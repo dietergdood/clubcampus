@@ -8780,6 +8780,75 @@ funktionierendes System aus.** Dieselbe Bauart wie:
 andere als gedacht.**
 
 
+### ⚠⚠ EINE UNBEKANNTE FRAGE MIT „NULL" ZU BEANTWORTEN IST DERSELBE FEHLER WIE EINE LEERE MENGE IM GUT-ZWEIG
+
+Didis Formulierung vom 11.09.2026, **beim vierten Fall desselben Musters an
+einem Tag.**
+
+Die Karte „Bestand drüben" zeigte `0 Personen · 0 mit Verbandsnummer ·
+0 ohne`, während drüben **129** standen. ⚠ **Und es gab drei Erklärungen,
+die in der Anzeige gleich aussahen:**
+
+| | |
+|---|---|
+| drüben läuft eine ältere Fassung, die die Frage nicht kennt | ✅ so war es |
+| den Beitragstyp `fch_person` gibt es dort nicht | |
+| es stehen wirklich null da | |
+
+**Drei Fälle, zwei Äste.** `vorhanden === false` war ausdrücklich eingebaut,
+um den zweiten vom dritten zu trennen — **und der erste fiel durch, weil ein
+fehlender Schlüssel `undefined` ergibt und nicht `false`.**
+
+> **Eine Unterscheidung mit zwei Ästen deckt keine drei Fälle, egal wie
+> sorgfältig die zwei benannt sind.**
+
+⚠ **Gebaut habe ich den Fehler in der Stunde, in der ich über ihn
+geschrieben habe** — der Eintrag „`acf_kennt = null` heisst nicht
+feststellbar und ist KEINE leere Liste" stammt vom selben Nachmittag.
+
+#### Die vier Fälle desselben Tages, nebeneinander
+
+| | die unbekannte Frage kam heraus als |
+|---|---|
+| `unbeachtete_unterfelder` vor 0.9.16 | eine leere Liste — der Melder verglich die Konstante mit sich selbst |
+| `nutzlast_fassung` | ein grüner Testfall — die Attrappe trug das Feld, die Nutzlast nicht |
+| `spiele_gesamt` in `/status` | eine Zahl, die nur `publish` zählt und „gesamt" heisst |
+| **`personen` in `bestand`** | **`0 · 0 · 0`** |
+
+**Gemeinsames Merkmal: der Gut-Zweig und der Nichts-gefragt-Zweig laufen
+zusammen.** Und die Null ist dabei die gefährlichste Form, weil sie wie ein
+Messergebnis aussieht.
+
+#### ⚠ Die Reparatur ist nicht ein dritter Ast, sondern die Frage nach der Herkunft
+
+Ein dritter `if` behebt diesen einen Fall. Was die Klasse behebt, ist, dass
+**jede Antwort ihre eigene Fassung nennt** — seit 0.9.19 tragen alle Routen
+`empfaenger` und `version`, nicht mehr nur `/status`.
+
+> **Eine Auskunft, die ihre eigene Herkunft verschweigt, lässt genau die
+> Frage offen, die man bei einem überraschenden Wert zuerst stellt.**
+
+Und fehlt die Fassung, steht das als Satz da statt als Null: *„Die Antwort
+nennt keine Fassung — drüben läuft etwas vor 0.9.19."*
+
+#### Der Beleg, und warum er eine eigene Datei brauchte
+
+Didi hat die Erklärung nicht angenommen, sondern einen Beleg verlangt —
+zu Recht: sie war plausibel und ich hatte sie nicht ausgeführt.
+
+⚠ **Die Deutung liess sich nicht prüfen, solange sie in der Komponente
+stand.** Sie liegt seither in `src/domains/spiele/bestandAnzeige.ts` mit
+sieben Fällen, darunter der entscheidende: **eine echte alte Antwort ohne
+`personen` hineingeben und festhalten, dass „0 Personen stehen drüben"
+NICHT erscheint.**
+
+**Gegengeprobt:** mit der Zweiast-Logik ist genau dieser eine Fall rot, die
+anderen sechs bleiben grün. **Eine Prüfung, die nie rot war, ist keine.**
+
+> **Eine Entscheidung, die man nicht gegen eine erfundene Antwort halten
+> kann, ist nur zu belegen, indem man sie ausführt.**
+
+
 ### ✅ VIER SPIELE, DEREN VERLAUF NICHT ZUM RESULTAT PASST — alle vier erklärt, keines ein Fehler bei uns
 
 Gemeldet von der Website-Seite am 11.09.2026, gemessen über alle 68
