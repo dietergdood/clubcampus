@@ -56,6 +56,20 @@ export interface MatchdatenErgebnis {
   /** Gegnerzeilen ohne Rueckennummer. Sie haetten keinerlei Identitaet:
       kein Name, keine Person, keine Nummer. */
   fremd_ohne_nummer: number;
+  /**
+   * Wie oft der Verband seine EIGENE Angabe geaendert hat.
+   *
+   * ⚠ Gemessen am 11.09.2026 an Spiel 4379006: in fuenf Minuten nennt
+   * ein spaeterer Abruf eine andere Person. Kein Fehler bei uns — ein
+   * Matchblatt darf nachtraeglich berichtigt werden, und die neue Fassung
+   * gilt.
+   *
+   * ⚠ ⚠ GEZAEHLT WIRD VOR DEM ERSETZEN. Danach gibt es nichts mehr zu
+   * vergleichen, und der Beleg waere mitgeloescht — dieselbe Regel wie bei
+   * `unplausibel`: die Korrektur macht den Befund unsichtbar, nicht
+   * ungeschehen.
+   */
+  verband_hat_korrigiert: number;
   /** Gegnerzeilen, die sich (Team, Nummer) teilten und verschmolzen wurden.
       ⚠ Erwartung 0 — jede andere Zahl ist eine Unstimmigkeit BEIM VERBAND
       und keine Eigenschaft unserer Kette. Sie wird gezaehlt, damit das
@@ -361,6 +375,7 @@ export function fuersProtokoll(erg: LaufErgebnis): Record<string, unknown> {
       aufstellung_geliefert: md.aufstellung_geliefert,
       eigen_ohne_person: md.eigen_ohne_person,
       fremd_ohne_nummer: md.fremd_ohne_nummer,
+      verband_hat_korrigiert: md.verband_hat_korrigiert,
       gegner_doppel: md.gegner_doppel,
       halbzeit: md.halbzeit,
       paesse_geschrieben: md.paesse_geschrieben,

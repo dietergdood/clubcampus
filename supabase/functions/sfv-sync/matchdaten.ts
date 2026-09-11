@@ -482,6 +482,101 @@ export function leseHalbzeit(m: SfvRoh): { stand: string | null; zustand: Halbze
   return { stand: `${a}:${b}`, zustand: "da" };
 }
 
+/* ── Der Verband korrigiert nachtraeglich ──────────────────────────────────
+   Gemessen am 11.09.2026 an Spiel 4379006 (29.08., 1:6): in fuenf Minuten
+   nennt ein spaeterer Abruf eine ANDERE Person als der fruehere.
+
+     51.  1013543  ->  1072172
+     64.  1182824  ->  850930 / 995639
+     70.   731765  ->  1018119
+
+   ⚠ DAS IST KEIN FEHLER BEI UNS. Der Verband erlaubt, ein Matchblatt
+   nachtraeglich zu berichtigen, und die neue Fassung ist die gueltige.
+   **Wir wissen es nicht besser als die Quelle — was wir koennen, ist zu
+   sagen, DASS sie sich geaendert hat.**
+
+   ⚠ Ohne diesen Zaehler loeschte das Ersetzen den Beleg mit. Dieselbe
+   Regel wie bei `unplausibel`, das nach der Korrektur gesetzt bleibt:
+   die Korrektur macht den Befund unsichtbar, nicht ungeschehen. */
+
+/** Das Wenigste, was zwei Verlaufsfassungen vergleichbar macht. */
+export interface VerlaufVergleich {
+  minute: number | null;
+  zusatzminute: number | null;
+  typ_id: number;
+  subtyp_id: number | null;
+  ist_eigener: boolean;
+  sfv_person_id: number | null;
+  rueckennr: number | null;
+}
+
+/**
+ * Die Stelle im Spiel, an der ein Ereignis steht — OHNE die Person.
+ *
+ * ⚠ Bewusst ohne: die Person ist genau das, was sich bei einer Korrektur
+ * aendert. Waere sie Teil des Schluessels, saehe jede Korrektur wie ein
+ * Verschwinden und ein Auftauchen aus, statt wie eine Aenderung.
+ */
+function stelle(e: VerlaufVergleich): string {
+  return [e.minute, e.zusatzminute, e.typ_id, e.subtyp_id, e.ist_eigener]
+    .map((x) => (x === null || x === undefined ? "" : String(x)))
+    .join("|");
+}
+
+/** Wer gemeint ist — eigene ueber die Person, fremde ueber die Nummer. */
+function wer(e: VerlaufVergleich): string {
+  return e.sfv_person_id != null ? `p:${e.sfv_person_id}` : `n:${e.rueckennr}`;
+}
+
+/**
+ * Wie viele STELLEN nennen jetzt andere Personen als vorher?
+ *
+ * ⚠ ⚠  GEZAEHLT WIRD DIE STELLE, NICHT DIE ZEILE — und darin steckt der
+ * ganze Unterschied zu einer naheliegenden, falschen Abfrage.
+ *
+ * Ein DREIFACHWECHSEL in der 46. hat vier Personen in einer Minute, aus
+ * EINEM Abruf. Wer „mehr als eine Person je Minute" zaehlt, meldet ihn als
+ * Korrektur. Deshalb wird die MENGE der Personen je Stelle verglichen:
+ * bleibt sie gleich, ist nichts geschehen, egal wie gross sie ist.
+ *
+ * ⚠ Und die Menge ist eine MULTImenge: zwei Tore derselben Nummer in
+ * derselben Minute (gemessen am 11.09.2026, Gegner Nr. 9) sind zwei
+ * Eintraege. Wuerde hier entdoppelt, saehe ihr Verschwinden aus wie
+ * „unveraendert".
+ */
+export function zaehleVerbandKorrekturen(
+  alt: VerlaufVergleich[], neu: VerlaufVergleich[],
+): number {
+  const sammle = (liste: VerlaufVergleich[]) => {
+    const m = new Map<string, string[]>();
+    for (const e of liste) {
+      const k = stelle(e);
+      const l = m.get(k) ?? [];
+      l.push(wer(e));
+      m.set(k, l);
+    }
+    /* Sortiert, damit die Reihenfolge des Verbands keine Rolle spielt —
+       sie ist keine Aussage, und ein Vergleich, der an ihr haengt, meldete
+       Korrekturen, wo nur umsortiert wurde. */
+    for (const [k, l] of m) m.set(k, l.sort());
+    return m;
+  };
+
+  const a = sammle(alt);
+  const n = sammle(neu);
+  let geaendert = 0;
+  for (const [k, neuWer] of n) {
+    const altWer = a.get(k);
+    /* ⚠ Eine Stelle, die es vorher NICHT gab, ist keine Korrektur, sondern
+       ein Nachtrag — und eine, die verschwindet, eine Streichung. Beides
+       ist etwas anderes als „dieselbe Sache, andere Person", und nur die
+       wird hier gezaehlt. */
+    if (!altWer) continue;
+    if (altWer.join(",") !== neuWer.join(",")) geaendert += 1;
+  }
+  return geaendert;
+}
+
 /* ── Kandidaten ────────────────────────────────────────────────────────────
    Neue Spiele zuerst, Wiederholungen fuellen auf: ein fehlender Spielbericht
    faellt auf, eine um eine Stunde verzoegerte Korrektur nicht.

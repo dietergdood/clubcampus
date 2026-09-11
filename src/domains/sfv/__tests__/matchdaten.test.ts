@@ -4,6 +4,7 @@ import {
   bildeAufstellung, bildeEreignis, istEigener, istKorrekturUeberfluessig,
   leseHalbzeit, waehleKandidaten, NACHZUG_TAGE, bildeOffeneNamen,
   bildeSfvPerson, entdoppleSfvPersonen, verschmelzeAufstellung,
+  zaehleVerbandKorrekturen,
 } from "../../../../supabase/functions/sfv-sync/matchdaten.ts";
 import type { KorrekturZeile } from "../../../../supabase/functions/sfv-sync/matchdaten.ts";
 
@@ -673,3 +674,78 @@ describe("verschmelzeAufstellung", () => {
   });
 });
 
+describe("zaehleVerbandKorrekturen — der Verband berichtigt nachtraeglich", () => {
+  /* ⚠ ⚠ ANLASS, gemessen am 11.09.2026 an Spiel 4379006 (29.08., 1:6):
+     fuenf Minuten nennen in einem spaeteren Abruf eine ANDERE Person.
+     51.: 1013543 → 1072172. Das ist kein Fehler bei uns — der Verband
+     erlaubt, ein Matchblatt nachtraeglich zu berichtigen.
+
+     ⚠ Ohne diesen Zaehler loeschte das Ersetzen den Beleg mit. */
+  const e = (minute: number, person: number | null, extra = {}) => ({
+    minute, zusatzminute: null, typ_id: 2, subtyp_id: null,
+    ist_eigener: true, sfv_person_id: person, rueckennr: null, ...extra,
+  });
+
+  it("dieselbe Stelle, andere Person — eine Korrektur", () => {
+    expect(zaehleVerbandKorrekturen([e(51, 1013543)], [e(51, 1072172)])).toBe(1);
+  });
+
+  it("unveraendert ist keine Korrektur", () => {
+    expect(zaehleVerbandKorrekturen([e(51, 1013543)], [e(51, 1013543)])).toBe(0);
+  });
+
+  it("⚠⚠ ein DREIFACHWECHSEL in einer Minute ist keine Korrektur", () => {
+    /* Der Fehler, den die erste Messabfrage gemacht hat: sie zaehlte
+       „mehr als eine Person je Minute" und meldete damit jeden
+       Doppelwechsel. Vier Personen in der 46., aus EINEM Abruf. */
+    const dreifach = [e(46, 1), e(46, 2), e(46, 3), e(46, 4)];
+    expect(zaehleVerbandKorrekturen(dreifach, dreifach)).toBe(0);
+  });
+
+  it("die Reihenfolge des Verbands ist keine Aussage", () => {
+    expect(zaehleVerbandKorrekturen(
+      [e(46, 1), e(46, 2)], [e(46, 2), e(46, 1)],
+    )).toBe(0);
+  });
+
+  it("⚠ zwei Tore derselben Nummer in derselben Minute bleiben zwei", () => {
+    /* Gemessen am 11.09.2026: Gegner Nr. 9, zwei Tore in der 69., EIN
+       Abruf. Wuerde hier entdoppelt, saehe ihr Verschwinden aus wie
+       „unveraendert" — und genau das darf es nicht. */
+    const zwei = [
+      e(69, null, { typ_id: 1, ist_eigener: false, rueckennr: 9 }),
+      e(69, null, { typ_id: 1, ist_eigener: false, rueckennr: 9 }),
+    ];
+    const eins = [e(69, null, { typ_id: 1, ist_eigener: false, rueckennr: 9 })];
+    expect(zaehleVerbandKorrekturen(zwei, zwei)).toBe(0);
+    expect(zaehleVerbandKorrekturen(zwei, eins)).toBe(1);
+  });
+
+  it("⚠ eine neue Stelle ist ein Nachtrag, keine Korrektur", () => {
+    /* Die Assists, die seit dem 11.09.2026 mitkommen, sind genau das —
+       sie taeuschen sonst fuenfzehn Korrekturen vor. */
+    expect(zaehleVerbandKorrekturen([e(51, 1)], [e(51, 1), e(60, 2)])).toBe(0);
+  });
+
+  it("⚠ eine verschwundene Stelle ebenfalls nicht", () => {
+    expect(zaehleVerbandKorrekturen([e(51, 1), e(60, 2)], [e(51, 1)])).toBe(0);
+  });
+
+  it("eigene und fremde Seite sind verschiedene Stellen", () => {
+    expect(zaehleVerbandKorrekturen(
+      [e(51, 1)], [e(51, null, { ist_eigener: false, rueckennr: 9 })],
+    )).toBe(0);
+  });
+
+  it("Gelb und Gelb-Rot in derselben Minute sind verschieden", () => {
+    /* subtyp_id gehoert in die Stelle: zwei Verwarnungen gegen denselben
+       Spieler sind ein Platzverweis, nicht eine Zeile. */
+    const gelb = e(70, 5, { typ_id: 3 });
+    const gelbrot = e(70, 5, { typ_id: 4, subtyp_id: 20 });
+    expect(zaehleVerbandKorrekturen([gelb, gelbrot], [gelb, gelbrot])).toBe(0);
+  });
+
+  it("leer gegen leer ist null", () => {
+    expect(zaehleVerbandKorrekturen([], [])).toBe(0);
+  });
+});

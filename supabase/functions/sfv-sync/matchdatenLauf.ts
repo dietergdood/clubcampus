@@ -24,9 +24,9 @@ import { schreibeSfvPersonen } from "./sfvPersonenSchreiben.ts";
 import {
   bildeAufstellung, verschmelzeAufstellung, bildeEreignis, leseHalbzeit, istKorrekturUeberfluessig, waehleKandidaten,
   passAenderungen, passKonflikte, leseSchiedsrichter,
-  MATCHDATEN_STATUS,
+  MATCHDATEN_STATUS, zaehleVerbandKorrekturen,
 } from "./matchdaten.ts";
-import type { KorrekturZeile, SfvRoh, SpielKandidat } from "./matchdaten.ts";
+import type { KorrekturZeile, SfvRoh, SpielKandidat, VerlaufVergleich } from "./matchdaten.ts";
 import { ausBase64, erkenneBild, logoPfad, offeneLogos, LOGO_BUCKET } from "./logos.ts";
 import type { LogoZeile } from "./logos.ts";
 import type { MatchdatenErgebnis } from "./ergebnisTypen.ts";
@@ -60,6 +60,7 @@ export async function laufeMatchdaten(
        ist „nur neun Spieler" nicht von „wir haben neun uebrig gelassen"
        zu unterscheiden — und genau das war am 11.09.2026 die Frage. */
     aufstellung_geliefert: 0, eigen_ohne_person: 0, fremd_ohne_nummer: 0,
+    verband_hat_korrigiert: 0,
     eigene_unzugeordnet: 0, zuordnungen_gesamt: 0, namen_geschrieben: 0, aufstellung_fremd: 0, gegner_doppel: 0,
     halbzeit: { da: 0, fehlt: 0, leer: 0, ohne_halbzeit: 0 }, paesse_geschrieben: 0, pass_konflikte: [], nachzug_meldungen: 0, fehler: 0, fehlermeldungen: [],
   };
@@ -247,11 +248,91 @@ export async function laufeMatchdaten(
         erg.aufstellung_fremd += fremdeZeilen.length;
       }
 
-      if (ereignisse.length) {
-        /* onConflict auf den partiellen Schluessel: nur SFV-Zeilen tragen
-           eine sfv_event_id, Vereins-Zeilen bleiben unberuehrt. */
+      /* ⚠ ⚠ ⚠  ERSETZEN, NICHT UPSERTEN — seit dem 11.09.2026.
+
+         Hier stand ein `upsert` auf `(verein_id, sfv_event_id)`. Der
+         Schluessel ist richtig und der Constraint haelt (gemessen: 1051
+         Zeilen, 1051 verschiedene Paare). **Falsch war die Annahme
+         darueber, was eine `sfv_event_id` IST.**
+
+         Sie ist keine Kennung des EREIGNISSES, sondern eine des Eintrags
+         beim Verband: wird ein Matchblatt nachtraeglich berichtigt,
+         bekommt derselbe Vorgang eine neue Nummer. Der Upsert findet
+         dann keinen Konflikt und legt den ganzen Verlauf noch einmal an.
+
+         Gemessen an Spiel 4379006 (29.08., 1:6) — das Tor der 37.:
+
+           30038739 · 31.08.   30064899 · 01.09.   30083863 · 11.09.
+
+         Dieselbe Minute, derselbe Typ, dieselbe Person, drei Kennungen.
+         Auf der Website stand jede Verlaufszeile dreifach.
+
+         ⚠ **Dieselbe Klasse wie `substitutePlayerId`:** ein Feld, das wie
+         ein Schluessel aussieht und keiner ist. Es war nie ein Fehler im
+         Upsert.
+
+         ── Warum ERSETZEN und nicht ein besserer Schluessel ─────────────
+
+         Ein fachlicher Schluessel (Minute, Typ, Person) haette eine echte
+         Doppelung verschluckt: gemessen am 11.09.2026 hat ein Gegner mit
+         der Nummer 9 in der 69. ZWEI Tore erzielt, in EINEM Abruf. Nichts,
+         was wir fuehren, unterscheidet die beiden Zeilen.
+
+         **Was man nicht entdoppelt, kann man nicht faelschlich
+         entdoppeln.** Der Verband liefert je Abruf den VOLLSTAENDIGEN
+         Verlauf — gemessen an 70 Spielen, und bei 68 davon stimmt die
+         Zahl der Tor-Ereignisse exakt gegen das Resultat. Also wird der
+         jueng­ste Abruf ganz uebernommen und der vorherige ganz verworfen.
+
+         ⚠ NUR `herkunft = 'sfv'`. Vereinszeilen sind Eingaben von
+         Menschen und werden nie geloescht.
+
+         ⚠ ⚠  UND EIN HAKEN, DER HEUTE FOLGENLOS IST UND ES NICHT BLEIBT:
+         eine Vereins-Korrektur zeigt ueber `ersetzt_ereignis_id` auf die
+         `id` einer SFV-Zeile. Wird die geloescht und neu angelegt, zeigt
+         die Korrektur ins Leere; `mischeEreignisse` faengt das ab („zeigt
+         ins Leere: trotzdem zeigen"), aber sie verliert ihren Anker.
+         **Gemessen am 11.09.2026: null Vereinszeilen im ganzen Bestand.**
+         Wer die erste erfasst, braucht davor ein Neuverankern ueber den
+         fachlichen Schluessel. */
+      const altRes = await db.from("spiel_ereignisse")
+        .select("id, minute, zusatzminute, typ_id, subtyp_id, ist_eigener,"
+          + " sfv_person_id, rueckennr")
+        .eq("verein_id", v.verein_id)
+        .eq("spiel_id", spiel.id)
+        .eq("herkunft", "sfv");
+      if (altRes.error) {
+        throw new SfvFehler(`Verlauf nicht lesbar: ${altRes.error.message}`);
+      }
+      const alteZeilen = (altRes.data ?? []) as unknown as VerlaufVergleich[];
+
+      /* ⚠ ⚠  GEZAEHLT WIRD VOR DEM LOESCHEN. Danach gibt es nichts mehr
+         zu vergleichen — und der Beleg, dass der Verband seine eigene
+         Angabe geaendert hat, waere mitgeloescht. Dieselbe Regel wie bei
+         `unplausibel`, das nach der Korrektur gesetzt bleibt: **die
+         Korrektur macht den Befund unsichtbar, nicht ungeschehen.** */
+      if (alteZeilen.length && ereignisse.length) {
+        erg.verband_hat_korrigiert += zaehleVerbandKorrekturen(
+          alteZeilen, ereignisse as unknown as VerlaufVergleich[],
+        );
+      }
+
+      if (alteZeilen.length) {
         const { error } = await db.from("spiel_ereignisse")
-          .upsert(ereignisse, { onConflict: "verein_id,sfv_event_id" });
+          .delete()
+          .eq("verein_id", v.verein_id)
+          .eq("spiel_id", spiel.id)
+          .eq("herkunft", "sfv");
+        if (error) throw new SfvFehler(`Verlauf löschen: ${error.message}`);
+      }
+
+      if (ereignisse.length) {
+        /* ⚠ Nicht atomar: bricht das Schreiben nach dem Loeschen ab,
+           fehlt der Verlauf dieses Spiels bis zum naechsten Lauf.
+           Dieselbe Abwaegung wie bei der Gegneraufstellung — und derselbe
+           Grund, sie hinzunehmen: die Tabelle ist eine reine Spiegelung,
+           der naechste Lauf stellt sie wieder her. */
+        const { error } = await db.from("spiel_ereignisse").insert(ereignisse);
         if (error) throw new SfvFehler(`Ereignisse: ${error.message}`);
         erg.ereignisse_zeilen += ereignisse.length;
       }
