@@ -3578,6 +3578,120 @@ Gehalten wird das von `src/domains/sfv/__tests__/protokollSpur.test.ts`:
 wer schreibt, protokolliert — und zwar vorher. **Gegengeprobt an der
 echten Datei:** `aktion`/`laeuft` entfernt → rot, zurückgesetzt → grün.
 
+### ⚠⚠ 62 SPIELE WAREN WOCHENLANG EINGEFROREN — und nichts hat es gemeldet
+
+Gemessen am 11.09.2026. **Der Befund ist nicht „es fehlten Daten",
+sondern: ein Teil des Bestands nahm an keiner einzigen Verbesserung mehr
+teil, und der Zustand war von aussen nicht von Absicht zu unterscheiden.**
+
+`waehleKandidaten()` (`matchdaten.ts`) hat zwei Töpfe und einen Deckel:
+
+```ts
+neu    = ohne matchdaten_geholt_am           // jüngstes zuerst
+wieder = MIT geholt_am UND date >= heute−7   // jüngstes zuerst
+return [...neu, ...wieder].slice(0, 10)
+```
+
+| Spiel | in `neu`? | in `wieder`? |
+|---|---|---|
+| nie geholt | ✅ | — |
+| geholt, innerhalb 7 Tagen | ✗ | ✅ |
+| **geholt, älter als 7 Tage** | ✗ | ✗ |
+
+**62 Spiele lagen in dieser Zone, zurück bis zum 01.07.** Sie trugen die
+Form vom Tag ihres Abrufs: ohne Halbzeitstand, ohne die Rollenableitung
+aus den Minuten, ohne Gegnerzeilen nach Entscheid B.
+
+⚠ **Es ist keine Eigenschaft der Gegnerzeilen, sondern des Fensters.**
+Jede künftige Änderung an der Matchdaten-Verarbeitung erreicht nur die
+letzten sieben Tage — alles Ältere behält still die alte Form. Wer eine
+solche Änderung baut, baut damit unbemerkt einen zweigeteilten Bestand.
+
+⚠ **Aufgefallen ist es an einer Zahl, die sich nicht bewegte:** zehn
+Spiele trugen Gegnerzeilen, immer dieselben zehn, über Stunden. Nicht an
+einer Meldung — es gibt keine. Dieselbe Familie wie „354 Textdateien
+geprüft", zweimal derselbe Wert.
+
+**Behoben wurde es mit `update … set matchdaten_geholt_am = null` von
+Hand** — genau der Handgriff, an den jemand denken muss. Der Vorschlag,
+das abzuschaffen, steht in `docs/vorschlag_matchdaten_fenster.md`; er
+empfiehlt einen rollenden Nachlauf (zwei der zehn Plätze für das am
+längsten nicht Geholte) statt eines Versionsstempels, **weil nur der
+erste ohne Erinnerung auskommt.**
+
+⚠ **Und dort steht eine ZWEITE Hungerzone, die niemand gesucht hat:**
+`hoechstens = 10` deckelt beide Töpfe zusammen. Fallen mehr als zehn
+Spiele in die sieben Tage — ein Samstag mit zwölf Partien genügt —,
+altert der Rest des Fensters heraus, ohne je nachgeholt worden zu sein.
+**Ungemessen.**
+
+### ⚠ „Nur neun Spieler" kam von der Quelle — meine zweite Lesart ist widerlegt
+
+Gemessen am 11.09.2026, drei Läufe nach dem Rücksetzen:
+
+| geliefert | eigen | fremd | verworfen | doppelt |
+|---|---|---|---|---|
+| 265 | 130 | 135 | **0** | 0 |
+| 288 | 144 | 144 | **0** | 0 |
+| 285 | 144 | 141 | **0** | 0 |
+
+**`eigen_ohne_person` ist null.** Der Filter in `bildeAufstellung()`
+wirft nichts weg: wo neun eigene Zeilen stehen, hat der Verband neun
+geliefert. Die Summen gehen ohne Rest auf.
+
+⚠ **Ich hatte zwei Lesarten angeboten — abgebrochener Abruf oder stiller
+Filter — und die zweite war falsch.** Sie war trotzdem nicht wertlos: sie
+hat die drei Zähler erzwungen, und **erst die machen die erste Lesart zu
+einer Messung statt zu einer Vermutung.** Ohne `aufstellung_geliefert`
+wäre „der Verband liefert weniger" bis heute eine Behauptung.
+
+**Die vier Spiele mit unvollständiger Aufstellung** — nach dem Neuabruf
+erneut zu prüfen, die Zahlen unten sind der Stand VOR ihm:
+
+| Spiel | Datum | eigene | fremde | Ereignisse |
+|---|---|---|---|---|
+| 4354263 | 05.09. | 9 | 0 | **21** |
+| 4375665 | 29.08. | 8 | 0 | 5 |
+| 4395750 | 08.09. | 9 | **12** | 8 |
+| 4395741 | 04.09. | 10 | 0 | 10 |
+
+⚠ **Neun eigene Spieler bei 21 Ereignissen bleibt erklärungsbedürftig** —
+aber die Erklärung liegt beim Verband, nicht bei uns. Und weil alle vier
+in der eingefrorenen Zone lagen, ist offen, ob der Neuabruf sie füllt.
+
+**Und ein fünftes:** 4354253 (29.08., ausgetragen, 10:11) wurde am
+05.09. abgerufen und brachte **null Zeilen und null Ereignisse**. Es ist
+beim Rücksetzen dabei; ob der zweite Abruf etwas liefert, ist die Probe
+darauf, ob ein leeres Ergebnis beim Verband bleibend ist.
+
+### ⚠ Es gibt ZWÖLF Spielstatus, nicht fünf — und die kurze Liste war eine Falle
+
+`migration_sfv_spielplan.sql:75` nennt in einem Spaltenkommentar fünf:
+*„1 noch nicht ausgetragen, 2 ausgetragen, 6 verschoben, 7 neu angesetzt,
+10 findet nicht statt."*
+
+**Der Verband führt zwölf** (`sfv_stammdaten.json`). Am 11.09.2026 habe
+ich aus den fünf geschlossen, ein nie geholtes Spiel müsse einen davon
+tragen. Gemessen: zwei trugen **3 forfait** — zu Recht kein Kandidat, aber
+ein Wert, den die Liste nicht kennt.
+
+⚠ **Eine unvollständige Aufzählung wird für vollständig gehalten, GERADE
+WEIL sie aufzählt.** Wer `(1|2|6|7|10)` liest, hält 3, 4, 5, 8, 9, 11, 12
+für unmöglich — eine Liste ohne Angabe ihrer Grenze ist schlimmer als
+keine. Dieselbe Familie wie „Unbekannte Aktion: spiele", nur umgekehrt:
+dort nannte die Meldung die gültigen Werte nicht mehr, hier nennt sie zu
+wenige.
+
+Steht seither vollständig als `SFV_STATUS` in `matchdaten.ts`, getrennt
+von `MATCHDATEN_STATUS = [2]` — **was es GIBT und was wir HOLEN sind zwei
+Listen**, sonst liest man die Auswahl als die ganze Menge.
+
+⚠ **Offen und ungemessen: Status 5 „abgebrochen".** Ein abgebrochenes
+Spiel hat stattgefunden und kann Aufstellung und Ereignisse tragen; wir
+holen sie nicht. Ob der Verband sie führt, weiss niemand. Forfait (3) und
+die Nichtantritte (8, 9) sind dagegen zu Recht draussen — dort wurde nicht
+gespielt.
+
 ### ⚠ Die Anrede „Spielerin" wird beim THEME entschieden — nicht bei uns aus dem Ligennamen
 
 Entscheid vom 10.09.2026, und er gehört festgehalten, **weil beide

@@ -28,7 +28,25 @@ import { join } from "node:path";
 const ORDNER = "supabase/functions/sfv-sync";
 const ZEILEN = new RegExp(String.fromCharCode(13) + "?" + String.fromCharCode(10));
 
-/** Schreibende Aufrufe auf `spiele`, mit Datei und Zeile. */
+/**
+ * Schreibende Aufrufe auf `spiele` — Datei und Art, OHNE Zeilennummer.
+ *
+ * ⚠ ⚠  DIE ZEILENNUMMER STAND HIER BIS ZUM 11.09.2026, UND SIE WAR DER
+ * DEFEKT DIESER PRUEFUNG. An einem einzigen Tag ist sie zweimal rot
+ * geworden, beide Male ohne Aussage: ein Kommentar weiter oben hatte die
+ * Tueren um sechs Zeilen verschoben.
+ *
+ * **Eine Pruefung, die bei jeder Kommentaraenderung anschlaegt, bringt
+ * niemandem etwas bei — sie bringt bei, die Zahl hochzuzaehlen, ohne zu
+ * lesen, was sie sagt.** Dieselbe Abstumpfung wie bei den 758
+ * Lint-Warnungen; „rot ist ein Zustand fuer Stunden" gilt auch fuer „rot
+ * ohne Aussage".
+ *
+ * ⚠ Die ZUSAGE bleibt unveraendert scharf: genau drei Tueren, zwei in
+ * matchdatenLauf.ts und eine in sync.ts. Eine vierte macht den Fall rot —
+ * und nur das soll er tun. **Geprueft wird die Anzahl der Schreibwege,
+ * nicht ihre Lage im Text.**
+ */
 function tueren(): string[] {
   const raus: string[] = [];
   for (const name of readdirSync(ORDNER)) {
@@ -41,7 +59,7 @@ function tueren(): string[] {
       const umfeld = zeilen.slice(i, i + 3).join(" ");
       if (!/\.(update|upsert|insert|delete)\(/.test(umfeld)) return;
       const art = (umfeld.match(/\.(update|upsert|insert|delete)\(/) ?? [])[1];
-      raus.push(`${name}:${i + 1} ${art}`);
+      raus.push(`${name} ${art}`);
     });
   }
   return raus.sort();
@@ -58,9 +76,9 @@ describe("Türen in die Tabelle spiele", () => {
        sync.ts            der Spielplan-Upsert — die EINZIGE Tür, an der
                           schneideAufFeldhoheit() steht */
     expect(tueren()).toEqual([
-      "matchdatenLauf.ts:266 update",
-      "matchdatenLauf.ts:278 update",
-      "sync.ts:318 upsert",
+      "matchdatenLauf.ts update",
+      "matchdatenLauf.ts update",
+      "sync.ts upsert",
     ]);
   });
 

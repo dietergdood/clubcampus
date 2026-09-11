@@ -24,6 +24,7 @@ import { schreibeSfvPersonen } from "./sfvPersonenSchreiben.ts";
 import {
   bildeAufstellung, verschmelzeAufstellung, bildeEreignis, leseHalbzeit, istKorrekturUeberfluessig, waehleKandidaten,
   passAenderungen, passKonflikte, leseSchiedsrichter,
+  MATCHDATEN_STATUS,
 } from "./matchdaten.ts";
 import type { KorrekturZeile, SfvRoh, SpielKandidat } from "./matchdaten.ts";
 import { ausBase64, erkenneBild, logoPfad, offeneLogos, LOGO_BUCKET } from "./logos.ts";
@@ -75,7 +76,12 @@ export async function laufeMatchdaten(
     .from("spiele")
     .select("id,date,matchdaten_geholt_am,sfv_match_id")
     .eq("verein_id", v.verein_id)
-    .eq("sfv_status", 2);
+    /* ⚠ Aus MATCHDATEN_STATUS, nicht als Zahl hier: die vollstaendige
+       Liste der zwoelf Status steht daneben, und wer die Auswahl aendern
+       will, sieht dort zuerst, wovon er auswaehlt. Am 11.09.2026 hat eine
+       unvollstaendige Aufzaehlung (fuenf statt zwoelf) mich glauben
+       lassen, „3 forfait" gebe es nicht. */
+    .in("sfv_status", MATCHDATEN_STATUS);
 
   const kandidaten = waehleKandidaten(
     (kandidatenRoh ?? []) as unknown as SpielKandidat[], new Date(), hoechstens,

@@ -495,6 +495,51 @@ export interface SpielKandidat {
   sfv_match_id: number | null;
 }
 
+/**
+ * Die Spielstatus des Verbands — ALLE ZWOELF, aus `sfv_stammdaten.json`.
+ *
+ * ⚠ ⚠  SIE STAND NIRGENDS VOLLSTAENDIG. `migration_sfv_spielplan.sql`
+ * nennt in einem Spaltenkommentar fuenf (1, 2, 6, 7, 10), und daraus habe
+ * ich am 11.09.2026 geschlossen, ein nie geholtes Spiel muesse einen
+ * dieser fuenf tragen. Didi hat gemessen: zwei trugen **3 forfait** — ein
+ * Wert, den die Liste nicht kennt.
+ *
+ * ⚠ Dieselbe Klasse wie „eine Meldung, die die gueltige Antwort KENNT und
+ * nicht nennt": eine unvollstaendige Aufzaehlung wird fuer vollstaendig
+ * gehalten, gerade weil sie aufzaehlt. Wer nur `(1|2|6|7|10)` liest,
+ * haelt 3, 4, 5, 8, 9, 11, 12 fuer unmoeglich.
+ *
+ * ⚠ HIER STEHT NUR, WAS ES GIBT — nicht, was geholt wird. Der Filter ist
+ * `MATCHDATEN_STATUS` darunter, und die Trennung ist Absicht: sonst
+ * liest man die Auswahl als die ganze Menge.
+ */
+export const SFV_STATUS: Record<number, string> = {
+  1: "noch nicht ausgetragen",
+  2: "ausgetragen",
+  3: "forfait",
+  4: "Null zu Null - Null Punkte",
+  5: "abgebrochen",
+  6: "verschoben",
+  7: "neu angesetzt",
+  8: "nicht gespielt (SR)",
+  9: "nicht gespielt (Gegner)",
+  10: "Spiel findet nicht statt (keine Neuansetzung)",
+  11: "Abbruch der Saison",
+  12: "Spiel ohne Austragung (keine Publikation)",
+};
+
+/**
+ * Wovon Matchdaten geholt werden. Heute: nur ausgetragene Spiele.
+ *
+ * ⚠ OFFEN, 11.09.2026: **5 „abgebrochen" ist ein Spiel, das STATTGEFUNDEN
+ * hat** — es kann Aufstellung und Ereignisse tragen, und wir holen sie
+ * nicht. Ob der Verband dafuer Matchdaten fuehrt, ist UNGEMESSEN; die
+ * Frage steht in `docs/vorschlag_matchdaten_fenster.md`. Ein Forfait (3)
+ * und die Nichtantritte (8, 9) sind dagegen zu Recht draussen: dort wurde
+ * nicht gespielt.
+ */
+export const MATCHDATEN_STATUS = [2];
+
 export const NACHZUG_TAGE = 7;
 
 export function waehleKandidaten<T extends SpielKandidat>(
