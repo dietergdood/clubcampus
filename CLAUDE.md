@@ -3768,7 +3768,103 @@ Spiele in die sieben Tage — ein Samstag mit zwölf Partien genügt —,
 altert der Rest des Fensters heraus, ohne je nachgeholt worden zu sein.
 **Ungemessen.**
 
+### ⚠⚠ KURZE AUFSTELLUNGEN SIND KEINE LÜCKE — es ist das SPIELFORMAT
+
+**Die Auflösung von zwei Tagen Suche, gemessen am 11.09.2026 über alle
+Mannschaften.** Sie steht hier, weil die Frage sonst alle paar Wochen neu
+gestellt wird — und weil jede der bisherigen Antworten falsch war.
+
+| Format | eigene Zeilen im Schnitt |
+|---|---|
+| Junioren D-7 · Juniorinnen D-7 · **Senioren 50+/7** | **3,0 – 9,3** |
+| D-9-Formate | 12,0 – 12,7 |
+| Elferfussball | 13 – 20 |
+
+> **Die Zahl im Ligennamen IST die Spieleranzahl.** „Junioren D-**7**"
+> heisst Siebnerfussball. **Neun Zeilen bei Senioren 50+/7 sind eine
+> vollständige Mannschaft mit Bank** — es fehlt nichts.
+
+⚠ **Und damit war die Prämisse aller bisherigen Erklärungen falsch, nicht
+ihre Logik.** Der Satz *„weniger als elf kann keine Mannschaft
+aufstellen"* — von mir, am 11.09.2026, und er klang zwingend — gilt nur
+für Elferfussball. Aus ihm folgten nacheinander drei Untersuchungen:
+
+| Lesart | Ergebnis |
+|---|---|
+| abgebrochener Abruf | ✗ die fremde Spalte war nie kurz |
+| `bildeAufstellung` verwirft still | ✗ `eigen_ohne_person` = 0 über drei Läufe |
+| `istEigener` sortiert falsch ein | ✗ keine Zeile mit unserer Teamnummer als fremd |
+
+**Alle drei waren sauber gemessen und alle drei suchten einen Fehler, den
+es nicht gab.** Der Grund steht in keiner Zeile Code: er steht im
+Ligennamen, und niemand hat ihn gelesen.
+
+#### ⚠⚠ UND JETZT DIE FALLE, DIE ALS NÄCHSTES KOMMT
+
+Der naheliegende nächste Schritt wäre eine Vollständigkeitsprüfung —
+*„meldet, wenn eine Aufstellung kürzer ist als erwartet"*. Sie braucht die
+erwartete Zahl, und die steht scheinbar bereit:
+
+```sql
+-- ⚠ GENAU DAS NICHT
+case when s.liga like '%-7%' then 7
+     when s.liga like '%-9%' then 9 else 11 end
+```
+
+> **Ein Filter auf einen NAMEN prüft eine Schreibweise, ein Filter auf ein
+> MERKMAL prüft die Sache.** „Senioren 50+/7" trägt die 7 hinter einem
+> Schrägstrich, „Junioren D-7" hinter einem Bindestrich, und beim nächsten
+> Format des Verbands steht sie woanders oder gar nicht. **Eine Prüfung,
+> die daran hängt, meldet ab dann Lücken, die keine sind — und niemand
+> traut ihr nach dem dritten Fehlalarm.**
+
+**Wenn die Spieleranzahl je gebraucht wird, gehört sie als Spalte an
+`teams` oder `spiele`** — gepflegt oder aus den Stammdaten des Verbands,
+nicht aus dem Anzeigetext erschlossen. Das ist derselbe Entscheid wie bei
+der Anrede „Spielerin": **nicht aus einem Namen ableiten, sondern ein
+Merkmal führen oder es lassen.**
+
+⚠ **Bis dahin gilt: eine kurze Aufstellung ist KEIN Befund.** Wer sie
+meldet, ohne das Format zu kennen, schickt den nächsten Leser auf dieselbe
+Zweitagesrunde.
+
+#### ⚠ Meine Matchblatt-Hypothese — zurückgenommen, und ihre Vorhersage war falsch
+
+Ich hatte angeboten: *das elektronische Matchblatt wird je Mannschaft
+ausgefüllt, der Gegner hat es getan und unsere Betreuer nicht — deshalb
+kennt der Verband von uns nur die, die in einem Ereignis vorkommen.*
+
+**Sie ist für diese drei Spiele gegenstandslos: es gibt keine Lücke zu
+erklären.** Und wo sie prüfbar war, zeigte die Messung das **Gegenteil
+ihrer Vorhersage** — *die meisten erfassten Spieler kommen im Verlauf gar
+nicht vor*, also entsteht die Aufstellung nicht aus den Ereignissen.
+
+⚠ **Sie bleibt als offene Frage stehen, nicht als Erklärung** (Didi,
+11.09.2026). Der Unterschied ist nicht Höflichkeit: eine zurückgezogene
+Hypothese, die als Erklärung im Papier stehen bleibt, wird beim nächsten
+Mal zitiert — und dann sucht jemand ein Matchblatt statt eines Formats.
+
+#### ⚠ Was als echte Lücke übrig bleibt: EIN Spiel
+
+**Dc-Junioren, `eigen_min` = 0 bei `eigen_max` = 9.** Alle anderen
+Mannschaften streuen eng um ihr Format; diese eine hat ein Spiel **ohne
+jede eigene Zeile**. Das ist der einzige Rest, den das Format nicht
+erklärt — und die Frage dazu ist, ob es Ereignisse hat: ohne Ereignisse
+ist es ein Spiel, zu dem der Verband nichts führt, mit Ereignissen ein
+Widerspruch in seinen eigenen Daten.
+
+
 ### ⚠ „Nur neun Spieler" kam von der Quelle — meine zweite Lesart ist widerlegt
+
+> ⚠ ⚠ **DIESER ABSCHNITT IST RICHTIG UND STELLT DIE FALSCHE FRAGE.** Die
+> Auflösung steht darüber: **neun Zeilen sind bei Siebnerfussball eine
+> vollständige Mannschaft.** Es gab nie eine Lücke zu erklären — die
+> Messungen hier sind sauber, sie beantworten nur „liefert der Verband
+> weniger, als er hat?" statt „wie viele soll er denn liefern?".
+>
+> **Der Absatz bleibt stehen, weil die Zähler aus ihm entstanden sind**
+> und weil er zeigt, wie lange man an einer Prämisse messen kann, die
+> niemand geprüft hat.
 
 Gemessen am 11.09.2026, drei Läufe nach dem Rücksetzen:
 
