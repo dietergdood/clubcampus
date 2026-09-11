@@ -4218,9 +4218,19 @@ jobid  jobname                    schedule        active
   9    sync-waechter              */30 * * * *    ja   ← der neue
 ```
 
-**Zwei Wächter liefen drei Wochen lang parallel.** Am 10.09.2026 hatte eine
+**Zwei Wächter liefen parallel.** Am 10.09.2026 um 19:50 hatte eine
 Erweiterung dem Auftrag einen neuen Namen gegeben — und `cron.schedule`
 ersetzt einen **gleichnamigen** Auftrag und legt sonst einen zweiten an.
+
+> ⚠ ⚠ **HIER STAND „drei Wochen", UND DAS WAR ERSCHLOSSEN STATT GEMESSEN.**
+> Ich hatte das Alter des ÄLTEREN Auftrags (21.08.2026) für die Dauer der
+> Überschneidung genommen. Gemessen sind es **rund ein Tag** — der zweite
+> Auftrag entstand am 10.09.2026 um 19:50.
+>
+> **Die Dauer einer Überschneidung bemisst sich am JÜNGEREN der beiden.**
+> Der ältere sagt nur, wie lange es ihn gibt, nicht wie lange sie sich
+> überlagern. Ein Fehler, der sich in eine Zahl kleidet und deshalb wie
+> eine Messung aussieht.
 
 > **Beim Umbenennen eines Auftrags bleibt der alte stehen.** Es gibt keine
 > Meldung, keinen Konflikt und keine Prüfung: die Datenbank sieht zwei
@@ -4249,6 +4259,37 @@ eine Ebene höher.
 ⚠ **Das ist der Grund, warum die Frage „welchen löschen?" die falsche war.**
 Die richtige lautet: *was kann jeder von beiden, das der andere nicht kann?*
 Sie kostet einen Vergleich und verhindert einen stillen Verlust.
+
+#### ⚠ Und das ALTER war kein Argument — auch dort, wo es stimmte
+
+Die Reihenfolge der `jobid` (1 · 3 · 8 · 9) deckt sich hier mit der
+Entstehungsreihenfolge: `cron.jobid` kommt aus einer Sequenz, und eine
+Sequenz vergibt keine Nummer zweimal. **Die Vermutung „der mit der höheren
+Nummer ist der neuere" traf also zu.**
+
+> ⚠ **Und sie hätte trotzdem zur falschen Entscheidung geführt.** „Den
+> neueren behalten" war nicht deshalb falsch, weil das Alter falsch
+> bestimmt war, sondern weil **das Alter nichts über den Inhalt sagt.**
+
+**Ein richtig abgeleitetes Merkmal, das die Frage nicht beantwortet, ist
+gefährlicher als ein falsches** — es hält jeder Nachprüfung stand und führt
+trotzdem am Ziel vorbei. Dieselbe Familie wie der Filter auf einen Namen,
+der eine Schreibweise prüft statt der Sache.
+
+**Entschieden hat am Ende eine Messung des INHALTS:** die Länge des
+gespeicherten Befehls je Auftrag, gegen die Länge, die jede Fassung der
+Datei erzeugt.
+
+| `cron.job` | Datei |
+|---|---|
+| jobid 3 · **8319** Zeichen | die Fassung **mit** Wachstumsfrage (8157) |
+| jobid 9 · **4353** | `cron_waechter_nachlauf.sql` (4254) |
+| — | die Fassung vom 21.08.2026 (**4711**) — passt zu keinem |
+
+⚠ **Die Längen stimmen nicht auf das Zeichen** (Versatz 162 bzw. 99), und
+das ist kein Grund zu zweifeln: sie unterscheiden sich untereinander um das
+Doppelte. **Eine Messung muss nicht genau sein, um eindeutig zu sein** —
+sie muss nur die Alternativen sicher trennen.
 
 #### Was daraus folgt — drei Regeln
 
