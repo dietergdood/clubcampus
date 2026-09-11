@@ -62,7 +62,7 @@ select count(*)                                   as zeilen_gesamt,
 
 -- ─── 2 · WAS WEGGEHT, BEVOR ES WEGGEHT ────────────────────────────────────
 
-select s.sfv_match_id, s.datum, s.gegner,
+select s.sfv_match_id, s.date, s.gegner,
        count(*)                                    as zeilen,
        count(distinct e.zuletzt_synchronisiert)    as abrufe,
        min(e.zuletzt_synchronisiert)               as aeltester,
