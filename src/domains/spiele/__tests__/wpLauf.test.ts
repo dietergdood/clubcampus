@@ -154,7 +154,7 @@ describe("Aufstellungszeilen — die Zahl, die bis zum 11.09.2026 fehlte", () =>
       { sfv_team_id: "38301", gesendet: 1, wp: { ...okAntwort(1), aufstellung_zeilen: 0 }, fehler: null },
     ]);
     const m = laufMeldung("dev.fcherrliberg.ch", zahlen, undefined, {
-      zeilen: 17, rollen: { start: 11, eingewechselt: 4, nicht_eingesetzt: 2 },
+      zeilen: 17, rollen: { start: 11, eingewechselt: 4, nicht_eingesetzt: 2 }, je_spiel: { '4395750': 17 },
     });
     expect(m).toContain("17 gesendet");
     expect(m).toContain("0 geschrieben");
@@ -166,7 +166,7 @@ describe("Aufstellungszeilen — die Zahl, die bis zum 11.09.2026 fehlte", () =>
     const { zahlen } = fasseLauf([
       { sfv_team_id: "38301", gesendet: 1, wp: okAntwort(1), fehler: null },
     ]);
-    expect(laufMeldung("h", zahlen, undefined, { zeilen: 0, rollen: {} }))
+    expect(laufMeldung("h", zahlen, undefined, { zeilen: 0, rollen: {}, je_spiel: {} }))
       .toContain("Aufstellung 0 gesendet / 0 geschrieben");
   });
 
@@ -176,7 +176,7 @@ describe("Aufstellungszeilen — die Zahl, die bis zum 11.09.2026 fehlte", () =>
     ];
     const { zahlen } = fasseLauf(teile);
     const d = fuersProtokoll("h", zahlen, teile, undefined, {
-      zeilen: 17, rollen: { start: 11, eingewechselt: 4, nicht_eingesetzt: 2 },
+      zeilen: 17, rollen: { start: 11, eingewechselt: 4, nicht_eingesetzt: 2 }, je_spiel: { '4395750': 17 },
     });
     expect(d.aufstellung_zeilen).toBe(17);
     expect(d.gesendete_aufstellung_zeilen).toBe(17);
@@ -184,6 +184,9 @@ describe("Aufstellungszeilen — die Zahl, die bis zum 11.09.2026 fehlte", () =>
        entsteht `eingewechselt` bei uns überhaupt? Drei Zahlen, keine
        Person — deshalb darf sie ins Protokoll. */
     expect(d.gesendete_rollen).toEqual({ start: 11, eingewechselt: 4, nicht_eingesetzt: 2 });
+    /* ⚠ Je Spiel — die Summe beantwortet die Frage nicht mehr, sobald
+       sie an einem EINZELNEN Spiel gestellt wird. */
+    expect(d.gesendete_aufstellung_je_spiel).toEqual({ '4395750': 17 });
     expect((d.je_team as { aufstellung_zeilen: number }[])[0].aufstellung_zeilen).toBe(17);
   });
 });

@@ -4,7 +4,7 @@
  *
  * Plugin Name: ClubCampus Export
  * Description: Nimmt Spielplan, Verlauf und Ranglisten aus ClubCampus entgegen.
- * Version:     0.9.11
+ * Version:     0.9.12
  *
  * ⚠ ⚠  STAND 10.09.2026: DIESE DATEI **IST** DER EMPFAENGER  ⚠ ⚠
  *
@@ -141,6 +141,16 @@ const CC_ROUTE      = 'clubcampus/v1';
    `/status` fuer zwei verschiedene Fassungen dieselbe Zahl, und die eine
    Auskunft, die „laeuft drueben der neue Empfaenger?" beantworten koennte,
    beantwortet sie nicht mehr.
+
+   0.9.12 (11.09.2026): die Zaehlung auch JE SPIEL —
+   `aufstellung_je_spiel`, sfv_match_id => Zeilen.
+   ⚠ ⚠  ANLASS: die Summe beantwortet die Frage nicht mehr, sobald sie
+         an einem EINZELNEN Spiel gestellt wird. Bei 4395750 standen in
+         der ClubCampus-Datenbank neun Zeilen und in Beitrag #552 zwei —
+         ueber 46 Spiele summiert ist das unsichtbar.
+   ⚠     Der Schluessel ist die sfv_match_id aus der Nutzlast, nicht die
+         Beitrags-Id: nur sie laesst sich drueben gegen die eigene Zahl
+         halten. Eine Beitrags-Id kennt ClubCampus nicht.
 
    0.9.11 (11.09.2026): der Abgleich ZAEHLT die Aufstellungszeilen, die
    er geschrieben hat — `aufstellung_zeilen` und `aufstellung_spiele`, in
@@ -343,7 +353,7 @@ const CC_ROUTE      = 'clubcampus/v1';
    einander), `autoload` wird nach dem Schreiben geprueft und notfalls
    berichtigt, `/status` nennt Empfaenger, Version, Metaschluessel und die
    Team-Zuordnung. */
-const CC_VERSION    = '0.9.11';
+const CC_VERSION    = '0.9.12';
 const CC_TYP_SPIEL  = 'fch_spiel';
 const CC_TYP_TEAM   = 'fch_team';
 /* ⚠ DER SCHLUESSEL, AN DEM DIE GANZE ZUORDNUNG HAENGT — Meta am
@@ -1318,6 +1328,20 @@ function cc_schreibe_felder( int $post_id, array $spiel ): array {
 			if ( count( (array) $wert ) > 0 ) {
 				$GLOBALS['cc_aufstellung_spiele']++;
 			}
+			/* ⚠ ⚠ UND JE SPIEL, seit 0.9.12. Die Summe beantwortet die
+			   Frage nicht mehr, sobald sie an einem EINZELNEN Spiel
+			   gestellt wird: bei 4395750 standen in der ClubCampus-
+			   Datenbank neun Zeilen und in diesem Beitrag zwei. Ueber 46
+			   Spiele summiert ist das unsichtbar.
+
+			   ⚠ Der Schluessel ist die sfv_match_id aus der NUTZLAST,
+			   nicht die Beitrags-Id: nur sie laesst sich auf der anderen
+			   Seite gegen die eigene Zahl halten. Eine Beitrags-Id kennt
+			   ClubCampus nicht. */
+			$mid = (string) ( $spiel['sfv_match_id'] ?? '' );
+			if ( '' !== $mid ) {
+				$GLOBALS['cc_aufstellung_je_spiel'][ $mid ] = count( (array) $wert );
+			}
 		}
 	}
 	return $geschrieben;
@@ -1653,6 +1677,7 @@ function cc_route_spiele( WP_REST_Request $req ) {
 	   sind. */
 	$GLOBALS['cc_aufstellung_zeilen'] = 0;
 	$GLOBALS['cc_aufstellung_spiele'] = 0;
+	$GLOBALS['cc_aufstellung_je_spiel'] = array();
 
 	$vorhanden = cc_abgleich_kandidaten();
 	$teamKarte = cc_team_karte();
@@ -1839,6 +1864,7 @@ function cc_route_spiele( WP_REST_Request $req ) {
 	   Abwesenheit ist geraten. */
 	$erg['aufstellung_zeilen'] = (int) ( $GLOBALS['cc_aufstellung_zeilen'] ?? 0 );
 	$erg['aufstellung_spiele'] = (int) ( $GLOBALS['cc_aufstellung_spiele'] ?? 0 );
+	$erg['aufstellung_je_spiel'] = (array) ( $GLOBALS['cc_aufstellung_je_spiel'] ?? array() );
 
 	return new WP_REST_Response( $erg, 200 );
 }

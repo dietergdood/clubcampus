@@ -98,6 +98,68 @@ const json = (koerper: unknown, status = 200) =>
    genau der Fehler, den sie finden soll. */
 const PROBE_HOECHSTENS = 25;
 
+/** Wie viele Zeilen PostgREST hoechstens auf einmal herausgibt. */
+const SEITE = 1000;
+
+/**
+ * Eine Abfrage vollstaendig lesen — seitenweise, mit Zaehlprobe.
+ *
+ * ⚠ ⚠  ANLASS, 11.09.2026: `.in("spiel_id", …)` OHNE `range()` liefert
+ * hoechstens 1000 Zeilen. **PostgREST kuerzt still** — `error` ist null,
+ * `data` hat genau 1000 Eintraege, und nichts unterscheidet das von „es
+ * gibt genau 1000".
+ *
+ * Solange `spiel_aufstellung` unter tausend Zeilen lag, war es folgenlos.
+ * Der Nachhol-Lauf ueber 62 eingefrorene Spiele hat die Tabelle darueber
+ * geschoben — **und ab da fehlten Aufstellungen auf der Website, ohne
+ * dass irgendetwas fehlschlug.** Dieselbe Familie wie die 16 verlorenen
+ * Testdateien und wie `cat > datei`: es fehlt etwas, und nichts meldet es.
+ *
+ * ⚠ `order("id")` ist PFLICHT, nicht Kosmetik. Ohne feste Reihenfolge
+ * darf Postgres zwei Seiten verschieden sortieren — dann fehlen Zeilen in
+ * der Mitte und andere kommen doppelt. Ein Paginieren ohne `order` ist
+ * schlimmer als keines, weil es zufaellig meistens stimmt.
+ *
+ * ⚠ UND DIE ZAEHLPROBE GEHOERT DAZU. Paginieren allein behebt den Fehler
+ * und **verbirgt zugleich, dass es ihn gab** — die naechste Kuerzung
+ * (ein Gateway-Zeitlimit, eine Policy) saehe wieder aus wie eine
+ * Datenlage. Deshalb wird am Ende gegen `count: "exact"` gehalten und bei
+ * Abweichung geworfen: eine unvollstaendige Aufstellung auf einer
+ * oeffentlichen Seite ist schlimmer als ein Lauf, der abbricht.
+ */
+async function alleSeiten<T>(
+  wieviele: number,
+  seite: (von: number, bis: number) => PromiseLike<{ data: unknown; error: unknown }>,
+  zaehle: () => PromiseLike<{ count: number | null; error: unknown }>,
+  was: string,
+): Promise<T[]> {
+  if (!wieviele) return [];
+  const raus: T[] = [];
+  /* ⚠ Ein Deckel gegen die Endlosschleife. 200 Seiten sind 200 000
+     Zeilen — weit ueber allem, was dieses Portal je halten wird, und
+     trotzdem eine Grenze statt eines `while (true)`. */
+  for (let s = 0; s < 200; s++) {
+    const r = await seite(s * SEITE, s * SEITE + SEITE - 1);
+    if (r.error) {
+      throw new Error(`${was} nicht lesbar: ${(r.error as { message?: string }).message}`);
+    }
+    const teil = (r.data ?? []) as T[];
+    raus.push(...teil);
+    if (teil.length < SEITE) break;
+  }
+  const z = await zaehle();
+  if (z.error) {
+    throw new Error(`${was}: Zählprobe nicht möglich — `
+      + `${(z.error as { message?: string }).message}`);
+  }
+  if (z.count !== null && z.count !== raus.length) {
+    throw new Error(`${was}: ${raus.length} Zeilen gelesen, ${z.count} vorhanden `
+      + `— der Lauf wäre unvollständig und würde auf der Website wie eine `
+      + `Datenlage aussehen.`);
+  }
+  return raus;
+}
+
 /** Die gueltigen Aktionen — eine Liste, aus der die Pruefung UND die
     Fehlermeldung lesen. Zwei Orte koennten auseinanderlaufen. */
 const AKTIONEN = ["probe", "export", "bestand", "status", "ranglisten"];
@@ -483,10 +545,25 @@ async function sendeAnWordpress(
      auseinander, und dann ist nicht zu sagen, welche stimmt. */
   const zf = erg.zusammenfassung as Record<string, unknown>;
   const alsZahl = (k: string) => Number(zf[k] ?? 0) || 0;
+  /* ⚠ ⚠ JE SPIEL, NICHT NUR ALS SUMME — und gestern habe ich genau diesen
+     Zaehler als „Zaehler ohne Frage" abgelehnt. Die Frage ist inzwischen
+     da: bei 4395750 stehen in der Datenbank neun Zeilen und im
+     WordPress-Beitrag zwei. Bei einer Summe ueber 46 Spiele ist das
+     unsichtbar; je Spiel trennt es „2 gesendet / 2 geschrieben" (unser
+     Bau) von „9 gesendet / 2 geschrieben" (Empfaenger oder ACF).
+
+     ⚠ Nur Spiele MIT Aufstellung. Ein Spiel ohne ist keine Null, sondern
+     eine andere Aussage — die steht in `spiele_aufstellung_geleert`. */
+  const jeSpiel: Record<string, number> = {};
+  for (const s of erg.alle) {
+    const n = Array.isArray(s.aufstellung) ? s.aufstellung.length : 0;
+    if (n > 0) jeSpiel[String(s.sfv_match_id)] = n;
+  }
   const gesendet = {
     zeilen: alsZahl("aufstellung_zeilen_eigen") + alsZahl("aufstellung_zeilen_fremd"),
     rollen: (zf.aufstellung_rollen as Record<string, number>)
       ?? { start: 0, eingewechselt: 0, nicht_eingesetzt: 0 },
+    je_spiel: jeSpiel,
   };
   if (heimatlos.length) {
     zahlen.fehler.push(`${heimatlos.length} Spiel(e) ohne SFV-Teamnummer, nicht gesendet: `
@@ -959,13 +1036,17 @@ async function laufeProbe(
 
   /* ── Ereignisse, in einem Zug ────────────────────────────────────── */
   const spielIds = eigene.map((s) => String(s.id));
-  const eRes = spielIds.length
-    ? await db.from("spiel_ereignisse").select("*").in("spiel_id", spielIds)
-    : { data: [], error: null };
-  if (eRes.error) throw new Error(`Ereignisse nicht lesbar: ${eRes.error.message}`);
+  const eZeilen = await alleSeiten<EreignisZeile & { spiel_id: string }>(
+    spielIds.length,
+    (von, bis) => db.from("spiel_ereignisse").select("*")
+      .in("spiel_id", spielIds).order("id").range(von, bis),
+    () => db.from("spiel_ereignisse").select("id", { count: "exact", head: true })
+      .in("spiel_id", spielIds),
+    "Ereignisse",
+  );
 
   const proSpiel = new Map<string, EreignisZeile[]>();
-  for (const z of (eRes.data ?? []) as (EreignisZeile & { spiel_id: string })[]) {
+  for (const z of eZeilen) {
     const liste = proSpiel.get(z.spiel_id) ?? [];
     liste.push(z);
     proSpiel.set(z.spiel_id, liste);
@@ -976,19 +1057,22 @@ async function laufeProbe(
      Spalten, die nicht auf die Website gehoeren, und ein neues Feld
      reiste beim naechsten Mal stillschweigend mit. Genannt wird, was
      gebraucht wird — dieselbe Regel wie bei jeder Allowlist. */
-  const aRes = spielIds.length
-    ? await db.from("spiel_aufstellung")
-        .select("spiel_id, ist_eigener, sfv_person_id, name, rueckennr,"
-          + " position_name, von_minute, bis_minute, spielzeit, rolle_zuweisung_id")
-        .in("spiel_id", spielIds)
-    : { data: [], error: null };
   /* ⚠ `error` lesen, nicht nur `data`: eine gescheiterte Abfrage saehe
      sonst aus wie „es gibt keine Aufstellung" — und auf der Website
-     fehlte sie kommentarlos. */
-  if (aRes.error) throw new Error(`Aufstellung nicht lesbar: ${aRes.error.message}`);
+     fehlte sie kommentarlos. Erledigt alleSeiten(). */
+  const AUF_SPALTEN = "spiel_id, ist_eigener, sfv_person_id, name, rueckennr,"
+    + " position_name, von_minute, bis_minute, spielzeit, rolle_zuweisung_id";
+  const aufZeilenAlle = await alleSeiten<AufstellungQuelle & { spiel_id: string }>(
+    spielIds.length,
+    (von, bis) => db.from("spiel_aufstellung").select(AUF_SPALTEN)
+      .in("spiel_id", spielIds).order("id").range(von, bis),
+    () => db.from("spiel_aufstellung").select("id", { count: "exact", head: true })
+      .in("spiel_id", spielIds),
+    "Aufstellung",
+  );
 
   const aufProSpiel = new Map<string, AufstellungQuelle[]>();
-  for (const z of (aRes.data ?? []) as (AufstellungQuelle & { spiel_id: string })[]) {
+  for (const z of aufZeilenAlle) {
     const liste = aufProSpiel.get(z.spiel_id) ?? [];
     liste.push(z);
     aufProSpiel.set(z.spiel_id, liste);
@@ -1001,8 +1085,8 @@ async function laufeProbe(
 
      Sie kostet keinen Abruf: die Aufstellung ist ohnehin geladen. */
   const bruecke = baueNummernBruecke(
-    (aRes.data ?? []) as { spiel_id: string; ist_eigener: boolean;
-                           rueckennr: number | null; name: string | null }[],
+    aufZeilenAlle as unknown as { spiel_id: string; ist_eigener: boolean;
+                                  rueckennr: number | null; name: string | null }[],
   );
   const brueckeZaehler = { ueber_nummer_aufgeloest: 0 };
 

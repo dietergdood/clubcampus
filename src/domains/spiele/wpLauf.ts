@@ -251,6 +251,23 @@ export function fasseLauf(teile: TeilErgebnis[]): { status: LaufStatus; zahlen: 
 export interface GesendeteAufstellung {
   zeilen: number;
   rollen: Record<string, number>;
+  /**
+   * Aufstellungszeilen je Spiel, `sfv_match_id` → Anzahl.
+   *
+   * ⚠ ⚠ DIE GESAMTZAHL BEANTWORTET DIE FRAGE NICHT MEHR, sobald sie an
+   * einem einzelnen Spiel gestellt wird. Am 11.09.2026 stand bei 4395750
+   * in der Datenbank neun und im WordPress-Beitrag zwei — bei einer
+   * Summe über 46 Spiele ist das unsichtbar.
+   *
+   * Gestern habe ich diesen Zähler als „Zähler ohne Frage" abgelehnt.
+   * **Die Frage ist inzwischen da**, und sie lautet genau: liegt es beim
+   * Senden (2 gesendet / 2 geschrieben) oder beim Schreiben (9 / 2)?
+   *
+   * ⚠ Nur Spiele mit Aufstellung stehen darin — ein Spiel ohne ist keine
+   * Null, sondern eine andere Aussage („der Verband führt keine"), und
+   * die steht schon in `spiele_aufstellung_geleert`.
+   */
+  je_spiel: Record<string, number>;
 }
 
 export function laufMeldung(
@@ -322,6 +339,8 @@ export function fuersProtokoll(
     aufstellung_zeilen: zahlen.aufstellung_zeilen,
     gesendete_aufstellung_zeilen: gesendet?.zeilen ?? null,
     gesendete_rollen: gesendet?.rollen ?? null,
+    /* Nur Spiele mit Aufstellung. Siehe GesendeteAufstellung.je_spiel. */
+    gesendete_aufstellung_je_spiel: gesendet?.je_spiel ?? null,
     ohne_team: zahlen.ohne_team,
     doppelte_teams: zahlen.doppelte_teams,
     moegliche_dubletten: zahlen.moegliche_dubletten,

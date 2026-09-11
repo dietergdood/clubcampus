@@ -240,6 +240,7 @@ const REGELN = [
        gescheitert sind — ein Zaehler, der mehr behauptet als er misst,
        ist gefaehrlicher als keiner (05.09.2026, die 431 Klarnamen). */
     frage: "cc_schreibe_felder zaehlt die geschriebenen Aufstellungszeilen",
+    // (je_spiel wird von der Regel darunter geprueft)
     pruefe: (b) => {
       const f = b.funktionen.cc_schreibe_felder;
       if (!f) return ["(Funktion fehlt — die Pruefung sieht die falsche Datei an)"];
@@ -252,6 +253,21 @@ const REGELN = [
         ? [] : ["cc_aufstellung_zeilen wird in cc_schreibe_felder nicht gefuehrt"];
     },
     kontrolle: "<?php function cc_schreibe_felder() { update_field('a', 1, 2); }",
+    erwarteImKontrollfall: 1,
+  },
+  {
+    /* ⚠ Die Summe allein reicht nicht: bei 4395750 standen neun Zeilen
+       in der Datenbank und zwei im Beitrag, und ueber 46 Spiele summiert
+       ist das unsichtbar. Der Zaehler je Spiel ist die Zusage, die den
+       Fall ueberhaupt aufloesbar macht. */
+    frage: "cc_schreibe_felder zaehlt die Aufstellung auch je Spiel",
+    pruefe: (b) => {
+      const f = b.funktionen.cc_schreibe_felder;
+      if (!f) return ["(Funktion fehlt — falsche Datei)"];
+      return (f.texte ?? []).includes("cc_aufstellung_je_spiel")
+        ? [] : ["cc_aufstellung_je_spiel wird nicht gefuehrt"];
+    },
+    kontrolle: "<?php function cc_schreibe_felder() { update_field(1,2,3); }",
     erwarteImKontrollfall: 1,
   },
   {
