@@ -63,6 +63,15 @@ export type WpVerlaufArt = "tor" | "gelb" | "gelbrot" | "rot" | "wechsel";
 export interface WpVerlaufZeile {
   /** Text, nicht Zahl — damit „45+2" hineinpasst. */
   minute: string;
+  /**
+   * Die Rückennummer des Menschen, um den es in dieser Zeile geht —
+   * **beide Seiten**, anders als `sfv_person_id`.
+   *
+   * ⚠ Sie ist der einzige Weg, ein Gegnertor einem SPIELER statt einem
+   * VEREIN zuzuordnen. Entscheid B verbietet Name und Personennummer,
+   * nicht die Nummer: sie ist eine Beschriftung auf einem Trikot.
+   */
+  nummer: number | null;
   art: WpVerlaufArt;
   seite: "heim" | "gast";
   text: string;
@@ -408,10 +417,39 @@ export function bildeVerlauf(
          statt sie voraussetzen zu muessen. */
       sfv_person_id: wir && e.sfv_person_id != null
         ? String(e.sfv_person_id) : null,
-      /* ⚠ Nur bei einem Wechsel und nur bei uns. Bei einem Gegnerwechsel
-         bleibt sie leer — die Nummer steht dort an der
-         Aufstellungszeile, und zwei Wahrheiten waeren eine zu viel. */
-      ein_nummer: wir && art === "wechsel" ? (e.ein_rueckennr ?? null) : null,
+      /* ⚠ ⚠  DIE RUECKENNUMMER DES HANDELNDEN — BEIDE SEITEN, seit dem
+         11.09.2026.
+
+         Ohne sie kann die Website ein Gegnertor nur dem VEREIN zuordnen:
+         „FC Wagen RJ" statt „Nr. 10". Der Name steht im Text, aber ihn
+         zurueckzuparsen waere derselbe Umweg, den dieses Papier zweimal
+         als Fehler fuehrt.
+
+         ⚠ ENTSCHEID B ERLAUBT SIE AUSDRUECKLICH. Verboten sind Name und
+         Personennummer — erzwungen durch
+         spiel_ereignisse_fremde_anonym_check, der genau diese zwei
+         Spalten nennt und die Rueckennummer NICHT. Sie bleibt seit dem
+         10.09.2026 bewusst stehen, fuer die Symbole an der
+         Gegneraufstellung. **Eine Nummer ist eine Beschriftung auf einem
+         Trikot, kein Personendatum.** */
+      nummer: e.rueckennr ?? null,
+      /* ⚠ ⚠  EBENFALLS BEIDE SEITEN, seit dem 11.09.2026.
+
+         Hier stand: „nur bei uns — die Nummer steht beim Gegner an der
+         Aufstellungszeile, und zwei Wahrheiten waeren eine zu viel."
+
+         **Die Begruendung traegt nicht mehr**, und zwar aus einem
+         gemessenen Grund: bei 4395750 sagt die Aufstellungszeile des
+         Gegners 1/70/70 — also Startelf —, waehrend der Verlauf denselben
+         Spieler in der 40. einwechselt. **Es gibt dort keine zweite
+         Wahrheit, die man verdoppeln koennte; es gibt zwei, die sich
+         widersprechen.** Wer die eine weglaesst, entscheidet den
+         Widerspruch stillschweigend zugunsten der anderen.
+
+         Der Text trug die Nummer ohnehin schon („ersetzt durch Nr. 9") —
+         neu ist nur, dass die Website sie nicht mehr aus ihm
+         herausschneiden muss. */
+      ein_nummer: art === "wechsel" ? (e.ein_rueckennr ?? null) : null,
     });
   }
 
@@ -1061,6 +1099,54 @@ export interface AufstellungQuelle {
   bis_minute: number | null;
   spielzeit: number | null;
   rolle_zuweisung_id: number | null;
+}
+
+/**
+ * Der Verlauf sagt „eingewechselt", die Aufstellung sagt „von Anfang an".
+ *
+ * ⚠ ⚠ EINE ANDERE FRAGE ALS `aufstellung_widerspruch`, und die
+ * Verwechslung liegt nahe:
+ *
+ * | Zähler | vergleicht |
+ * |---|---|
+ * | `aufstellung_widerspruch` | `rolle_zuweisung` **gegen die Minuten**, innerhalb EINER Zeile |
+ * | `verlauf_gegen_aufstellung` | **`/events` gegen `/players`**, zwei Endpunkte |
+ *
+ * **Bei 4395750 hätte der erste NICHT angeschlagen** — Nr. 9 trug
+ * Zuweisung „-" und 1/70/70, und beide sagen „start". Gefunden wurde es
+ * über ein Bild auf der Website: die Gegneraufstellung zeigte keine
+ * Wechselpfeile, obwohl der Verlauf zwei Gegnerwechsel in der 40. nennt.
+ *
+ * > **Die Quelle ist uneinig, nicht wir.** Aus 1/70/70 Startelf abzuleiten
+ * > ist richtig; falsch wäre nur, es nicht zu zählen.
+ *
+ * ⚠ DIE SEITE WIRD GEPRÜFT, nicht nur die Nummer. Ein gegnerisches
+ * Wechselereignis wird gegen die GEGNERISCHEN Aufstellungszeilen
+ * gehalten — dieselbe Grenze wie bei der Nummern-Brücke, und dort hat ihr
+ * Fehlen am 11.09.2026 unsere Namen auf die Gegnerseite gesetzt.
+ *
+ * ⚠ Und gezählt wird nur, wo es eine Zeile GIBT. Fehlt sie, ist das eine
+ * andere Sache (`rein_ohne_zeile`) und keine Uneinigkeit.
+ */
+export function zaehleWechselWiderspruch(
+  ereignisse: { typ_id: number; subtyp_id: number | null; ist_eigener: boolean;
+                ein_rueckennr: number | null }[],
+  aufstellung: AufstellungQuelle[],
+): { eigen: number; fremd: number } {
+  const raus = { eigen: 0, fremd: 0 };
+  for (const e of ereignisse) {
+    if (e.typ_id !== TYP_WECHSEL || e.ein_rueckennr == null) continue;
+    const zeile = aufstellung.find(
+      (a) => a.ist_eigener === e.ist_eigener && a.rueckennr === e.ein_rueckennr,
+    );
+    if (!zeile) continue;
+    /* Eingewechselt heisst `von_minute > 1`. Steht dort 1 oder 0, sagt die
+       Aufstellung etwas anderes als der Verlauf. */
+    if (zeile.von_minute != null && zeile.von_minute <= 1) {
+      if (e.ist_eigener) raus.eigen += 1; else raus.fremd += 1;
+    }
+  }
+  return raus;
 }
 
 export interface WpAufstellungZeile {

@@ -17,7 +17,7 @@ import {
   wpDatum, wpZeit, zerlegeResultat, bildeStatus,
   verlaufArt, verlaufMinute, bildeVerlauf, bildeSpiel, zaehleVerlaufNamen,
   TYP_WECHSEL, TYP_ASSIST, SUBTYP_ZWEITE_VERWARNUNG,
-  hatDoppelabstand, sammleMarken, markeSchluessel,
+  hatDoppelabstand, sammleMarken, markeSchluessel, zaehleWechselWiderspruch,
   spielerAnzeige, rolleAus, ROLLE_ERSATZ_ID, ROLLE_KEIN_EINSATZ_ID,
   ROLLE_CAPTAIN_ID, baueAufstellung, leereAufstellungZahlen,
 } from "../wpNutzlast.ts";
@@ -1082,6 +1082,76 @@ describe("baueNummernBruecke", () => {
   });
 });
 
+describe("zaehleWechselWiderspruch — Verlauf gegen Aufstellung", () => {
+  /* ⚠ ⚠ EINE ANDERE FRAGE ALS aufstellung_widerspruch. Der misst
+     rolle_zuweisung gegen die Minuten INNERHALB einer Zeile; dieser misst
+     /events gegen /players, also zwei Endpunkte gegeneinander.
+
+     Bei 4395750 hätte der erste NICHT angeschlagen: Nr. 9 trug Zuweisung
+     „-" und 1/70/70 — beide sagen Startelf. Gefunden wurde es über ein
+     Bild auf der Website. */
+  const wechselEreignis = (eigen: boolean, nr: number) =>
+    ({ typ_id: 2, subtyp_id: null, ist_eigener: eigen, ein_rueckennr: nr });
+  const zeile = (eigen: boolean, nr: number, von: number | null) =>
+    ({ ist_eigener: eigen, sfv_person_id: null, name: null, rueckennr: nr,
+       position_name: null, von_minute: von, bis_minute: 90,
+       spielzeit: 90, rolle_zuweisung_id: 0 });
+
+  it("⚠⚠ der Fall von 4395750: Verlauf sagt eingewechselt, Zeile sagt 1", () => {
+    const r = zaehleWechselWiderspruch(
+      [wechselEreignis(false, 9)], [zeile(false, 9, 1)],
+    );
+    expect(r).toEqual({ eigen: 0, fremd: 1 });
+  });
+
+  it("stimmt die Zeile überein, ist es kein Widerspruch", () => {
+    const r = zaehleWechselWiderspruch(
+      [wechselEreignis(false, 9)], [zeile(false, 9, 40)],
+    );
+    expect(r).toEqual({ eigen: 0, fremd: 0 });
+  });
+
+  it("zählt eigene und fremde getrennt", () => {
+    const r = zaehleWechselWiderspruch(
+      [wechselEreignis(true, 5), wechselEreignis(false, 9)],
+      [zeile(true, 5, 1), zeile(false, 9, 1)],
+    );
+    expect(r).toEqual({ eigen: 1, fremd: 1 });
+  });
+
+  it("⚠⚠ prüft die SEITE, nicht nur die Nummer", () => {
+    /* Dieselbe Grenze wie bei der Nummern-Brücke — dort hat ihr Fehlen am
+       11.09.2026 unsere Namen auf die Gegnerseite gesetzt. Ein
+       gegnerisches Ereignis darf sich nicht an unserer Zeile messen. */
+    const r = zaehleWechselWiderspruch(
+      [wechselEreignis(false, 9)], [zeile(true, 9, 1)],
+    );
+    expect(r).toEqual({ eigen: 0, fremd: 0 });
+  });
+
+  it("ohne Aufstellungszeile wird nicht gezählt", () => {
+    /* Eine fehlende Zeile ist eine andere Sache und keine Uneinigkeit. */
+    const r = zaehleWechselWiderspruch([wechselEreignis(false, 9)], []);
+    expect(r).toEqual({ eigen: 0, fremd: 0 });
+  });
+
+  it("ein Tor ist kein Wechsel", () => {
+    const r = zaehleWechselWiderspruch(
+      [{ typ_id: 1, subtyp_id: null, ist_eigener: true, ein_rueckennr: 9 }],
+      [zeile(true, 9, 1)],
+    );
+    expect(r).toEqual({ eigen: 0, fremd: 0 });
+  });
+
+  it("eine Zeile ohne Minuten wird nicht gezählt", () => {
+    /* Sie sagt gar nichts — das ist ohne_minuten, nicht Widerspruch. */
+    const r = zaehleWechselWiderspruch(
+      [wechselEreignis(false, 9)], [zeile(false, 9, null)],
+    );
+    expect(r).toEqual({ eigen: 0, fremd: 0 });
+  });
+});
+
 describe("beschreibeGewechselten mit Brücke", () => {
   const bruecke = new Map([["s1:9", "Sara Bösch"]]);
   /* ⚠ ⚠  `ist_eigener` STAND BIS ZUM 11.09.2026 IN KEINEM DIESER FÄLLE —
@@ -1210,13 +1280,51 @@ describe("bildeVerlauf — ein_nummer", () => {
     expect(z.text).toContain("Nr. 21");
   });
 
-  it("⚠ bei einem Gegnerwechsel bleibt sie leer", () => {
+  it("⚠⚠ bei einem Gegnerwechsel geht sie MIT — umgedreht am 11.09.2026", () => {
+    /* ⚠ ⚠ DIESER FALL HIELT DEN GEGENTEILIGEN ENTSCHEID FEST und ist beim
+       Umdrehen von selbst rot geworden — genau wofür er da war.
+
+       Die alte Begründung lautete: „die Nummer steht beim Gegner an der
+       Aufstellungszeile, und zwei Wahrheiten wären eine zu viel."
+
+       **Sie trägt nicht mehr, und zwar aus einem gemessenen Grund.** Bei
+       4395750 sagt die Gegner-Aufstellungszeile 1/70/70 — Startelf —,
+       während der Verlauf denselben Spieler in der 40. einwechselt. **Es
+       gibt dort keine zweite Wahrheit, die man verdoppeln könnte; es gibt
+       zwei, die sich widersprechen.** Wer die eine weglässt, entscheidet
+       den Widerspruch stillschweigend zugunsten der anderen.
+
+       ⚠ Entscheid B bleibt unberührt: sfv_person_id ist weiterhin null,
+       der Name ebenfalls. Eine Rückennummer ist eine Beschriftung auf
+       einem Trikot, kein Personendatum — und der CHECK in der Datenbank
+       nennt genau die zwei anderen Spalten. */
     const [z] = bildeVerlauf(
       [wechsel({ ist_eigener: false, sfv_person_id: null,
                  ein_sfv_person_id: null, gegner_club_name: "FC Uster" })],
       true, new Map(), "FC Herrliberg",
     );
-    expect(z.ein_nummer).toBeNull();
+    expect(z.ein_nummer).toBe(21);
+    /* Die Grenze, die NICHT gefallen ist. */
+    expect(z.sfv_person_id).toBeNull();
+  });
+
+  it("⚠ die Nummer des Handelnden geht bei BEIDEN Seiten mit", () => {
+    /* Ohne sie kann die Website ein Gegnertor nur dem VEREIN zuordnen —
+       „FC Uster" statt „Nr. 7". Der Name steht im Text; ihn
+       zurückzuparsen wäre der Umweg, den dieses Projekt zweimal als
+       Fehler führt. */
+    const [eigen] = bildeVerlauf([wechsel({ rueckennr: 7 })],
+      true, new Map(), "FC Herrliberg");
+    expect(eigen.nummer).toBe(7);
+
+    const [fremd] = bildeVerlauf(
+      [wechsel({ ist_eigener: false, sfv_person_id: null,
+                 ein_sfv_person_id: null, rueckennr: 7,
+                 gegner_club_name: "FC Uster" })],
+      true, new Map(), "FC Herrliberg",
+    );
+    expect(fremd.nummer).toBe(7);
+    expect(fremd.sfv_person_id).toBeNull();
   });
 
   it("⚠ bei einem Tor bleibt sie leer — sie gehört zum Wechsel", () => {

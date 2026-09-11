@@ -59,6 +59,7 @@ import type { EreignisZeile } from "../../../src/domains/spiele/matchdatenAnzeig
 import {
   bildeSpiel, zaehleVerlaufNamen, hatDoppelabstand,
   baueAufstellung, leereAufstellungZahlen, sammleMarken,
+  zaehleWechselWiderspruch,
 } from "../../../src/domains/spiele/wpNutzlast.ts";
 /* ⚠ Der Zeitraum ist RECHNUNG, keine Zusage — er gehoert dorthin, wo tsc
    und vitest ihn lesen koennen. Diese Datei importiert von esm.sh und wird
@@ -1163,6 +1164,19 @@ async function laufeProbe(
      Deutung einer Abwesenheit ist geraten. Am 10.09.2026 achtmal an einem
      Tag passiert. */
   const aufZahlen = leereAufstellungZahlen();
+  /* ⚠ ⚠  VERLAUF GEGEN AUFSTELLUNG — eine ANDERE Frage als
+     `aufstellung_widerspruch`, und die Verwechslung liegt nahe:
+
+       aufstellung_widerspruch   rolle_zuweisung gegen die Minuten,
+                                 innerhalb EINER Zeile
+       verlauf_gegen_aufstellung /events gegen /players, zwei Endpunkte
+
+     Bei 4395750 hätte der erste NICHT angeschlagen — Nr. 9 trug Zuweisung
+     „-" und 1/70/70, und beide sagen Startelf. Der Verlauf wechselt
+     denselben Spieler in der 40. ein. **Gefunden wurde es über ein Bild
+     auf der Website**, weil die Gegneraufstellung keine Wechselpfeile
+     zeigte — und nicht über eine Zahl. */
+  const wechselWiderspruch = { eigen: 0, fremd: 0 };
   let spieleMitAufstellung = 0;
   /* Geholt, aber der Verband fuehrt keine Aufstellung — die Zeilen, die
      drueben ausdruecklich geleert werden. */
@@ -1210,6 +1224,9 @@ async function laufeProbe(
         aufZeilen, marken.je_spieler, spiel.heim_auswaerts === "heim",
         namen, aufZahlen,
       );
+      const ww = zaehleWechselWiderspruch(ereignisse, aufZeilen);
+      wechselWiderspruch.eigen += ww.eigen;
+      wechselWiderspruch.fremd += ww.fremd;
     } else if (s.matchdaten_geholt_am) {
       /* ⚠ ⚠  DIE AUSDRUECKLICH LEERE LISTE — Entscheid Didi, 10.09.2026.
 
@@ -1294,6 +1311,11 @@ async function laufeProbe(
          der Messung vom 10.09.2026: mindestens 37. Weicht der Wert stark
          ab, ist die Ableitungsregel falsch und nicht die Quelle. */
       aufstellung_widerspruch: aufZahlen.widerspruch,
+      /* ⚠ Beide Seiten getrennt, beide immer da. Die Gegnerseite ist seit
+         Entscheid B genauso Bestand wie unsere — und bis zum 11.09.2026
+         wurde sie von keinem Zähler gegen den Verlauf gehalten. */
+      verlauf_gegen_aufstellung_eigen: wechselWiderspruch.eigen,
+      verlauf_gegen_aufstellung_fremd: wechselWiderspruch.fremd,
       /* ⚠ Bleibt gezaehlt, AUCH wenn korrigiert wurde. Die Korrektur
          macht den Befund unsichtbar, nicht ungeschehen. Heute: 1. */
       aufstellung_unplausibel: aufZahlen.unplausibel,

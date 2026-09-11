@@ -4,7 +4,7 @@
  *
  * Plugin Name: ClubCampus Export
  * Description: Nimmt Spielplan, Verlauf und Ranglisten aus ClubCampus entgegen.
- * Version:     0.9.12
+ * Version:     0.9.13
  *
  * ⚠ ⚠  STAND 10.09.2026: DIESE DATEI **IST** DER EMPFAENGER  ⚠ ⚠
  *
@@ -353,7 +353,7 @@ const CC_ROUTE      = 'clubcampus/v1';
    einander), `autoload` wird nach dem Schreiben geprueft und notfalls
    berichtigt, `/status` nennt Empfaenger, Version, Metaschluessel und die
    Team-Zuordnung. */
-const CC_VERSION    = '0.9.12';
+const CC_VERSION    = '0.9.13';
 const CC_TYP_SPIEL  = 'fch_spiel';
 const CC_TYP_TEAM   = 'fch_team';
 /* ⚠ DER SCHLUESSEL, AN DEM DIE GANZE ZUORDNUNG HAENGT — Meta am
@@ -559,6 +559,11 @@ const CC_VERLAUF_FELDER = array(
 	   der naechste Leser genau diese Frage stellen wird. */
 	'sfv_person_id',
 	'ein_nummer',
+	/* ⚠ Seit 0.9.13: die Rueckennummer des Handelnden, BEIDE Seiten.
+	   Ohne sie kann die Website ein Gegnertor nur dem Verein zuordnen —
+	   „FC Wagen RJ" statt „Nr. 10". Entscheid B verbietet Name und
+	   Personennummer, nicht die Nummer. */
+	'nummer',
 );
 
 /**
