@@ -3768,6 +3768,97 @@ Spiele in die sieben Tage — ein Samstag mit zwölf Partien genügt —,
 altert der Rest des Fensters heraus, ohne je nachgeholt worden zu sein.
 **Ungemessen.**
 
+### ⚠⚠ POSTGREST KÜRZT BEI 1000 ZEILEN — still, und ein AUFRÄUMEN hat es ausgelöst
+
+Gemessen am 11.09.2026:
+
+| Tabelle | Zeilen |
+|---|---|
+| `spiel_aufstellung` | **2282** |
+| `spiel_ereignisse` | **1051** |
+
+**`.in("spiel_id", …)` ohne `range()` gibt höchstens 1000 Zeilen heraus.**
+`error` ist `null`, `data` hat genau 1000 Einträge — **nichts unterscheidet
+das von „es gibt genau 1000".** Auf der Website fehlten daraufhin
+Aufstellungszeilen, ohne dass irgendetwas fehlschlug.
+
+#### ⚠⚠ DER BITTERSTE TEIL: DIE REPARATUR HAT DEN FEHLER AUSGELÖST
+
+**Die Grenze war jahrelang folgenlos, weil der Bestand darunter lag.**
+Ausgelöst hat sie der Nachhol-Lauf über die **62 eingefrorenen Spiele** —
+also genau das Aufräumen eines anderen Defekts, in derselben Nacht.
+
+> **Eine stille Grenze ist keine Bombe mit Zünder, sondern eine mit
+> Wasserstand.** Sie tut nichts, bis jemand etwas hineingiesst — und wer
+> giesst, ist meistens derjenige, der gerade etwas in Ordnung bringt.
+
+⚠ **Und deshalb ist „es lief doch bisher" kein Argument.** Es lief, weil
+die Tabelle klein war. Jede Zeile, die dazukommt, bringt den Tag näher —
+und der Tag fällt mit einer Änderung zusammen, die aus einem *anderen*
+Grund gemacht wurde. **Die Ursache und der Auslöser liegen dann so weit
+auseinander, dass niemand sie zusammenbringt.**
+
+Hier waren es Stunden, und trotzdem hat es drei Untersuchungen gekostet.
+
+#### Die Bauart, die dagegen hilft — und ihre zwei Hälften
+
+```ts
+.order("id").range(von, bis)          // seitenweise
+… und am Ende gegen count: "exact"    // Zählprobe
+```
+
+**1 · `order("id")` ist Pflicht, nicht Kosmetik.**
+
+> **Paginieren ohne Reihenfolge ist schlimmer als keines, weil es zufällig
+> meistens stimmt.**
+
+Ohne feste Sortierung darf Postgres zwei Seiten verschieden anordnen —
+dann fehlen Zeilen in der Mitte und andere kommen doppelt. Ein Fehler, der
+von der Ausführungsreihenfolge abhängt, tritt beim Prüfen nicht auf und im
+Betrieb sporadisch; **er wird nicht gesucht, weil er sich nicht
+reproduzieren lässt.** Dieselbe Familie wie ACFs Namenssuche und wie die
+verlorenen Testdateien unter Last.
+
+**2 · Bei Abweichung wird GEWORFEN, nicht still repariert.**
+
+> **Paginieren allein behebt den Fehler und verbirgt zugleich, dass es ihn
+> gab.** Die nächste Kürzung — ein Gateway-Zeitlimit, eine Policy, ein
+> Netzwerkfehler mitten in der Schleife — sähe wieder aus wie eine
+> Datenlage.
+
+Eine unvollständige Aufstellung auf einer öffentlichen Seite ist schlimmer
+als ein Lauf, der abbricht. Deshalb hält `alleSeiten()` am Ende gegen
+`count: "exact"` und wirft bei Ungleichheit. **Eine Aufteilung, die
+aufgehen MUSS, prüft sich selbst.**
+
+#### ⚠ 83 weitere Lesestellen ohne Begrenzung — gemessen, nicht geschätzt
+
+Über den TypeScript-Syntaxbaum gezählt (ein Regex zählte Kommentare und
+umgebrochene Ketten falsch): **83 Stellen über 26 Tabellen** lesen ohne
+`range`, `limit`, `single`, `maybeSingle` oder `head: true`.
+
+⚠ **Das sind KEINE 83 Defekte** — dieselbe Warnung wie bei den 758
+Lint-Warnungen und den 84 Schreibstellen: `api_verbindungen` hat eine
+Handvoll Zeilen und wird nie wachsen. **Die Frage ist nicht „liest es
+ungepagt?", sondern „wächst diese Tabelle auf tausend zu?"**
+
+| Lage | Beispiel |
+|---|---|
+| **darüber** | `spiel_aufstellung` 2282 · `spiel_ereignisse` 1051 |
+| **nah dran** | ⚠ `personen` — die Mitgliederliste würde still Mitglieder verlieren |
+| unbedenklich | `api_verbindungen`, `mitgliedtypen`, `personenarten`, `portal_funktionen` |
+
+⚠ **Die zwei Storage-Buckets** (`mitglieder-fotos`, `sfv-logos`) stehen in
+derselben Liste und haben eine **eigene** Grenze — `storage.list()` gibt
+standardmässig 100 Objekte heraus, nicht 1000. Wer hier nur an PostgREST
+denkt, prüft die falsche Zahl.
+
+**Zum Wiederholen:** das Messskript liegt nicht im Repo (es ist eine
+Bestandsaufnahme, kein Prüfmittel). Es hängt am `from("…")`-Aufruf und
+läuft von dort in der Kette nach aussen; schreibende Ketten (`insert`,
+`update`, `upsert`, `delete`, `rpc`) zählen nicht mit.
+
+
 ### ⚠⚠ KURZE AUFSTELLUNGEN SIND KEINE LÜCKE — es ist das SPIELFORMAT
 
 **Die Auflösung von zwei Tagen Suche, gemessen am 11.09.2026 über alle
@@ -4853,6 +4944,20 @@ mit Datum:
 | daraus gebaut | `/bench` — **ein zusätzlicher Abruf je Spiel**, ein Viertel aller Matchdaten-Aufrufe |
 | **10.09., Abend** | `/players` **führt die Bank mit** (7 von 20 eigenen Spielern tragen dort „Ersatz") |
 | und der Beitrag von `/bench`, gemessen | **20 Personen, die `/players` nicht hat — alle „Trainer/in", kein einziger Spieler** |
+
+> ⚠ **NACHTRAG 11.09.2026, belegt am FVRZ-Spielbericht:** bei den
+> Senioren sind Trainer **regelmässig zugleich Spieler** — an Senioren
+> 50+ gemessen, wo Lars Haussmann (Ersatz) und Stefan Planzer (Captain)
+> beides sind.
+>
+> **Das erklärt nachträglich, warum `/bench` Personen lieferte, die auch
+> in `/players` standen** — es war kein Fehler des Endpunkts, sondern der
+> Normalfall dieser Kategorie.
+>
+> ⚠ Und es schärft den Grund für den Ausbau: `/bench` trug nicht „20
+> fehlende Personen" bei, sondern **20 Doppelrollen ohne Rückennummer
+> und ohne Position** — also weniger über dieselben Menschen, als
+> `/players` ohnehin schon wusste.
 
 ⚠ **Der Fehlschluss ist der Kern, nicht der Abruf.** Die 207 messen
 **fehlende NAMEN**, nicht **fehlende ZEILEN**. Ich habe eine Messung über
