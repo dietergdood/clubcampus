@@ -414,8 +414,11 @@ describe("waehleKandidaten", () => {
       s("aeltest", "2026-06-01", "2026-05-01T20:00:00Z"),
       s("juengst", "2026-06-01", "2026-08-01T20:00:00Z"),
     ], jetzt, 10);
-    expect(w.spiele.map((x) => x.id)).toEqual(["aeltest", "mitte"]);
-    expect(w.alt).toBe(2);
+    /* ⚠ NACHLAUF_PLAETZE ist ein MINDESTMASS, keine Obergrenze: braucht
+       das Fenster die Plaetze nicht, nimmt der Nachlauf sie. Die
+       Reihenfolge ist das Gepruefte — das aelteste zuerst. */
+    expect(w.spiele.map((x) => x.id)).toEqual(["aeltest", "mitte", "juengst"]);
+    expect(w.alt).toBe(3);
   });
 
   it("⚠⚠ der Nachlauf bekommt seine Plaetze auch bei vollem Fenster", () => {
@@ -467,6 +470,41 @@ describe("waehleKandidaten", () => {
        nichts zu holen. */
     expect(waehleKandidaten([s("intern", "2026-08-18", null, null)], jetzt, 10)
       .spiele).toHaveLength(0);
+  });
+
+it("⚠⚠ ein AUS DEM FENSTER GEFALLENES Spiel faellt nicht durch", () => {
+    /* ⚠ ⚠ DIE DRITTE LUECKE, gemessen am 11.09.2026 an einer Zahl, die
+       nicht stimmen konnte: `aelteste_holung` stand bei 143 Stunden,
+       obwohl 15 Stunden vorher alles frisch geholt worden war.
+
+       Beim ersten Bau war `alt` auf „geholt UND NICHT im Fenster"
+       eingeschraenkt. Das Fenster wird nach DATUM sortiert und bekommt
+       nur die uebrigen Plaetze — die aeltesten Fensterspiele fallen als
+       erste heraus, und die waren dann in KEINEM Topf: nicht im Fenster
+       (kein Platz), nicht in `alt` (sie SIND im Fenster).
+
+       Jetzt ist `alt` ein Sicherheitsnetz ueber alles Geholte. */
+    const heute = "2026-08-19";
+    const viele = Array.from({ length: 20 }, (_, i) =>
+      s(`f${i}`, heute, `2026-08-19T${String(10 + (i % 10)).padStart(2, "0")}:00:00Z`));
+    /* Dieses steht im Fenster und wurde am laengsten nicht geholt. */
+    const vergessen = s("vergessen", "2026-08-15", "2026-08-13T01:00:00Z");
+    const w = waehleKandidaten([...viele, vergessen], jetzt, 12);
+    expect(w.spiele.map((x) => x.id)).toContain("vergessen");
+    expect(w.alt).toBeGreaterThan(0);
+  });
+
+  it("⚠ ein Spiel wird nie zweimal geholt, auch wenn beide Toepfe es nennen", () => {
+    /* Seit `alt` ueber alles Geholte geht, koennen sich die Toepfe
+       ueberschneiden. Ohne Entdoppelung: vier Abrufe umsonst, und die
+       drei Zahlen gingen nicht mehr auf. */
+    const w = waehleKandidaten([
+      s("a", "2026-08-18", "2026-08-01T10:00:00Z"),
+      s("b", "2026-08-17", "2026-08-02T10:00:00Z"),
+    ], jetzt, 12);
+    const ids = w.spiele.map((x) => x.id);
+    expect(new Set(ids).size).toBe(ids.length);
+    expect(w.neu + w.fenster + w.alt).toBe(w.spiele.length);
   });
 
   it("nimmt innerhalb einer Gruppe das juengste zuerst", () => {

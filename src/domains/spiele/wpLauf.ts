@@ -268,6 +268,19 @@ export interface GesendeteAufstellung {
    * die steht schon in `spiele_aufstellung_geleert`.
    */
   je_spiel: Record<string, number>;
+  /**
+   * Die Verlaufszahlen — wie viele Zeilen die drei neuen Felder tragen.
+   *
+   * ⚠ ⚠ SIE STANDEN BIS ZUM 11.09.2026 NUR IN DER VORSCHAU. Der scharfe
+   * Lauf schreibt sein Protokoll über `fuersProtokoll()`, und das ist
+   * eine eigene Allowlist — die fünf Zahlen wurden berechnet, an die
+   * Vorschau geliefert und im Protokoll nicht gezeigt.
+   *
+   * **Dritter Fall derselben Klasse an einem Tag**, nach
+   * `unbeachtete_felder` und `aufstellung_zeilen`. Die Frage dagegen ist
+   * immer dieselbe und kostet nichts: **wer liest diesen Wert?**
+   */
+  verlauf?: Record<string, number>;
 }
 
 export function laufMeldung(
@@ -341,6 +354,7 @@ export function fuersProtokoll(
     gesendete_rollen: gesendet?.rollen ?? null,
     /* Nur Spiele mit Aufstellung. Siehe GesendeteAufstellung.je_spiel. */
     gesendete_aufstellung_je_spiel: gesendet?.je_spiel ?? null,
+    ...(gesendet?.verlauf ?? {}),
     ohne_team: zahlen.ohne_team,
     doppelte_teams: zahlen.doppelte_teams,
     moegliche_dubletten: zahlen.moegliche_dubletten,

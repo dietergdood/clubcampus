@@ -29,6 +29,16 @@
 --   festen 120 Minuten, die für den Export ein Fehlalarm-Generator
 --   gewesen wären.
 --
+-- ⚠ ⚠  SIE RECHNET MIT DEM MINDESTMASS, NICHT MIT DEM SCHNITT.
+--   `NACHLAUF_PLAETZE` (2) ist eine RESERVIERUNG, keine Obergrenze:
+--   braucht das Fenster die Plätze nicht, nimmt der Nachlauf mehr — bei
+--   ruhiger Woche bis zu zwölf. Der Durchgang ist dann schneller als
+--   gerechnet, und die Schwelle ist zu grosszügig.
+--
+--   **Das ist die sichere Richtung.** Eine zu enge Schwelle meldete einen
+--   Ausfall, den es nicht gibt — und ein Melder, der grundlos anschlägt,
+--   wird nach dem dritten Mal abgeschaltet statt gelesen.
+--
 -- ⚠ Beide Werte kommen aus dem Lauf selbst (`api_sync_log.details`), nicht
 --   aus einer zweiten Rechnung in SQL. Zwei Stellen, die dieselbe Frage
 --   beantworten, laufen still auseinander.

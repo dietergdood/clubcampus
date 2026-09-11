@@ -17,6 +17,7 @@ import {
 } from "./sfvApi.ts";
 import { schneideAufFeldhoheit } from "../../../src/domains/sfv/feldhoheit.ts";
 import { laufeMatchdaten, laufeLogos, UNZUGEORDNET_WARNUNG } from "./matchdatenLauf.ts";
+import { HOECHSTENS_SPIELE } from "./matchdaten.ts";
 import type { LaufErgebnis } from "./ergebnisTypen.ts";
 import type { SfvZugang, SfvTeam, SfvSpiel } from "./sfvApi.ts";
 
@@ -26,11 +27,23 @@ import { zaehleOhneZuordnungGetrennt, findeTeamsOhneSpiele, saisonWechsel } from
 
 interface Verbindung { id: string; verein_id: string; api_url: string; sync_felder: Record<string, unknown> }
 
-/* Zehn Spiele pro Lauf: drei Aufrufe je Spiel, dazu die fuenf des
-   Spielplans — 35 statt 5. Bei 268 Spielen und stuendlichem Lauf waere
-   alles auf einmal nicht tragbar, zumal Rate Limits nicht dokumentiert
-   sind. Der Rueckstand ist in zehn Stunden aufgeholt. */
-const MATCHDATEN_PRO_LAUF = 10;
+/* Spiele pro Lauf: VIER Aufrufe je Spiel, dazu die fuenf des Spielplans.
+   Bei 270 Spielen und stuendlichem Lauf waere alles auf einmal nicht
+   tragbar, zumal Rate Limits nicht dokumentiert sind.
+
+   ⚠ ⚠  DIE ZAHL STAND AN ZWEI ORTEN, UND DER ZWEITE GEWANN.
+
+   Am 11.09.2026 habe ich `HOECHSTENS_SPIELE` in `matchdaten.ts` von 10
+   auf 12 gesetzt — die VORGABE der Funktion. Dieser Aufrufer gibt den
+   Wert aber ausdruecklich mit, also blieb es bei 10, und der erste Lauf
+   mit dem Nachlauf holte 10 statt 12 Spiele.
+
+   ⚠ Aufgefallen ist es nur, weil die drei Zahlen aufgingen: 0 + 8 + 2
+   = 10 statt 12. **Eine Aufteilung, die aufgehen MUSS, hat hier nicht
+   den Fehler gefunden, den sie sucht — sondern einen anderen.**
+
+   Deshalb kommt der Wert jetzt AUS matchdaten.ts. Eine Zahl, ein Ort. */
+const MATCHDATEN_PRO_LAUF = HOECHSTENS_SPIELE;
 
 /* ── Ein Spiel abbilden ───────────────────────────────────────────────────
    Rückgabe: alle Felder, die der Sync berechnen kann. Welche davon

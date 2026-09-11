@@ -565,6 +565,15 @@ async function sendeAnWordpress(
     rollen: (zf.aufstellung_rollen as Record<string, number>)
       ?? { start: 0, eingewechselt: 0, nicht_eingesetzt: 0 },
     je_spiel: jeSpiel,
+    /* Die fuenf Verlaufszahlen — dieselben, die die Vorschau zeigt.
+       Aus derselben Quelle, nicht neu gerechnet. */
+    verlauf: {
+      verlauf_mit_nummer: alsZahl("verlauf_mit_nummer"),
+      verlauf_mit_ein_nummer: alsZahl("verlauf_mit_ein_nummer"),
+      verlauf_mit_zusatz: alsZahl("verlauf_mit_zusatz"),
+      verlauf_zusatz_eigentor: alsZahl("verlauf_zusatz_eigentor"),
+      verlauf_zusatz_penalty: alsZahl("verlauf_zusatz_penalty"),
+    },
   };
   if (heimatlos.length) {
     zahlen.fehler.push(`${heimatlos.length} Spiel(e) ohne SFV-Teamnummer, nicht gesendet: `

@@ -839,8 +839,29 @@ export function waehleKandidaten<T extends SpielKandidat>(
      fenster.md` (Variante a) gegenstandslos: er sollte „was ist
      veraltet?" beantworten, und die Reihenfolge tut es besser, weil
      niemand eine Konstante hochzaehlen muss. */
+  /* ⚠ ⚠  ÜBER ALLE GEHOLTEN, NICHT NUR ÜBER DIE AUSSERHALB DES FENSTERS.
+
+     Beim ersten Bau stand hier `&& !imFenster(s)` — und damit gab es eine
+     dritte Lücke, die genauso aussah wie die, die der Nachlauf beheben
+     soll:
+
+       Das Fenster bekommt nur die Plätze, die nach `neu` und `alt` übrig
+       sind, und es wird nach DATUM sortiert — die ältesten Spiele des
+       Fensters fallen als erste heraus. Ein herausgefallenes Fensterspiel
+       war dann in KEINEM der drei Töpfe: nicht im Fenster (kein Platz),
+       nicht in `alt` (es IST im Fenster).
+
+     **Es fiel durch beide.** Gemessen am 11.09.2026: `aelteste_holung`
+     stand bei 143 Stunden, obwohl der Nachhol-Lauf 15 Stunden vorher
+     alles frisch geholt hatte. Die Zahl war richtig — sie hat meine
+     Lücke gefunden, nicht einen Ausfall.
+
+     ⚠ Jetzt ist `alt` ein Sicherheitsnetz über ALLES, was schon einmal
+     geholt wurde. Die Überschneidung mit dem Fenster ist gewollt und wird
+     unten entdoppelt: ein Spiel, das beide Töpfe nennen, wird einmal
+     geholt. */
   const alt = mitId
-    .filter((s) => s.matchdaten_geholt_am && !imFenster(s))
+    .filter((s) => s.matchdaten_geholt_am)
     .sort((a, b) => String(a.matchdaten_geholt_am)
       .localeCompare(String(b.matchdaten_geholt_am)));
 
@@ -853,27 +874,43 @@ export function waehleKandidaten<T extends SpielKandidat>(
   const raus: T[] = [];
 
   /* 1 · Nie Geholtes hat Vorrang, ohne Deckel. Es ist der Rueckstand;
-         `alt` ist per Definition schon einmal geholt worden und kann
-         warten. */
+         alles Uebrige wurde schon einmal geholt und kann warten. */
   raus.push(...neu.slice(0, hoechstens));
 
-  /* 2 · Der Nachlauf bekommt seine Plaetze GARANTIERT — solange `neu`
-         sie nicht braucht.
+  /* 2 · DAS FENSTER ZUERST — aber nur bis auf die Plaetze des Nachlaufs.
 
-     ⚠ Warum garantiert und nicht „was uebrig bleibt": bei einem
-     Spielwochenende mit zwoelf Partien bliebe nichts uebrig, der
-     Durchgang stuende still, und **ein stillstehender Durchgang ist
-     genau der Ausfall, den niemand bemerkt.** Zwei Plaetze kosten das
-     Fenster nichts, was es nicht verkraftet — ein verdraengtes
-     Fensterspiel kommt in der naechsten Stunde wieder. */
-  const fuerAlt = Math.min(NACHLAUF_PLAETZE, Math.max(0, hoechstens - raus.length));
-  const altGewaehlt = alt.slice(0, fuerAlt);
+     ⚠ ⚠  DIE REIHENFOLGE WAR ZUERST UMGEKEHRT, und das war falsch — nicht
+     im Ergebnis, sondern in der AUSKUNFT.
 
-  /* 3 · Das Fenster fuellt den Rest. */
-  const rest = Math.max(0, hoechstens - raus.length - altGewaehlt.length);
-  const fensterGewaehlt = fenster.slice(0, rest);
+     Seit `alt` ueber alles Geholte geht, sind bei wenigen Spielen die
+     Fensterspiele selbst die am laengsten nicht geholten. Nahm `alt`
+     zuerst, landeten sie dort — und die drei Zahlen meldeten
+     „alt: 1, fenster: 0" fuer ein Spiel, das im Fenster steht. **Das
+     Spiel wurde richtig geholt und die Begruendung war falsch.**
 
-  raus.push(...fensterGewaehlt, ...altGewaehlt);
+     Gefunden haben es zwei bestehende Faelle, die auf `fenster` prueften.
+     Sie waren nicht veraltet — sie hatten recht.
+
+     ⚠ `hoechstens - NACHLAUF_PLAETZE` ist die Reservierung: das Fenster
+     darf den Nachlauf nicht aushungern. Bei einem Spielwochenende mit
+     zwoelf Partien bliebe ihm sonst nichts, der Durchgang stuende still,
+     **und ein stillstehender Durchgang ist der Ausfall, den niemand
+     bemerkt.** */
+  const fuersFenster = Math.max(0, hoechstens - raus.length - NACHLAUF_PLAETZE);
+  const fensterGewaehlt = fenster.slice(0, fuersFenster);
+  raus.push(...fensterGewaehlt);
+
+  /* 3 · Der Nachlauf fuellt den Rest — aus ALLEM Geholten, entdoppelt.
+
+     ⚠ Die Entdoppelung ist Pflicht: ein Fensterspiel kann auch das am
+     laengsten nicht geholte sein. Ohne sie holte ein Lauf dasselbe Spiel
+     zweimal — vier Abrufe umsonst, und die drei Zahlen gingen nicht mehr
+     auf. */
+  const schonDrin = new Set(raus.map((s) => s.id));
+  const altGewaehlt = alt
+    .filter((s) => !schonDrin.has(s.id))
+    .slice(0, Math.max(0, hoechstens - raus.length));
+  raus.push(...altGewaehlt);
 
   return {
     spiele: raus,
