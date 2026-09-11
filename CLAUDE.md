@@ -4205,6 +4205,88 @@ eine falsche Behauptung ERZEUGT"). Hier hatte die Buchführung recht — und
 beinahe wäre sie der Datei angeglichen worden.
 
 
+### ⚠⚠ `cron.schedule` PRÜFT NICHT, OB DIESELBE SACHE SCHON UNTER ANDEREM NAMEN LÄUFT
+
+Gemessen am 11.09.2026 in der laufenden Datenbank, nachdem der Verdacht aus
+dem Repository kam:
+
+```
+jobid  jobname                    schedule        active
+  1    sfv-sync-stuendlich        17 * * * *      ja
+  3    sync-waechter-stuendlich   47 * * * *      ja   ← der alte
+  8    wp-export-abholer          */15 * * * *    ja
+  9    sync-waechter              */30 * * * *    ja   ← der neue
+```
+
+**Zwei Wächter liefen drei Wochen lang parallel.** Am 10.09.2026 hatte eine
+Erweiterung dem Auftrag einen neuen Namen gegeben — und `cron.schedule`
+ersetzt einen **gleichnamigen** Auftrag und legt sonst einen zweiten an.
+
+> **Beim Umbenennen eines Auftrags bleibt der alte stehen.** Es gibt keine
+> Meldung, keinen Konflikt und keine Prüfung: die Datenbank sieht zwei
+> Aufträge und findet daran nichts.
+
+⚠ **Und die Regel, die das Nagen verhindert, hat es zusätzlich verdeckt.**
+Beide prüfen vor dem Schreiben auf eine **ungelesene** Meldung derselben Art
+— der zweite fand also die Meldung des ersten und schwieg. **Die Doppelung
+war nach aussen unsichtbar, gerade weil beide richtig gebaut waren.**
+
+#### ⚠⚠ Die naheliegende Reparatur wäre die schlimmste gewesen
+
+Der Reflex heisst *„zwei Aufträge, also den neueren behalten"*. Gemessen:
+
+| | Ausfall | Export | Nachlauf | Wachstum | **Totmannschalter** |
+|---|---|---|---|---|---|
+| `sync-waechter-stuendlich` | ✅ | ❌ | ❌ | ✅ | **✅** |
+| `sync-waechter` (`*/30`) | ✅ | ✅ | ✅ | ❌ | **❌** |
+
+**Keiner konnte alles, und der Totmannschalter stand in genau einem.** Wer
+den neueren behält, entfernt die einzige Einrichtung, die den Ausfall des
+Wächters **selbst** meldet — und **Schweigen ist von Zufriedenheit nicht zu
+unterscheiden.** Genau das Loch, gegen das der Totmannschalter gebaut wurde,
+eine Ebene höher.
+
+⚠ **Das ist der Grund, warum die Frage „welchen löschen?" die falsche war.**
+Die richtige lautet: *was kann jeder von beiden, das der andere nicht kann?*
+Sie kostet einen Vergleich und verhindert einen stillen Verlust.
+
+#### Was daraus folgt — drei Regeln
+
+| | |
+|---|---|
+| **ein Zeitplan, ein Name, für immer** | wer eine Frage ergänzt, ändert den Inhalt und **nie** den Namen. Ein neuer Name ist ein neuer Auftrag |
+| **beim Umbenennen gehört das `unschedule` in denselben Auftrag** | sonst ist es eine Hälfte, und die andere fällt niemandem auf |
+| **erst einspielen, dann entfernen** | umgekehrt entstünde eine Lücke ohne Wächter. Eine kurze Überschneidung ist folgenlos — die Ungelesen-Regel deckt sie |
+
+⚠ **Und die Menge gehört ausgegeben, bevor geschnitten wird** — hier
+`select jobid, jobname, schedule, active from cron.job`. Dieselbe Regel wie
+beim Entfernen eines Bereichs im Code und beim Löschen der Sammelaktionen:
+*„beide Listen", „alle Aufrufer", „überall" sind Mengen, die der Sprecher im
+Kopf hat und der Ausführende schätzt.*
+
+#### ⚠ Der Befund kam aus dem Repository, nicht aus der Datenbank
+
+Aufgefallen ist es beim Nachtragen der Tabelle in `ARCHITECTURE.md` → „was
+`schema.sql` nicht nachbaut": **zwei Dateien schrieben denselben Auftrags-
+namen, eine dritte einen anderen, und nirgends stand ein `cron.unschedule`.**
+
+**Bestätigt hat es erst die Abfrage an `cron.job`.** Beides zusammen ist die
+Lehre: das Repository zeigt, was jemand ANGELEGT hat; nur die Datenbank
+sagt, was LÄUFT. ⚠ **Und `cron.job` liegt nicht in `public`** — es steht in
+keinem Dump, in keiner Zählprobe, und ein verwaister Auftrag überlebt jeden
+Nachbau, bei dem ihn niemand anlegt, genauso wie er jede Aufräumung
+überlebt, bei der ihn niemand entfernt.
+
+Zusammengelegt am 11.09.2026: **ein Auftrag, fünf Fragen**
+(`supabase/cron_sync_waechter.sql`); `cron_waechter_export.sql` und
+`cron_waechter_nachlauf.sql` sind ersatzlos entfallen, damit niemand sie
+erneut einspielt und den zweiten Auftrag wieder anlegt.
+
+⚠ **Der Block prüft seither je Frage den GESPEICHERTEN Befehl** —
+`cron.schedule` speichert nur eine Zeichenkette, und dass ein Auftrag
+angelegt ist, sagt nichts darüber, was darin steht.
+
+
 ### ✅ VIER SPIELE, DEREN VERLAUF NICHT ZUM RESULTAT PASST — alle vier erklärt, keines ein Fehler bei uns
 
 Gemeldet von der Website-Seite am 11.09.2026, gemessen über alle 68

@@ -116,9 +116,73 @@
 -- ANWEISUNG FUER DAS VAULT-SECRET steht am Ende der Datei.
 -- ═══════════════════════════════════════════════════════════════════════════
 
+-- ═══════════════════════════════════════════════════════════════════════════
+-- ⚠ ⚠  ZUERST LESEN: ES GAB ZWEI WAECHTER, UND SIE SIND HIER ZUSAMMENGELEGT
+--
+--   Gemessen am 11.09.2026 in der laufenden Datenbank:
+--
+--     jobid  jobname                    schedule
+--       3    sync-waechter-stuendlich   47 * * * *     ← dieser hier
+--       9    sync-waechter              */30 * * * *   ← faellt weg
+--
+--   ⚠ cron.schedule PRUEFT NICHT, OB DIESELBE SACHE SCHON UNTER EINEM
+--   ANDEREN NAMEN LAEUFT. Es ersetzt einen GLEICHNAMIGEN Auftrag — und legt
+--   sonst einen zweiten an. Am 10.09.2026 bekam der Waechter beim Erweitern
+--   einen neuen Namen, und der alte blieb still stehen. Zwei Wochen lang
+--   haette niemand es gemerkt: beide liefen, beide meldeten, und die Regel
+--   „nur wenn keine ungelesene steht" hat die Doppelmeldungen sogar
+--   verdeckt.
+--
+--
+-- ⚠ ⚠  UND KEINER DER BEIDEN KONNTE ALLES — die naheliegende Annahme
+--       „der neuere gewinnt" war falsch:
+--
+--                                 Ausfall  Export  Nachlauf  Wachstum  Totmann
+--     sync-waechter-stuendlich       ja      nein    nein       JA       JA
+--     sync-waechter (*/30)           ja       JA      JA       nein     nein
+--
+--   Der Totmannschalter stand in genau einem. Wer „den neueren behaelt",
+--   nimmt die einzige Einrichtung weg, die den Ausfall des Waechters SELBST
+--   meldet — und Schweigen ist von Zufriedenheit nicht zu unterscheiden.
+--
+--   Behalten wird deshalb der STUENDLICHE (jobid 3): der Totmannschalter zu
+--   verschieben ist riskanter als zwei Fragen zu verschieben, und
+--   healthchecks.io ist auf „Period 1 hour" eingestellt. Ein */30-Takt
+--   braechte nichts: die Export-Frage vergleicht ohnehin gegen eine Stunde.
+--
+--
+-- REIHENFOLGE — ERST EINSPIELEN, DANN ENTFERNEN
+--
+--   Andersherum entstuende eine Luecke, in der gar kein Waechter laeuft.
+--   Eine kurze Ueberschneidung ist dagegen folgenlos: beide pruefen vor dem
+--   Schreiben auf eine ungelesene Meldung derselben Art.
+--
+--   1. den do $waechter$-Block unten ausfuehren
+--   2. den Entfernungs-Block hier darunter ausfuehren
+--   3. nachsehen, dass genau drei Auftraege bleiben
+-- ═══════════════════════════════════════════════════════════════════════════
+
+-- ─── SCHRITT 2: den doppelten Waechter entfernen ───────────────────────────
+-- ⚠ Als select, nicht als do-Block: der Supabase-Editor zeigt NOTICE nicht
+--   an, und eine Entfernung, die nichts berichtet, ist von einer, die nicht
+--   stattfand, nicht zu unterscheiden.
+--
+--   -- vorher:
+--   select jobid, jobname, schedule, active from cron.job order by jobname;
+--
+--   -- entfernen (gibt true zurueck, wenn es ihn gab):
+--   select cron.unschedule('sync-waechter') as entfernt;
+--
+--   -- nachher: es muessen genau DREI Auftraege bleiben —
+--   --   sfv-sync-stuendlich · sync-waechter-stuendlich · wp-export-abholer
+--   --   (plus sync-log-aufraeumen-taeglich, sobald er eingespielt ist)
+--   select jobid, jobname, schedule, active from cron.job order by jobname;
+
+
 do $waechter$
 declare
-  v_anz int;
+  v_anz    int;
+  v_befehl text;
 begin
   if not exists (select 1 from pg_extension where extname = 'pg_cron') then
     raise exception 'pg_cron ist nicht aktiviert (Dashboard → Database → Extensions)';
@@ -130,6 +194,12 @@ begin
   /* ⚠ ABBRECHEN statt einen Platzhalter anzulegen — dieselbe Falle wie in
      cron_sfv_sync.sql: ein Secret mit dem Platzhalter als Wert ergaebe einen
      gruenen Auftrag und stille Fehlschlaege. */
+  /* Seit der Zusammenlegung am 11.09.2026 braucht der Waechter auch die
+     Export-Frage. Fehlt sie, laeuft er stuendlich in einen Fehler. */
+  if to_regprocedure('public.export_wartet(uuid)') is null then
+    raise exception 'ABBRUCH: export_wartet() fehlt — erst migration_export_wartet.sql.';
+  end if;
+
   if not exists (select 1 from vault.secrets where name = 'healthcheck_url') then
     raise exception 'ABBRUCH: healthcheck_url fehlt im Vault. Erst die Anweisung am Ende dieser Datei.';
   end if;
@@ -163,6 +233,10 @@ begin
       v_anz      int;
       v_zeilen   bigint;
       v_ref      uuid;
+      v_wartet   integer;
+      v_alt      integer;
+      v_kand     integer;
+      v_schwelle integer;
     begin
       /* ── Pruefen: das PAAR, nicht die eine Spalte ──────────────────── */
       for r in
@@ -173,12 +247,81 @@ begin
          where v.active is true and v.auto_sync is true
       loop
         v_grund := null;
-        if r.letzter_sync is null then
-          v_grund := 'Es hat noch nie ein Lauf stattgefunden.';
-        elsif r.minuten > 120 then
-          v_grund := 'Der letzte Lauf ist ' || (r.minuten / 60) || ' Stunden her — erwartet wird stuendlich.';
-        elsif r.sync_status = 'fehler' then
-          v_grund := 'Der letzte Lauf ist gescheitert: ' || coalesce(r.sync_status, '?') || '.';
+
+        /* ⚠ ⚠ ZWEI ANSCHLUESSE, ZWEI FRAGEN — und wer sie gleich behandelt,
+           bekommt fuer den einen einen Fehlalarm-Generator.
+
+             SFV-Sync   hat einen TAKT (stuendlich)
+                        → „wann lief er zuletzt?"
+             Export     hat KEINEN Takt, er laeuft nach Bedarf
+                        → „wartet etwas, und wie lange schon?"
+
+           Zusammengelegt am 11.09.2026 aus cron_waechter_export.sql. */
+        if r.key = 'wordpress' then
+          v_wartet := public.export_wartet(r.verein_id);
+          if v_wartet > 0 and (
+               r.letzter_sync is null
+               or r.letzter_sync < now() - interval '1 hour'
+             ) then
+            v_grund := v_wartet || ' Zeile(n) warten seit ueber einer Stunde '
+                    || 'auf den Export. Der Abholer laeuft alle 15 Minuten — '
+                    || 'er kommt also nicht durch.';
+          elsif r.sync_status = 'fehler' then
+            v_grund := 'Der letzte Export ist gescheitert.';
+          end if;
+        else
+          if r.letzter_sync is null then
+            v_grund := 'Es hat noch nie ein Lauf stattgefunden.';
+          elsif r.minuten > 120 then
+            v_grund := 'Der letzte Lauf ist ' || (r.minuten / 60) || ' Stunden her — erwartet wird stuendlich.';
+          elsif r.sync_status = 'fehler' then
+            v_grund := 'Der letzte Lauf ist gescheitert: ' || coalesce(r.sync_status, '?') || '.';
+          end if;
+
+          /* ⚠ DIE DRITTE FRAGE: kommt der rollende Nachlauf voran?
+             Beide Werte aus dem juengsten Lauf, nicht neu gerechnet.
+             Zusammengelegt am 11.09.2026 aus cron_waechter_nachlauf.sql.
+
+             ⚠ ⚠ DIE SCHWELLE IST UNGEPRUEFT. Sie ist hergeleitet
+             (Kandidaten / 2 Plaetze = Durchgangsdauer, Alarm beim
+             Doppelten) und gegen KEINEN echten Wert gehalten: der einzige,
+             den es gibt — 143 Stunden am 11.09.2026 —, stammt von VOR der
+             Reparatur der Luecke im alt-Topf.
+
+             ⚠ UND EINE STUFENSCHWELLE BEANTWORTET MOEGLICHERWEISE DIE
+             FALSCHE FRAGE. aelteste_holung_stunden STEIGT waehrend eines
+             Aufholens, also gerade dann, wenn der Nachlauf richtig
+             arbeitet. Der Ausfallmodus ist nicht „die Zahl ist hoch",
+             sondern „der Nachlauf bekommt keinen Platz" — messbar als
+             kandidaten_alt = 0 ueber mehrere Laeufe. Offen seit dem
+             11.09.2026, bis die Messung da ist.
+
+             ⚠ Die 2 ist NACHLAUF_PLAETZE aus matchdaten.ts:787 — zwei Orte
+             fuer eine Zahl, und dieser hier sieht die Konstante nicht. Wer
+             die Plaetze erhoeht, bekommt eine Schwelle, die weiter durch 2
+             teilt. Offen. */
+          if v_grund is null then
+            select (l.details->'matchdaten'->>'aelteste_holung_stunden')::int,
+                   (l.details->'matchdaten'->>'kandidaten_gesamt')::int
+              into v_alt, v_kand
+              from public.api_sync_log l
+             where l.verein_id = r.verein_id
+               and l.details->'matchdaten' is not null
+             order by l.gestartet_am desc
+             limit 1;
+
+            if v_alt is not null and v_kand is not null and v_kand > 0 then
+              v_schwelle := (v_kand / 2) * 2;
+              if v_alt > v_schwelle then
+                v_grund := 'Der rollende Nachlauf kommt nicht voran: das am '
+                        || 'laengsten nicht geholte Spiel ist ' || v_alt
+                        || ' Stunden alt, erwartet waeren hoechstens '
+                        || v_schwelle || ' (' || v_kand || ' Kandidaten, '
+                        || '2 Plaetze je Lauf). ⚠ Diese Meldung sagt NICHTS '
+                        || 'darueber, ob die geholten Daten stimmen.';
+              end if;
+            end if;
+          end if;
         end if;
 
         if v_grund is null then continue; end if;
@@ -303,6 +446,17 @@ begin
 
   select count(*) into v_anz from cron.job where jobname = 'sync-waechter-stuendlich';
   if v_anz <> 1 then raise exception 'UNVOLLSTAENDIG: Waechter nicht angelegt'; end if;
+
+  /* ⚠ cron.schedule SPEICHERT NUR EINE ZEICHENKETTE. Dass der Auftrag da
+     ist, sagt nichts darueber, WAS darin steht — am 21.08.2026 lief das
+     Einrichten zweimal fehlerfrei durch und hinterliess einen Befehl, der
+     stuendlich scheiterte. Deshalb je Frage eine Probe. */
+  select command into v_befehl from cron.job where jobname = 'sync-waechter-stuendlich';
+  if v_befehl not ilike '%letzter_sync%'            then raise exception 'UNVOLLSTAENDIG: Frage 1 (Ausfall) fehlt'; end if;
+  if v_befehl not ilike '%export_wartet%'           then raise exception 'UNVOLLSTAENDIG: Frage 2 (Export) fehlt'; end if;
+  if v_befehl not ilike '%aelteste_holung_stunden%' then raise exception 'UNVOLLSTAENDIG: Frage 3 (Nachlauf) fehlt'; end if;
+  if v_befehl not ilike '%n_live_tup%'              then raise exception 'UNVOLLSTAENDIG: Frage 4 (Wachstum) fehlt'; end if;
+  if v_befehl not ilike '%healthcheck_url%'         then raise exception 'UNVOLLSTAENDIG: der Totmannschalter fehlt'; end if;
 
   /* Die Spalte, die der Waechter schreibt und die Kachel liest. */
   if not exists (select 1 from information_schema.columns
