@@ -3849,6 +3849,77 @@ Datenbank genau das tut**. Wer eine KÜRZUNG nachstellen will, setzt
 912 vorhanden → `fetchSupporter` gibt `null`, nicht eine Liste mit einem
 Eintrag. **Eine Prüfung, die nie rot war, ist keine Prüfung.**
 
+### ⚠⚠ `update_field()` VERWIRFT UNBEKANNTE UNTERFELDER STILL — unsere Prüfung sieht das nicht
+
+Befund der Website-Seite, 11.09.2026. **`ein_nummer` ging seit 0.9.7 ins
+Leere** — vier Tage lang, in jeder Nutzlast, ohne eine einzige Meldung.
+
+Das Unterfeld gab es am Repeater `verlauf` drüben nicht. ACF schreibt
+einen Repeater als Ganzes; **Schlüssel, die keinem Unterfeld entsprechen,
+fallen weg — ohne Rückgabewert, ohne Warnung, ohne Eintrag irgendwo.**
+
+#### ⚠ Und genau dort hat unsere Prüfkette ein Loch
+
+`cc_unbeachtete_felder()` meldet seit 0.7.0, was die Nutzlast bringt und
+keine Allowlist führt. **Sie vergleicht nur die OBERSTE Ebene** —
+`minute`, `art`, `verlauf`, `aufstellung`. Was innerhalb eines Repeaters
+steht, sieht sie nicht.
+
+| Ebene | „kam es an?" beantwortbar |
+|---|---|
+| Spielfeld (`liga`, `resultat`, `verlauf`) | ✅ `unbeachtete_felder` |
+| **Unterfeld eines Repeaters** | ❌ **niemand** |
+
+> **Eine Prüfung, die nur die oberste Ebene sieht, bestätigt eine Nutzlast,
+> die eine Ebene tiefer verworfen wird.** Dieselbe Familie wie „eine
+> Prüfung, die nur das letzte Glied sieht, bestätigt eine Kette, die vorne
+> gerissen ist" — nur in der Tiefe statt in der Länge.
+
+⚠ **Und es ist doppelt tückisch, weil der Empfänger `geschrieben`
+zurückmeldet.** `cc_schreibe_felder()` zählt `verlauf` als geschrieben,
+sobald `update_field` lief — **es lief ja auch.** Die Zeilen kamen an, nur
+ohne das Unterfeld. **Ein „geschrieben: verlauf" ist keine Aussage über
+den Inhalt einer Zeile.**
+
+**Zu tun, wenn es das nächste Mal auffällt:** der Empfänger kann die
+Unterfeldnamen eines Repeaters aus seiner Feldgruppe lesen
+(`acf_get_field` → `sub_fields`) und dieselbe Differenz bilden wie oben.
+Dann gäbe es `unbeachtete_unterfelder`, und der Fall wäre sichtbar statt
+still. **Nicht gebaut — aber der Grund, warum er teuer war, steht hier.**
+
+### ⚠⚠ DIE SPIELSEITE LIEST „Eigentor" AUS DEM FLIESSTEXT — wer ihn kürzt, verschiebt den Stand
+
+Warnung der Website-Seite, 11.09.2026, und sie ist ernst.
+
+Die Vorlage dreht den Zwischenstand auf die andere Mannschaft, **indem sie
+das Wort „Eigentor" im Feld `text` sucht**. Ein Eigentor zählt für den
+Gegner; ohne die Umkehr steht der Spielstand falsch.
+
+> ⚠ **Wer den Zusatz aus `text` entfernt, bevor die Vorlage umgestellt
+> ist, verschiebt den Stand um zwei Tore — ohne Fehlermeldung.** Kein
+> Test wird rot, kein Zähler schlägt an, die Seite sieht gepflegt aus und
+> rechnet falsch.
+
+**Das ist eine Kopplung über einen ANZEIGETEXT**, und dieses Papier führt
+sie an zwei Stellen schon als Fehler: die 431 vermeintlichen Klarnamen
+kamen daher, dass jemand seinen eigenen Ausgabetext wieder zerlegte.
+**Hier tut es die Gegenseite — und deshalb kann unsere Prüfkette sie nicht
+sehen.**
+
+⚠ **Die Reihenfolge ist damit zwingend, nicht bloss ordentlich:**
+
+| | |
+|---|---|
+| 1 | die Nummernfelder füllen, **`text` unverändert** |
+| 2 | Freigabe der Website-Seite abwarten |
+| 3 | **erst dann** `text` leeren und die Zusätze umziehen |
+
+**Schritt 1 und 3 zusammen bricht den Zwischenstand.**
+
+⚠ `„2. Verwarnung"` darf dagegen ersatzlos weg: `art` trägt bereits
+`gelbrot`, die Information ist doppelt.
+
+
 ### ⚠⚠ EIN `INSERT` KANN NICHTS VERGLEICHEN — und damit war der Wächter taub
 
 `stempel_zuletzt_geaendert` vergleicht bei **UPDATE** den Inhalt und lässt
