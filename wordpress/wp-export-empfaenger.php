@@ -4,7 +4,7 @@
  *
  * Plugin Name: ClubCampus Export
  * Description: Nimmt Spielplan, Verlauf und Ranglisten aus ClubCampus entgegen.
- * Version:     0.9.19
+ * Version:     0.9.20
  *
  * ⚠ ⚠  STAND 10.09.2026: DIESE DATEI **IST** DER EMPFAENGER  ⚠ ⚠
  *
@@ -141,6 +141,19 @@ const CC_ROUTE      = 'clubcampus/v1';
    `/status` fuer zwei verschiedene Fassungen dieselbe Zahl, und die eine
    Auskunft, die „laeuft drueben der neue Empfaenger?" beantworten koennte,
    beantwortet sie nicht mehr.
+
+   0.9.20 (11.09.2026): `bestand` liefert je Person drei
+   VERGLEICHSMERKMALE — Nummer, E-Mail-Hash, Name-plus-Jahrgang-Hash.
+   ⚠ ⚠  KEINE KLARNAMEN. Fuer die Schnittmenge genuegt Gleichheit, und
+         dafuer genuegt ein SHA-256. Eine Auskunft ist kein
+         Schreibvorgang und trotzdem eine Preisgabe.
+   ⚠     Ein Hash findet WENIGER Treffer als ein Mensch. `ohne_treffer`
+         wird damit eher zu gross geschaetzt — und das ist die bezahlbare
+         Fehlerrichtung: wer zu viele neue Datensaetze erwartet, sieht
+         genauer hin; wer zu wenige erwartet, drueckt.
+   ⚠     `cc_namensschluessel()` steht auch in personenAbgleich.ts. Laufen
+         die beiden auseinander, trifft kein Hash mehr und die Vorschau
+         meldet lauter neue Personen — LAUT, nicht still.
 
    0.9.19 (11.09.2026): JEDE Antwort nennt Datei und Fassung, nicht nur
    /status.
@@ -450,7 +463,7 @@ const CC_ROUTE      = 'clubcampus/v1';
    einander), `autoload` wird nach dem Schreiben geprueft und notfalls
    berichtigt, `/status` nennt Empfaenger, Version, Metaschluessel und die
    Team-Zuordnung. */
-const CC_VERSION    = '0.9.19';
+const CC_VERSION    = '0.9.20';
 const CC_TYP_SPIEL  = 'fch_spiel';
 const CC_TYP_TEAM   = 'fch_team';
 /* ⚠ NUR ZUM ZAEHLEN. Dieses Plugin legt keine Person an und aendert
@@ -1883,6 +1896,28 @@ function cc_titel_nachziehen( int $post_id ): void {
  *    Auskunft, zwei Listen sind eine Aufgabe** — deshalb kommt die
  *    Liste mit, aber gerechnet wird drueben.
  */
+/**
+ * Der Namensschluessel fuer den Hash — und er muss drueben identisch sein.
+ *
+ * ⚠ Kleinschreibung, Umlaute aufgeloest, alles ausser Buchstaben weg,
+ *   dann sortiert. **Sortiert, weil „Anna Meier" und „Meier Anna"
+ *   derselbe Mensch sind** und der Beitragstitel die Reihenfolge nicht
+ *   garantiert.
+ *
+ * ⚠ Wer ihn aendert, aendert ihn in personenAbgleich.ts mit — sonst
+ *   trifft kein einziger Hash mehr, und die Vorschau meldet lauter neue
+ *   Personen. Ein Auseinanderlaufen waere also LAUT, nicht still; das ist
+ *   Absicht.
+ */
+function cc_namensschluessel( string $roh ): string {
+	$t = strtolower( $roh );
+	$t = strtr( $t, array( 'ä' => 'ae', 'ö' => 'oe', 'ü' => 'ue', 'ß' => 'ss' ) );
+	$t = preg_replace( '/[^a-z ]+/u', ' ', $t );
+	$teile = array_values( array_filter( explode( ' ', (string) $t ) ) );
+	sort( $teile );
+	return implode( ' ', $teile );
+}
+
 function cc_personen_lage(): array {
 	if ( ! post_type_exists( CC_TYP_PERSON ) ) {
 		/* ⚠ null-Semantik wie bei cc_unterfelder(): „gibt es hier nicht"
@@ -1898,10 +1933,42 @@ function cc_personen_lage(): array {
 			'fields'      => 'ids',
 		)
 	);
-	$nummern = array();
+	/* ⚠ ⚠ VERGLEICHSMERKMALE STATT NAMEN.
+
+	   Die Schnittmenge braucht drei Ebenen — Nummer, E-Mail, Name plus
+	   Jahrgang. Die erste ist eine Zahl und harmlos. Fuer die zweite und
+	   dritte geht ein SHA-256 hinaus, nie der Wert selbst: **eine Auskunft
+	   ist kein Schreibvorgang und trotzdem eine Preisgabe.**
+
+	   ⚠ EIN HASH VERGLEICHT NUR AUF GLEICHHEIT, und das ist hier die
+	   richtige Richtung: er findet weniger Treffer als ein menschlicher
+	   Abgleich. Damit wird `ohne_treffer` eher zu GROSS geschaetzt — die
+	   Vorschau sagt also im Zweifel mehr neue Datensaetze voraus, als
+	   entstehen. **Von zwei Fehlerrichtungen ist das die bezahlbare:** wer
+	   zu viele erwartet, sieht genauer hin; wer zu wenige erwartet, drueckt.
+
+	   ⚠ Die Normalisierung muss auf BEIDEN Seiten dieselbe sein. Sie steht
+	   deshalb hier ausgeschrieben und in `personenAbgleich.ts` noch einmal,
+	   mit einem Testfall, der beide gegeneinander haelt. */
+	$nummern  = array();
+	$merkmale = array();
 	$ohne    = 0;
 	foreach ( $ids as $id ) {
 		$nr = trim( (string) get_post_meta( (int) $id, 'sfv_person_id', true ) );
+
+		/* E-Mail und Jahrgang als Hash — nie im Klartext. */
+		$mail = strtolower( trim( (string) get_post_meta( (int) $id, 'email', true ) ) );
+		$geb  = trim( (string) get_post_meta( (int) $id, 'geburtsdatum', true ) );
+		$jahr = preg_match( '/(\\d{4})/', $geb, $m ) ? $m[1] : '';
+		$post = get_post( (int) $id );
+		$name = $post ? cc_namensschluessel( (string) $post->post_title ) : '';
+
+		$merkmale[] = array(
+			'sfv_person_id' => '' === $nr ? null : $nr,
+			'email_hash'    => '' === $mail ? null : hash( 'sha256', $mail ),
+			'name_hash'     => ( '' === $name || '' === $jahr )
+				? null : hash( 'sha256', $name . '|' . $jahr ),
+		);
 		if ( '' === $nr ) {
 			$ohne++;
 			continue;
@@ -1915,6 +1982,9 @@ function cc_personen_lage(): array {
 		'mit_nummer'  => count( $nummern ),
 		'ohne_nummer' => $ohne,
 		'nummern'     => $nummern,
+		/* ⚠ Je Person drei Merkmale, keines davon ein Klartext. Die
+		   Schnittmenge rechnet die andere Seite — sie hat die 93. */
+		'merkmale'    => $merkmale,
 	);
 }
 
