@@ -3824,6 +3824,74 @@ angewendet, den niemand gemessen hat.** Und jedes Mal klang es plausibler
 als eine blosse Vermutung, gerade weil der Mechanismus stimmte.
 
 
+### ✅ VIER SPIELE, DEREN VERLAUF NICHT ZUM RESULTAT PASST — alle vier erklärt, keines ein Fehler bei uns
+
+Gemeldet von der Website-Seite am 11.09.2026, gemessen über alle 68
+Spiele mit Verlauf und Resultat: **64 stimmen.**
+
+| Spiel | Resultat | Verlauf | Erklärung |
+|---|---|---|---|
+| **4395740** Wald | 1:6 | 0:0 | der Verband führt **keinen** Verlauf |
+| **4375665** Pfäffikon | 1:5 | 1:0 | dasselbe, teilweise |
+| **4305423** Red Star | 2:1 | 2:0 | ⚠ **Matchblatt ohne Gegnerereignisse** |
+| **4346574** Oberland | 0:7 | 0:8 | ⚠ **Doppelmeldung**, über `ht_resultat` belegt |
+
+⚠ **Und der Filterverdacht ist endgültig erledigt:** 542 fremde Zeilen im
+Bestand, `fremd · tor` bei **96,9 %** mit Rückennummer. Die fremden Zeilen
+streuen von 0 bis 20 und liegen meist im Bereich der eigenen. **Es gibt
+keinen Filter, der die Gegnerseite wegnimmt.**
+
+#### ⚠ Red Star: der Verbandsbericht zeigt dasselbe wie wir
+
+Gegengeprobt am FVRZ-Spielbericht (Didi, 11.09.2026): Resultat **2:1**,
+im Verlauf **zwei** Herrliberg-Tore und sechs eigene Wechsel — **kein
+einziges Ereignis von Red Star, auch beim Verband nicht.**
+
+> **Unsere Daten bilden exakt ab, was er führt.**
+
+⚠ **Und es ist ein TRAININGSSPIEL** (Spieltyp 3, 31.07., Spielnummer
+700228). **Dieselbe Kategorie, bei der auch die Einwechselminuten
+reihenweise fehlen** — 12 von 14 Spielen dieses Typs tragen keine
+einzige. *Dort füllt niemand ein vollständiges Matchblatt.*
+
+**Damit ist es kein Einzelfall, sondern ein Muster mit einer Erklärung.**
+
+#### ⚠ Oberland: zwei Quellen des Verbands widersprechen sich
+
+`ht_resultat` sagt **0:2**, die Ereignisliste nennt **drei** Tore bis zur
+45. Die zwei Angaben kommen aus verschiedenen Endpunkten —
+`/api/match/{id}` gegen `/api/match/{id}/events`.
+
+⚠ **Nicht entdoppelt, und das ist Absicht.** Die Entdopplung geht auf den
+Abruf-Zeitstempel, nicht auf den Inhalt: zwei inhaltsgleiche Zeilen aus
+EINEM Abruf bleiben stehen. Am 11.09.2026 hat ein Gegner mit der Nummer 9
+in der 69. **zwei Tore** erzielt, in einem Abruf, und nichts, was wir
+führen, unterscheidet die Zeilen.
+
+> **Was man nicht entdoppelt, kann man nicht fälschlich entdoppeln.**
+
+Stattdessen zählt `halbzeit_widerspruch` seit dem 11.09.2026 — **zählen
+statt glätten**, dieselbe Bauart wie `verband_hat_korrigiert` und wie
+`unplausibel`, das nach der Korrektur gesetzt bleibt.
+
+⚠ Mit **`halbzeit_nicht_pruefbar`** als eigener dritter Zahl: ohne
+`ht_resultat` gibt es nichts, wogegen man halten könnte, und **wer es mit
+„stimmt" zusammenzählt, meldet fehlende Halbzeitstände als geprüft.**
+
+⚠ **Und eine Falle beim Bauen, die fast durchgegangen wäre:**
+`ht_resultat` steht **immer** als `heim:gast`. Wer das mit „unsere Seite
+zuerst" verwechselt, meldet **jedes Auswärtsspiel mit ungleichem Stand**
+als Widerspruch — ein Fehlalarm-Generator, und die halbe Saison ist
+auswärts. Eigener Testfall.
+
+#### Die Entscheidung der Website-Seite bleibt richtig
+
+**Bei Abweichung zeigt sie gar keinen Zwischenstand.** Das ist die
+richtige Wahl: ein Zwischenstand, der auf einer unvollständigen
+Ereignisliste rechnet, ist von einem richtigen nicht zu unterscheiden —
+**und eine Zahl, die plausibel aussieht, wird zitiert.**
+
+
 ### ⚠⚠ EIN SPIEL, DAS BEIM ABRUF SCHEITERT, BLEIBT FÜR IMMER „NIE GEHOLT"
 
 Gefunden am 11.09.2026 beim Nachgehen eines Widerspruchs.
