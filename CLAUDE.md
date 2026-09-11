@@ -3824,6 +3824,75 @@ angewendet, den niemand gemessen hat.** Und jedes Mal klang es plausibler
 als eine blosse Vermutung, gerade weil der Mechanismus stimmte.
 
 
+### ⚠⚠ EIN SPIEL, DAS BEIM ABRUF SCHEITERT, BLEIBT FÜR IMMER „NIE GEHOLT"
+
+Gefunden am 11.09.2026 beim Nachgehen eines Widerspruchs.
+`matchdatenLauf.ts:452` setzt die Marke **innerhalb des `try`**:
+
+```ts
+await db.from("spiele")
+  .update({ matchdaten_geholt_am: jetzt })
+  .eq("id", spiel.id);
+erg.spiele_geholt += 1;
+} catch (e) {
+  /* matchdaten_geholt_am bleibt leer … */
+```
+
+**Das ist einzeln betrachtet richtig** — ein Spiel, dessen Abruf fehlschlug,
+soll nicht als geholt gelten. ⚠ **Zusammen mit der Kandidatenwahl ergibt
+es eine Falle:**
+
+```
+neu = alles ohne matchdaten_geholt_am, VORRANG ohne Deckel
+```
+
+> **Ein dauerhaft scheiterndes Spiel steht in jedem Lauf wieder ganz
+> vorne, belegt einen Platz, scheitert wieder — und wird nie fertig.**
+
+⚠ **Und es wächst:** vier scheiternde Spiele fressen ein Drittel der
+zwölf Plätze, acht die Hälfte. **Der Nachlauf verhungert zuerst**, weil er
+nach `neu` kommt — also genau die Einrichtung, die den Rückstand
+aufholen soll.
+
+#### ⚠ Sichtbar ist es, aber nur wenn jemand hinsieht
+
+`erg.fehler` zählt und `fehlermeldungen` nennt die ersten fünf beim
+Namen. **Beide stehen im Protokoll.** Was fehlt, ist die Verbindung: die
+Meldung sagt nicht, dass dieses Spiel schon zum zwanzigsten Mal
+scheitert.
+
+```sql
+select gestartet_am at time zone 'Europe/Zurich' as zeit,
+       details->'matchdaten'->>'fehler'         as fehler,
+       details->'matchdaten'->'fehlermeldungen' as meldungen
+  from public.api_sync_log
+ where details->'matchdaten' is not null
+ order by gestartet_am desc limit 8;
+```
+
+**Dieselben Spielnummern über mehrere Läufe sind der Befund.**
+
+#### Die Antwort: eine eigene Marke am Fehlschlag
+
+> ⚠ **„Geholt" darf nicht lügen** (Didi, 11.09.2026) — und eine Marke,
+> die bei einem Fehlschlag gesetzt würde, täte genau das.
+
+Deshalb **eine zweite** Spalte, nicht dieselbe: `matchdaten_versucht_am`
+(und, wenn es tragen soll, `matchdaten_fehler`). Die Kandidatenwahl
+nimmt `neu` dann als *„nie geholt UND seit einer Stunde nicht
+versucht"* — ein scheiterndes Spiel rückt nach hinten, statt den Kopf
+der Schlange zu verstopfen, und bleibt trotzdem in der Schlange.
+
+⚠ **Nicht gebaut.** Erst ist zu messen, ob es überhaupt vorkommt — die
+Abfrage oben beantwortet es, und bei null Fehlern über acht Läufe ist es
+eine Vorsichtsmassnahme ohne Anlass.
+
+**Dieselbe Familie wie `api_sync_log` ohne Anfangszeile:** der Ausfall
+hinterlässt keine Spur, die von „es gab nichts zu tun" zu unterscheiden
+wäre — hier ist die Spur sogar da, sie sagt nur nicht, dass sie sich
+wiederholt.
+
+
 ### ⚠⚠ 62 SPIELE WAREN WOCHENLANG EINGEFROREN — und nichts hat es gemeldet
 
 Gemessen am 11.09.2026. **Der Befund ist nicht „es fehlten Daten",
