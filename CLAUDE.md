@@ -3578,6 +3578,139 @@ Gehalten wird das von `src/domains/sfv/__tests__/protokollSpur.test.ts`:
 wer schreibt, protokolliert — und zwar vorher. **Gegengeprobt an der
 echten Datei:** `aktion`/`laeuft` entfernt → rot, zurückgesetzt → grün.
 
+### ⚠⚠ UNSERE NAMEN STANDEN BEIM GEGNER — die Nummern-Brücke, 11.09.2026
+
+Auf der Spielseite Junioren Ba – FC Fällanden vom 30.08. stand **viermal**:
+
+```
+„FC Fällanden ersetzt durch Levin Rutishauser"   ← in der 55. bei UNS eingewechselt
+„FC Fällanden ersetzt durch Louis Pfenninger"    ← bei uns in der 46.
+„FC Fällanden ersetzt durch Luis Sanchez Alonso" ← bei uns in der 59.
+„FC Fällanden ersetzt durch Alessio Graeser"     ← bei uns in der 80.
+```
+
+**Derselbe Mensch, im selben Verlauf, auf beiden Seiten.** Eine öffentliche
+Seite behauptete, ein Spieler von uns sei für den Gegner eingewechselt
+worden. **Entscheid B, andersherum** — nicht Gegnernamen bei uns, sondern
+unsere Namen beim Gegner.
+
+**Die Regel war vollständig aufgeschrieben und zu zwei Dritteln gebaut:**
+
+| Grenze | |
+|---|---|
+| dasselbe Spiel | ✅ `${spiel_id}:${nummer}` als Schlüssel |
+| genau ein Treffer | ✅ `menge.size === 1` |
+| **`ist_eigener` beidseitig** | ⚠ nur auf der **Aufstellungsseite** |
+
+Der Kommentar an `baueNummernBruecke()` sagte sie **wörtlich**: *„`ist_eigener`
+auf BEIDEN Seiten, dasselbe Spiel, und bei zwei Kandidaten gar keiner."*
+
+⚠ **Es ist der Kommentar-über-eine-andere-Stelle, zum wiederholten Mal** —
+und diesmal von demjenigen geschrieben, der die Regel eine Woche zuvor ins
+Papier gesetzt hat. Die Brücke filterte, was sie AUFNAHM. Wer sie BEFRAGT,
+stand nicht unter ihrer Aufsicht.
+
+⚠ ⚠ **UND SIE KONNTE DORT NICHT GEPRÜFT WERDEN: `beschreibeGewechselten()`
+BEKAM `ist_eigener` GAR NICHT.** Der Parameter war ein
+`Pick<EreignisZeile, "ein_sfv_person_id" | "ein_rueckennr">` — die Seite war
+im Typ nicht ausdrückbar. **Eine Grenze, die eine Funktion nicht sehen kann,
+kann sie nicht ziehen**, und kein Werkzeug meldet das: ein zu schmaler `Pick`
+ist für `tsc` kein Fehler, sondern eine Absicht.
+
+Seither ist es **Pflichtfeld**, nicht optional. Der Unterschied ist die
+Prüfung: der Compiler nennt jede Aufrufstelle, die es nicht liefert.
+Gemessen dabei — **kein einziger Produktionsaufrufer fehlte, nur die
+Testfälle.**
+
+#### ⚠ Warum der Testfall grün war, der genau danach benannt ist
+
+Es gab einen Fall mit dem Titel *„schweigt bei zwei Namen unter derselben
+Nummer"*, und im Kommentar darüber stand *„die 9 gibt es in beiden
+Mannschaften"*. Er war grün, und er war **richtig** grün:
+
+| | |
+|---|---|
+| er prüfte | `baueNummernBruecke()` — die **Aufstellungsseite** |
+| die war | **korrekt gebaut** |
+| die Ereignisseite prüfte | **kein Fall** — die Funktion kannte das Feld nicht |
+
+> **Geprüft war die Hälfte, die gebaut wurde, nicht die, die fehlte.**
+
+Dieselbe Familie wie „ein Komponententest prüft die Komponente, nicht ihren
+Einbau". Und die Testobjekte trugen zwei Felder — **ein Test kann eine
+Unterscheidung nicht prüfen, die sein eigener Eingabetyp nicht kennt.**
+
+#### ⚠ Das zweite Loch, das erst beim Schreiben des Testfalls auffiel
+
+Es gibt **zwei** Wege zu einem Namen — die Brücke **und** die Zuordnungskarte
+(`namen`, aus `sfv_personen`). Meine Grenze stand zuerst **zwischen** ihnen,
+also nur vor der Brücke. Löste die Kennung eines gegnerischen Wechsels
+zufällig in unserer Karte auf, stünde der Name genauso falsch da.
+
+Ob das heute vorkommen KANN, ist **ungemessen**: Entscheid B verbietet die
+Personennummer bei fremden AUFSTELLUNGSzeilen, für
+`spiel_ereignisse.ein_sfv_person_id` gibt es **keinen** CHECK.
+
+> **Eine Grenze, die vor allen Quellen steht, muss die Frage nicht
+> beantworten.** Sie steht seither ganz vorne, und der zweite Fall hält es
+> fest.
+
+Gegengeprobt: Grenze ausgeschaltet → **beide** neuen Fälle rot.
+
+### ⚠ `/events` kennt Spieler, die `/players` nicht listet — in VIER Spielen
+
+Gemessen am 11.09.2026 über den ganzen Bestand: **sieben Ereignisse in vier
+Spielen** nennen eine `sfv_person_id`, zu der es in `spiel_aufstellung`
+derselben Partie keine Zeile gibt.
+
+| Spiel | Fälle |
+|---|---|
+| 4379006 | 3 |
+| 4391599 | 2 |
+| 4378093 | 1 |
+| 4393089 | 1 |
+
+**Sieben von rund 900 Ereignissen. Ein Randbefund**, festgehalten mit Datum
+und beim nächsten Durchlauf neu zu messen — **kein Bau.**
+
+⚠ ⚠ **UND EINE AUFSTELLUNGSZEILE AUS EREIGNISSEN ZUSAMMENZUSETZEN IST
+AUSDRÜCKLICH ABGELEHNT** (Didi, 11.09.2026, und die Begründung ist meine
+eigene): eine Zeile, die wir uns selbst ableiten, wäre von einer gelieferten
+nicht mehr zu unterscheiden — **und genau diese Ununterscheidbarkeit ist der
+teuerste Fehler in diesem Papier.** Wenn je, dann mit eigenem Merkmal und
+eigenem Zähler.
+
+#### ⚠⚠ UND 4395750 GEHÖRT NICHT DAZU — ich hatte den Befund am falschen Spiel behauptet
+
+**Das ist der eigentliche Eintrag hier, nicht die sieben Fälle.**
+
+Bei 4395750 (Senioren 50+, 9 eigene Zeilen) tauchten drei Namen im Verlauf
+auf — André Kym, Lars Haussmann, Benedetto Montana —, und ich habe daraus
+geschlossen: *„Damit ist `/events` für dieses Spiel vollständiger als
+`/players`."*
+
+**Gemessen: falsch.** Alle drei stehen in den neun Aufstellungszeilen.
+
+⚠ **Der Fehlschluss ist sauber benennbar, und er ist nicht Flüchtigkeit:**
+ich habe den WEG mit der EXISTENZ verwechselt.
+
+| | |
+|---|---|
+| richtig | der Name des Ausgewechselten kommt über `beschreibeWer()` aus `sfv_personen` — **nie** aus der Aufstellung |
+| **falsch daraus geschlossen** | „also steht er nicht in der Aufstellung" |
+
+**Der Weg sagt nichts über die Existenz.** Er ist derselbe, ob der Mensch
+zusätzlich in der Aufstellung steht oder nicht — die Funktion sieht sie gar
+nicht an. Meine Prämisse war richtig, die Folgerung war ein *non sequitur*,
+und die Zwischenfrage hätte eine Abfrage gekostet.
+
+⚠ **Dritter Fall derselben Klasse in zwei Tagen** — nach „der Sync macht es
+überall falsch" und „ein ausgefallener Lauf hat keine Spur hinterlassen".
+Gemeinsames Merkmal: **ein richtig verstandener Mechanismus, auf einen Fall
+angewendet, den niemand gemessen hat.** Und jedes Mal klang es plausibler
+als eine blosse Vermutung, gerade weil der Mechanismus stimmte.
+
+
 ### ⚠⚠ 62 SPIELE WAREN WOCHENLANG EINGEFROREN — und nichts hat es gemeldet
 
 Gemessen am 11.09.2026. **Der Befund ist nicht „es fehlten Daten",
