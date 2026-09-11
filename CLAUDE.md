@@ -4116,6 +4116,95 @@ schwächste Lösung**, und sie hat hier zweimal hintereinander versagt.
 Nachgetragen für 0.9.13 bis 0.9.16.
 
 
+### ⚠⚠ ZWEI PRÜFUNGEN AN EINEM TAG, DIE HINTER DEM FILTER STANDEN
+
+Der Satz selbst steht eine Bildschirmseite weiter oben, beim
+Unterfeld-Melder. Was fehlte, ist der **zweite Fall** — und dass es zwei
+am 11.09.2026 waren, zwei Stunden auseinander.
+
+| | was sie ansah | warum sie grün war |
+|---|---|---|
+| **Unterfeld-Melder** | die **Konstante** gegen ACF | die unbekannten Namen fielen schon an unserer eigenen Allowlist heraus |
+| **`nutzlast_fassung`** | ein **selbstgebautes Objekt** statt dessen, was `baueNutzlast()` liefert | das Feld lag in der Attrappe, nicht in der Nutzlast |
+
+⚠ ⚠ **`nutzlast_fassung` WURDE NIE GESCHICKT.** Gemessen am 11.09.2026:
+`NUTZLAST_FASSUNG` steht in `wpNutzlast.ts:97` als exportierte Konstante
+und kommt in **keiner** Nutzlast vor. **Die ganze Idee hätte vom ersten
+Lauf an nicht funktioniert** — und der Testfall war grün.
+
+**Die gemeinsame Form, und dafür steht der Eintrag:** beide Prüfungen
+sahen etwas an, das sie **selbst erzeugt hatten**. Die eine den
+gefilterten Wert, die andere die eigene Attrappe.
+
+> **Keine von beiden konnte jemals etwas anderes sagen als „in Ordnung".**
+
+Dieselbe Familie wie `zaehleVerlaufNamen()`, das den eigenen Ausgabetext
+wieder zerlegte, und wie **„eine Attrappe, die die Form abschreibt, prüft
+die Abschrift"** — dort steht die ausführliche Fassung.
+
+⚠ **Die Gegenmassnahme ist beide Male dieselbe: die Prüfung an das echte
+Erzeugnis hängen.** Für den Melder ist das die rohe Nutzlast; für die
+Fassung der Rückgabewert von `baueNutzlast()`, nicht ein daneben gebautes
+Objekt. **Wer eine Prüfung schreibt, fragt zuerst, wer das prüft, was sie
+ansieht — sie selbst oder der Code, um den es geht.**
+
+### ⚠ EIN ÄNDERUNGSVERLAUF AUS DER ABSICHT STATT AUS DEM ERZEUGNIS
+
+Dritte Ausprägung derselben Familie am 11.09.2026, und diese ist von mir,
+am selben Tag geschrieben.
+
+`git log -S"nutzlast_fassung" -- wordpress/wp-export-empfaenger.php` nennt
+**genau einen** Commit — `6b759e0`, den von heute. Das Wort steht im
+Empfänger ausschliesslich in einer Änderungsverlauf-Zeile, die ich selbst
+verfasst habe:
+
+> *„0.9.15 (11.09.2026): `nutzlast_fassung` in jeder Antwort…"*
+
+⚠ **Die Datei hat das Feld nicht und hatte es nie.** Ich habe den Eintrag
+aus dem **Commit-Titel** abgeschrieben (`NUTZLAST_FASSUNG und der
+Unterfeld-Melder`) — und die eine Hälfte davon war in `src/` gelandet,
+nicht im Empfänger.
+
+> **Ein Änderungsverlauf, der aus der Absicht geschrieben wird statt aus
+> dem Erzeugnis, ist eine Behauptung über eine andere Stelle.**
+
+⚠ Dieselbe Familie wie „ein Kommentar, der eine ANDERE Stelle zusichert" —
+nur ist die andere Stelle hier **dieselbe Datei**, zweihundert Zeilen
+tiefer. Der Abstand, der die Behauptung ungeprüft lässt, ist nicht der
+zwischen zwei Dateien, sondern der zwischen **dem, was man vorhatte, und
+dem, was man abgeliefert hat.** Berichtigt.
+
+### ⚠ EIN WIDERSPRUCH ZWISCHEN PAPIER UND CODE WIRD AM CODE AUFGELÖST
+
+Didi, 11.09.2026:
+
+> *„Das Papier hatte recht, die Datei nicht — und du hast es am Code
+> aufgelöst statt am Dokument. Die 630 Zeilen sind der unabhängige Beleg,
+> dass die Aufräumfunktion nie lief."*
+
+Die gemessene Hälfte dazu, 11.09.2026: **im ganzen Repository gibt es kein
+`delete`, kein `truncate` und keinen Job auf `api_sync_log`.** Das
+Protokoll wächst unbegrenzt — und 630 Zeilen seit dem 14.08.2026 sind
+genau das, was daraus folgt.
+
+> **Der Code ist das, was läuft; das Papier ist eine Messung von damals.
+> Wer die Datei an das Papier anpasst, macht aus einer erkannten
+> Abweichung eine bestätigte Behauptung.**
+
+⚠ **Und die zweite Hälfte ist die Bestandszahl.** Papier und Code sind
+beide **Beschreibungen** — die eine von damals, die andere von jetzt. 630
+Zeilen sind keine Beschreibung.
+
+> **Wo zwei Beschreibungen streiten, entscheidet eine dritte Quelle, die
+> keine Beschreibung ist.**
+
+⚠ Dieselbe Richtung wie die Selbstauskunft vom selben Tag, nur
+**gespiegelt**: dort las sich eine Lücke in der eigenen Buchführung wie
+eine Lücke in der Wirklichkeit (siehe „Der fehlende Änderungsverlauf hat
+eine falsche Behauptung ERZEUGT"). Hier hatte die Buchführung recht — und
+beinahe wäre sie der Datei angeglichen worden.
+
+
 ### ✅ VIER SPIELE, DEREN VERLAUF NICHT ZUM RESULTAT PASST — alle vier erklärt, keines ein Fehler bei uns
 
 Gemeldet von der Website-Seite am 11.09.2026, gemessen über alle 68
@@ -4161,11 +4250,69 @@ einziges Ereignis von Red Star, auch beim Verband nicht.**
 > **Unsere Daten bilden exakt ab, was er führt.**
 
 ⚠ **Und es ist ein TRAININGSSPIEL** (Spieltyp 3, 31.07., Spielnummer
-700228). **Dieselbe Kategorie, bei der auch die Einwechselminuten
-reihenweise fehlen** — 12 von 14 Spielen dieses Typs tragen keine
-einzige. *Dort füllt niemand ein vollständiges Matchblatt.*
+700228) — dieselbe Kategorie, bei der auch die Einwechselminuten
+reihenweise fehlen (12 von 14 Spielen dieses Typs tragen keine einzige).
+*Dort füllt niemand ein vollständiges Matchblatt.*
 
-**Damit ist es kein Einzelfall, sondern ein Muster mit einer Erklärung.**
+⚠ ⚠ **HIER STAND „DAMIT IST ES KEIN EINZELFALL, SONDERN EIN MUSTER MIT
+EINER ERKLÄRUNG". DAS IST WIDERLEGT** — siehe den Abschnitt darunter. Für
+Red Star gilt der Satz, für die vierzehn Spiele ohne Verlauf nicht.
+
+#### ⚠⚠ „BEI TRAININGSSPIELEN WIRD DAS MATCHBLATT NICHT GEFÜLLT" — NICHT BESTÄTIGT
+
+Gemessen von Didi am 11.09.2026, nachdem der Satz aus dem Red-Star-Fall
+entstanden war. **Die vierzehn Spiele ganz ohne Verlauf sind überwiegend
+Meisterschaft:**
+
+| Typ | Spiele |
+|---|---|
+| **1 Meisterschaft** | **9** |
+| 3 Trainingsspiel | 3 |
+| 2 Cup | 2 |
+
+**Und über alle 82 Spiele ist kein Muster — die Anteile sind gleich:**
+
+| Typ | Spiele | ohne Gegnerereignis | ganz ohne Verlauf |
+|---|---|---|---|
+| 1 | 54 | 11 (20 %) | 9 |
+| 2 | 9 | 2 (22 %) | 2 |
+| 3 | 18 | 5 (28 %) | 3 |
+| 9 | 1 | 0 | 0 |
+
+**14 von 82 Spielen haben gar keinen Verlauf — jedes sechste, quer durch
+alle Kategorien**; bei 18 von 82 fehlen die Gegnerereignisse. 28 % gegen
+20 % bei 18 Spielen ist kein Unterschied, den man messen kann.
+
+| der Satz gilt für | |
+|---|---|
+| **Red Star** | ✅ am Verbandsbericht gegengeprüft |
+| die **zwölf ohne Einwechselminuten** | ✅ 12 von 14 Spielen des Typs |
+| die **vierzehn ohne Verlauf** | ❌ **nicht bestätigt** |
+
+⚠ **Er bleibt stehen, als nicht bestätigt gekennzeichnet.** Ihn zu
+streichen wäre nur scheinbar sauber — er erklärt weiterhin, wofür er
+gemessen wurde, und die zwölf ohne Einwechselminuten bräuchten sonst eine
+neue Erklärung für dieselbe Beobachtung.
+
+**Übrig bleibt die Erklärung, die sich nicht messen lässt:** ob jemand das
+Matchblatt gefüllt hat. **Eine Person am Spielfeldrand** — derselbe Befund
+wie bei den Einwechselminuten (siehe „Das Merkmal dahinter: Spieltyp 3 =
+Trainingsspiele"), und dort steht auch, was daraus folgt.
+
+**Es ist eine Datenlage ohne technische Ursache, kein offener Defekt.**
+Nichts zu bauen, nur zu wissen, bevor jemand die Lücke als Ausfall meldet.
+
+#### ⚠ Und die Lehre über den Fall hinaus
+
+Red Star war Typ 3. Daraus wurde „also ist Typ 3 die Ursache" — und die
+Verteilung über alle 82 hat es widerlegt.
+
+> **Ein Einzelfall, der zu einer Hypothese passt, ist ihr schwächster
+> Beleg, gerade weil er sie erzeugt hat.**
+
+Eine Erklärung, die für den Fall stimmt, an dem sie gefunden wurde, ist
+noch keine Erklärung für die Klasse. Die Gegenprobe ist immer dieselbe und
+kostet eine Abfrage: **die Verteilung über alle, nicht den einen.**
 
 #### ⚠ Oberland: zwei Quellen des Verbands widersprechen sich
 

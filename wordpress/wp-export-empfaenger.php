@@ -174,9 +174,20 @@ const CC_ROUTE      = 'clubcampus/v1';
          durchgelaufen. Gegengeprobt in der Pruefkette, die die vier
          reinen Funktionen aus dieser Datei schneidet und AUSFUEHRT.
 
-   0.9.15 (11.09.2026): `nutzlast_fassung` in jeder Antwort, und der
-   Unterfeld-Melder ueberhaupt (`unbeachtete_unterfelder`,
-   `unterfelder_unbekannt`).
+   0.9.15 (11.09.2026): der Unterfeld-Melder ueberhaupt
+   (`unbeachtete_unterfelder`, `unterfelder_unbekannt`).
+   ⚠ ⚠  BERICHTIGT AM 11.09.2026, eine Stunde nach dem Eintrag. Hier stand
+         "`nutzlast_fassung` in jeder Antwort". DAS FELD GIBT ES IN DIESER
+         DATEI NICHT UND GAB ES NIE — gemessen mit
+         `git log -S nutzlast_fassung`: genau ein Commit, naemlich der,
+         der diese Zeile geschrieben hat.
+   ⚠     Woher der Fehler kam: der Eintrag ist aus dem COMMIT-TITEL
+         abgeschrieben ("NUTZLAST_FASSUNG und der Unterfeld-Melder") — und
+         diese Haelfte landete in src/, nicht im Empfaenger.
+         **Ein Aenderungsverlauf, der aus der ABSICHT geschrieben wird
+         statt aus dem ERZEUGNIS, ist eine Behauptung ueber eine andere
+         Stelle.** Dieselbe Familie wie ein Kommentar, der eine andere
+         Stelle zusichert.
    ⚠     ACF verwirft unbekannte Unterfelder eines Repeaters wortlos —
          kein Rueckgabewert, keine Warnung. `cc_unbeachtete_felder()` sah
          das nicht: sie vergleicht nur die oberste Ebene.
