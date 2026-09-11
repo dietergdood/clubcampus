@@ -353,11 +353,53 @@ export function baueNummernBruecke(
  * @param spielId nur noetig, wenn die Bruecke benutzt werden soll.
  */
 export function beschreibeGewechselten(
-  e: Pick<EreignisZeile, "ein_sfv_person_id" | "ein_rueckennr">,
+  /* ⚠ `ist_eigener` ist PFLICHT, nicht optional — siehe unten. Optional
+     hiesse: eine Aufrufstelle kann es weglassen, und dann ist der Fehler
+     vom 11.09.2026 zurück, ohne dass etwas meldet. */
+  e: Pick<EreignisZeile, "ein_sfv_person_id" | "ein_rueckennr" | "ist_eigener">,
   namen?: Map<number, string>,
   bruecke?: Map<string, string>,
   spielId?: string,
 ): string {
+  /* ⚠ ⚠  DIE GRENZE STEHT GANZ VORNE, VOR JEDER NAMENSQUELLE — SIE FEHLTE
+     BIS ZUM 11.09.2026, UND SIE HAT UNSERE SPIELER BEIM GEGNER ERSCHEINEN
+     LASSEN.
+
+     Die Brücke enthält NUR eigene Zeilen — `baueNummernBruecke()` filtert
+     auf `ist_eigener`. Befragt wurde sie aber auch bei GEGNERISCHEN
+     Wechseln, und dort fand sie unseren Spieler mit derselben Nummer.
+
+     Auf der Spielseite Junioren Ba – FC Fällanden vom 30.08. stand
+     viermal „FC Fällanden ersetzt durch <unser Spieler>" — und derselbe
+     Mensch wurde im selben Verlauf bei UNS eingewechselt. Eine
+     öffentliche Seite behauptete damit, ein Spieler von uns sei für den
+     Gegner eingewechselt worden.
+
+     ⚠ DER KOMMENTAR AN `baueNummernBruecke()` NANNTE DIE REGEL WÖRTLICH:
+     „ist_eigener auf BEIDEN Seiten, dasselbe Spiel, genau ein Treffer."
+     Im Code standen zwei davon. Die dritte war eine Zusicherung über
+     eine andere Stelle — und die prüft kein Werkzeug.
+
+     ⚠ UND SIE KONNTE HIER GAR NICHT GEPRÜFT WERDEN: diese Funktion bekam
+     `ist_eigener` nicht. Deshalb steht es jetzt als PFLICHTFELD im Pick
+     — so meldet der Compiler jede Aufrufstelle, die es nicht liefert.
+     Eine Bedingung, die man weglassen kann, wäre die zweite Auflage
+     desselben Fehlers. */
+  /* ⚠ ⚠ UND SIE STEHT VOR DER ZUORDNUNGSKARTE, NICHT ZWISCHEN DEN BEIDEN
+     NAMENSQUELLEN. Beim Schreiben des Testfalls dazu fiel auf, dass es
+     ZWEI Wege zu einem Namen gibt: die Brücke UND `namen`. Löste die
+     Kennung eines gegnerischen Wechsels zufällig in unserer Karte auf,
+     stünde der Name genauso falsch auf der Seite.
+
+     Ob das heute vorkommen KANN, ist offen — Entscheid B verbietet die
+     Personennummer bei fremden AUFSTELLUNGSzeilen, für
+     `spiel_ereignisse.ein_sfv_person_id` gibt es keinen solchen CHECK.
+     **Eine Grenze, die vor beiden Quellen steht, muss die Frage gar
+     nicht beantworten.** */
+  if (!e.ist_eigener) {
+    return e.ein_rueckennr != null ? `Nr. ${e.ein_rueckennr}` : "";
+  }
+
   const name = e.ein_sfv_person_id != null ? namen?.get(e.ein_sfv_person_id) : null;
   if (name) return name;
 

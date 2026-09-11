@@ -1084,32 +1084,72 @@ describe("baueNummernBruecke", () => {
 
 describe("beschreibeGewechselten mit Brücke", () => {
   const bruecke = new Map([["s1:9", "Sara Bösch"]]);
+  /* ⚠ ⚠  `ist_eigener` STAND BIS ZUM 11.09.2026 IN KEINEM DIESER FÄLLE —
+     und das ist der Grund, warum sie den Defekt nicht fangen KONNTEN.
+     Die Objekte trugen zwei Felder; die Seite war nicht ausdrückbar.
+     Seither ist es Pflicht im Typ. */
+  const eigen = (id: number | null, nr: number | null) =>
+    ({ ein_sfv_person_id: id, ein_rueckennr: nr, ist_eigener: true });
+  const fremd = (id: number | null, nr: number | null) =>
+    ({ ein_sfv_person_id: id, ein_rueckennr: nr, ist_eigener: false });
 
   it("die Karte gewinnt, wenn sie auflöst", () => {
     const namen = new Map([[500, "Aus der Zuordnung"]]);
-    expect(beschreibeGewechselten(
-      { ein_sfv_person_id: 500, ein_rueckennr: 9 }, namen, bruecke, "s1",
-    )).toBe("Aus der Zuordnung");
+    expect(beschreibeGewechselten(eigen(500, 9), namen, bruecke, "s1"))
+      .toBe("Aus der Zuordnung");
   });
 
   it("⚠ die Brücke greift, wenn die Kennung ins Leere zeigt", () => {
     /* Der Normalfall, nicht die Ausnahme: 1266706 steht in keiner
        Personentabelle, die 15 aber in der Aufstellung. */
-    expect(beschreibeGewechselten(
-      { ein_sfv_person_id: 1266706, ein_rueckennr: 9 }, new Map(), bruecke, "s1",
-    )).toBe("Sara Bösch");
+    expect(beschreibeGewechselten(eigen(1266706, 9), new Map(), bruecke, "s1"))
+      .toBe("Sara Bösch");
   });
 
   it("ohne Brücke bleibt es bei „Nr. 9“", () => {
-    expect(beschreibeGewechselten(
-      { ein_sfv_person_id: 1266706, ein_rueckennr: 9 }, new Map(),
-    )).toBe("Nr. 9");
+    expect(beschreibeGewechselten(eigen(1266706, 9), new Map())).toBe("Nr. 9");
   });
 
   it("⚠ eine fremde Nummer im anderen Spiel greift nicht", () => {
-    expect(beschreibeGewechselten(
-      { ein_sfv_person_id: null, ein_rueckennr: 9 }, new Map(), bruecke, "s2",
-    )).toBe("Nr. 9");
+    expect(beschreibeGewechselten(fremd(null, 9), new Map(), bruecke, "s2"))
+      .toBe("Nr. 9");
+  });
+
+  /* ══════════════════════════════════════════════════════════════════
+     ⚠ ⚠  DER FALL VON DER WEBSITE — 11.09.2026, Junioren Ba – FC
+     Fällanden vom 30.08. Viermal stand dort „FC Fällanden ersetzt durch
+     <unser Spieler>", und derselbe Mensch wurde im selben Verlauf bei
+     UNS eingewechselt.
+
+     ⚠ WARUM DIE VORHANDENEN FÄLLE GRÜN WAREN, obwohl einer ausdrücklich
+     „die 9 gibt es in beiden Mannschaften" hiess: er prüfte
+     `baueNummernBruecke()` — die AUFSTELLUNGSSEITE, und die war richtig.
+     Die Ereignisseite konnte kein Fall prüfen, weil die Funktion
+     `ist_eigener` gar nicht entgegennahm.
+
+     **Geprüft war die Hälfte, die gebaut wurde, nicht die, die fehlte.**
+     Dieselbe Familie wie „ein Komponententest prüft die Komponente,
+     nicht ihren Einbau".
+     ══════════════════════════════════════════════════════════════════ */
+  it("⚠⚠ ein GEGNERISCHER Wechsel bekommt NIE einen Namen aus der Brücke", () => {
+    /* Die Brücke kennt s1:9 als unseren Spieler. Bei einem gegnerischen
+       Wechsel mit der 9 darf sie trotzdem schweigen. */
+    expect(beschreibeGewechselten(fremd(1266706, 9), new Map(), bruecke, "s1"))
+      .toBe("Nr. 9");
+  });
+
+  it("⚠⚠ auch die Zuordnungskarte gilt beim Gegner nicht", () => {
+    /* Die zweite Hälfte derselben Grenze: löste `ein_sfv_person_id` eines
+       GEGNERISCHEN Wechsels zufällig in unserer Karte auf, stünde der
+       Name genauso falsch da. Entscheid B verbietet beides. */
+    const namen = new Map([[500, "Unser Spieler"]]);
+    expect(beschreibeGewechselten(fremd(500, 25), namen, bruecke, "s1"))
+      .toBe("Nr. 25");
+  });
+
+  it("ein gegnerischer Wechsel ohne Nummer bleibt leer", () => {
+    expect(beschreibeGewechselten(fremd(null, null), new Map(), bruecke, "s1"))
+      .toBe("");
   });
 });
 
