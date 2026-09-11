@@ -162,22 +162,70 @@
 --   3. nachsehen, dass genau drei Auftraege bleiben
 -- ═══════════════════════════════════════════════════════════════════════════
 
--- ─── SCHRITT 2: den doppelten Waechter entfernen ───────────────────────────
--- ⚠ Als select, nicht als do-Block: der Supabase-Editor zeigt NOTICE nicht
---   an, und eine Entfernung, die nichts berichtet, ist von einer, die nicht
---   stattfand, nicht zu unterscheiden.
+-- ═══════════════════════════════════════════════════════════════════════════
+-- SCHRITT 1 — was laeuft JETZT? (nur lesen)
 --
---   -- vorher:
---   select jobid, jobname, schedule, active from cron.job order by jobname;
+-- ⚠ ⚠  DAS IST KEINE FORMALITAET, SONDERN DIE EINZIGE QUELLE.
+--   Was in cron.job steht, ist eine Zeichenkette, die irgendwann einmal
+--   eingespielt wurde. **Keine Pruefkette, kein Test, kein Deploy erreicht
+--   sie.** Der einzige Weg zu wissen, was laeuft, ist cron.job zu lesen.
+--   (Didi, 11.09.2026.)
 --
---   -- entfernen (gibt true zurueck, wenn es ihn gab):
---   select cron.unschedule('sync-waechter') as entfernt;
+--   Erwartete Laengen, aus den Dateien gerechnet — LF plus ein Byte je
+--   Zeile, weil der Editor beim Einfuegen CRLF daraus macht:
 --
---   -- nachher: es muessen genau DREI Auftraege bleiben —
---   --   sfv-sync-stuendlich · sync-waechter-stuendlich · wp-export-abholer
---   --   (plus sync-log-aufraeumen-taeglich, sobald er eingespielt ist)
---   select jobid, jobname, schedule, active from cron.job order by jobname;
+--     sfv-sync-stuendlich             1035
+--     wp-export-abholer               1395
+--     sync-waechter-stuendlich       11932   ← nach diesem Einspielen
+--     sync-log-aufraeumen-taeglich      34
+--
+--   ⚠ Weicht eine ab, laeuft dort etwas anderes als in der Datei steht —
+--   und dann ist die Datei nicht die Wirklichkeit.
+-- ═══════════════════════════════════════════════════════════════════════════
 
+select jobid, jobname, schedule, active, length(command) as zeichen
+  from cron.job
+ order by jobid;
+
+
+-- ═══════════════════════════════════════════════════════════════════════════
+-- SCHRITT 2 — BEIDE Waechter entfernen
+--
+-- ⚠ Beide Namen, nicht einer. Am 10.09.2026 bekam der Waechter beim
+--   Erweitern einen neuen Namen, und cron.schedule ersetzt nur einen
+--   GLEICHNAMIGEN Auftrag — der alte blieb stehen und meldete weiter.
+--
+-- ⚠ AS MATERIALIZED ist Pflicht: ohne das liefe die Funktion, die Zeilen
+--   loescht, ueber genau die Tabelle, die gerade gelesen wird.
+--
+-- Die Ausgabe nennt jeden entfernten Auftrag beim Namen. KEINE Zeile heisst:
+-- es gab keinen — dann stimmt die Annahme nicht, und Schritt 3 wartet.
+-- ═══════════════════════════════════════════════════════════════════════════
+
+with ziel as materialized (
+  select jobid, jobname, schedule
+    from cron.job
+   where jobname in ('sync-waechter', 'sync-waechter-stuendlich')
+)
+select jobname, schedule, cron.unschedule(jobid) as entfernt
+  from ziel;
+
+
+-- ═══════════════════════════════════════════════════════════════════════════
+-- SCHRITT 3 — den EINEN anlegen (der Block darunter)
+--
+-- Er stellt VIER Fragen und traegt den Totmannschalter:
+--
+--   1  Ausfall    laeuft der Anschluss noch?      letzter_sync + sync_status
+--   2  Export     wartet etwas, und wie lange?    export_wartet()
+--   3  Nachlauf   kommt der Durchgang voran?      aelteste_holung_stunden
+--   4  Paging     waechst eine Tabelle auf 1000?  n_live_tup + echte Zaehlung
+--   +  Totmann    meldet den Ausfall des Waechters SELBST an healthchecks
+--
+-- ⚠ Der Block prueft nach dem Anlegen jede einzelne davon am GESPEICHERTEN
+--   Befehl und bricht ab, wenn eine fehlt. cron.schedule speichert nur eine
+--   Zeichenkette und prueft sie nicht.
+-- ═══════════════════════════════════════════════════════════════════════════
 
 do $waechter$
 declare
@@ -467,6 +515,39 @@ begin
 
   raise notice 'Waechter steht: stuendlich zur Minute 47.';
 end $waechter$;
+
+
+-- ═══════════════════════════════════════════════════════════════════════════
+-- SCHRITT 4 — GEGENPROBE: genau ein Waechter, und er stellt alle Fragen
+--
+-- ⚠ Als select, nicht als raise notice: der Supabase-Editor zeigt NOTICE
+--   nicht an, und eine Bestaetigung, die niemand sieht, ist keine.
+-- ═══════════════════════════════════════════════════════════════════════════
+
+-- (a) GENAU EINE Zeile, mit 11932 Zeichen.
+select jobid, jobname, schedule, length(command) as zeichen
+  from cron.job
+ where jobname like '%waechter%';
+
+-- (b) Alle vier Fragen und der Totmannschalter muessen auf true stehen.
+select f.frage, position(f.marke in j.command) > 0 as steht_drin
+  from cron.job j
+ cross join (values
+   ('1 Ausfall ', 'letzter_sync'),
+   ('2 Export  ', 'export_wartet'),
+   ('3 Nachlauf', 'aelteste_holung_stunden'),
+   ('4 Paging  ', 'n_live_tup'),
+   ('+ Totmann ', 'healthcheck_url')
+ ) as f(frage, marke)
+ where j.jobname = 'sync-waechter-stuendlich'
+ order by 1;
+
+-- (c) Und alle Auftraege gegen ihre Dateilaenge:
+--       sfv-sync-stuendlich 1035 · wp-export-abholer 1395
+--       sync-waechter-stuendlich 11932 · sync-log-aufraeumen-taeglich 34
+select jobid, jobname, schedule, length(command) as zeichen
+  from cron.job
+ order by jobid;
 
 
 -- ─── Nachschauen ───────────────────────────────────────────────────────────
