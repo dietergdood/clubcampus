@@ -3794,6 +3794,55 @@ Spiele in die sieben Tage — ein Samstag mit zwölf Partien genügt —,
 altert der Rest des Fensters heraus, ohne je nachgeholt worden zu sein.
 **Ungemessen.**
 
+### ⚠ `loadDbMitglieder` las nie `error` — ein Lesefehler hiesse „0 Mitglieder"
+
+Gefunden am 11.09.2026, **nebenbei beim Paginieren** und nicht durch eine
+Suche danach:
+
+```js
+const [mitgliederRes, kaderRes, benutzerRes] = await Promise.all([…]);
+const mitgliederFlach = flacheZeilen(mitgliederRes.data);   // ⚠ nur data
+```
+
+**Ein `42501` oder ein Netzwerkfehler wäre als leere Liste durchgegangen.**
+Das Portal hätte „0 Mitglieder" gezeigt — nicht als Fehler, sondern als
+Auskunft, **als wäre nachgesehen worden**.
+
+⚠ Das ist dieselbe Familie wie `(data || [])` über einem 400er und wie
+der leere `catch`: **aus einem Ausfall wird eine Datenlage.** Die Regel
+dagegen steht seit dem 20.08.2026 im Papier, und diese Stelle ist ihr
+trotzdem zwei Wochen entgangen — weil niemand nach ihr gesucht hat.
+
+⚠ **Und sie ist die Liste, an der dieser Verein arbeitet.** Bei den
+Supportern fiele der Tab weg (er rendert bei 0 gar nicht), hier stünde
+eine leere Tabelle mit einer Null darüber. **Beides sieht aus wie eine
+Antwort.**
+
+Behoben mit `alleSeiten()`, das wirft statt still zurückzugeben; die zwei
+`if (…Res.error) throw` stehen daneben.
+
+### ⚠⚠ Die Testattrappe gab bei Zählabfragen 0 zurück — und hätte die neue Prüfung wertlos gemacht
+
+`makeSb()` lieferte auf `select("id", { count: "exact", head: true })`
+den Vorgabewert `count: 0`. Die Zählprobe in `alleSeiten()` hielt also
+**jede gelesene Zeile gegen eine Null** und schlug in jedem Test an.
+
+⚠ Hier war es die **laute** Richtung — vierzehn rote Fälle, also
+harmlos. **Die stille wäre dieselbe Zeile gewesen:** hätte die Attrappe
+immer eine passende Zahl geliefert, wäre die Zählprobe in jedem Test
+grün — **und damit ungeprüft, ohne dass etwas rot wird.**
+
+> **Eine Attrappe kennt kein Schema.** Sie prüft dann etwas anderes als
+> das, was läuft — und ob das auffällt, hängt allein an der Richtung.
+
+Jetzt leitet sie die Zahl aus den gelieferten Zeilen ab, **weil eine echte
+Datenbank genau das tut**. Wer eine KÜRZUNG nachstellen will, setzt
+`count` ausdrücklich — und genau das tut die Positivkontrolle.
+
+⚠ **Die Gegenprobe gehört dazu und war billig:** eine Zeile gelesen bei
+912 vorhanden → `fetchSupporter` gibt `null`, nicht eine Liste mit einem
+Eintrag. **Eine Prüfung, die nie rot war, ist keine Prüfung.**
+
 ### ⚠⚠ POSTGREST KÜRZT BEI 1000 ZEILEN — still, und ein AUFRÄUMEN hat es ausgelöst
 
 Gemessen am 11.09.2026:
@@ -3807,6 +3856,32 @@ Gemessen am 11.09.2026:
 `error` ist `null`, `data` hat genau 1000 Einträge — **nichts unterscheidet
 das von „es gibt genau 1000".** Auf der Website fehlten daraufhin
 Aufstellungszeilen, ohne dass irgendetwas fehlschlug.
+
+#### ⚠⚠ DER BELEG, IN ZWEI PROTOKOLLZEILEN NEBENEINANDER
+
+Zwei Läufe desselben Tages, der zweite mit `alleSeiten()`:
+
+| Lauf | gesendet (4395750) | gesamt gesendet | gesamt geschrieben |
+|---|---|---|---|
+| **09:30** | `null` | **1000** | **1000** |
+| **10:06** | **21** | **2282** | **2282** |
+
+> **1000 von 2282 — und beide Zahlen stimmen überein.** Der Empfänger hat
+> genau geschrieben, was ankam; unsere Seite hat genau gesendet, was sie
+> gelesen hat. **Jede Prüfung der Kette war grün, und 1282 Zeilen
+> fehlten.**
+
+⚠ **Das ist der Beleg, den wir nie hatten:** die Kürzung ist nicht
+hergeleitet, sie steht als Zahl im Protokoll. Und sie ist an keiner
+Stelle als Fehler aufgetreten — nicht in `error`, nicht im Status, nicht
+in der Kachel.
+
+⚠ **Die 1000 ist das Verräterische und wäre fast durchgegangen.** Eine
+krumme Zahl hätte jemanden stutzig gemacht; eine runde sieht aus wie
+eine Obergrenze, die jemand gesetzt hat — also nach Absicht.
+
+**Für 4395750 ist die Kette seither geschlossen: 21 vorhanden, 21
+gesendet, 21 geschrieben** (neun eigene, zwölf fremde).
 
 #### ⚠⚠ DER BITTERSTE TEIL: DIE REPARATUR HAT DEN FEHLER AUSGELÖST
 
@@ -3882,7 +3957,7 @@ derselben Liste und haben eine **eigene** Grenze — `storage.list()` gibt
 standardmässig 100 Objekte heraus, nicht 1000. Wer hier nur an PostgREST
 denkt, prüft die falsche Zahl.
 
-#### ⚠⚠ UND FÜR DIE BUCKETS GILT EINE ANDERE ZAHL: 100, NICHT 1000
+#### ⚠ Für die Buckets gilt 100 statt 1000 — nur ruft sie hier niemand auf
 
 `mitglieder-fotos` und `sfv-logos` stehen in derselben Liste und sind
 **keine Tabellen**. `storage.list()` gibt standardmässig **100** Objekte
@@ -3892,9 +3967,29 @@ heraus.
 > nichts.** Er rechnet mit 1000, sieht 387 Logos, hält es für
 > unbedenklich — und die Liste war schon bei 100 zu Ende.
 
-**Und es ist die gefährlichere der beiden Grenzen**, weil sie zehnmal
-früher greift und weil niemand sie erwartet: die 1000 kennt man
-irgendwann, die 100 steht in einer anderen Dokumentation.
+**Sie wäre die gefährlichere der beiden Grenzen** — zehnmal früher, und
+niemand erwartet sie.
+
+⚠ ⚠ **NUR GIBT ES SIE HIER NICHT, UND DAS IST EIN BEFUND ÜBER MICH.**
+Gemessen am 11.09.2026: **`storage.list()` wird im ganzen Portal kein
+einziges Mal aufgerufen.** Die drei Storage-Stellen sind ein `upload()`
+und zweimal `getPublicUrl()` — letzteres baut eine URL aus einem Pfad,
+ohne Netzwerkaufruf und ohne Liste. **Die Wappen werden über die TABELLE
+`sfv_team_logos` aufgezählt, nicht über den Bucket.** Die 100er-Grenze
+kann damit gar nicht greifen.
+
+⚠ **Und die zwei Bucket-Einträge in der 83er-Liste waren ein Artefakt
+meines Messskripts:** es hing am `from(…)`-Aufruf und konnte
+`sb.storage.from("sfv-logos")` nicht von `sb.from("tabelle")`
+unterscheiden. **Es sind 81 Lesestellen, nicht 83.**
+
+**Fünfter Fall derselben Klasse an einem Tag:** ein richtig verstandener
+Mechanismus, angewendet auf einen Fall, den niemand gemessen hat — und
+wieder klang es überzeugender als eine Vermutung, **gerade weil die 100
+stimmt.**
+
+**Der Satz bleibt stehen, als Vorausschau statt als Befund:** wer je
+`storage.list()` schreibt, rechnet mit 1000 und bekommt 100.
 
 
 #### ✅ `alleSeiten()` — gebaut am 11.09.2026, an vier Stellen
