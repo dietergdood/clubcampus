@@ -3,6 +3,7 @@
    Supabase Lade-Funktionen für App-Level Daten
    ═══════════════════════════════════════════════════════════════ */
 import { THEME_DEFAULT_STATIC, hexToRgba, darkenHex, contrastColor } from "../../theme.ts";
+import { alleSeiten } from "../db/alleSeiten.ts";
 import { flacheZeilen } from "../person/personService.ts";
 
 export function useAppData({ sb, slug, setAppTheme, setModuleAktiv, setModuleRechte, setDbStufen,
@@ -187,10 +188,45 @@ export function useAppData({ sb, slug, setAppTheme, setModuleAktiv, setModuleRec
         /* Ohne .order(): sortiert wird im Browser (memberFilter), und die
            Spalten nachname/vorname sind mit Etappe 6 aus `mitglieder`
            verschwunden — ein .order() darauf braeche die Abfrage. */
-        sb.from("mitglieder").select("*, personen(*)").eq("aktiv", true),
-        sb.from("kader").select("mitglied_id,rollen,teams(id,name,kurzname)").eq("aktiv", true),
+        /* ⚠ ⚠  SEITENWEISE, SEIT DEM 11.09.2026.
+
+           PostgREST gibt höchstens 1000 Zeilen heraus und KÜRZT STILL:
+           `error` bleibt null, `data` hat genau 1000 Einträge, und nichts
+           unterscheidet das von „es gibt genau 1000".
+
+           `mitglieder` stand an dem Tag bei 515 aktiven Zeilen — nicht
+           akut, aber das ist kein Grund: am selben Tag hat ein Aufräumen
+           `spiel_aufstellung` über die Grenze geschoben und auf der
+           Website Aufstellungen verschwinden lassen. **Eine stille Grenze
+           ist eine Bombe mit Wasserstand, nicht mit Zünder.**
+
+           ⚠ Und hier wäre der Ausfall am teuersten: die Mitgliederliste
+           ist die Liste, an der dieser Verein arbeitet. Eine Liste sieht
+           immer vollständig aus. */
+        alleSeiten(
+          (von, bis) => sb.from("mitglieder").select("*, personen(*)")
+            .eq("aktiv", true).order("id").range(von, bis),
+          () => sb.from("mitglieder").select("id", { count: "exact", head: true })
+            .eq("aktiv", true),
+          "Mitglieder",
+        ).then(data => ({ data, error: null }), error => ({ data: null, error })),
+        alleSeiten(
+          (von, bis) => sb.from("kader")
+            .select("mitglied_id,rollen,teams(id,name,kurzname)")
+            .eq("aktiv", true).order("id").range(von, bis),
+          () => sb.from("kader").select("id", { count: "exact", head: true })
+            .eq("aktiv", true),
+          "Kader",
+        ).then(data => ({ data, error: null }), error => ({ data: null, error })),
         sb.from("benutzer").select("person_id,aktiv"),
       ]);
+      /* ⚠ `error` LESEN, nicht nur `data`. Bis zum 11.09.2026 stand hier
+         nur `mitgliederRes.data` — ein Lesefehler wäre als leere Liste
+         durchgegangen, und das Portal hätte „0 Mitglieder" gezeigt, als
+         wäre nachgesehen worden. Jetzt wirft `alleSeiten()` auch bei einer
+         gekürzten Antwort, und der `catch` unten fängt beides. */
+      if (mitgliederRes.error) throw mitgliederRes.error;
+      if (kaderRes.error) throw kaderRes.error;
       const mitgliederFlach = flacheZeilen(mitgliederRes.data);
       /* ⚠ UEBER `person_id`, NICHT `mitglied_id` (F2, behoben am 22.08.2026).
          Das Konto haengt seit Etappe 4 an der PERSON. Der Schluessel hier war

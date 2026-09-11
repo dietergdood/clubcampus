@@ -19,6 +19,7 @@ import type { SbClient } from "../../types.ts";
 import { fetchArtenFuerPersonen } from "../person/personArtService.ts";
 import type { PersonArt } from "../person/personArtService.ts";
 import { beendeVerknuepfungen, setzeArtFuerElternOhneKind } from "./memberService.ts";
+import { alleSeiten } from "../db/alleSeiten.ts";
 
 export interface SupporterRoh {
   /** personen.id */
@@ -69,6 +70,45 @@ export type PersonFuerMitgliedschaft =
 /* Genau die Felder, die mapSupporter liest. Nicht `*`: was die Liste nicht
    anzeigt, muss auch nicht ueber die Leitung — und eine neue Spalte in
    `personen` soll nicht ungefragt in einer Liste landen. */
+/**
+ * Die Form, die PERSON_SELECT zurueckgibt.
+ *
+ * ⚠ VON HAND, UND DAS IST EIN PREIS. Bis zum 11.09.2026 leitete
+ * supabase-js den Typ aus dem select-String gegen database.types.ts ab.
+ * `alleSeiten()` reicht die Zeilen durch einen Generic und LOESCHT diese
+ * Inferenz — was das Paginieren kostet, ist die Typpruefung an der
+ * Abfrage.
+ *
+ * ⚠ Deshalb hier ausdruecklich statt als `any`: ein `any` naehme dem
+ * Compiler auch noch die Pruefung der VERWENDUNG, und dann waere der
+ * Preis doppelt. Wer PERSON_SELECT aendert, aendert diesen Typ mit —
+ * eine Zusicherung ueber eine andere Stelle, und die steht deshalb
+ * unmittelbar daneben.
+ */
+interface PersonZeile {
+  id: string;
+  vorname: string;
+  nachname: string;
+  email: string | null;
+  telefon: string | null;
+  strasse: string | null;
+  plz: string | null;
+  ort: string | null;
+  geburtsdatum: string | null;
+  geschlecht: string | null;
+  nationalitaet: string | null;
+  nationalitaet2: string | null;
+  heimatort: string | null;
+  ahv_nr: string | null;
+  foto_url: string | null;
+  funktionen: string[] | null;
+  profil_geprueft_at: string | null;
+  offene_punkte: string | null;
+  mitglieder: { id: number }[] | null;
+  eltern_kinder: { person_id: string }[] | null;
+  benutzer: { id: string; role: string | null; aktiv: boolean | null }[] | null;
+}
+
 const PERSON_SELECT = `
   id, vorname, nachname, email, telefon,
   strasse, plz, ort, geburtsdatum, geschlecht,
@@ -113,14 +153,39 @@ export async function fetchSupporter(
   sb: SbClient,
   vereinId: string,
 ): Promise<SupporterRoh[] | null> {
-  const { data, error } = await sb.from("personen")
-    .select(PERSON_SELECT)
-    .eq("verein_id", vereinId)
-    .order("nachname", { ascending: true });
+  /* ⚠ ⚠  SEITENWEISE, SEIT DEM 11.09.2026 — und diese Stelle war die
+     dringendste im ganzen Portal.
+
+     `personen` stand an dem Tag bei **912** Zeilen, und PostgREST gibt
+     höchstens **1000** heraus: `error` bleibt `null`, `data` hat genau
+     1000 Einträge. **88 Zeilen Abstand** — bei 515 Mitgliedern sind das
+     Monate, nicht Jahre.
+
+     ⚠ Und der Ausfall wäre genau der, gegen den der Block darunter
+     gebaut ist, nur eine Stufe leiser: kein `42501`, keine leere Liste,
+     sondern eine Liste, die **zu kurz ist und vollständig aussieht**.
+     Niemand sucht dort — eine Liste sieht immer vollständig aus. */
+  let data: PersonZeile[] | null = null;
+  let error: unknown = null;
+  try {
+    data = await alleSeiten<PersonZeile>(
+      (von, bis) => sb.from("personen").select(PERSON_SELECT)
+        .eq("verein_id", vereinId)
+        .order("nachname", { ascending: true }).order("id")
+        .range(von, bis),
+      () => sb.from("personen").select("id", { count: "exact", head: true })
+        .eq("verein_id", vereinId),
+      "Supporter",
+    );
+  } catch (e) {
+    error = e;
+  }
 
   /* error lesen, nicht nur try/catch: sb.from().select() wirft bei einem
-     Datenbankfehler nicht, es liefert { data, error }. Ohne diese Zeile
-     saehe ein 42501 aus wie „es gibt keine Supporter". */
+     Datenbankfehler nicht, es liefert { data, error }. `alleSeiten()`
+     dreht das um und wirft — der Rückfall auf `null` unten bleibt
+     derselbe, und das ist der Punkt: ein Lesefehler und eine gekürzte
+     Liste enden beide dort, wo die Oberfläche „nicht gelesen" anzeigt. */
   /* ⚠ `null` BEI EINEM LESEFEHLER, NICHT `[]`. Der Unterschied ist der ganze
      Punkt: `[]` heisst „nachgesehen, nichts da", `null` heisst „nicht
      gelesen". Wer beides zu `[]` macht, verwandelt einen Fehler in eine

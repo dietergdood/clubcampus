@@ -18,6 +18,7 @@
    nicht aendern, sonst bleiben gespeicherte Ansichten still leer.
    ═══════════════════════════════════════════════════════════════ */
 import type { PostgrestError } from "@supabase/supabase-js";
+import { alleSeiten } from "../db/alleSeiten.ts";
 import { flacheZeile, verteileFelder } from "../person/personService.ts";
 import { fetchArtenFuerPersonen } from "../person/personArtService.ts";
 import type { SbClient, TablesInsert, TablesUpdate } from "../../types.ts";
@@ -132,9 +133,59 @@ export async function fetchElternkontakte(sb: SbClient, mitgliedId: number): Pro
    Die Kindernamen kommen aus `mitglieder.personen`, nicht aus den
    Altspalten von `mitglieder`; `flacheZeile()` macht sie wieder flach,
    damit `getKinderMitTeams()` in elternListUtils unveraendert bleibt. */
+/**
+ * Die Form, die fetchAlleElternkontakte zurückgibt.
+ *
+ * ⚠ VON HAND, UND DAS IST DER PREIS DES PAGINIERENS: `alleSeiten()`
+ * reicht die Zeilen durch einen Generic und löscht die Typinferenz, die
+ * supabase-js aus dem select-String gegen `database.types.ts` gezogen
+ * hat. Ausdrücklich statt `any`, sonst wäre auch die Prüfung der
+ * Verwendung weg und der Preis doppelt.
+ */
+interface ElternZeile {
+  id: string;
+  vorname: string;
+  nachname: string;
+  email: string | null;
+  telefon: string | null;
+  strasse: string | null;
+  plz: string | null;
+  ort: string | null;
+  geburtsdatum: string | null;
+  geschlecht: string | null;
+  nationalitaet: string | null;
+  nationalitaet2: string | null;
+  heimatort: string | null;
+  ahv_nr: string | null;
+  funktionen: string[] | null;
+  profil_geprueft_at: string | null;
+  benutzer: { id: string; role: string | null }[] | null;
+  eltern_kinder: {
+    /* ⚠ NOT NULL in der Datenbank (schema.sql:904) — nachgesehen, nicht
+       angenommen. Ein zu weiter Typ zwingt jeden Leser zu einer
+       Fallunterscheidung, die es nicht gibt. */
+    mitglied_id: number;
+    hauptkontakt: boolean;
+    beziehung: string | null;
+    mitglieder: unknown;
+  }[] | null;
+}
+
 export async function fetchAlleElternkontakte(sb: SbClient, vereinId: string) {
-  const { data, error } = await sb.from("personen")
-    .select(`
+  /* ⚠ ⚠  SEITENWEISE, SEIT DEM 11.09.2026. `personen` stand an dem Tag
+     bei 912 Zeilen; PostgREST gibt höchstens 1000 heraus und kürzt STILL
+     — `error` bleibt null, `data` hat genau 1000 Einträge.
+
+     ⚠ DIE ZÄHLUNG TRÄGT DENSELBEN `!inner`-EMBED wie die Seitenabfrage.
+     Ohne ihn zählte sie ALLE Personen (912) gegen die gelieferten Eltern
+     (~390) und meldete einen Verlust, den es nicht gibt — und ein Melder,
+     der grundlos anschlägt, wird abgeschaltet statt gelesen. */
+  let data: ElternZeile[] | null = null;
+  let error: unknown = null;
+  try {
+    data = await alleSeiten<ElternZeile>(
+      (von, bis) => sb.from("personen")
+        .select(`
       id, vorname, nachname, email, telefon,
       strasse, plz, ort, geburtsdatum, geschlecht,
       nationalitaet, nationalitaet2, heimatort, ahv_nr,
@@ -149,8 +200,18 @@ export async function fetchAlleElternkontakte(sb: SbClient, vereinId: string) {
         )
       )
     `)
-    .eq("verein_id", vereinId)
-    .order("nachname", { ascending: true });
+        .eq("verein_id", vereinId)
+        .order("nachname", { ascending: true }).order("id")
+        .range(von, bis),
+      () => sb.from("personen")
+        .select("id, eltern_kinder!inner(mitglied_id)",
+          { count: "exact", head: true })
+        .eq("verein_id", vereinId),
+      "Elternkontakte",
+    );
+  } catch (e) {
+    error = e;
+  }
   /* ⚠ `null` BEI EINEM LESEFEHLER, NICHT `[]`. Der Unterschied ist der ganze
      Punkt: `[]` heisst „nachgesehen, nichts da", `null` heisst „nicht
      gelesen". Wer beides zu `[]` macht, verwandelt einen Fehler in eine

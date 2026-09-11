@@ -3669,18 +3669,44 @@ Gegengeprobt: Grenze ausgeschaltet → **beide** neuen Fälle rot.
 
 ### ⚠ `/events` kennt Spieler, die `/players` nicht listet — in VIER Spielen
 
-Gemessen am 11.09.2026 über den ganzen Bestand: **sieben Ereignisse in vier
+Gemessen am 11.09.2026 über den ganzen Bestand: **fünf Ereignisse in vier
 Spielen** nennen eine `sfv_person_id`, zu der es in `spiel_aufstellung`
 derselben Partie keine Zeile gibt.
 
 | Spiel | Fälle |
 |---|---|
-| 4379006 | 3 |
+| 4379006 | 1 |
 | 4391599 | 2 |
 | 4378093 | 1 |
 | 4393089 | 1 |
 
-**Sieben von rund 900 Ereignissen. Ein Randbefund**, festgehalten mit Datum
+⚠ **BERICHTIGT AM 11.09.2026 NACH DEM NACHHOL-LAUF: es sind fünf, nicht
+sieben.** Die erste Messung lief, während zwei der Spiele noch in der
+eingefrorenen Zone lagen — ihre Aufstellung war unvollständig, ihre
+Ereignisse nicht. **Die eingefrorene Zone erklärt zwei der sieben, nicht
+alle.**
+
+⚠ **UND ALLE FÜNF STEHEN AUF DER AUSGEWECHSELTEN-SEITE.** Gemessen mit
+beiden Rollen getrennt (`sfv_person_id` gegen `ein_rueckennr`):
+
+| Spiel | raus_ohne_zeile | rein_ohne_zeile |
+|---|---|---|
+| 4379006 | 1 | **0** |
+| 4391599 | 2 | **0** |
+| 4393089 | 1 | **0** |
+| 4378093 | 1 | **0** |
+
+> **`rein_ohne_zeile` ist überall 0 — die Nummern-Brücke findet JEDEN
+> Eingewechselten.** Die Hälfte, die ich für die schwächere hielt, trägt
+> vollständig.
+
+⚠ Das ist die zweite Korrektur an derselben Sache an einem Tag: erst hat
+meine Abfrage nur `sfv_person_id` geprüft und damit genau die Rolle
+gemessen, die ohnehin funktioniert — und dann stand die Zahl sieben im
+Papier, obwohl zwei davon aus einem Zustand stammten, den es nicht mehr
+gab. **Eine Zahl in einem Dokument ist eine Messung von damals.**
+
+**Fünf von rund 1000 Ereignissen. Ein Randbefund**, festgehalten mit Datum
 und beim nächsten Durchlauf neu zu messen — **kein Bau.**
 
 ⚠ ⚠ **UND EINE AUFSTELLUNGSZEILE AUS EREIGNISSEN ZUSAMMENZUSETZEN IST
@@ -3692,7 +3718,7 @@ eigenem Zähler.
 
 #### ⚠⚠ UND 4395750 GEHÖRT NICHT DAZU — ich hatte den Befund am falschen Spiel behauptet
 
-**Das ist der eigentliche Eintrag hier, nicht die sieben Fälle.**
+**Das ist der eigentliche Eintrag hier, nicht die fünf Fälle.**
 
 Bei 4395750 (Senioren 50+, 9 eigene Zeilen) tauchten drei Namen im Verlauf
 auf — André Kym, Lars Haussmann, Benedetto Montana —, und ich habe daraus
@@ -3845,13 +3871,73 @@ ungepagt?", sondern „wächst diese Tabelle auf tausend zu?"**
 | Lage | Beispiel |
 |---|---|
 | **darüber** | `spiel_aufstellung` 2282 · `spiel_ereignisse` 1051 |
+| **88 Zeilen darunter** | ⚠ `personen` **912** — die Supporter-Liste liest sie ALLE |
+| wächst mit jedem Jahrgang | `mitglieder` 515 · `eltern_kinder` 399 · `sfv_personen` 387 |
 | **nah dran** | ⚠ `personen` — die Mitgliederliste würde still Mitglieder verlieren |
 | unbedenklich | `api_verbindungen`, `mitgliedtypen`, `personenarten`, `portal_funktionen` |
+| bounded durch einen FILTER, nicht durch die Tabelle | die `.in(…)`-Lesestellen der Sammelaktionen — die Auswahl deckelt bei 25 |
 
 ⚠ **Die zwei Storage-Buckets** (`mitglieder-fotos`, `sfv-logos`) stehen in
 derselben Liste und haben eine **eigene** Grenze — `storage.list()` gibt
 standardmässig 100 Objekte heraus, nicht 1000. Wer hier nur an PostgREST
 denkt, prüft die falsche Zahl.
+
+#### ⚠⚠ UND FÜR DIE BUCKETS GILT EINE ANDERE ZAHL: 100, NICHT 1000
+
+`mitglieder-fotos` und `sfv-logos` stehen in derselben Liste und sind
+**keine Tabellen**. `storage.list()` gibt standardmässig **100** Objekte
+heraus.
+
+> ⚠ **Wer dort an PostgREST denkt, prüft die falsche Zahl und findet
+> nichts.** Er rechnet mit 1000, sieht 387 Logos, hält es für
+> unbedenklich — und die Liste war schon bei 100 zu Ende.
+
+**Und es ist die gefährlichere der beiden Grenzen**, weil sie zehnmal
+früher greift und weil niemand sie erwartet: die 1000 kennt man
+irgendwann, die 100 steht in einer anderen Dokumentation.
+
+
+#### ✅ `alleSeiten()` — gebaut am 11.09.2026, an vier Stellen
+
+`src/domains/db/alleSeiten.ts`, **eine** Fassung für beide Welten. Sie
+stand zuerst in `wp-export/index.ts`; eine zweite für die
+Browser-Dienste wäre genau die Doppelung gewesen, die dieses Papier an
+einem Dutzend Stellen als teuersten Fehler führt.
+
+| Stelle | Tabelle | heute |
+|---|---|---|
+| `fetchSupporter` | `personen` | ⚠ **912** — liest ALLE, 88 unter der Grenze |
+| `fetchAlleElternkontakte` | `personen` (`!inner`) | ~390 |
+| `loadDbMitglieder` | `mitglieder` · `kader` | 515 |
+| `wp-export` | `spiel_aufstellung` · `spiel_ereignisse` | 2282 · 1051 |
+
+⚠ **`loadDbMitglieder` las bis dahin nur `data`, nie `error`.** Ein
+Lesefehler wäre als leere Liste durchgegangen — „0 Mitglieder“, als wäre
+nachgesehen worden. Beim Paginieren ist es aufgefallen, nicht bei einer
+Suche danach.
+
+⚠⚠ **DIE ZÄHLABFRAGE MUSS JEDEN FILTER DER SEITENABFRAGE TRAGEN.** Bei
+`fetchAlleElternkontakte` gehört der `!inner`-Embed dazu: ohne ihn zählt
+sie 912 Personen gegen ~390 gelieferte Eltern und **meldet einen
+Verlust, den es nicht gibt.**
+
+> **Ein Melder, der grundlos anschlägt, ist schlimmer als keiner** — er
+> wird nach dem dritten Mal abgeschaltet. Dieselbe Abstumpfung wie bei
+> den 758 Lint-Warnungen und beim dauerhaft roten Test.
+
+⚠ **Und das Paginieren hat einen Preis, den man kennen muss:** es
+reicht die Zeilen durch einen Generic und **löscht damit die
+Typinferenz**, die supabase-js aus dem select-String gegen
+`database.types.ts` zieht. Deshalb steht an jeder Stelle ein
+ausdrücklicher Zeilentyp statt `any` — ein `any` nähme dem Compiler
+auch noch die Prüfung der Verwendung, und der Preis wäre doppelt.
+
+⚠ **Die Attrappe musste mit.** `makeSb()` gab auf eine Zählabfrage den
+Vorgabewert `count: 0` zurück, und damit schlug die Zählprobe in jedem
+Test an. Jetzt leitet sie die Zahl aus den gelieferten Zeilen ab — wer
+eine Kürzung nachstellen will, setzt `count` ausdrücklich.
+**Gegengeprobt:** eine Zeile gelesen bei 912 vorhanden → `fetchSupporter`
+gibt `null`, nicht eine Liste mit einem Eintrag.
 
 **Zum Wiederholen:** das Messskript liegt nicht im Repo (es ist eine
 Bestandsaufnahme, kein Prüfmittel). Es hängt am `from("…")`-Aufruf und

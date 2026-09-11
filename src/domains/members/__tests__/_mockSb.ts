@@ -85,7 +85,33 @@ export function makeSb(results: Record<string, OpResult | OpResult[]> = {}): Moc
       } else {
         hit = roh ?? {};
       }
-      return Promise.resolve({ ...def, ...hit });
+      const erg: OpResult = { ...def, ...hit };
+
+      /* ⚠ ⚠  EINE ZAEHLABFRAGE ZAEHLT — seit dem 11.09.2026.
+
+         `select("id", { count: "exact", head: true })` gibt in echt KEINE
+         Zeilen und DAFUER eine Zahl zurueck. Die Attrappe lieferte dort
+         den Vorgabewert `count: 0` — und damit schlug die Zaehlprobe in
+         `alleSeiten()` bei jedem Test an, obwohl der Code richtig ist.
+
+         ⚠ Das ist genau die Falle aus CLAUDE.md: **eine Attrappe kennt
+         kein Schema.** Sie prueft dann etwas anderes als das, was laeuft —
+         hier in der lauten Richtung (rot, also harmlos), aber die stille
+         waere dieselbe Zeile: eine Zaehlung, die IMMER passt, machte die
+         Zaehlprobe wertlos, ohne dass ein Test rot wuerde.
+
+         Deshalb wird abgeleitet statt geraten: so viele Zeilen, wie die
+         Attrappe fuer dieselbe Frage liefert. Wer eine KUERZUNG
+         nachstellen will, setzt `count` ausdruecklich — und genau das tut
+         der Fall in `alleSeiten.test.ts`. */
+      const kopf = (rec.selectArgs ?? []).some(
+        (a: any) => a && typeof a === "object" && a.head === true,
+      );
+      if (kopf && hit.count === undefined) {
+        erg.count = Array.isArray(erg.data) ? erg.data.length : 0;
+        erg.data = null;
+      }
+      return Promise.resolve(erg);
     };
 
     const b: any = {};
