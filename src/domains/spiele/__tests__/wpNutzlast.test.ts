@@ -18,6 +18,7 @@ import {
   verlaufArt, verlaufMinute, bildeVerlauf, bildeSpiel, zaehleVerlaufNamen,
   TYP_WECHSEL, TYP_ASSIST, SUBTYP_ZWEITE_VERWARNUNG, torZusatz,
   hatDoppelabstand, sammleMarken, markeSchluessel, zaehleWechselWiderspruch,
+  halbzeitWiderspruch,
   leererWechselWiderspruch,
   spielerAnzeige, rolleAus, ROLLE_ERSATZ_ID, ROLLE_KEIN_EINSATZ_ID,
   ROLLE_CAPTAIN_ID, baueAufstellung, leereAufstellungZahlen,
@@ -1438,5 +1439,66 @@ describe("bildeVerlauf — die drei Felder fuer die Website", () => {
     expect(z.nummer).toBe(5);
     expect(z.ein_nummer).toBe(21);
     expect(z.ereignis_zusatz).toBe("");
+  });
+});
+describe("halbzeitWiderspruch — Doppelmeldungen zaehlen statt glaetten", () => {
+  /* ⚠ ⚠ BELEGT an Spiel 4346574 (0:7): ht_resultat sagt 0:2, die
+     Ereignisliste nennt DREI Tore bis zur 45. Zwei unabhaengige Quellen
+     des Verbands widersprechen sich.
+
+     ⚠ Und er entdoppelt NICHT: zwei inhaltsgleiche Zeilen aus einem
+     Abruf koennen zwei echte Tore sein (Nr. 9 in der 69., gemessen am
+     11.09.2026). Was man nicht entdoppelt, kann man nicht faelschlich
+     entdoppeln. */
+  const tor = (minute: number | null, eigen = false) =>
+    ({ typ_id: TYP_TOR, minute, ist_eigener: eigen });
+
+  it("⚠⚠ der Fall 4346574: drei Tore bis zur 45., Halbzeit sagt zwei", () => {
+    const r = halbzeitWiderspruch(
+      [tor(12), tor(30), tor(45)], "0:2", true,
+    );
+    expect(r).toBe(true);
+  });
+
+  it("stimmt es ueberein, ist es kein Widerspruch", () => {
+    expect(halbzeitWiderspruch([tor(12), tor(30)], "0:2", true)).toBe(false);
+  });
+
+  it("⚠ die zweite Halbzeit zaehlt nicht mit", () => {
+    expect(halbzeitWiderspruch(
+      [tor(12), tor(30), tor(70), tor(88)], "0:2", true,
+    )).toBe(false);
+  });
+
+  it("Minute 45 zaehlt zur ersten Haelfte, 46 nicht", () => {
+    expect(halbzeitWiderspruch([tor(45)], "0:1", true)).toBe(false);
+    expect(halbzeitWiderspruch([tor(46)], "0:0", true)).toBe(false);
+  });
+
+  it("⚠ auswaerts sind die Seiten getauscht", () => {
+    /* ht_resultat steht immer als heim:gast. Wer das verwechselt, meldet
+       jedes Auswaertsspiel mit ungleichem Stand als Widerspruch. */
+    expect(halbzeitWiderspruch([tor(20, true)], "0:1", false)).toBe(false);
+    expect(halbzeitWiderspruch([tor(20, true)], "1:0", false)).toBe(true);
+  });
+
+  it("⚠⚠ ohne ht_resultat ist es NICHT PRUEFBAR, nicht in Ordnung", () => {
+    /* null heisst „es gibt nichts, wogegen man halten koennte". Wer es
+       mit false zusammenzaehlt, meldet fehlende Halbzeitstaende als
+       geprueft. */
+    expect(halbzeitWiderspruch([tor(12)], null, true)).toBeNull();
+    expect(halbzeitWiderspruch([tor(12)], "", true)).toBeNull();
+    expect(halbzeitWiderspruch([tor(12)], "kaputt", true)).toBeNull();
+  });
+
+  it("⚠ ein Tor ohne Minute macht die Pruefung gegenstandslos", () => {
+    expect(halbzeitWiderspruch([tor(null), tor(20)], "0:1", true)).toBeNull();
+  });
+
+  it("Karten und Wechsel zaehlen nicht als Tore", () => {
+    expect(halbzeitWiderspruch(
+      [{ typ_id: 3, minute: 20, ist_eigener: false },
+       { typ_id: 2, minute: 30, ist_eigener: true }], "0:0", true,
+    )).toBe(false);
   });
 });

@@ -59,7 +59,7 @@ import type { EreignisZeile } from "../../../src/domains/spiele/matchdatenAnzeig
 import {
   bildeSpiel, zaehleVerlaufNamen, hatDoppelabstand,
   baueAufstellung, leereAufstellungZahlen, sammleMarken,
-  zaehleWechselWiderspruch, leererWechselWiderspruch,
+  zaehleWechselWiderspruch, leererWechselWiderspruch, halbzeitWiderspruch,
 } from "../../../src/domains/spiele/wpNutzlast.ts";
 /* ⚠ Der Zeitraum ist RECHNUNG, keine Zusage — er gehoert dorthin, wo tsc
    und vitest ihn lesen koennen. Diese Datei importiert von esm.sh und wird
@@ -1186,6 +1186,12 @@ async function laufeProbe(
      auf der Website**, weil die Gegneraufstellung keine Wechselpfeile
      zeigte — und nicht über eine Zahl. */
   const wechselWiderspruch = leererWechselWiderspruch();
+  /* Halbzeitstand gegen die Tore bis zur Pause — zwei unabhaengige
+     Quellen des Verbands. Belegt an 4346574: ht sagt 0:2, die Liste
+     nennt drei. ⚠ `nicht_pruefbar` getrennt: ohne ht_resultat gibt es
+     nichts, wogegen man halten koennte — und wer es mit „stimmt"
+     zusammenzaehlt, meldet fehlende Halbzeitstaende als geprueft. */
+  const halbzeit = { widerspruch: 0, stimmt: 0, nicht_pruefbar: 0 };
   let spieleMitAufstellung = 0;
   /* Geholt, aber der Verband fuehrt keine Aufstellung — die Zeilen, die
      drueben ausdruecklich geleert werden. */
@@ -1241,6 +1247,13 @@ async function laufeProbe(
         aufZeilen, marken.je_spieler, spiel.heim_auswaerts === "heim",
         namen, aufZahlen,
       );
+      const hw = halbzeitWiderspruch(
+        ereignisse, (s.ht_resultat as string | null) ?? null,
+        spiel.heim_auswaerts === "heim",
+      );
+      if (hw === null) halbzeit.nicht_pruefbar += 1;
+      else if (hw) halbzeit.widerspruch += 1;
+      else halbzeit.stimmt += 1;
       const ww = zaehleWechselWiderspruch(ereignisse, aufZeilen);
       for (const k of Object.keys(wechselWiderspruch) as (keyof typeof wechselWiderspruch)[]) {
         wechselWiderspruch[k] += ww[k];
@@ -1376,6 +1389,9 @@ async function laufeProbe(
          Altbestand — bis zum 10.09. filterte ein `eigen ?` die Nummer
          bei Gegnern weg —, und er fuellt sich mit dem rollenden
          Nachlauf. */
+      halbzeit_widerspruch: halbzeit.widerspruch,
+      halbzeit_stimmt: halbzeit.stimmt,
+      halbzeit_nicht_pruefbar: halbzeit.nicht_pruefbar,
       verlauf_mit_nummer: verlaufZahlen.mit_nummer,
       verlauf_mit_ein_nummer: verlaufZahlen.mit_ein_nummer,
       verlauf_mit_zusatz: verlaufZahlen.mit_zusatz,

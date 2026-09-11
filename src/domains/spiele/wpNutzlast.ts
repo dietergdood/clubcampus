@@ -335,6 +335,65 @@ export function bildeStatus(sfvStatus: number | null): StatusEntscheid {
   }
 }
 
+/**
+ * Passen die Tore bis zur Pause zum gemeldeten Halbzeitstand?
+ *
+ * ⚠ ⚠  ER FINDET DOPPELMELDUNGEN, OHNE EINE ZEILE ANZUFASSEN.
+ *
+ * Belegt am 11.09.2026 an Spiel 4346574 (0:7): der Halbzeitstand sagt
+ * **0:2**, die Ereignisliste nennt **drei** Tore bis zur 45. Zwei
+ * unabhaengige Quellen des Verbands widersprechen sich — `ht_resultat`
+ * kommt aus `/api/match/{id}`, die Tore aus `/api/match/{id}/events`.
+ *
+ * ⚠ ⚠  UND ER ENTDOPPELT NICHT, UND ZWAR MIT ABSICHT.
+ *
+ * Die Entdopplung geht auf den Abruf-Zeitstempel, nicht auf den Inhalt:
+ * zwei inhaltsgleiche Zeilen aus EINEM Abruf bleiben stehen. Das ist
+ * kein Versaeumnis — am 11.09.2026 hat ein Gegner mit der Nummer 9 in
+ * der 69. **zwei Tore** erzielt, in einem Abruf, und nichts, was wir
+ * fuehren, unterscheidet die beiden Zeilen.
+ *
+ * > **Was man nicht entdoppelt, kann man nicht faelschlich entdoppeln.**
+ *
+ * Der Halbzeitstand ist die einzige Angabe, die von aussen dagegenhaelt.
+ * Deshalb wird gezaehlt statt geglaettet — dieselbe Bauart wie
+ * `verband_hat_korrigiert` und wie `unplausibel`, das nach der Korrektur
+ * gesetzt bleibt.
+ *
+ * ⚠ `null` heisst „nicht pruefbar" und ist KEINE Null: ohne
+ * `ht_resultat` gibt es nichts, wogegen man halten koennte. Wer beides
+ * zusammenzaehlt, meldet fehlende Halbzeitstaende als Widersprueche.
+ *
+ * @param heimspiel  Wir sind daheim — dann ist unsere Seite die linke.
+ */
+export function halbzeitWiderspruch(
+  ereignisse: { typ_id: number; minute: number | null; ist_eigener: boolean }[],
+  htResultat: string | null,
+  heimspiel: boolean,
+): boolean | null {
+  const ht = zerlegeResultat(htResultat);
+  if (ht.tore_heim === null || ht.tore_gast === null) return null;
+
+  /* ⚠ „Bis zur Pause" heisst Minute <= 45 — Nachspielzeit der ersten
+     Haelfte zaehlt mit, sie steht als `45` mit `zusatzminute`. Ein Tor
+     ohne Minute laesst sich keiner Haelfte zuordnen und macht die
+     Pruefung gegenstandslos. */
+  let ohneMinute = false;
+  let eigen = 0;
+  let fremd = 0;
+  for (const e of ereignisse) {
+    if (e.typ_id !== TYP_TOR) continue;
+    if (e.minute === null) { ohneMinute = true; continue; }
+    if (e.minute > 45) continue;
+    if (e.ist_eigener) eigen += 1; else fremd += 1;
+  }
+  if (ohneMinute) return null;
+
+  const erwartetEigen = heimspiel ? ht.tore_heim : ht.tore_gast;
+  const erwartetFremd = heimspiel ? ht.tore_gast : ht.tore_heim;
+  return eigen !== erwartetEigen || fremd !== erwartetFremd;
+}
+
 /* ── Verlauf ──────────────────────────────────────────────────────── */
 
 /**
