@@ -4,7 +4,7 @@
  *
  * Plugin Name: ClubCampus Export
  * Description: Nimmt Spielplan, Verlauf und Ranglisten aus ClubCampus entgegen.
- * Version:     0.9.16
+ * Version:     0.9.17
  *
  * ⚠ ⚠  STAND 10.09.2026: DIESE DATEI **IST** DER EMPFAENGER  ⚠ ⚠
  *
@@ -142,6 +142,19 @@ const CC_ROUTE      = 'clubcampus/v1';
    Auskunft, die „laeuft drueben der neue Empfaenger?" beantworten koennte,
    beantwortet sie nicht mehr.
 
+   0.9.17 (11.09.2026): `/status` nennt die UNTERFELDER der Repeater —
+   was ACF kennt, was wir schicken, und was dabei wortlos wegfaellt.
+   ⚠ ⚠  ANLASS: `sfv_person_id` kam an KEINER der 33 Aufstellungszeilen
+         an. Unsere Seite war nachweislich in Ordnung — die Spalte steht
+         im Select des Exports und in der Nutzlast. Der Verlust lag
+         drueben, und keine Auskunft konnte ihn benennen.
+   ⚠     Der Melder aus 0.9.16 fuellt sich nur bei einem SCHREIBLAUF.
+         **Eine Auskunft, die einen Lauf braucht, beantwortet die Frage
+         nicht, die man VOR dem Lauf stellt.** `/status` ist ein Lesen und
+         antwortet sofort.
+   ⚠     `acf_kennt = null` heisst „nicht feststellbar" und ist KEINE
+         leere Liste — sonst liest sich eine fehlende Feldgruppe wie
+         „alle Unterfelder fehlen".
    0.9.16 (11.09.2026): DER UNTERFELD-MELDER MISST IN BEIDE RICHTUNGEN —
    und `cc_nutzlast_pfade()` steigt rekursiv hinab statt ueber einen
    Parameter.
@@ -414,7 +427,7 @@ const CC_ROUTE      = 'clubcampus/v1';
    einander), `autoload` wird nach dem Schreiben geprueft und notfalls
    berichtigt, `/status` nennt Empfaenger, Version, Metaschluessel und die
    Team-Zuordnung. */
-const CC_VERSION    = '0.9.16';
+const CC_VERSION    = '0.9.17';
 const CC_TYP_SPIEL  = 'fch_spiel';
 const CC_TYP_TEAM   = 'fch_team';
 /* ⚠ DER SCHLUESSEL, AN DEM DIE GANZE ZUORDNUNG HAENGT — Meta am
@@ -996,6 +1009,56 @@ function cc_doppelte_match_ids(): array {
  *   Empfaenger ohne Zuordnung ist betriebsbereit, nur nutzlos, und ein
  *   503 wuerde den Unterschied zu Fall 1 wieder einebnen.
  */
+/**
+ * Welche UNTERFELDER kennt ACF in den Repeatern — und welche schicken wir?
+ *
+ * ⚠ ⚠  DIE FRAGE, DIE BIS 0.9.16 NIEMAND OHNE EINEN LAUF BEANTWORTEN
+ *       KONNTE. `spielfelder` sagt seit 0.8.0, ob ACF einen Feldnamen auf
+ *       der OBERSTEN Ebene kennt. Fuer die Unterfelder eines Repeaters gab
+ *       es nichts — und dort verwirft update_field() wortlos.
+ *
+ * ⚠ ⚠  ANLASS, 11.09.2026: `sfv_person_id` kam an keiner einzigen der 33
+ *       Aufstellungszeilen an. Unsere Seite war nachweislich in Ordnung —
+ *       die Spalte steht im Select des Exports UND in der Nutzlast. Der
+ *       Verlust lag drueben, und es gab keine Auskunft, die ihn benennt:
+ *       der Melder aus 0.9.16 fuellt sich nur bei einem SCHREIBLAUF.
+ *
+ *       **Eine Auskunft, die einen Lauf braucht, beantwortet die Frage
+ *       nicht, die man VOR dem Lauf stellt.**
+ *
+ * ⚠  `acf_kennt = null` heisst „nicht feststellbar" und ist KEINE leere
+ *    Liste: der Repeater steht dann gar nicht in der Feldgruppe dieses
+ *    Beitrags. Wer beides gleich liest, meldet eine fehlende Feldgruppe
+ *    als „alle Unterfelder fehlen".
+ *
+ * Sie schreibt nichts und aendert nichts.
+ */
+function cc_unterfeld_lage( int $spielId ): array {
+	if ( $spielId <= 0 ) {
+		return array( 'hinweis' => 'kein fch_spiel-Beitrag vorhanden — nichts aufzuloesen' );
+	}
+	$raus = array();
+	foreach ( array(
+		'verlauf'     => CC_VERLAUF_FELDER,
+		'aufstellung' => cc_erlaubt_aufstellung(),
+	) as $repeater => $erlaubt ) {
+		$acf = cc_unterfelder( $spielId, $repeater );
+		$raus[ $repeater ] = array(
+			'acf_kennt'    => $acf,
+			'wir_schicken' => $erlaubt,
+			/* ⚠ DAS IST DIE ANTWORT: was wir schicken und ACF nicht fuehrt,
+			   faellt beim Schreiben wortlos weg. */
+			'faellt_weg'   => null === $acf
+				? null : array_values( array_diff( $erlaubt, $acf ) ),
+			/* Die Gegenrichtung — ACF fuehrt ein Unterfeld, das wir nie
+			   fuellen. Kein Fehler, aber ein leeres Feld auf der Seite. */
+			'bleibt_leer'  => null === $acf
+				? null : array_values( array_diff( $acf, $erlaubt ) ),
+		);
+	}
+	return $raus;
+}
+
 function cc_route_status(): WP_REST_Response {
 	$fehlt = cc_voraussetzungen();
 
@@ -1069,6 +1132,15 @@ function cc_route_status(): WP_REST_Response {
 			   `liga` bis zum 10.09.2026 unmoeglich machte. Die Liste in
 			   der Pruefkette kann das nicht wissen, diese Auskunft schon. */
 			'spielfelder'           => cc_spielfeld_lage( cc_ein_spiel_id() ),
+			/* ⚠ ⚠ UND DIE EBENE DARUNTER, seit 0.9.17. `spielfelder` sieht nur
+			   die obersten Namen; was INNERHALB von `verlauf` und
+			   `aufstellung` steht, durchlief bis dahin keine Auskunft —
+			   und genau dort verwirft update_field() wortlos.
+
+			   ⚠ Eine Grenze, die eine Ebene tiefer offen ist, sieht wie eine
+			   ganze aus. Das galt fuer die Allowlist, und es galt fuer die
+			   Auskunft darueber. */
+			'unterfelder'           => cc_unterfeld_lage( cc_ein_spiel_id() ),
 			/* ⚠ MISST, statt Reste zu melden. Der Aufruf loest jeden
 			   Feldnamen an einem Beispielbeitrag auf und fuellt dabei
 			   `cc_feld_mehrdeutig` / `cc_ohne_feldschluessel` — ohne ihn
