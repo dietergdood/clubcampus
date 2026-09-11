@@ -4280,16 +4280,4314 @@ der eine Schreibweise prüft statt der Sache.
 gespeicherten Befehls je Auftrag, gegen die Länge, die jede Fassung der
 Datei erzeugt.
 
-| `cron.job` | Datei |
-|---|---|
-| jobid 3 · **8319** Zeichen | die Fassung **mit** Wachstumsfrage (8157) |
-| jobid 9 · **4353** | `cron_waechter_nachlauf.sql` (4254) |
-| — | die Fassung vom 21.08.2026 (**4711**) — passt zu keinem |
+| `cron.job` | Datei (LF) | **+ CRLF** |
+|---|---|---|
+| jobid 3 · **8319** | die Fassung **mit** Wachstumsfrage · 8157 · 162 Zeilen | **8319** ✅ |
+| jobid 9 · **4353** | `cron_waechter_nachlauf.sql` · 4254 · 99 Zeilen | **4353** ✅ |
+| — | die Fassung vom 21.08.2026 · 4711 | 4808 — passt zu keinem |
 
-⚠ **Die Längen stimmen nicht auf das Zeichen** (Versatz 162 bzw. 99), und
-das ist kein Grund zu zweifeln: sie unterscheiden sich untereinander um das
-Doppelte. **Eine Messung muss nicht genau sein, um eindeutig zu sein** —
-sie muss nur die Alternativen sicher trennen.
+⚠ ⚠ **DER VERSATZ WAR CRLF, UND ER STIMMT AUF DAS ZEICHEN.** Die Dateien
+im Repository haben reines LF; beim Einfügen in den SQL-Editor wird daraus
+CRLF, also **ein Byte je Zeile**. 8157 + 162 = 8319, 4254 + 99 = 4353.
+
+> **Erst wollte ich die Abweichung wegerklären — „eine Messung muss nicht
+> genau sein, um eindeutig zu sein". Der Satz stimmt, und er war hier die
+> faule Antwort.** Der Versatz WAR erklärbar, und die Erklärung macht aus
+> „passt am besten" ein **„ist es"**.
+
+⚠ **Die Lehre: ein Rest, der sich nicht erklären lässt, und einer, den man
+nicht erklärt hat, sehen gleich aus.** Nachzusehen kostete eine Minute —
+und hätte der Rest NICHT gepasst, wäre es der eigentliche Befund gewesen:
+dann stünde im Auftrag etwas, das so in keiner Datei steht.
+
+**Und dieselbe Rechnung beantwortet die wichtigere Frage:** was landet beim
+Einspielen überhaupt im Auftrag? `cron.schedule` bekommt die Zeichenkette
+als **dollar-quotiertes Literal** — kein `||`, kein `format()`, keine
+Zusammensetzung. **Was zwischen den `$job# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+ClubCampus — mandantenfähige PWA für Sportvereine (React 18 + Vite + Supabase). **Code, UI-Texte, Kommentare und Domänenbegriffe sind Deutsch** (Schweiz) — das gilt auch für neuen Code (`mitglieder`, `kader`, `verein_id`, `kannSchreiben`, …).
+
+## Befehle
+
+```bash
+npm install                # node_modules ist nicht eingecheckt
+npm run dev                # Vite Dev-Server
+npm run build              # Produktionsbuild — muss vor jeder Lieferung grün sein
+npm test                   # vitest run (alle Tests)
+npm run test:watch         # vitest watch
+
+npm run typecheck          # tsc --noEmit
+npm run check:imports      # fehlende Konstanten-Imports (--fix ergänzt sie)
+npm run check:selects      # Spalten in select()-Strings gegen database.types.ts
+npm run check:encoding     # NUL-Bytes, BOM, kaputtes UTF-8 in eingecheckten Textdateien
+npm run check:php          # php -l für wordpress/ (sonst über Docker)
+
+npx vitest run src/modules/members/__tests__/memberFilter.test.js   # eine Datei
+npx vitest run -t "filtert nach Team"                               # ein Testfall
+```
+
+ESLint ist konfiguriert (`eslint.config.js`, Flat Config; `npm run lint`, blockt in CI nur bei error-Level: `react-hooks/rules-of-hooks` + `import/no-restricted-paths`).
+
+> **⚠ Die 758 Warnungen sind selbst der Defekt.** Nicht weil Warnungen
+> schlimm wären, sondern weil echte Funde darin untergehen. Beleg vom
+> 20.08.2026: `getProfilFehlend` und `markiereProfilGeprueft` stehen seit
+> Monaten als `is assigned a value but never used` in der Ausgabe — genau der
+> tote Zweig der Datenprüfung, den eine eigene Analyse mühsam wieder gefunden
+> hat. Die Meldung war die ganze Zeit da, nur nicht zu sehen.
+>
+> Ein ungenutzter Rückgabewert ist fast immer eine Absicht, die nie
+> angeschlossen wurde. Wer die Liste einmal aufräumt, findet damit vermutlich
+> weitere. Tests (vitest + Testing Library, jsdom, Setup in `src/test-setup.js`) liegen an zwei Orten: **Komponenten-Tests** unter `src/modules/members/__tests__/`, **Service-/Domain-Tests** co-lokalisiert unter `src/domains/members/__tests__/` (mit dem Mock-Supabase-Helfer `_mockSb.ts`). Service-Tests sind `.test.ts` und werden von `tsc` strict typgeprüft; Komponenten-Tests bleiben `.jsx` (via `checkJs:false` nicht typgeprüft).
+
+Stand 28.08.2026: **847 grün, 0 rot (58 Testdateien)**. Die Zahl gehört nach jedem Zulauf gegen die Erwartung gehalten — `npx vitest list | sed 's/ > .*//' | sort | uniq -c` zählt ohne auszuführen und ist die verlässlichere Quelle als ein Lauf (siehe den Abschnitt über verlorene Testdateien unten).
+
+> **⚠⚠ REPRODUZIERT AM 10.09.2026 — es ist kein Einzelfall, sondern eine
+> Eigenschaft der Prüfkette.**
+>
+> Der Verdacht stand seit dem 28.08.2026 als einmalige Beobachtung im
+> Papier. Am 10.09.2026 ist er gezielt nachgestellt worden: `npm test`
+> mit gleichzeitig laufendem `npm run build` (und in der zweiten Reihe
+> zusätzlich `typecheck` und einem zweiten `build`).
+>
+> | Läufe | Verlust |
+> |---|---|
+> | 3 unter einfacher Last | **1** — 74 statt 76 Dateien, 7 Fälle rot |
+> | 3 unter dreifacher Last | **1** — 73 statt 76, 6 rot, mit `[vitest-pool-runner]: Timeout waiting for worker to respond` |
+> | 4 weitere unter dreifacher Last | 0 |
+>
+> **Zwei von neun.** Nicht jedes Mal, aber verlässlich oft genug, dass
+> ein grüner Lauf ohne Zählprobe nichts bedeutet.
+>
+> ⚠ **Zwei Ausprägungen, und nur eine ist laut:**
+>
+> | | Ausgabe | gefährlich? |
+> |---|---|---|
+> | **laut** | „6 failed \| 67 passed (73)" | nein — es fällt auf |
+> | **still** | „59 passed (59)" · „921 passed (921)" | ⚠ **ja** — nichts deutet auf 17 fehlende Dateien |
+>
+> **Die stille Ausprägung ist an diesem Tag einmal aufgetreten** (Liste
+> 76/1156, Lauf 59/921) **und in neun Versuchen nicht wiedergekommen.**
+> Wie häufig sie ist, ist ungemessen — dass es sie gibt, ist belegt.
+>
+> ⚠ **Und eine eigene Messung ist mir dabei danebengegangen:** ich habe
+> `E=$?` nach `R=$(npm test | grep …)` gelesen und damit den Exit-Code
+> von **grep** gemessen, nicht den von vitest. Beinahe hätte ich „Exit 0
+> trotz roter Dateien" gemeldet. **Wer eine Pipeline misst, misst ihr
+> letztes Glied** — dieselbe Familie wie „eine Meldung nennt das letzte
+> Glied der Kette, nicht das gerissene".
+>
+> **✅ UND SEIT DEM 10.09.2026 IST DIE ZÄHLPROBE `npm test` SELBST.**
+>
+> `scripts/test-mit-zaehlprobe.mjs` zählt erst mit `vitest list`, führt
+> dann aus und hält beides gegeneinander. Weicht es ab, endet der Lauf
+> mit **Exit 1** und der Meldung *„ZÄHLPROBE GESCHEITERT — der Lauf ist
+> wertlos, unabhängig davon, was oben bei «passed» steht."*
+>
+> ⚠ **Warum ein Wrapper und keine vitest-Einstellung:** der Verlust
+> entsteht, WEIL ein Worker nicht antwortet — vitest weiss dann nichts
+> von der Datei, die er hätte laufen lassen sollen. Es gibt keine
+> Einstellung „melde, was du nicht ausgeführt hast"; **die einzige
+> Stelle, die den Verlust sehen kann, ist ausserhalb.**
+>
+> ⚠ **Und die Regel war vorher das Problem.** Sie stand seit dem
+> 28.08.2026 als Anweisung im Papier — und wurde am 10.09.2026 mehrfach
+> übersprungen, von demjenigen, der sie aufgeschrieben hat. **Eine
+> Regel, an die jemand denken muss, ist die schwächste Lösung.**
+>
+> Positivkontrolle: den Lauf künstlich auf ein Unterverzeichnis
+> eingeschränkt, die Liste nicht → *„14 gelaufen, 76 erwartet — 62 nicht
+> ausgeführt"*, Exit 1. Zurückgesetzt: grün.
+>
+> `npm run test:roh` gibt es weiterhin — ohne Zählprobe, für den Fall,
+> dass jemand sie bewusst umgehen will. **Bewusst ist der Unterschied.**
+>
+> Testlauf und Build gehören trotzdem nicht in dieselbe Befehlskette —
+> die Zählprobe meldet den Verlust, sie verhindert ihn nicht.
+
+> **⚠ EIN LAUF KANN 16 TESTDATEIEN VERLIEREN UND TROTZDEM EXIT 0 MELDEN.**
+> Gemessen am 28.08.2026, gleich zu Sessionbeginn und unbeabsichtigt:
+>
+> | | Dateien | Fälle | Errors | Exit |
+> |---|---|---|---|---|
+> | Lauf unter Last (im Hintergrund gestartet) | **39** | **592** | **16** | **0** |
+> | derselbe Stand, allein im Vordergrund | 55 | 829 | 0 | 0 |
+> | `vitest list` (zählt ohne auszuführen) | 55 | 829 | — | — |
+>
+> Die 16 Errors waren alle `[vitest-pool-runner]: Timeout waiting for worker
+> to respond`. 55 − 39 = 16, und `grep -rl "@vitest-environment jsdom" src
+> --include=*.test.*` ergibt ebenfalls **16** — es sind genau die
+> jsdom-Komponententests, deren Worker beim Umgebungsaufbau hängen bleiben.
+> Der Beleg steht in der Zeitzeile: der kaputte Lauf meldet
+> `environment 16ms`, der gute `environment 140.20s`. Im ersten ist keine
+> einzige jsdom-Instanz hochgekommen.
+>
+> ⚠ **Und vitest quittiert das mit „Tests 592 passed (592)" und Exit-Code 0.**
+> Die verlorenen Dateien stehen nur als „Errors 16" daneben. Wer auf `passed`
+> und den Exit-Code schaut — also CI —, sieht grün, während 237 Fälle nie
+> gelaufen sind.
+>
+> **Das ist die Fortsetzung von „Zwei Tests entschieden sich nach
+> Rechnerlast" (22.08.2026), eine Stufe schlimmer: damals hiess Last ROT,
+> jetzt heisst sie GRÜN.** Rot fällt auf, grün nicht.
+>
+> **Die Gegenmassnahme ist die Zählprobe, nicht das Zusehen.** Nach jedem
+> Lauf die Dateizahl gegen `vitest list` halten:
+>
+> ```bash
+> npx vitest list | grep -E "^src/" | sed 's/ > .*//' | sort | uniq -c \
+>   | awk '{f++; s+=$1} END {print "Dateien:", f, "| Faelle:", s}'
+> ```
+>
+> Stimmen Lauf und Liste nicht überein, ist der Lauf wertlos — unabhängig
+> davon, was „passed" sagt. Dieselbe Familie wie `cat > datei`, das
+> dreizehn Prüfungen verschluckte: **es fehlt etwas, und nichts meldet es.**
+
+**`npm run typecheck` braucht vollständige `node_modules`.** `tsconfig.json` setzt `"types": ["node", "vite/client"]`. Sobald `types` gesetzt ist, gilt **nur noch**, was dort steht — alle anderen `@types/*` werden nicht mehr automatisch geladen. Beide Einträge sind deshalb Pflicht: `node` für Tests, die den Quelltext lesen (`icons.test.ts`), `vite/client` für `import.meta.env` (ohne den Eintrag verschwindet `import.meta.env.DEV` aus dem Typsystem und der Build bricht an Stellen, die es lesen). Fehlt `@types/node` in `node_modules`, meldet `tsc` `error TS2688: Cannot find type definition file for 'node'` — das ist ein Installationsloch, kein Codefehler; `npm install` behebt es.
+
+> **`npm install` auf Windows verändert `package-lock.json`.** Es entfernt die plattformfremden esbuild-Binärpakete (`@esbuild/linux-x64`, `darwin-arm64`, …) aus dem Lockfile — zuletzt 27 Einträge. Deployment läuft auf Vercel/Linux und braucht genau die. Die Änderung **nicht** committen (`git checkout -- package-lock.json`), oder gleich `npm ci` benutzen: das installiert aus dem Lockfile, ohne es zu schreiben.
+
+**Häufigste Testfalle:** Die Tests mocken `theme.ts` mit einer Factory, die die benötigten Exporte einzeln auflistet. Nutzt eine Komponente eine weitere Komponente aus `theme.ts`, wirft Vitest bereits bei der blossen Referenz (`No "X" export is defined on the mock`) — und zwar für die ganze Testdatei, nicht nur den betroffenen Fall. Wer einen Import in einer getesteten Komponente ergänzt, ergänzt den Mock mit.
+
+**Env-Variablen** (`.env`, gitignored) sind Pflicht — ohne sie bleibt `supabaseClient` `null` und die App zeigt nur den Login-Screen:
+
+```
+VITE_SUPABASE_URL=…
+VITE_SUPABASE_ANON_KEY=…
+```
+
+## Architektur — Gesamtbild
+
+**Kein Router.** `src/clubcampus.tsx` (`Portal`) ist Root-Komponente, Datenlader und Router in einem. Das Pfadsegment wird davon nicht berührt — es wählt nur den Verein (siehe Slug-Routing unten), die Navigation innerhalb der App läuft weiterhin über den Hash:
+
+- `active` (String-Key) steuert die Ansicht über einen `switch` in `getView()`; persistiert in `window.location.hash` + `sessionStorage`, `popstate` für Browser-Zurück. Sub-Navigation (z.B. Team-Detail) registriert einen `customBack`-Callback.
+- Alle App-Daten (`dbUser`, `dbTeams`, `dbMitglieder`, `dbStufen`, `dbMitgliedtypen`, `dbPortalRollen`, `dbKaderRollen`, `dbFunktionen`, `tenant`) werden nach Login in `Portal` geladen und per **Prop-Drilling** in die Module gereicht — inklusive des Supabase-Clients `sb`.
+- Ladefunktionen liegen in `src/domains/app/useAppData.js` (`loadDbMitglieder` reichert Mitglieder z.B. mit `kader_eintraege`, `hat_benutzer`, `benutzer_deaktiviert` an). `useDbUser` leitet zusätzlich aus `kader.rollen` die höchste Portalrolle ab und **schreibt sie in `benutzer.role` zurück**.
+- Module importieren sich nie gegenseitig. Wo ein Modul ein anderes rendern muss, übergibt `Portal` es als Prop (`TeamViewComponent`, `KaderModulComponent`, …).
+
+**Mandantenfähigkeit.** Alle Vereine teilen eine Supabase-DB; Trennung über `verein_id` + RLS. Jede neue Tabelle braucht zwingend `verein_id`, Index, RLS und Policies; jedes `insert()` braucht `verein_id: tenant.id`. DB-Helper: `get_my_verein_id()`, `get_my_role()`, `is_admin()`, `is_trainer()`. Policy-Vorlagen: `ARCHITECTURE.md` → Datenbankregeln.
+
+**Slug-Routing** (Session 21). Der Verein kommt aus dem ersten Pfadsegment: `/fcherrliberg` → `slug = "fcherrliberg"`. `getSlugFromPath()` in `src/App.tsx` liest ihn und reicht ihn als Prop an `Portal` → `useAppData({sb, slug, …})`. `loadTenant()` lädt damit gezielt über `.eq("slug", slug).single()`; Quelle ist die Spalte `vereine.slug` (mit `UNIQUE`-Constraint `vereine_slug_unique`).
+
+**Ohne Slug wird kein Verein geraten.** Früher lief hier ein `.single()` ohne Filter — das lag nur zufällig richtig, solange genau ein Verein in der DB stand, und hätte ab dem zweiten einen beliebigen geliefert, samt fremdem Branding und fremder `verein_id` in jedem folgenden `insert()`. Stattdessen setzt `loadTenant()` jetzt eine Meldung über den Fehler-Screen in `clubcampus.tsx` (dafür nimmt `useAppData` ein `setError` entgegen); ein unbekannter Slug bekommt eine eigene Meldung.
+
+`vercel.json` erledigt zwei Dinge: alle Pfade werden auf `/index.html` umgeschrieben, damit ein Deep-Link wie `/fcherrliberg/…` nicht im 404 landet, und die blosse Wurzel wird auf `/fcherrliberg` umgeleitet, damit alte Lesezeichen ohne Slug nicht in die Meldung laufen. Der Redirect ist bewusst `permanent: false` (307): ein 308 würde dauerhaft im Browser gecacht und wäre kaum zurückzudrehen, sobald dieses Deployment mehr als einen Verein bedient. `redirects` laufen bei Vercel vor `rewrites`. **Lokal greift der Redirect nicht** — `vite dev` liest `vercel.json` nicht, dort landet `/` weiterhin in der Meldung.
+
+> **`verein_id`-Regel (häufigster Defekt).** Fast jede Tabelle hat `verein_id NOT NULL` **ohne** DB-Default. Jedes `insert()`/`upsert()` muss `verein_id: tenant.id` (Komponenten: die `vereinId`/`tenant?.id`-Prop) mitgeben — sonst lehnt die DB die Zeile ab und die Aktion scheitert still (Fehler landet höchstens in einer `saveMsg`). `update()` ist nicht betroffen (die Spalte ist schon gesetzt). Bei `upsert()` gilt es trotzdem, weil der Insert-Zweig greifen kann. Die TS-Migration von `modules/portal/` (Session 18) hat so sechs tote Schreibpfade aufgedeckt (Users↔Funktionen, Team-Module, Mitgliedtyp + zwei Pflichtfeld-Matrizen, Modul-Rechte, Gruppen/Funktionen/Team-Zuordnung) — alle als JS unsichtbar. Wer einen Schreibpfad anfasst: `verein_id` prüfen.
+
+**Branding/Theme.** `vereine.theme` (JSONB) → `applyThemeCss()` schreibt CSS-Variablen (`--cc-accent`, `--nav`, `--btn-primary`, …) mit `!important` in ein injiziertes `<style id="cc-theme-vars">`. `localStorage["cc-theme"]` wird zuerst angewendet (Flicker-Schutz), danach überschreibt Supabase. Eine Realtime-Subscription auf `UPDATE vereine` verteilt Branding-Änderungen live an alle Sessions.
+
+**Zwei Berechtigungsschichten** — nicht verwechseln:
+1. `domains/app/getPermissions.ts` — Zugriffstufen `lesen | schreiben | verwalten` pro Modul-Key. Quelle: DB (`module_config`, `modul_rechte`, via `localStorage` gecached) mit `APP_ZUGRIFF_DEFAULT` als Fallback. Liefert `kannLesen/kannSchreiben/kannVerwalten`, die als Props in die Module wandern. Für Rolle `funktionaer` kommt die Stufe stattdessen aus `portal_funktionen`/`portal_gruppen` (`getEffektiveStufeForFunktionaer` in `domains/permissions/funktionaerStufen.ts`).
+2. `domains/permissions/permissions.js` — statische Prädikate pro Fachbereich (`memberPermissions.canEdit(role)` etc.).
+Zusätzlich blendet `isModuleVisible()` in `clubcampus.tsx` Module global/rollenbasiert aus; `administrator` sieht immer alles.
+
+**Rollen:** `administrator`, `administration`, `trainer`, `funktionaer`, `spieler`, `eltern` (+ `supporter`). Umlaute werden für Rollen-Keys normalisiert (`funktionär` → `funktionaer`).
+
+### Schichten
+
+```
+modules/  →  domains/  →  shared/        erlaubt
+shared/   kennt keine Module            verboten
+Modul     importiert Modul              verboten
+```
+
+- `src/domains/` — Services (`sb` als erstes Argument: `updateMitglied(sb, id, fields)`) und Hooks.
+- `src/shared/` — wiederverwendbare UI: `ui/`, `forms/`, `list/`, `person/`.
+- `src/theme.ts` — **Barrel-Datei**, die fast alles aus `shared/` re-exportiert (`Btn`, `Card`, `Modal`, `Toolbar`, `InlineField`, `useConfirm`, `COMPONENT_REGISTRY`, …). Neue Komponenten als eigene Datei unter `shared/` anlegen **und** in `theme.ts` re-exportieren; Module importieren aus `theme.ts`.
+- `src/styles/cc.css` — das komplette Design-System als `cc-*`-Klassen (eingebunden über `styles/index.css`).
+- `src/constants.ts` — Design-Tokens (`FONT`, `TEXT`, `SPACE`, `RADIUS`, Farben). Module erben nichts implizit: fehlende Konstanten explizit importieren.
+
+### Listen: ListView
+
+Jede tabellarische Liste läuft über `shared/list/ListView.tsx` (State/Logik in `useListView.ts`): Suche, Filter, Mehrfach-Gruppierung, Spaltenauswahl mit Drag&Drop, Stufensortierung, Bulk-Aktionen, gespeicherte Ansichten (`mitglieder_ansichten`, teilbar via `geteilt`), Export über `exportUtils.ts`. Nicht neu bauen — `colDefs`, `filterDefs`, `groupOptions`, `renderCell` übergeben.
+
+`Toolbar.tsx` hält nur noch Buttons und Öffnen/Schliessen-State; die Panel-Inhalte liegen daneben und bedienen Desktop wie Mobile über ein `mobile`-Flag: `SortPanel`, `GroupPanel`, `FilterPanel`, `FilterChips`, `MoreMenu`, `MoreSheet`. `MoreSheet` bekommt die drei Panels als fertig gerenderte Slots (`panels={{filter,sort,group}}`) und weiss dadurch nichts über Filter, Sortierung oder Gruppierung.
+
+**Stufensortierung** (Session 21). `sortDefs: SortDef[]` statt `sortCol`/`sortDir` — beide bleiben als abgeleitete Werte erhalten. Desktop: Klick sortiert einstufig, Shift+Klick hängt eine Ebene an. Mobile: eigenes Panel im Bottom Sheet, Reihenfolge über ↑/↓ (HTML5-`draggable` greift auf Touch nicht). Der Kern steht in `sortUtils.ts`: `Array.prototype.sort` ist stabil, deshalb ergibt das Anwenden der Ebenen **von hinten nach vorne** die mehrstufige Ordnung — die modulspezifische `sortFn` behält ihren einstufigen Vertrag `(rows, key, dir)` und muss für neue Ebenen nicht angefasst werden. Persistiert in `mitglieder_ansichten.sortierung` (jsonb, `[{key,dir}, …]`); Ansichten mit `null` fallen auf die Ausgangssortierung zurück.
+
+Fallstricke bei rekursiver Gruppierung: `effectiveCtx`/`parentCtx` müssen durch **alle** Ebenen von `renderGroupsTable` propagiert werden, `filterVals` an `buildGroups` und `renderCell` weiterreichen; `__parentTeam`, `__parentGruppe`, `__portalFunktionen` sind interne Kontextschlüssel.
+
+### Mitgliedermodul als Referenz
+
+`src/modules/members/` ist das am weitesten refaktorierte und einzige getestete Modul — Vorlage für neue Module: `memberMapper.js` (DB→UI), `memberFilter.js`, `memberGrouping.js`, `memberExportUtils.js`, `memberConstants.js`, Detail-Tabs unter `tabs/`, Service in `domains/members/memberService.js`.
+
+Inline-Editing läuft über `domains/members/useInlineEdit.js` + `InlineField`; es gibt kein Bearbeiten-Modal für Stammdaten.
+
+**Änderungshistorie** — zwei Tabellen, Logik in `logAenderung()`:
+- `Wert A → Wert B` → `mitglieder_aenderungen`
+- `null → Wert` / `Wert → null` → `mitglieder_aktivitaeten` (`FELD_ERFASST` / `FELD_GELEERT`)
+- Strukturierte Ereignisse (`AKTIVITAET_TYP`: Team, Kaderrolle, Eltern, Portal, Archiv …) → `logAktivitaet()`
+
+`VerlaufTab` mischt beide Quellen chronologisch. Wer Mitgliederdaten schreibt, loggt.
+
+## Migrationsstand
+
+Nicht alle Module hängen an Supabase. `src/demoData.js` ist temporär und wird noch importiert von: `DashboardModul`, `TermineModul`, `TrainingsplanModul`, `HelferModul`, `TeamModul`, `PlatzhalterModul`, `NavigationModul` (`USER_ACCOUNTS`), `appConstants.js` und `clubcampus.tsx` (nur noch `USER_ACCOUNTS`). Neue Features nie gegen `demoData` bauen — Service + Supabase.
+
+> **⚠ EIN IMPORT ALLEIN SAGT NICHTS — ES KOMMT AUF DAS SYMBOL AN.** Die Liste
+> darüber führt neun Importeure und liest sich wie eine Baustelle von neun
+> gleich grossen Teilen. Sie ist es nicht: `demoData.js` ist **zur Hälfte
+> leergeräumt**, und wer nach Importen sucht statt nach Symbolen, zählt
+> falsch — in beide Richtungen.
+>
+> | | Konstanten | Wirkung |
+> |---|---|---|
+> | **leer** (`[]` / `{}`) | `ATT_EVENTS`, `ATT_INITIAL`, `ATT_LOG`, `GANTT` | was daraus rendert, zeigt **nichts** — der Import ist ein Rest |
+> | **gefüllt** | `ROSTER`, `USER_ACCOUNTS`, `EVENTS`, `POLLS`, `HELPERS`, `HELPER_EVENTS`, `BUSES`, `MATERIAL`, `LOCKERS`, `MEDIA`, `WIKI`, `NEWS` | erscheint im Portal als plausible Daten |
+> | **importiert von niemandem** | `SCHEDULE`, `TABLES`, `MEMBERS`, `PSTATS`, `FUNKTIONEN`, `MITGLIEDTYPEN` | tot, aber nicht harmlos: `TABLES` sieht aus wie eine Ligatabelle und ist es nicht mehr |
+>
+> Gemessen am 28.08.2026. **Beide Fehlrichtungen sind real:** `TeamModul`
+> importiert `ATT_EVENTS` und zeigt daraus nichts (harmlos, sieht aber nach
+> Arbeit aus), und `PlatzhalterModul` importiert `NEWS` und zeigt daraus 17
+> erfundene Meldungen an **jede** Rolle (nicht harmlos, sieht aber nach
+> nichts aus, wenn man nur die Importliste liest).
+>
+> Wer den Umfang wissen will, zählt deshalb **Anzeigestellen, nicht
+> Importe** — siehe „35 Stellen zeigen erfundene Daten".
+
+TypeScript-Migration **abgeschlossen**: `domains/`, `shared/`, alle `src/modules/*` (inkl. `modules/portal/`, `modules/members/`), `clubcampus.tsx` sowie `App.tsx`/`main.tsx` sind `.tsx`. Übrig als `.jsx` sind nur noch die Test-Dateien unter `src/modules/members/__tests__/`. `tsconfig` ist `strict`, aber `checkJs: false` und es gibt keine CI-Typprüfung — deshalb vor jeder Lieferung `npm run typecheck` laufen lassen.
+
+Der frühere `JsComponent`-Brücken-Block in `clubcampus.tsx` (umging die Prop-Prüfung noch nicht migrierter JS-Komponenten) ist entfernt; alle von `clubcampus.tsx` gerenderten Module werden jetzt regulär typgeprüft.
+
+**Muster aus der Migration** (falls ein Legacy-`.jsx` neu dazukommt): demoData-Importe (`ROSTER`, `SCHEDULE`, `TABLES`, `ATT_EVENTS`, `HELPERS`, …) sind stark inferiert und tragen Phantomfelder — beim Zugriff als `any` aliasieren (`import { ROSTER as ROSTER_SRC } …; const ROSTER: any[] = ROSTER_SRC;`). `window.storage` ist eine App-Bridge, kein Standard-Window-Feld → über einen lokalen `winStorage`-Cast kapseln. State-Objekte **nie** als `useState<any>(null)`/`useState({})` typisieren (dann kollabiert `SetStateAction<any>` und der Updater-Param wird implizit-`any`) — konkret als `useState<Record<string, any>>({})` o.ä.
+
+## Konventionen
+
+- Kein `sb.from()` direkt in Komponenten → Service in `domains/`. (Legacy-Module verletzen das noch; neuer Code nicht.)
+- **Ein Test, der nur Längen zählt, überlebt eine leere Konfiguration — Erwartungen nennen Feldnamen.** `expect(fehlend).toHaveLength(2)` besteht auch dann, wenn die zwei aus einem ganz anderen Grund entstehen. `expect(fehlend).toEqual(["Nachname", "Telefon"])` nicht.
+
+  Beleg vom 21.08.2026: `mitgliedtyp_feldkonfig` bekam die Spalte `gilt_fuer`, und drei Testdateien führten Attrappen **ohne** dieses Feld. Zur Laufzeit ist es dann `undefined`, der Filter `z.gilt_fuer !== ziel.gilt_fuer` trifft, und **jede Zeile wird übersprungen** — die Konfiguration war leer, die Prüfung damit gegenstandslos. Rot geworden sind die Tests **allein deshalb**, weil ihre Erwartungen die Feldnamen nennen; mit `toHaveLength` wären alle drei Dateien grün geblieben und hätten ab da nichts mehr geprüft.
+
+  Dasselbe gilt für den umgekehrten Fall: wer eine Attrappe um ein Pflichtfeld erweitert, prüft, ob die Testzahl steigt (`npx vitest list | sed 's/ > .*//' | sort | uniq -c`). Eine Attrappe ist Produktionscode für den Test — fehlt ihr eine Spalte, prüft er etwas anderes als das, was läuft.
+  **⚠ Eine Attrappe kennt kein Schema — und der Fehler geht in beide Richtungen.**
+
+  | | Beispiel | Folge |
+  |---|---|---|
+  | Ihr **fehlt** ein Feld, das es gibt | `gilt_fuer` (21.08.2026) | der Filter trifft, jede Zeile wird übersprungen — die Konfiguration ist leer |
+  | Sie **nimmt** eines an, das es nicht mehr gibt | `vorname` in `mitglieder` (seit Etappe 6a) | der Test prüft einen Schreibpfad, der in der Datenbank einen Laufzeitfehler ergäbe |
+
+  **Beide Male prüft der Test etwas anderes als das, was läuft. Und beide Male ist er grün.** Der zweite Fall stand ein halbes Jahr unbemerkt in `memberService.errors.test.ts` und schrieb den Altspalten-Ausweichpfad fest, den es längst nicht mehr gab.
+
+  **Woran man es merkt — zwei Dinge:**
+
+  1. **Erwartungen nennen Feldnamen statt Längen zu zählen** (siehe oben). Nur deshalb sind die `gilt_fuer`-Fälle rot geworden.
+  2. **Wo eine Attrappe eine Tabellenzeile nachbildet, gehört ihr Typ aus `database.types.ts`** — nicht von Hand gepflegt:
+
+     ```ts
+     import type { Tables } from "../../../types.ts";
+     const zeile: Partial<Tables<"mitglieder">> = { vorname: "Neu" };
+     //                                            ^^^^^^^ TS2353 — gibt es nicht
+     ```
+
+     Für Fassadenzeilen (`flacheZeile()` mischt `personen`-Felder auf `mitglieder`) gibt es `Mitglied` aus `types.ts`, das genau diese Mischung beschreibt.
+
+  **Wo es nicht geht, und warum:** die `results`-Map von `makeSb()` ist absichtlich `{ data?: any }`. Sie muss Join-Formen, `count`-Antworten und `PostgrestError` gleichermassen annehmen — ein Tabellentyp träfe darauf nicht zu. Ebenso ist `CallRecord.payload` untypisiert, weshalb `expect(rec.payload)` nichts erzwingt. **Die Prüfung greift also nur dort, wo der Test die Zeile selbst als Variable anlegt und annotiert.** Das ist der Ort, an dem die erfundene Spalte entsteht — für den Rest bleibt es beim Hinsehen.
+
+
+- **Wo ein Text einen Ort nennt, gehört ein Test dazu, der den Ort kennt.**
+
+  `PortalTab` sagte bis zum 21.08.2026: *„Keine E-Mail-Adresse hinterlegt. Bitte zuerst eine E-Mail im **Kontakt-Tab** erfassen."* Einen Kontakt-Tab gibt es nicht — die Tabs heissen Profil, Eltern, Statistik, Portal-Zugang, Datenprüfung und Verlauf; die Kontaktfelder stehen im Profil.
+
+  **Eine Anleitung, die auf einen Ort zeigt, den es nicht gibt, trifft genau die Nutzer, die sie brauchen.** Wer den Satz zu sehen bekommt, ist der, dem die E-Mail fehlt — also der, der Hilfe sucht. Wer sie nicht braucht, liest ihn nie und meldet ihn deshalb auch nicht.
+
+  Der Text ist Teil dessen, was ein Test absichern kann:
+
+  ```jsx
+  expect(screen.getByText(/im Profil erfassen/)).toBeTruthy();
+  expect(screen.queryByText(/Kontakt-Tab/)).toBeNull();   // ← die zweite Hälfte
+  ```
+
+  Die zweite Zeile ist die wichtigere: sie hält fest, dass der falsche Ort **nicht** zurückkommt. Dasselbe gilt für Beschriftungen, auf die sich ein Ablauf beruft — „Mitgliedschaft löschen" ist aus demselben Grund in `mitgliederBulk.test.jsx` festgehalten.
+
+- **Zwei Zustände für EINEN Schlüssel sind ehrlich. Zwei Zustände für eine SAMMLUNG sind es nicht.**
+
+  Ein Schiebeschalter hat zwei Stellungen. Eine Sammlung hat drei Tatsachen: alles an · **gemischt** · alles aus. Wer sie über `some(...)` auf zwei abbildet, malt „gemischt" wie „alles an" — und bei mehr als zwei Elementen ist gemischt der Normalfall, der Schalter steht also meistens falsch.
+
+  Befund vom 21.08.2026: der Bereichskopf in `MitgliedtypFelderSektion` trug denselben `AnAusSchalter` wie eine einzelne Zeile, aber für bis zu sechs Felder. Er stand auf „aus", während die Felder darunter bedienbar waren — **und beides war richtig**: er meinte „gerade ist nichts sichtbar", nicht „gesperrt". Nur sagte die Bildsprache das Gegenteil, denn ein Schiebeschalter ist die Darstellung eines RIEGELS.
+
+  ⚠ **Ein dreiwertiger Schalter wäre die falsche Reparatur.** „Gemischt" ist kein Wert, den man *setzen* kann, nur einer, den man anzeigt. Die Lösung ist, aus dem Zustand eine **Handlung** zu machen: ein Knopf „Alle ausblenden" beschreibt, was er tut, und kann nichts Falsches behaupten.
+
+  An einer einzelnen Zeile bleibt der Schiebeschalter richtig — ein Schlüssel, zwei Zustände. Die Grenze verläuft bei der Anzahl, nicht beim Ort.
+
+- **Eine Komponente, die INNERHALB einer anderen deklariert wird, wird bei jedem Render neu erzeugt** — React hängt den Teilbaum ab und neu an. Zustand, Fokus und Auswahlposition gehen verloren.
+
+  **Es fällt nirgends als Fehler auf.** Kein Build, kein Typecheck, keine Konsole; nur eine Bedienung, die sich falsch anfühlt, und die niemand meldet. In `PortalTab` verlor das `<select>` der Portalrolle bei jedem Tastendruck den Fokus — **gefunden hat es ein Test**, der genau deshalb seit Monaten auf `it.skip` stand: nach `fireEvent.change` war das `<select>` ein anderer DOM-Knoten.
+
+  ⚠ **Nach dem Herausziehen liefen BEIDE übersprungenen Fälle UNVERÄNDERT grün.** Keine Zeile angepasst. Der Test hatte recht, die Komponente war falsch — er hielt `select` in einer Variablen fest und feuerte `keyDown` darauf, und dieser Knoten war zu dem Zeitpunkt bereits abgehängt.
+
+  **Daraus die Regel: wer einen roten Test anpasst, bis er grün ist, löscht die Meldung statt den Fehler.** Ein Test, der auf `skip` gesetzt wird, tut dasselbe — nur langsamer. Rot ist ein Zustand für Stunden, nicht für Wochen; für einen Skip gilt dasselbe.
+
+  Bekannte Fundstellen am 21.08.2026 (nur `RolleField` ist behoben):
+
+  | Stelle | Art |
+  |---|---|
+  | `PortalTab` → `RolleField` | ✅ herausgezogen — hielt einen fokussierten `<select>` |
+  | `MitgliedtypFelderSektion` → `ModusSchalter`, `AnAusSchalter`, `Zeile` | Schalter; Fokusverlust für Tastaturbedienung |
+  | `TrainingsplanModul` → `Btn2` | Knopf; geringste Wirkung |
+
+  `SortPanel` → `Suchfeld` ist **kein** Fall: es ist ein JSX-Wert, kein Komponententyp, und wird nicht neu montiert.
+
+- **Zwei Anzeigen derselben Sache sind auch eine Gegenprobe — wer sie zusammenführt, verliert sie.**
+
+  Am 21.08.2026 zeigte die Profilseite eines archivierten Juniorenmitglieds gleichzeitig **„Ohne Mitgliedschaft"** (neuer Chip) und **„Juniorenmitglied"** (Mitgliedtyp-Chip). Ursache war ein `as never` am Archiv-Einstieg, das `mitgliedId` weggelassen hatte; die Seite las das Fehlen als „keine Mitgliedschaft" und schaltete alle zehn `nur_mitgliedschaft`-Schlüssel ab: Eltern-, Statistik- und Verlauf-Tab, Teams-Karte, Notizen und die ganze Vereinsdaten-Karte.
+
+  **Gemeldet hat den Fehler die Uneinigkeit**, nicht das Fehlen. `heroChips()` las `raw.mitgliedtyp` direkt, die Kachel las die Konfiguration — zwei Quellen, und deshalb ein sichtbarer Widerspruch. **Ein fehlender Tab fällt erst auf, wenn jemand ihn sucht; ein Widerspruch im Kopf fällt sofort auf.**
+
+  Beide auf dieselbe Quelle zu legen ist trotzdem richtig — eine Anzeige, die einer anderen widerspricht, ist kein Prüfmittel, sondern ein Fehler mit Zusatznutzen. **Aber der Verlust gehört benannt:** danach gibt es diese Warnung nicht mehr, und was übrig bleibt, ist ein Zustand, der still falsch sein kann. Wer zwei Anzeigen zusammenlegt, ersetzt die verlorene Gegenprobe durch einen Test.
+
+  Hier: `MemberHero` bekommt seither `konfig` und liest `mitgliedtyp` durch `istSichtbar()` — dazu zwei Fälle in `memberDetail.test.jsx`, die festhalten, dass ein Mitglied über **jeden** Einstieg ein Mitglied bleibt.
+
+- **Ein Werkzeug, das nach Text sucht, trifft was gleich AUSSIEHT, nicht was gleich GEMEINT ist.** `.eq("mitglied_id", …)` steht in `memberService.ts` achtmal und meint achtmal etwas anderes: Notizen, Kader, Team-Details, Anwesenheiten, das Konto. Wer ersetzt, **nennt vorher die Zielfunktion** und **liest hinterher jeden Treffer der Datei einzeln gegen** — auch die, die er nicht angefasst zu haben glaubt.
+
+  Beleg vom 21.08.2026: eine Ersetzung sollte `fetchBenutzerFuerMitglied` auf `person_id` umstellen und traf die **erste** Fundstelle der Datei — `fetchNotizen`. Aus `.eq("mitglied_id", mitgliedId)` wurde dort `.eq("person_id", personId)`. `mitglieder_notizen.mitglied_id` ist `NOT NULL`; die Abfrage wäre **immer leer** zurückgekommen. Keine Notizen, kein Fehler — wieder ein Ausfall, der aussieht wie eine Datenlage.
+
+  ⚠ **Was ihn gefangen hat, war ein Zufall der Benennung, keine Absicherung:** `personId` existierte in `fetchNotizen` gar nicht, also gab es einen Compilerfehler. **Hätte die Funktion beide Werte im Sichtfeld gehabt — etwa weil sie ohnehin eine `personId` führt —, wäre der Fehler kompiliert und stumm geblieben.** Auf den Compiler ist hier kein Verlass; er hat nur diesmal geholfen.
+
+  Dieselbe Familie wie der Regex-Schnitt vom 19.08. (der die neu eingefügte Sektion mitnahm) und wie `\b` in deutschen Bezeichnern. Gemeinsames Merkmal: das Werkzeug kennt die Bedeutung nicht, und das Ergebnis sieht richtig aus.
+
+- **`cat > datei` truncatet ohne Rückfrage — für Dateien, die es vielleicht schon gibt, das Write-Werkzeug nehmen.** Es verweigert das Überschreiben einer ungelesenen Datei; die Shell tut es wortlos.
+
+  Am 20.08.2026 so passiert: `src/domains/app/__tests__/getProfilCheck.test.ts` existierte mit **13 Fällen** und wurde von einer neuen Fassung mit 12 ersetzt. Build grün, Typecheck grün, alle 38 Testdateien grün — **nichts hat gemeldet, dass dreizehn Prüfungen verschwunden sind.**
+
+  Aufgefallen ist es allein daran, dass die **Gesamtzahl der Tests um eins sank, obwohl zwölf dazukamen**. Deshalb lohnt es, die Zahl nach jedem Zulauf gegen die Erwartung zu halten — genau wie die Zählprobe beim Schema-Dump. Zum Nachrechnen:
+
+  ```bash
+  npx vitest list | sed 's/ > .*//' | sort | uniq -c   # Fälle pro Datei
+  ```
+
+  Wiederherstellen ging über `git show HEAD:pfad`, weil die Datei eingecheckt war. Dieselbe Familie wie der Regex-Schnitt vom 19.08.2026: **erst nachsehen, was da liegt, dann schreiben.**
+
+- **Wer eine Spalte anlegt, nennt im selben Auftrag die Stelle, die sie liest.** Gibt es die noch nicht, steht das ausdrücklich dabei — als offener Punkt mit Datum, nicht als stille Lücke.
+
+  **Warum das teuer ist: nach aussen sieht es aus wie fehlende Daten, nicht wie fehlender Code.** Man sucht in der Datenbank, im Sync, beim Verband — nur nicht dort, wo es liegt. Eine Spalte, die niemand ausliest, ist von einer Spalte, die niemand befüllt, an der Oberfläche nicht zu unterscheiden; beide zeigen ein leeres Feld.
+
+  **Drei Fälle am 20.08.2026, und das ist kein Zufall:**
+
+  | Spalte | angelegt für | gelesen von |
+  |---|---|---|
+  | ~~`spiele.sfv_spiel_nr`~~ | die Spielnummer des Verbands | ✅ **berichtigt am 25.08.2026** — sie wird seit dem 20.08.2026 gelesen (`spielMapper.ts:107`). Der Eintrag stand danach fünf Tage falsch da; siehe den Abschnitt darunter |
+  | `mitgliedtypen.zaehlt_als_mitgliedschaft` | die Listentrennung | **niemandem mehr**, seit der Supporter-Rückbau nach Tabelle trennt statt nach Merkmal |
+  | `personen.profil_geprueft_at` + die Pflichtfeld-Matrix | der Datenprüfung | `getProfilFehlend()` **wird nie aufgerufen** (`clubcampus.tsx:465`) |
+
+  Dazu als viertes `api_verbindungen.active`: gelesen, aber nur von der Oberfläche, während die Edge Function es ignoriert — sechs Tage grauer Stecker für einen Anschluss, der stündlich lief.
+
+  Das gemeinsame Merkmal ist immer dasselbe: **es schlägt nichts fehl.** Kein Fehler im Build, keine Meldung im Log, kein roter Test. Deshalb hilft hier keine Prüfung, sondern nur die Frage beim Anlegen — *wer liest das?* Fällt die Antwort schwer, ist die Spalte entweder verfrüht oder der Auftrag unvollständig.
+
+- **⚠ `spiele.spiel_nr` hat noch nie einen Wert getragen — und die Anzeige zeigt seit jeher den Rückfallzweig.**
+
+  Gemessen am 25.08.2026: **0 von 269** Spielen haben `spiel_nr` gesetzt. `sfv_spiel_nr` dagegen bei **269 von 269**.
+
+  ```ts
+  spielMapper.ts:107   spielNr: z.spiel_nr || z.sfv_spiel_nr || "",
+  ```
+
+  Der linke Zweig hat also **nie** getroffen. Was auf dem Schirm steht, ist immer die Nummer des Verbands.
+
+  ⚠ **Das ist die umgekehrte Richtung des „wer liest diese Spalte?"-Fehlers, und sie ist schwerer zu sehen.** Dort wird eine Spalte befüllt und von niemandem gelesen; hier wird eine gelesen, die niemand befüllt. Beide Male schlägt nichts fehl. Aber im zweiten Fall sieht es sogar richtig aus: die Anzeige zeigt eine plausible Nummer, nur eben aus einer anderen Quelle als gedacht.
+
+  `spiel_nr` ist als **vereinseigene** Nummer gedacht (`migration_sfv_spielplan.sql` führt sie unter der Feldhoheit des Vereins — der Sync fasst sie nicht an). Zu entscheiden ist also nicht, ob der Rückfall stimmt, sondern **ob die Spalte einen Zweck hat**: pflegt jemand eigene Nummern von Hand, oder ist sie ein Rest? Wenn Letzteres, fällt sie samt der `||`-Kette.
+
+  ⚠ **Bis dahin nicht "aufräumen".** Ein `||` mit totem linkem Zweig sieht nach Zierrat aus und ist der einzige Ort, an dem eine eigene Nummer je erscheinen könnte.
+
+- **⚠ `holeMatch` wird bei jedem Spiel aufgerufen und sein Ergebnis weggeworfen.**
+
+  ```ts
+  // matchdatenLauf.ts:85-90
+  /* Drei Aufrufe, streng seriell mit demselben Token — … */
+  await holeMatch(zugang, token, matchId);          // ← kein const, nichts gelesen
+  const rohAufstellung = await holeAufstellung(…);
+  const rohEreignisse  = await holeEreignisse(…);
+  const rohRefs        = await holeSchiedsrichter(…);
+  ```
+
+  `holeMatch` hat genau **einen** Aufrufer, und der bindet den Rückgabewert
+  nicht. Es ist ein Viertel der vierzig Matchdaten-Aufrufe je Lauf.
+
+  ⚠ **Und der Kommentar direkt darüber sagt „Drei Aufrufe", während vier
+  Zeilen folgen** — `holeSchiedsrichter` kam am 20.08.2026 dazu. Die falsche
+  Zahl deckt den toten Aufruf zu: wer „drei" liest und vier zählt, sucht den
+  Fehler beim Zählen und nicht im Code.
+
+  ⚠ **Einen Zweck hat er vermutlich doch, und ich hatte ihn zuerst abgetan:**
+  `sfvApi.ts:126-130` wirft, wenn die Antwort kein Objekt ist. Der Aufruf
+  wirkt damit als Gültigkeitsprüfung vor den drei folgenden. Praktisch
+  redundant ist er trotzdem — bei einem unbekannten Spiel antwortet auch
+  `/players` mit 404 und wirft. Der einzige Fall, den nur er fängt, wäre
+  HTTP 200 mit unbrauchbarem Körper. **Belegt ist die Absicht nirgends:** es
+  steht kein Kommentar dazu, und der Kommentar, der dort steht, zählt falsch.
+
+  ⚠ **Das Ärgerliche daran ist nicht der verschwendete Aufruf, sondern was er
+  trägt.** `/api/match/{id}` liefert `MatchDetail` — und darin steht genau das,
+  was an anderer Stelle fehlt:
+
+  | Feld | wird gebraucht für | Stand heute |
+  |---|---|---|
+  | `teams[].isHomeTeam` | die Heim-/Auswärtsrechnung | über den Spielort belegt (28.08.2026), nicht aus der Quelle |
+  | Halbzeitstand | `spiele.ht_resultat` | leer |
+  | Zuschauer | `spiele.zuschauer` | leer |
+
+  Die Antwort wird also stündlich geholt, bezahlt und weggeworfen, während
+  drei Spalten daneben leer bleiben. **Wer den Aufruf entfernt, spart 25 % der
+  Matchdaten-Aufrufe; wer ihn ausliest, füllt drei Spalten ohne einen einzigen
+  zusätzlichen Aufruf.** Beides ist richtig, nichts zu tun ist es nicht.
+
+  ⚠ ⚠ **NACHGEMESSEN AM 10.09.2026 GEGEN DIE SPEZIFIKATION — ES SIND ZEHN
+  FELDER, NICHT DREI.** `MatchDetail` hat 34 Felder, `Schedule` 31, und die
+  Schnittmenge ist kleiner als die Zahlen vermuten lassen. **Das trägt der
+  Detailabruf, und der Spielplan nicht:**
+
+  | Feld | wofür |
+  |---|---|
+  | **`teams`** | darin `isHomeTeam` — die Heim-/Auswärtsfrage aus der Quelle statt über den Spielort erschlossen |
+  | **`intermediateResults`** | der **Halbzeitstand**. `spiele.ht_resultat` ist leer, und der Spielplan-Endpunkt liefert ihn nachweislich nicht |
+  | **`cupName`** | die Cup-Bezeichnung, die `Schedule` nicht führt |
+  | `championshipName` | das Gegenstück für die Meisterschaft |
+  | `hasMatchStarted` · `isMatchPause` · `hasMatchEnded` | der Spielzustand feiner als `matchState` |
+  | `stadiumFieldId` · `stadiumFieldName` · `isUnkownStadiumField` | das Spielfeld |
+
+  ⚠ **Es ist ein WEGGEWORFENER Abruf, kein fehlender.** Der Unterschied ist
+  die ganze Rechnung: hier kostet das Auslesen **nichts** — die Antwort ist
+  schon bezahlt, schon da, und wird in derselben Zeile verworfen. Das ist
+  eine andere Lage als bei `/bench`, das am selben Tag ausgebaut wurde, weil
+  es einen ZUSÄTZLICHEN Abruf kostete und nichts beitrug.
+
+  ⚠ **Der Zuschnitt beim Auslesen ist trotzdem eine Allowlist, Feld für
+  Feld** — nicht `{...detail}`. Zehn Felder, die man nehmen KANN, sind kein
+  Grund, zehn zu nehmen; und ein neues Feld der Gegenseite reiste sonst beim
+  nächsten Mal still mit (siehe „Ein neues Feld erbt JEDEN Ausgang").
+
+- **⚠ Der Verweis auf den FVRZ-Spielbericht: `tg=` ist `spiele.sfv_match_id`.**
+
+  Direkt belegt am 25.08.2026, nicht hergeleitet — die Seite zeigte bei `tg=4393132` unser Spiel vom 23.08.2026 (FC Herrliberg 3 – FC Blau-Weiss Erlenbach 1, 3:3) samt Aufstellung, und die dort genannte „Spielnummer: 177238" ist genau unsere `sfv_spiel_nr`.
+
+  ```
+  https://matchcenter.fvrz.ch/default.aspx?lng=1&cxxlnus=1&v=253&a=tg&{ID}&bn=0
+                                                                    ↑ tg=sfv_match_id
+  ```
+
+  Nur `tg` wechselt; `v=253` ist die Ansicht „Spielbericht". Gefüllt bei **269 von 269** Spielen, in jedem Wettbewerb.
+
+  ⚠ **Die beiden Zahlen sind NICHT austauschbar.** `sfv_match_id` (7-stellig, ~4.3 Mio, aus `matchId`) gehört in die URL; `sfv_spiel_nr` (6-stellig, aus `matchNumber`) steht auf der Seite und funktioniert in `tg=` nicht. Innerhalb einer Gruppe laufen beide parallel hoch, mit einem gruppenspezifischen Versatz — deshalb sehen sie verwandt aus und sind es nicht.
+
+  ⚠ Und der Server antwortet auf `WebFetch` mit **403**. Ein Link aus dem Browser geht; ein serverseitiger Abruf nicht.
+
+- **Nach jeder Strukturänderung gehören Dump UND Typen nachgezogen** — `npx supabase db dump --linked -f supabase/schema.sql` *und* `npm run gen:types`. Am 05.08.2026 fehlten in `database.types.ts` gleich drei Dinge aus vorherigen Etappen: die ganze Tabelle `personen`, `mitglieder.person_id` und die Fremdschlüsselbeziehung, ohne die PostgREST den Join nicht typisiert. Der Dump allein reicht nicht.
+- **Was „Supporter" in diesem Verein heisst — und was er NICHT heisst.** Ein Supporter ist jemand, der dem Verein **verbunden bleibt**: ehemalige Spieler, Eltern nach dem Austritt des Kindes, Leute die mithelfen. **Nicht finanziell.** „Gönner" ist ein Sponsoring-Begriff und meint etwas anderes; wenn Sponsoring einmal ein Thema wird, ist es ein eigenes Modul und darf das Wort behalten.
+
+  **Woher der Fehler kam:** Didi hat ihn am 22.08.2026 korrigiert, nachdem ich das Wort eine Woche lang benutzt hatte — 86 Fundstellen in 40 Dateien, in Kommentaren, Aufträgen, Migrationsköpfen und der Doku. ⚠ **Ein Begriff, den zwei Beteiligte verschieden verstehen, fällt in keiner Prüfkette auf.** Kein Test wird rot, kein Typ passt nicht, der Build läuft. Er zeigt sich erst in einer **Begründung, die danebenliegt** — und zwar an der Stelle, an der jemand sie das nächste Mal anwendet.
+
+  **Und genau das war der Fund.** Vier Stellen trugen denselben Satz, in `ARCHITECTURE.md`, `roleUtils.ts`, `getPermissions.ts` und der Session-Doku:
+
+  > *„Ein Passiv-, Ehren- oder Freimitglied ist Mitglied des Vereins mit Stimmrecht an der GV, ein Supporter ist **Gönner von aussen**."*
+
+  Er begründete, warum die Portalrolle `mitglied` nicht durch `supporter` ersetzt wurde. **Die Entscheidung ist richtig, die Begründung war es nicht.** Richtig ist der Unterschied **Mitgliedschaft ↔ keine Mitgliedschaft** (Statuten Artikel 6, Stimmrecht). Falsch ist „von aussen": ein Supporter ist das Gegenteil eines Aussenstehenden.
+
+  ⚠ **Die Gefahr lag in der Zukunft, nicht in der Vergangenheit.** Nachgeprüft: keine bestehende Entscheidung ist dadurch falsch geworden — `supporter` hat `helpers: 'schreiben'` wie ein Mitglied, und der Ausschluss von Statuten und GV-Papieren folgt aus der fehlenden Mitgliedschaft, nicht aus „aussen". **Aber ein Satz, der Supporter zu Aussenstehenden erklärt, hätte beim nächsten Mal begründet, sie aus Helferanfragen oder News herauszuhalten — und Mithelfen ist gerade das, was einen Supporter ausmacht.**
+
+  **Zwei Stellen bleiben absichtlich:**
+
+  | | |
+  |---|---|
+  | `CLAUDE.md`, die 17 verwaisten Matrix-Zeilen (`Gönner` 5) | ein protokollierter **Datenwert**, keine Bezeichnung — er stand so in der Tabelle. Ihn zu „berichtigen" hiesse, den Befund zu fälschen |
+  | `HelferModul` (bis 22.08.2026) | dort war `"Gönner"` ein Schlüssel in einer Farbtabelle, der **nie traf** — den Wert gibt es in keiner Tabelle. Rest desselben Spaltenkopf-Defekts; jetzt `"Supporter"` |
+
+  ⚠ **Und eine Falle beim Ersetzen selbst:** `supabase/schema.sql` ist **erzeugt**. Die Ersetzung traf ihn mit und machte aus „Goenner/Supporter" ein „Supporter/Supporter" — sinnlos und ausserdem wirkungslos, denn der Text lebt als `COMMENT ON COLUMN` in `pg_description`. Zurückgenommen mit `git checkout`; die Änderung gehört in eine Migration (`migration_begriff_supporter.sql`). **Wer einen Dump von Hand ändert, ändert nichts — und der nächste Dump nimmt es zurück.**
+
+- **Chips im Profilkopf nie selbst zusammenbauen** → `heroChips()` aus `domains/roles/roleUtils.ts`. Die Regel unterscheidet Rolle (was jemand tut) von Mitgliedtyp (wie er eingestuft ist) und ist mit 13 Tests abgesichert.
+- **Datenbereinigungen an Personenfeldern treffen `personen`, nicht `mitglieder`.** Die Fassade (`flacheZeile`) überschreibt jedes Feld aus `PERSON_FELDER` mit dem Wert der Person — die gleichnamige Spalte in `mitglieder` wird gar nicht mehr gelesen. Am 05.08.2026 selbst darauf reingefallen: Ein `update` auf `mitglieder.funktionen` sah in zwei Kontrollabfragen sauber aus und wirkte trotzdem nicht, weil die Liste `personen.funktionen` liest. Solange beide Spalten nebeneinander existieren (bis Etappe 6), gilt: erst `PERSON_FELDER` prüfen, dann die richtige Tabelle wählen.
+- **`mitglieder.funktionen` enthält Vereinsfunktionen, keine Kaderrollen.** Am 05.08.2026 stand dort bei 487 Mitgliedern „Spieler" — `ableitRolle()` prüft nur `funktionen.length > 0` und machte damit jeden ohne Kadereintrag zum Funktionär. Wer dort schreibt, prüft zweimal.
+- **Der Portal-Zugang hängt allein an `benutzer.mitglied_id`.** Das Kennzeichen `mitglieder.hat_portal_zugang` ist gestrichen — es war eine Kopie derselben Aussage und konnte veralten. Im Frontend kommt der Status aus `hat_benutzer` / `benutzer_deaktiviert`, die `useAppData` aus dem Join berechnet.
+- **`position` und `rueckennr` stehen an der Kaderzeile**, nicht am Mitglied: derselbe Spieler kann in zwei Teams zwei Nummern haben.
+- **Die Personenfelder gibt es in `mitglieder` nicht mehr** (seit 06a, 05.08.2026). Wer `select("id,vorname,…")` auf `mitglieder` schreibt, bekommt einen Laufzeitfehler — und ein `.order("nachname")` ebenso, was beim Bauen nicht auffällt.
+- **Personendaten nie direkt aus `mitglieder` lesen oder schreiben** → `domains/person/personService.ts`. Lesen per Join (`select("*, personen(*)")`) und durch `flacheZeile()`; Schreiben durch `verteileFelder()`. `personen` ist die Wahrheit, die gleichnamigen Spalten in `mitglieder` sind seit Etappe 2b Altlast und verschwinden in Etappe 6.
+- **Pflichtfelder nie selbst herleiten** → `getEffektivePflichtfelder()` aus `domains/members/pflichtfelder.ts`. Es gibt keine Rückfallliste: was in der Matrix steht, gilt. `vorname`/`nachname` stehen nicht darin (`IMMER_PFLICHT`), weil sie in `mitglieder` NOT NULL sind. Und: **ein Feld, das Pflicht sein kann, braucht ein Eingabefeld** — sonst blockiert die Prüfung ein Formular, das den Wert gar nicht erfassen kann.
+- **Unique-/Primärschlüssel auf Vereinsdaten immer mit `verein_id`** — sonst nimmt der erste Verein dem zweiten den Namen weg (siehe `ARCHITECTURE.md` → Mandantenfähigkeit). Wird ein Schlüssel geändert, müssen die `onConflict`-Angaben der `upsert()`-Aufrufe mit.
+- Kein `window.confirm` → `useConfirm` aus `theme.ts`.
+- Kein Inline-CSS, wenn eine `cc-*`-Klasse existiert. Neue CSS-Klassen nur mit `cc-`-Prefix in `cc.css` — und laut `ARCHITECTURE.md` nur nach Rücksprache mit Dieter. **Zwei Prüfungen vorher, in dieser Reihenfolge** — siehe unten.
+- Saison nie hardcoden → `currentSeason()` aus `domains/season/seasonUtils.ts`.
+- Rollenableitung nie duplizieren → `ableitRolle()` / `ROLLE_PRIORITAET` aus `domains/roles/roleUtils.ts`.
+- **Verengungen als `Pick<Basistyp, "feld">`**, nicht als eigenes Interface. Ein handgeschriebenes Interface mit denselben Feldern läuft still auseinander, sobald der Basistyp sich ändert. Der Name muss den Inhalt tragen: `KaderRolleMitLabel` sagt, was drin ist — `RolleOption` sagt es nicht. (Die vier fast gleichen Kaderrollen-Typen unter „Bekannte Defekte" sind genau dieser Fehler, viermal.)
+- **`verein_id` bei Service-Inserts als eigener Pflichtparameter**, nicht als optionales Feld im Objekt: `insertMitglied(sb, fields, vereinId)`, wobei `fields` den Typ `Omit<TablesInsert<"mitglieder">, "verein_id">` hat. Als Objektfeld ist es vergessbar, und die DB lehnt die Zeile dann still ab (siehe verein_id-Regel oben). Als Parameter kann der Compiler es erzwingen. So gebaut: `insertMitglied`, `insertAnsicht`, `insertNotiz`, `insertElternkontakt`.
+- **Modale schliessen nicht mehr beim Klick daneben, sobald etwas eingegeben wurde.** `ModalOrSheet` merkt sich das selbst über `input`/`change`-Ereignisse, die bis zum Container blubbern — kein Modal muss etwas melden, und bei einem neuen kann es niemand vergessen. Ein reines Anzeige-Modal löst nie ein solches Ereignis aus und schliesst weiterhin. `immerSchliessbar` hebt die Sperre auf, wird im Normalfall nicht gebraucht. **Escape folgt derselben Regel** und wirkt nur auf das oberste Modal — das Modul führt dafür einen Stapel, sonst gingen bei einem Modal im Modal beide zu.
+- Neue UI-Komponenten in `COMPONENT_REGISTRY` (`src/shared/componentRegistry.js`) eintragen — daraus generiert sich der Design-System-Tab in der Portalverwaltung.
+- Nach dem Auslagern einer Komponente: alle Props gegen den Parent prüfen und Factory-Funktionen (`makeXxx`) auf `return` kontrollieren — der Build findet fehlende Runtime-Props nicht.
+- **Beim Entfernen eines Bereichs erst zeigen, was darin liegt, dann schneiden.** Wer per Regex oder Index von A bis B schneidet statt gezielt zu ersetzen, nimmt alles mit, was seit dem letzten Hinsehen dazugekommen ist. Am 19.08.2026 so passiert: beim Herausnehmen der zwei alten Pflichtfeld-Matrizen aus `MitgliederKonfigTab` lag die neu eingefügte `<MitgliedtypFelderSektion/>` mitten im Schnittbereich und verschwand mit. **Kein Werkzeug meldet das** — ein ungenutzter Import ist für TypeScript kein Fehler, `tsc`, Build und Tests liefen grün, und der Tab war im Deployment ohne beide Hälften. Bei jeder Entfernung deshalb den Schnittbereich vorher ausgeben und gegenlesen.
+- **Ein leerer `catch` macht aus einem Fehler eine Datenlage.** Das ist der Grund, warum er so gefährlich ist: er bricht nichts ab und meldet nichts, sondern lässt den Code weiterlaufen, als wäre schlicht nichts da gewesen. Am 20.08.2026 hat ein `catch {}` in `sfv-sync/matchdatenLauf.ts` ein **`42P10` der eigenen Datenbank** verschluckt (der Ereignis-Upsert traf einen partiellen Index, den `ON CONFLICT` nicht ableiten kann). Nach aussen sah das aus wie „der Verband hat zu diesem Spiel keinen Verlauf erfasst" — und darauf ist eine Produktentscheidung gebaut worden, samt Text in der Oberfläche und einem Nachtrag im Auftrag. Die Regel:
+
+  ```js
+  } catch (e) {                       // ✓ binden, auch wenn nur gezählt wird
+    erg.fehler += 1;
+    erg.fehlermeldungen.push(`Spiel ${id}: ${e instanceof Error ? e.message : String(e)}`);
+  }
+  ```
+
+  Leer bleiben darf er nur, wo das Scheitern **keine Aussage über die Daten** ist: `localStorage`/`sessionStorage` (Quota, privater Modus), `JSON.parse` eines gespeicherten Werts mit Rückfall, `history.pushState`. Dort ist er richtig und steht im Projekt rund vierzigmal.
+
+  ⚠ **Bei Supabase kommt der Fehler gar nicht als `throw`.** `sb.from(…).select()` liefert `{ data, error }` und wirft nur bei einem Netzwerkfehler. Ein `try { const { data } = await … } catch {}` fängt den Datenbankfehler deshalb **nicht** — er verschwindet schon davor, weil `error` niemand liest. Wer eine Abfrage schreibt, liest `error`; das `catch` ist dafür kein Ersatz.
+
+  **Beleg vom 20.08.2026, und er hat zwei Wochen gehalten.** `fetchKinderVollstaendigFuerElternteil()` selektierte `profil_geprueft_at` auf `mitglieder` — seit Etappe 6a (05.08.2026) eine tote Spalte, sie steht in `personen`. PostgREST antwortete mit `400 / 42703 column mitglieder_1.profil_geprueft_at does not exist`. Gelesen wurde nur `data`:
+
+  ```ts
+  const { data } = await sb.from("eltern_kinder").select(…);
+  return (data || []).map(…)          // aus 400 wird []
+  ```
+
+  Die Datenprüfung meldete daraufhin **„Keine Kinder verknüpft"** — bei einem Kind, das nachweislich verknüpft war. Ein Fehler, der wie eine Datenlage aussah, und die Suche ging in die Datenbank statt in den Code.
+
+  ⚠ **`(data || [])` ist dabei der eigentliche Übeltäter.** Es macht aus `null` eine leere Liste und löscht damit die letzte Spur. Wo ein Rückfall auf `[]` steht, gehört `error` unmittelbar daneben — sonst ist der Rückfall eine Behauptung.
+
+  Gegen die eine Hälfte läuft seither **`npm run check:selects`** (`scripts/check-selects.mjs`, in CI): es hält jede Spalte in einer `select()`-Zeichenkette gegen `database.types.ts`. Was es **nicht** findet, steht im Kopf des Skripts — dynamisch gebaute Selects, `rpc`, nicht auflösbare Embeds, und vor allem eine Spalte, die es GIBT, aber die falsche Bedeutung hat. Gegen die andere Hälfte hilft nichts als `error` zu lesen.
+
+  ⚠ **UND BEIM SCHREIBEN REICHT `error` NICHT — das ist die andere Hälfte, und sie ist tückischer.** Ein `update`/`delete`, das **keine Zeile trifft**, ist kein Fehler: PostgREST antwortet `204 No Content`, `error` ist `null`. Wer die Regel oben befolgt und `error` liest, hat damit **nichts** gewonnen. RLS lehnt nicht ab — sie lässt die Zeile einfach nicht sehen.
+
+  ```ts
+  const { data, error } = await sb.from(t).update(felder).eq("id", id).select("id");
+  if (error) return { ok: false, fehler: error.message };
+  if (!data || data.length === 0) return { ok: false, fehler: "…nicht getroffen" };
+  ```
+
+  **`.select("id")` gehört an den Schreibvorgang selbst**, nicht als zweite Abfrage daneben. Der Unterschied ist die ganze Aussage:
+
+  | | fragt | fängt den Fall |
+  |---|---|---|
+  | `.update(…).select("id")` | wurde **geschrieben**? | ✅ |
+  | danach `select id where id = …` | ist **lesbar**? | ❌ |
+
+  Lesen und Schreiben hängen an **verschiedenen Policies**. Eine Zeile, die man sehen aber nicht ändern darf, besteht die zweite Prüfung und ist trotzdem nicht geschrieben. **In `kindService.ts` stand genau diese zweite Fassung** — als Gegenprobe gebaut, gegen den Fall wirkungslos, für den sie gebaut war; berichtigt am 23.08.2026 samt eigenem Testfall.
+
+  **Beleg vom 23.08.2026, gemessen:** `vereine` hatte RLS an und nur SELECT-Policies. `AussehenTab` meldete **„Theme gespeichert ✓"**, `setzeAustrittsziel()` gab `null` (= Erfolg) zurück — beide schrieben nichts. Der Code las `error` vorbildlich. Siehe „Zwei Schreibwege der Portalverwaltung treffen null Zeilen".
+
+  Stand 20.08.2026: **49 Destrukturierungen von `await sb…` lassen `error` weg**, 76 lesen ihn. Nicht alle sind gefährlich (ein `maybeSingle()` auf eine eigene Zeile verkraftet es), aber jede, die einen Rückfall auf `[]` oder `null` hat, ist ein Kandidat für denselben Ausfall.
+- **`\b` ist in dieser Codebasis unbrauchbar.** JavaScript zählt nur `[A-Za-z0-9_]` als Wortzeichen — `ä`, `ö`, `ü` gehören nicht dazu. Mitten in „Rückennummer" steht deshalb eine Wortgrenze hinter dem `R`, und `/\bR\b/.test("Rückennummer")` ist **`true`**. In einem Projekt, dessen Bezeichner, Kommentare und UI-Texte durchgehend deutsch sind, trifft das ständig. Wer nach Bezeichnern sucht, nimmt stattdessen:
+
+  ```js
+  const GRENZE = "[^\\p{L}\\p{N}_]";
+  new RegExp(`(?<=^|${GRENZE})${name}(?=$|${GRENZE})`, "u")
+  ```
+
+  Der Fehler geht in **beide** Richtungen und ist deshalb doppelt tückisch. Am 19.08.2026 in `scripts/check-imports.mjs` beide Male erlebt: erst meldete `\bR\b` jede Datei mit dem Wort „Rückennummer" als fehlenden Import von `R` (Rot) — `--fix` hätte ihn ergänzt. Nach der Korrektur stand in derselben Datei noch ein `\b` in der Prüfung auf lokale Deklarationen, wodurch ein `const Rückennummer = …` einen **echt** fehlenden Import von `R` verdeckt hätte. Ein Fehlalarm fällt auf, eine unterdrückte Meldung nicht.
+
+  Unbedenklich bleibt `\b` dort, wo nur ASCII geprüft wird — etwa `/<(path|circle|rect)\b/` gegen SVG-Markup in `icons.test.ts`.
+- **`benutzer.id` IST die Auth-Id — es gibt keine Spalte `auth_user_id`.** `handle_new_user()` legt die Zeile mit der `auth.users`-Id als Primärschlüssel an; `useDbUser` liest sie mit `.eq("id", uid)` aus der Sitzung. Ein zweiter Schlüssel existiert nicht.
+
+  **Ich habe am 23.08.2026 `auth_user_id` angenommen** und in zwei Stellen der Löschkette geschrieben. Der Fehler ist die Sorte, die man nicht bemerkt, **weil die eine Hälfte laut scheitert und die andere still durchläuft:**
+
+  | Stelle | was passiert wäre |
+  |---|---|
+  | Aufrufer auflösen (`.eq("auth_user_id", …)`) | **laut** — PostgREST antwortet `42703 column does not exist`, 500 |
+  | Auth-Konto löschen (`deleteUser(zeile.auth_user_id)`) | **still** — `undefined`, der Aufruf wird übersprungen |
+
+  Die zweite Hälfte hätte die `benutzer`-Zeile entfernt und das Anmeldekonto stehen gelassen: **die E-Mail-Adresse dauerhaft für jede erneute Registrierung blockiert**, mit einer Zeile in der Konsole als einzigem Zeichen. Nach aussen sähe das aus wie „diese Adresse ist schon vergeben" — wieder ein Ausfall in der Verkleidung einer Datenlage.
+
+  ⚠ **UND EIN AUTH-KONTO OHNE `auth.identities` IST FÜR DIE ADMIN-API NICHT LÖSCHBAR.** Gemessen am 23.08.2026 beim ersten scharfen Löschlauf: `auth.admin.deleteUser()` antwortete **„Database error loading user"**. Ursache war nicht der Code, sondern der Datensatz — das Konto war von Hand angelegt worden, hatte **null** Zeilen in `auth.identities` und ist für GoTrue damit unvollständig.
+
+  ```sql
+  select u.email, u.last_sign_in_at is not null as hat_login,
+         (select count(*) from auth.identities i where i.user_id = u.id) as identities
+    from auth.users u order by identities;
+  ```
+
+  ⚠ **Und `aud` war ebenfalls `NULL`** — bei einem gültigen GoTrue-Konto steht dort `authenticated`. Zwei Merkmale, beide Kennzeichen eines von Hand eingefügten Datensatzes.
+
+  **Zwei der sechs Konten hatten null** — `trainer@fch-test.ch` und `funktionaer@fch-test.ch`, beide am 28.05.2026 angelegt, beide nie angemeldet. **Sie waren nie anmeldefähig**; als Prüfmittel haben sie nur so ausgesehen. Ein Konto, das man nicht benutzen kann, fällt nicht auf, solange niemand es benutzt.
+
+  **Daraus die Reihenfolge in der Löschkette:** erst `auth.admin.deleteUser()`, dann die `benutzer`-Zeile. Scheitert der erste Schritt, ist **nichts** verloren; umgekehrt stünde die Waise da, vor der der Absatz oben warnt — und genau das ist beim ersten Lauf passiert.
+
+  ⚠ **Ein solches Konto lässt sich auch im Dashboard nicht löschen** — es benutzt dieselbe Admin-API. Es geht nur mit SQL (`delete from auth.users`), und das ist ein Schreibvorgang im `auth`-Schema. **Wer per SQL ein Konto anlegt, baut eines, das nur aussieht wie eines** — und hinterlässt es dem Nächsten als etwas, das weder benutzbar noch abräumbar ist. Neue Testkonten entstehen deshalb ausschliesslich über die Anmeldemaske; das Muster liegt in `supabase/testkonto_trainer.sql`, das bewusst nur die **Person** anlegt.
+
+  ⚠ **Die laute Hälfte ist kein Schutz für die stille.** Beide standen in derselben Datei, geschrieben in derselben Minute, aus derselben Annahme. Wäre die laute nicht dabei gewesen, hätte nichts gemeldet. Gefunden habe ich es beim Gegenlesen gegen das Schema und gegen `useDbUser` — nicht durch einen Lauf.
+
+- **Ein `Authorization`-Header ist keine Anmeldung — und `verify_jwt` ist keine Rechteprüfung.** Bei Supabase steht in diesem Header im Normalfall der **publishable key** (früher: anon key). Der liegt im JavaScript-Bündel jeder Seite; er ist öffentlich, das ist sein Zweck. Der Gateway-Schalter `verify_jwt` prüft, ob der Schlüssel **gültig** ist, nicht ob ein **Mensch** dahintersteht — und der publishable key ist gültig.
+
+  Beleg vom 23.08.2026, gemessen gegen die laufende Function, nicht vermutet:
+
+  ```
+  POST /functions/v1/invite-user   Authorization: Bearer sb_publishable_…
+  → 400 {"error":"E-Mail fehlt"}      ← durch die Rechteprüfung, in der Rumpfprüfung
+  ```
+
+  `invite-user` prüfte `if (!authHeader) return 401`. Damit konnte **jeder, der die Seite aufruft**, Einladungs-E-Mails im Namen des Vereins an beliebige Adressen verschicken — abgeschickt vom Auth-Server des Projekts, mit Absender und Aussehen des Portals und einem gültigen Anmeldelink darin. Und `redirect_url` kam ebenfalls aus dem Aufruf, landete also als Link **in der Mail**.
+
+  **Richtig ist, den Token aufzulösen statt ihn zu zählen:** `db.auth.getUser(token)` gegen den Auth-Server, dann `benutzer` über die zurückgegebene Id, dann `ist_admin` und `verein_id`. Ein publishable key ergibt dabei keinen Benutzer. Steht seit dem 23.08.2026 an **einer** Stelle — `supabase/functions/_shared/aufrufer.ts` —, weil zwei getrennte Rechteprüfungen still auseinanderlaufen; die Regeln selbst liegen ohne `esm.sh`-Import in `aufruferRegeln.ts` und haben 11 Testfälle.
+
+  ⚠ **Und der Aufrufer nennt seither eine PERSON, keine Adresse.** Eine mitgeschickte E-Mail lässt sich gegen keinen Verein halten — die Mandantenprüfung wäre Zierrat. Die Adresse kommt aus `personen`, das Ziel des Links aus `vereine.slug`. Erlaubtes aufzählen, nicht Verbotenes: dieselbe Regel wie unten bei Fremddaten, nur für den Rückweg.
+
+- **Eine grüne Prüfkette heisst „die Zahlen stimmen", nicht „die Entscheidung stimmt". Eine Schwelle ist nie durch einen Test gedeckt.**
+
+  Am 25.08.2026 zeigte die Löschvorschau für zwei Personen:
+
+  ```
+  WIRD GELÖSCHT (2)
+    ▸ 2 weitere, je 1–1 Zeilen        ← und kein einziger Name
+  ```
+
+  Typecheck grün, Build grün, 814 Tests grün. **Die Zahl stimmte, der Text stimmte, das Einklappen funktionierte genau wie gebaut** — nur war die Grenze, ab der eingeklappt wird, nie gegen einen echten Fall gehalten. Ein Bestätigungsdialog für die einzige unwiderrufliche Aktion des Portals, der die Betroffenen nicht nennt.
+
+  ⚠ **Und die Schwelle beantwortete die falsche Frage.** Sie fragte *„wie viele sind zu viel zum Anzeigen?"* — die Frage des Werkzeugs. Die Frage der Sache lautet *„welche muss ich gesehen haben, bevor ich drücke?"*, und die Antwort ist **immer alle**. (Didi, 25.08.2026.) Die Reparatur war deshalb nicht, die Schwelle zu verschieben, sondern sie **abzuschaffen**: nie einklappen, stattdessen scrollen. Bei zwanzig Personen ist eine scrollende Liste ehrlicher als eine zusammengefasste — man sieht, dass es zwanzig sind, und muss an ihnen vorbei; eingeklappt sieht man eine Zeile und drückt.
+
+  **Die Regel daraus, und sie reicht weit über diesen Fall:**
+
+  | | durch einen Test gedeckt |
+  |---|---|
+  | rechnet die Funktion richtig | ✅ |
+  | trifft die Bedingung zu | ✅ |
+  | ist **20** die richtige Grenze | ❌ **nie** |
+  | ist Einklappen hier überhaupt richtig | ❌ **nie** |
+
+  Ein Test hält fest, was jemand entschieden hat — er prüft nicht, ob die Entscheidung taugt. **Wo eine Zahl im Code steht, die niemand gemessen hat** (eine Schwelle, ein Grenzwert, ein Seitenumbruch, eine Kürzung, ein Timeout), **gehört sie gegen einen echten Fall gehalten, nicht gegen eine Erwartung.** Und der echte Fall ist oft der KLEINE: die Schwelle 20 war für den Stapel aus zwanzig gedacht und fiel beim Stapel aus zwei um.
+
+  ⚠ **Wenn die Grenze doch bleiben muss, gehört sie an die Stelle, an der es wirklich kippt.** Hier lag das nicht bei der Anzeige, sondern eine Stufe früher: die Vorschau ruft die Edge Function einmal pro Person auf, nacheinander. 395 Ausgewählte sind 395 Aufrufe. Die Grenze steht deshalb jetzt bei der Stapelgrösse (`HOECHSTENS = 25`) mit einer Ansage, die den Grund nennt — und nicht als stille Kürzung der Liste.
+
+  Dieselbe Familie wie „ein Test, der nur Längen zählt": beide sind grün und prüfen etwas anderes als das, worauf es ankommt.
+
+- **Eine Messung geht an einen Subagenten — die Deutung nicht. Und die Ausgangszahl gehört in den Auftrag, als BEHAUPTUNG, die er widerlegen darf.**
+
+  Was delegiert wird: Fundstellen zählen, Tabellen gegen Policies halten, Bestandszahlen erheben — alles, dessen Rohausgabe niemand ein zweites Mal liest. Zurück kommt das Ergebnis, nicht der Weg dorthin.
+
+  ⚠ **Was NICHT delegiert wird: was die Zahl für den Entwurf heisst.** Ein Subagent zählt „389 von 393 Kindern haben genau einen Elternteil"; dass daraus eine Regel statt einer Warnung folgt, ist eine Entscheidung. Die wertvollsten Funde entstehen in diesem Schritt.
+
+  **Zwei Anforderungen an den Auftrag, beide am 25.08.2026 belegt:**
+
+  1. **Zu jeder Zahl gehört die Abfrage.** Sonst ist sie nicht nachprüfbar — und der Reflex, eine überraschende Zahl zuerst gegen das WERKZEUG zu halten, ist genau der, der die Fehler findet.
+
+  2. ⚠ **Die Ausgangszahl mitgeben, aber als Behauptung.** Im Auftrag stand „eine Vormessung ergab: 6 minderjährige Aktivmitglieder". Der Subagent hat sie **widerlegt** — es sind **5 Personen in 6 Zeilen**, weil ein Kind zwei Elternzeilen hat. Hätte er sie als Tatsache gelesen, wäre der Fehler stehen geblieben; hätte ich sie weggelassen, hätte er nichts gehabt, wogegen er prüfen kann. Also: *„Eine Vormessung ergab X. Prüf das nach — es kann falsch sein."*
+
+  ⚠ **Und der Rückweg ist die dritte Gefahr, nicht bloss eine Fussnote.** Ich habe den Fund anschliessend ZU WEIT GEZOGEN und gemeldet, auch „393 Kinder" seien Zeilen gewesen. Waren sie nicht: 393 sind alle Kinder, 391 die aktiven — beides Personen, verschiedene Mengen. Aufgefallen ist es nur, weil vor dem Ändern von `CLAUDE.md` noch einmal gemessen wurde. **Eine Korrektur ist selbst eine Behauptung und wird wie eine geprüft** — sonst ersetzt sie eine richtige Zahl durch eine falsche und schreibt die Begründung gleich mit dazu.
+
+- **⚠ EINE ZAHL IN EINEM DOKUMENT IST EINE MESSUNG VON DAMALS. WER SIE ZITIERT, MACHT EINE BEHAUPTUNG ÜBER HEUTE.** (09.09.2026.)
+
+  `migration_sfv_spielplan.sql:113` sagt seit dem 14.08.2026 wörtlich:
+
+  > *„Gespeichert werden alle Zeilen der Gruppe, auch die der Gegner (**232 Zeilen ueber 21 Gruppen bei FCH**)"*
+
+  Das war richtig gemessen. Vier Wochen später wurde es in einem Gespräch als *„heute stehen 232 in `ranglisten`"* zitiert — im Präsens, als Bestandsangabe, und darauf eine Rechnung über fehlende Gruppen gebaut. **Niemand hatte nachgezählt.**
+
+  ⚠ **Der Fehler liegt nicht beim Zitierenden.** Die Zahl steht in einer Migration, also an einem Ort, der Struktur beschreibt und nicht Bestand — und sie trägt kein Datum in der Zeile. Ein Messwert ohne Zeitstempel sieht aus wie eine Eigenschaft.
+
+  **Und ich mache dasselbe.** Am 09.09.2026 habe ich „269 Spiele, 21 Teams" aus CLAUDE.md (Stand 25.08.) für eine Hochrechnung der Laufdauer benutzt, ohne die Zahlen nachzuzählen — und sie in einer Tabelle präsentiert, in der sie neben gemessenen standen.
+
+  | | |
+  |---|---|
+  | **beim Schreiben** | jede Zahl bekommt ihr Datum in dieselbe Zeile — nicht in die Überschrift, nicht in den Absatz darüber |
+  | **beim Lesen** | eine Zahl aus einem Dokument ist ein **Ausgangswert**, keine Auskunft. Sie gehört in den Auftrag als Behauptung, die widerlegt werden darf (siehe „Eine Messung geht an einen Subagenten") |
+  | **wo es zählt** | vor einer Entscheidung, die auf der Differenz zweier Zahlen beruht, wird **beide** frisch gemessen |
+
+  ⚠ **Die schärfste Form: eine Entscheidung, die damals richtig war und seither niemand nachgeprüft hat, ist nicht falsch geworden — die Lage hat sich geändert.** (Didi, 09.09.2026.) Das ist kein Vorwurf an die Entscheidung, sondern die Frage, ob ihre Voraussetzung noch gilt. Sie zu stellen kostet eine Abfrage; sie nicht zu stellen kostet die Umstellung, die daraus folgt.
+
+- **Eine Messung zählt leicht etwas anderes als gemeint — und im Gegensatz zu einer falschen Bedingung wird sie nie rot.** Ein Filter, der danebenliegt, fällt irgendwann jemandem auf. Eine Zahl, die danebenliegt, wird zitiert.
+
+  **Nach NAMEN gruppieren zählt Schreibweisen, nicht Menschen.** Beleg vom 23.08.2026: eine Auswertung der fehlenden Pflichtfelder meldete
+
+  ```
+  Adrian Schmid | Aktivmitglied | 3 | ahv_nr, ahv_nr, telefon
+  ```
+
+  Das doppelte `ahv_nr` war der einzige Hinweis. Es sind **zwei verschiedene Personen desselben Namens** mit einer und zwei Lücken — `group by name` hatte sie zu einer verschmolzen. Ohne die Doppelung hätte die Zeile völlig plausibel ausgesehen, und „ein Mitglied vermisst drei Felder" wäre in einen Bericht gewandert. **Wer Personen zählt, gruppiert über `id`.** Dieselbe Familie wie ein Filter auf einen Namen statt auf ein Merkmal — nur in einer Messung statt in einer Bedingung, und dort fällt es noch weniger auf, weil es keine zweite Anzeige gibt, die widerspricht.
+
+  ⚠ **Und `grep` auf eine laufende Ausgabe trifft Zwischenstände.** `npm test | grep -E "Tests |Test Files"` meldete am 23.08.2026 zweimal einen Einbruch (528 statt 742, dann 561 statt 790) — beide Male hatte der Filter eine Fortschrittszeile erwischt, die vitest während des Laufs druckt. Beim ersten Mal habe ich dem Alarm eine halbe Untersuchung gewidmet. **Für die Schlusszahl `tail` nehmen, nicht `grep`:**
+
+  ```bash
+  npm test 2>&1 | tail -8
+  ```
+
+  Der Reflex, den beide Fälle verlangen, ist derselbe: **eine Zahl, die überrascht, zuerst gegen das Werkzeug prüfen, das sie erzeugt hat** — und erst dann gegen die Sache.
+
+- **Eine Meldung, die die gültige Antwort KENNT und nicht nennt, kostet eine Rückfrage — und beim Verallgemeinern fällt genau diese Hälfte weg.**
+
+  Am 05.09.2026 in `wp-export/index.ts`. Solange es eine Aktion gab, hiess es:
+
+  ```ts
+  `Unbekannte Aktion: ${aktion} — heute gibt es nur "probe"`
+  ```
+
+  Beim Ergänzen von `export` habe ich den zweiten Teil **entfernt**, weil er mit zwei Aktionen nicht mehr stimmte. Übrig blieb `Unbekannte Aktion: spiele` — die Function kannte die Antwort weiterhin und sagte sie nicht mehr.
+
+  ⚠ **Der Aufruf, der es auslöste, war ein naheliegender Irrtum:** `spiele` ist der WordPress-**Routenpfad** (`/clubcampus/v1/spiele`), nicht die Aktion. Genau die Verwechslung, die eine Meldung mit Aufzählung in derselben Sekunde geklärt hätte. Stattdessen eine Runde hin und zurück.
+
+  **Die Reparatur ist nicht der Text, sondern die Quelle:** eine Liste, aus der die Prüfung *und* die Meldung lesen.
+
+  ```ts
+  const AKTIONEN = ["probe", "export"];
+  if (!AKTIONEN.includes(aktion)) return json({ fehler: …, gueltig: AKTIONEN }, 400);
+  ```
+
+  Damit kann die Meldung nicht veralten, wenn eine Aktion dazukommt — und das ist der eigentliche Punkt: **die alte Fassung war nicht falsch, sie wurde falsch, als jemand daneben etwas ergänzte.** Dieselbe Familie wie der Kommentar „Drei Aufrufe" über vier Zeilen.
+
+  **Verallgemeinern heisst nicht leeren.** Wo eine Meldung eine Aufzählung trug, gehört die Aufzählung erweitert, nicht gestrichen.
+
+- **⚠ EINE MELDUNG NENNT DAS LETZTE GLIED DER KETTE — NICHT DAS GERISSENE.** (Befund Didi, 09.09.2026.)
+
+  Der erste scharfe WordPress-Lauf brauchte **drei Anläufe, und alle drei sahen gleich aus:**
+
+  ```
+  ohne_team: ["38309"]   →  0 neu, 0 aktualisiert, Status „warnung"
+  ```
+
+  Wörtlich heisst das *„Mannschaft 38309 hat auf dieser Website kein Team mit dieser sfv_id"* — eine Aussage über einen **Meta-Wert im Backend**. Sie stimmte in genau **einem** der drei Fälle:
+
+  | Anlauf | tatsächlich | Glied |
+  |---|---|---|
+  | 1 | die Datei lag im **falschen Ordner** | es lief gar kein Empfänger |
+  | 2 | eine **fremde Datei trug denselben Namen** | es antwortete der falsche |
+  | 3 | der **Meta-Schlüssel** stimmte nicht | ✅ das war die Meldung wirklich |
+
+  ⚠ **Die ersten beiden sind DIESELBE Stelle** — „welche Datei antwortet hier eigentlich?" — und genau deshalb hat der zweite so wehgetan: nach dem ersten galt die Frage als beantwortet.
+
+  **Dieselbe Familie wie „ein Ausfall in der Verkleidung einer Datenlage", eine Stufe fieser:** hier ist es ein Ausfall in der Verkleidung **einer anderen, plausiblen Konfigurationsfrage.** Man sucht dreimal im Backend nach dem Feld, und zweimal lag es nicht dort.
+
+  ⚠ **Und das Prüfmittel dagegen gab es schon — es half in einem von drei Fällen.** `aktion: "status"` fragt die Gegenstelle, ob sie bereit ist. Bei Anlauf 1 hätte sie geschwiegen; bei 2 und 3 hätte sie **`bereit: true`** gesagt: die fremde Datei bedient dieselbe Route genauso bereitwillig, und die Voraussetzungsprüfung sah Beitragstypen an, keine Felder. **Eine Auskunft, die zwei von drei Ausfällen für gesund erklärt, schickt den Verdacht in die falsche Richtung** — sie ist schlimmer als keine, aus demselben Grund wie ein Zähler, dessen Name mehr behauptet als er misst.
+
+  **Die Regel: wer eine Gegenstelle nach ihrem Zustand fragt, fragt sie zuerst nach SICH SELBST.**
+
+  | Frage | Feld |
+  |---|---|
+  | **wer** antwortet hier | Dateiname + Version |
+  | **womit** sucht sie | der Schlüssel, an dem es hängt — als Wert, nicht im Quelltext |
+  | **worauf** trifft sie | die Zuordnung gezählt (`0 von 21`) |
+
+  Alle drei sind billig, keine davon ist eine Rechnung, und zusammen unterscheiden sie die drei Glieder. Geschrieben in `wordpress/wp-export-empfaenger.php` → `cc_route_status()`; der Schlüssel steht seither als `CC_META_TEAM_SFV` an einer Stelle statt als Zeichenkette mitten in der Funktion.
+
+  ⚠ **Am selben Abend berichtigt:** hier stand „geschrieben, nicht wirksam — auf der Website läuft die Spiegel-Fassung". Gemessen im Theme-Repo ist meine Datei dort inzwischen **md5-identisch** unter `mu-plugins/wp-export-empfaenger.php` eingespielt, und die Spiegel-Fassung ist gelöscht. **Ein Satz über ein zweites Repository veraltet in Stunden, nicht in Wochen** — deshalb steht die Frage jetzt als Aufruf da und nicht als Behauptung: `(await wpExport('status')).empfaenger` nennt die Datei, die tatsächlich antwortet.
+
+  ⚠ **Nicht die Route rot färben, wenn die Zuordnung leer ist.** Ein Empfänger ohne Zuordnung ist betriebsbereit, nur nutzlos — ein 503 ebnete den Unterschied zu „da läuft gar nichts" wieder ein, und genau diese Einebnung ist der Fehler.
+
+- **⚠⚠ EINE PRÜFUNG, DIE NUR DAS LETZTE GLIED SIEHT, BESTÄTIGT EINE KETTE, DIE VORNE GERISSEN IST.** (Didi, 09.09.2026 — der Satz ist seiner.)
+
+  Der Eintrag darüber handelt von einer **Meldung**, die das falsche Glied nennt. Dieser hier ist die andere Hälfte und die gefährlichere: **das Prüfmittel selbst.**
+
+  `aktion: "status"` gab es schon. Sie lief. Sie fragte die Website, ob sie bereit sei — und hätte in **zwei von drei** Ausfällen **`bereit: true`** gemeldet: die fremde Datei bediente dieselbe Route genauso bereitwillig, und die Voraussetzungsprüfung sah Beitragstypen an, keine Felder.
+
+  | | |
+  |---|---|
+  | eine Prüfung, die **fehlt** | man weiss, dass man nichts weiss |
+  | eine Prüfung, die **grün** ist, ohne zu prüfen | man hört auf zu suchen — an der einen Stelle, an der es lag |
+
+  **Das ist dieselbe Familie wie ein Zähler, dessen Name mehr behauptet als er misst** (die 431 Klarnamen, die 0 waren), und wie die zweite Abfrage in `kindService.ts`: eine Gegenprobe, gebaut gegen genau den Fall, für den sie wirkungslos war — sie fragte „ist die Zeile lesbar?" statt „wurde sie geschrieben?". Und es ist die gespiegelte Form von `job_run_details.status = 'succeeded'`, das nur „abgesetzt" heisst: dort sieht die Prüfung das **erste** Glied und behauptet den Rest.
+
+  **Zwei Fragen, bevor man einer grünen Prüfung glaubt:**
+
+  1. **Welches Glied sieht sie — und welche Glieder liegen davor?** Antwortet mein Empfänger, oder irgendeiner? Wurde geschrieben, oder ist nur lesbar? Wurde der Auftrag ausgeführt, oder nur abgeschickt?
+  2. **Was sagt sie über das, was sie NICHT geprüft hat?** Nichts zu sagen ist hier gleichbedeutend mit „in Ordnung" — und das ist die Lüge. Eine Prüfung, die ihren eigenen Zuschnitt nennt („Beitragstypen geprüft, Felder nicht"), kann nicht mehr für mehr genommen werden, als sie ist.
+
+  **Die Gegenmassnahme ist nicht, mehr zu prüfen, sondern die Kette nach SICH SELBST zu fragen** — von vorne, nicht vom Ende: wer antwortet, mit welcher Fassung, gegen welchen Schlüssel, mit wie vielen Treffern. Vier Angaben, keine davon eine Rechnung. Siehe den Eintrag darüber.
+
+- **⚠ EIN ZÄHLER, DESSEN NAME MEHR BEHAUPTET ALS ER MISST, IST GEFÄHRLICHER ALS KEINER.** (Didi, 05.09.2026.)
+
+  Befund aus dem ersten Probelauf des WordPress-Exports. Die Antwort meldete zwei Zahlen, die sich widersprachen:
+
+  ```
+  zuordnungen: 0            ← niemand ist zugeordnet
+  verlaufszeilen_mit_klarnamen: 431
+  ```
+
+  In den Beispielen standen Vereinsnamen („FC Küsnacht a"), eigene Spieler durchweg als „Nr. 13". **Null Klarnamen, gemeldet als 431.** Der Ausdruck dahinter:
+
+  ```js
+  /^[^N]|^N(?!r\. )/     // „Text beginnt NICHT mit «Nr. »"
+  ```
+
+  **Zwei Fehler in einer Zeile, und beide sind Muster:**
+
+  | | |
+  |---|---|
+  | **negativ definiert** | eine **Denylist in Zahlenform**. Was nicht wie ein Ausschluss aussah, galt als Treffer — und ein Vereinsname beginnt eben auch nicht mit „Nr. " |
+  | **misst die AUSGABE statt der ENTSCHEIDUNG** | wer seinen eigenen Ausgabetext wieder zerlegt, misst seine Formatierung mit. Die ändert sich, ohne dass jemand an die Messung denkt |
+
+  Die zweite Hälfte ist die allgemeinere: **den Ausgabetext zu parsen, um zu erfahren, was man selbst hineingeschrieben hat, ist immer der Umweg.** Die Frage war nicht „sieht die Zeile nach einem Namen aus", sondern „haben wir einen Namen eingesetzt" — und das weiss der Code an der Stelle, an der er es tut.
+
+  ⚠ **Warum es schlimmer ist als gar keine Zahl, und das ist Didis Punkt:** dieser Zähler war die **eine** Angabe, die vor dem ersten scharfen Lauf entscheidet, ob Klarnamen von Junioren auf eine öffentliche Website gehen. Stünde dort dauerhaft 431 statt 0, sähe **ein echter Fund aus wie der Normalzustand** — und beim nächsten Mal schaut niemand mehr hin. Dieselbe Abstumpfung wie bei den 758 Lint-Warnungen und beim dauerhaft roten Prüfmittel.
+
+  **Die Reparatur ist nicht ein besserer Ausdruck, sondern eine andere Frage.** `zaehleVerlaufNamen()` fragt: ist die Zeile von uns, und steht für ihre `sfv_person_id` ein Name in der Zuordnung? Kein Zeichenvergleich, keine Textform.
+
+  ⚠ **Und die Zahl kommt jetzt zu dritt** — Personenname · Rückennummer · Gegnername —, weil die drei zusammen die Zeilenzahl ergeben müssen. **Das ist keine Nettigkeit, sondern die Gegenprobe:** gehen Summe und Zeilenzahl auseinander, misst eine der beiden Funktionen etwas anderes als die andere. Sie steht als `zaehlung_stimmt` in der Antwort, nicht nur im Test — eine Aufteilung, die aufgehen muss, prüft sich selbst; eine einzelne Zahl kann nur behauptet werden.
+
+  ⚠ **Nebenbefund aus derselben Ausgabe, den niemand gesucht hat:** dort stand „FC Küsnacht a **· -**". `spiel_ereignisse.subtyp` trägt bei Subtyp 0 den Klartext `-` aus den SFV-Stammdaten — kein leerer Wert, sondern ein Strich. Ohne Prüfung stünde er so auf der Website. **Wer eine Ausgabe zum Gegenlesen erzeugt, findet darin mehr als das, wonach er gesucht hat** — das ist der Zweck des Probelaufs, und es ist der Grund, ihn von Hand zu lesen statt nur seine Kennzahlen anzusehen.
+
+- **Kein Kind von `MemberDetail` bekommt `onReload`. Nur `neuLaden`.** Am 23.08.2026 fünfmal derselbe Befund — Vereinsfunktionen, Inline-Felder, offene Punkte im Profil, „Mein Kind", die Archivliste. Immer: **geschrieben, aber die Anzeige weiss es nicht.**
+
+  | | tut |
+  |---|---|
+  | `onReload` | lädt die **Liste** (`loadDbMitglieder`) |
+  | `neuLaden` | frischt **`m.daten`** auf **und** ruft danach `onReload()` |
+
+  **`neuLaden` ist immer richtig, weil es beides tut.** Es geht nichts verloren; es kommt nur `aktualisiere()` davor.
+
+  ⚠ **Warum es fünfmal gefunden statt einmal gelöst wurde — das ist die eigentliche Erkenntnis, nicht die Umstellung:** die Wahl zwischen „Liste neu laden" und „Person neu laden" **sieht an jeder Aufrufstelle wie eine Ermessensfrage aus. Sie ist keine.** Erst wer die sechs Stellen nebeneinander sieht, erkennt das — einzeln betrachtet wirkt jede plausibel, und deshalb wurde sie sechsmal einzeln entschieden und dreimal gleich falsch.
+
+  ⚠ **Und der Fehler versteckt sich hinter der häufigeren Datenlage.** Bei einem MITGLIED kommt `dbRaw` aus der Liste und gewinnt in der Mischung — der Listen-Reload frischt mit auf, alles sieht richtig aus. Bei einer Person **ohne** Mitgliedschaft ist `dbRaw` leer, und dann frischt nichts auf. Ein Defekt, den die häufigere Hälfte der Daten deckt, wartet auf die seltenere.
+
+  Haltbar gemacht mit einem Fall je Kind (`memberDetail.test.jsx`): die Attrappe greift den Rückruf ab, ruft ihn, und prüft, dass **neu gelesen** wird. Gegengeprobt — mit der alten Verdrahtung sind sie rot.
+
+- **Wird eine Funktion entfernt, ersetzt die Zusage über das VERHALTEN ihre Tests — sonst verschwindet mit dem Code auch der Grund.**
+
+  Am 24.08.2026 fiel `nimmMitgliedschaftZurueck()`. Nicht weil sie falsch war — sie zählte fünf Tabellen vor und weigerte sich, sobald etwas daranhing —, sondern weil dreimal gefragt wurde, was sie vom Austritt unterscheidet. An ihr hingen **fünf Testfälle**.
+
+  ⚠ **Sie mitzulöschen wäre der Fehler gewesen, und zwar ein unsichtbarer.** Was sie festhielten, war nicht die Funktion, sondern ihr **Grund**: ein `delete` auf `mitglieder` reisst per CASCADE `eltern_kinder` mit — 399 Zeilen an 393 Mitgliedschaften —, und diese Verknüpfungen stehen in keinem Verlauf. Der wichtigste der fünf hiess „weigert sich, wenn Eltern-Verknüpfungen daranhängen".
+
+  **Diese Aussage überlebt die Funktion.** Sie steht seither als **eine** Strukturprüfung da, die den Quelltext liest:
+
+  ```ts
+  const MUSTER = /from\(\s*["'`]mitglieder["'`]\s*\)[\s\S]{0,80}?\.delete\(/;
+  // → erwartet: []
+  ```
+
+  | | prüft | hält |
+  |---|---|---|
+  | die fünf alten Fälle | dass **diese Funktion** richtig zählt | bis sie entfernt wird |
+  | die Strukturprüfung | dass **niemand** aus `mitglieder` löscht | über jeden Umbau |
+
+  ⚠ **UND SIE WAR IN DER MINUTE ROT, IN DER SIE ZUM ERSTEN MAL LIEF.** Drei lebende Wege löschten weiter aus `mitglieder` — alle drei im Archiv, alle drei mit der Kaskade, und alle drei am Tag zuvor für entfernt erklärt. Siehe den Eintrag darunter.
+
+  **Die Regel greift breiter als bei Löschpfaden.** Wo eine Funktion eine Zusage einlöst, die das Produkt braucht („niemand schreibt ohne `verein_id`", „kein Modal steht hinter dem frühen Return"), ist die Zusage der Test — nicht die Funktion. Die Prüfung nach dem Muster von `icons.test.ts` (Quelltext lesen, `node:fs`) kostet zehn Zeilen und ist an keinen Aufrufer gebunden.
+
+- **⚠ Eine Anweisung, die eine MENGE nennt, prüft niemand gegen die Wirklichkeit.**
+
+  Am 23.08.2026 lautete die Freigabe: *„Entfernen, mit deinem Ersatz. … Und die Sammelaktionen fallen mit, **in beiden Listen**."* Gemeint war „überall". Umgesetzt wurde, was im Blick lag.
+
+  **Einen Tag später standen drei Wege unverändert da**, alle im Archiv:
+
+  | Stelle | was |
+  |---|---|
+  | `ArchivView` bulkActions | Sammelaktion „Mitgliedschaft löschen", n Zeilen auf einmal |
+  | `ArchivView` Zeilenknopf | ein **unbeschrifteter roter Papierkorb** — kein Wort, nur das Symbol |
+  | `MitgliederModul` | `handleBulkDelete`, tot seit dem Vortag, kein Aufrufer |
+
+  ⚠ **Und die Kommentare daneben sagten das Gegenteil.** In `MemberHero`, `MitgliederModul` und `supporterService` stand jeweils ausführlich, „Mitgliedschaft löschen" sei am 23.08.2026 gefallen und warum. Wer das las, sah nicht nach — genau die Familie eine Zeile weiter unten.
+
+  **Warum es keine Prüfkette gemeldet hat:** Build grün, Typecheck grün, 807 Tests grün. Ein Knopf, der noch da ist, ist kein Fehler; er ist ein Knopf.
+
+  ⚠ **Die Sammelaktion zählte in ihrer Rückfrage auf: „Kadereinträge, Notizen und Verlauf".** Die Eltern nannte sie nicht — und das war die einzige der drei Folgen, die in keinem Verlauf steht.
+
+  **Woran es liegt:** „beide Listen", „alle Aufrufer", „überall" sind Mengen, die der Sprecher im Kopf hat und der Ausführende schätzt. Beide halten sie für dieselbe. **Die Gegenmassnahme ist nicht, sorgfältiger zu zählen, sondern die Menge vor dem Schneiden AUSZUGEBEN:**
+
+  ```bash
+  grep -rn "deleteMitglied\|Mitgliedschaft löschen" src/   # erst zeigen
+  ```
+
+  Dieselbe Regel wie „beim Entfernen eines Bereichs erst zeigen, was darin liegt" — nur eine Ebene höher: dort ist es der Schnittbereich, hier die Trefferliste. Und wo die Menge eine Zusage über das Produkt ist, gehört sie in einen Fall, der sie nachsieht (Eintrag darüber).
+
+- **Ein Kommentar, der eine ANDERE Stelle zusichert, ist eine Behauptung ohne Prüfung — und wer ihn liest, prüft erst recht nicht nach.** Am 23.08.2026 vier Fälle an einem Tag:
+
+  | Stelle | behauptet | tatsächlich |
+  |---|---|---|
+  | `archiviereMitglied` | „das Konto wird ohnehin vom Aufrufer deaktiviert" | der Aufrufer tat es nie |
+  | `person-loeschen` | `benutzer.auth_user_id` | die Spalte gibt es nicht |
+  | `testkonto_elternteil.sql` | „die Registrierung schickt eine Bestätigungsmail" | „Confirm email" ist aus |
+  | `InfoTab` | „`onReload` ist seit dem 22.08. `neuLaden`" | die Aufrufstelle übergab das äussere `onReload` |
+
+  **Vier Mal dasselbe: eine Aussage über Code, den der Leser nicht vor sich hat.** Kein Werkzeug prüft sie — `tsc` nicht, ESLint nicht, kein Test. Und sie klingt geprüft, weil jemand sie aufgeschrieben hat.
+
+  ⚠ **Die Gegenmassnahme ist nicht, Kommentare zu pflegen.** Es ist, die Zusicherung an der Grenze zwischen zwei Bausteinen in eine Behauptung über **Verhalten** zu übersetzen, die ein Test hält:
+
+  ```jsx
+  vi.mock('../tabs/InfoTab.tsx', () => ({
+    InfoTab: (props) => { h.infoOnReload = props.onReload; return null; },
+  }));
+  // …
+  await act(async () => { await h.infoOnReload(); });
+  expect(svc.fetchPerson).toHaveBeenCalledWith(expect.anything(), 'p-9');
+  ```
+
+  Nicht „der Kommentar stimmt", sondern **„ruft man den Rückruf, den die Komponente bekommt, wird neu gelesen"**. Gegengeprobt: mit der alten Verdrahtung sind beide Fälle rot.
+
+  **Die Regel daraus:** wo ein Kommentar sagt „X bekommt Y" oder „der Aufrufer tut Z", gehört ein Fall dazu, der es an der Grenze festhält. Wo das zu teuer ist, gehört der Satz umgeschrieben — **von einer Zusicherung in eine Beobachtung** („Stand 23.08.2026: …"), damit der nächste Leser weiss, dass er nachsehen muss.
+
+  ⚠ **Und warum es so lange hält:** die Verdrahtung war für **Mitglieder** folgenlos, weil `dbRaw` aus der Liste kommt und in der Mischung gewinnt — der Listenreload frischte mit auf. Erst bei einer Person **ohne** Mitgliedschaft ist `dbRaw` leer, und dann frischt nichts auf. Ein Fehler, den die häufigere Hälfte der Daten verdeckt, wartet auf die seltenere.
+
+- **Ein deutsches Anführungszeichen zerreisst einen String nur, wenn das SCHLIESSENDE Zeichen ein ASCII-`"` ist — und der String selbst mit `"` begrenzt.**
+
+  ⚠ **Hier stand bis zum 25.08.2026 „zerstören jedes JS-Stringliteral, in dem sie stehen". Das war falsch, und die Ungenauigkeit war der Grund, warum die Regel nicht half:** danach ist es noch dreimal passiert, zuletzt in Testnamen. Ein Satz, der zu viel verbietet, wird beim Schreiben übergangen — die halbe Codebasis benutzt diese Zeichen gefahrlos, also fühlt sich das Verbot falsch an, und man hält sich nicht daran.
+
+  **Was tatsächlich gilt:** `„` `“` `”` sind U+201E/C/D und beenden **keinen** String. Zerrissen wird er vom **ASCII-`"` (U+0022)**, das jemand als schliessendes deutsches Anführungszeichen tippt:
+
+  ```ts
+  describe('… heisst „Austritt…" und …')   // ✓ läuft — der String ist mit ' begrenzt
+  it("… sagen „behält 1", der Rest …")     // ✗ das ASCII-" beendet den String
+  it("… ist nicht „dieselbe Person\"")     // ✓ escaptes \" ist gültig
+  ```
+
+  Gemessen am 25.08.2026: **35** Stringliterale im Bestand enthalten deutsche Anführungszeichen, **keines** davon ist kaputt.
+
+  ⚠ **Und die Lehre ist nicht die Regel, sondern dass eine Regel hier nicht genügt.** Seit dem 25.08.2026 läuft **`npm run check:quotes`** (`scripts/check-quotes.mjs`, in CI). Es sucht nicht das Zeichen, sondern die **unpaarige Öffnung**: ein `„` in einem `"`-String ohne schliessendes `“`/`”`/`\"`. Der Build findet dasselbe — aber als Parserfehler drei Zeilen weiter, der auf eine Stelle zeigt, die mit der Ursache nichts zu tun hat.
+
+  **In Kommentaren sind sie richtig und erwünscht**; das Skript prüft ausschliesslich Stringliterale. Dieselbe Familie wie `\b` gegen deutsche Bezeichner: ein Werkzeug, das die Schreibweise nicht kennt.
+- **Bei Fremddaten immer Allowlist, nie Denylist.** Wer aus einer fremden Antwort etwas herausfiltert — Personendaten schwärzen, Felder übernehmen, Nutzlast begrenzen —, listet auf, was **durchkommt**, nicht was fällt. Ein neues Feld der Gegenseite ist damit im Zweifel geschwärzt und fällt auf, statt still mitzureisen. Umgekehrt ist jede Denylist nur so gut wie die Fantasie dessen, der sie geschrieben hat. Beleg vom 19.08.2026: eine Regex-Denylist `/person|player|birth|passport|…/` gegen die SFV-Matchdaten war zugleich zu streng (schwärzte `personId`, `isPlayer`) und zu lasch — `players[]` führt den Namen in **drei** Feldern, `firstname`, `name` und `secondName`, von denen keines „person" oder „player" heisst. Die Klarnamen von 32 Spielern, überwiegend gegnerische, gingen durch. Gefangen wurde es nur, weil die Datei zuerst in den Scratchpad geschrieben und dort gegengelesen wurde. Muster: `scripts/sfv-matchdaten-probe.mjs`, Konstante `ERLAUBT`.
+- **Ein neues Feld erbt JEDEN Ausgang des Objekts, an dem es hängt.** Wer einem bestehenden Objekt ein Feld hinzufügt, muss alle Wege kennen, die dieses Objekt schon nimmt — nicht nur den, für den das Feld gedacht war. Das Feld ist neu, die Ausgänge sind alt, und deshalb schlägt nichts fehl.
+
+  **Beleg vom 21.08.2026, selbst gebaut und am selben Abend aufgeflogen.** `MatchdatenErgebnis` bekam `offene_namen` — die Klarnamen eigener Spieler, ausdrücklich als Durchreiche an den Browser gedacht, mit einem langen Kommentar darüber, dass sie **nirgends gespeichert** werden. Gesichert war die Anzeige, mit einer Allowlist. Nur nahm das Objekt zwei weitere Wege, die seit Monaten bestanden:
+
+  | Ausgang | Folge |
+  |---|---|
+  | `details: erg` → `api_sync_log` | **903 Klarnamen in sieben Läufen**, dauerhaft, +129 pro Stunde durch den Zeitplan |
+  | Antwort des Cron-Laufs → `pg_net` | landet in `net._http_response.content` |
+
+  Dazu liest `PortalverwaltungModul` die Protokolltabelle mit `select("*")` — die Namen reisten in den Browser jedes Admins, der den Audit-Tab öffnete, ohne dort je gerendert zu werden.
+
+  ⚠ **Die Allowlist stand am falschen Ort.** Gesichert wurde der Weg, den der Autor im Blick hatte; hinaus ging es über den, den er nicht angesehen hat. Eine Allowlist schützt nur den Ausgang, an dem sie steht — die Frage ist nicht „ist dieses Feld gesichert?", sondern **„welche Ausgänge hat dieses Objekt?"**.
+
+  **Die Prüfung dazu ist mechanisch und dauert eine Minute:**
+
+  ```bash
+  grep -n "\berg\b" supabase/functions/sfv-sync/index.ts   # jeder Ausgang des Objekts
+  ```
+
+  Jede Zeile einzeln lesen: geht das Objekt dort in eine Tabelle, in ein Log, über HTTP hinaus? Für jeden dieser Ausgänge eine eigene Allowlist — hier `fuersProtokoll()` und `fuerZeitplanAntwort()` in `ergebnisTypen.ts`.
+
+  **Dieselbe Familie wie der Regex-Schnitt und `.eq("mitglied_id", …)`:** das Werkzeug — hier das Spread `{...erg}` — kennt die Bedeutung nicht, und das Ergebnis sieht richtig aus.
+
+  ⚠ **Und die Tests waren grün.** Beide Enden waren geprüft, gegen selbst erfundene Attrappen, in denen das Feld dort lag, wo der Autor es vermutete. **Eine Attrappe, die die Form abschreibt, prüft die Abschrift.** Wo eine Testattrappe die Form eines echten Objekts nachbildet, gehört ihr dessen Typ — und wenn der in einer Deno-Datei steht, die `tsc` nicht lesen kann, gehört die Form in eine eigene Datei, die beide Welten lesen (`ergebnisTypen.ts`, ohne `esm.sh`-Import).
+
+- **Ein Filter auf einen NAMEN prüft eine Schreibweise. Ein Filter auf ein MERKMAL prüft die Sache.** Wo eine Regel lautet „alles ausser X", ist X fast nie ein Name — es ist eine Eigenschaft, die X zufällig auch hat. Der Namensfilter hält, solange es genau ein X gibt, und fällt beim zweiten.
+
+  **Beleg vom 22.08.2026, und er hätte nie auffallen können.** „Art ändern" darf nur **gesetzte** Personenarten vergeben; eine abgeleitete ergibt sich aus den Daten, und die Sicht überschriebe die Zusage im nächsten Moment. Bis zum Morgen desselben Tages gab es **genau eine** abgeleitete Art — „Elternteil". Ein Filter `name !== "Elternteil"` wäre also durch jeden Test gekommen, den man ihm gestellt hätte.
+
+  Am Vormittag kam „Ehemaliges Elternteil" dazu. Der Namensfilter hätte sie **durchgelassen**, die Zeile wäre in `personenart_pro_person` gelandet, und die Sicht hätte sie ignoriert — die Aktion hätte **scheinbar funktioniert**: kein Fehler, keine Meldung, nur eine Art, die nicht gilt. Richtig ist `ableitung === null`: das ist die Sache selbst.
+
+  ⚠ **Das Beispiel ist seit dem Abend desselben Tages hypothetisch — die Regel nicht.** „Ehemaliges Elternteil" ist zurückgebaut worden, weil der Austritt die Art SETZT statt sie abzuleiten; heute gibt es wieder genau eine abgeleitete. Der Beleg steht hier trotzdem, und zwar absichtlich: **ohne ihn wäre die Regel eine Vorsichtsmassnahme ohne Anlass**, und der Nächste hielte sie für Umständlichkeit und vereinfachte sie weg. Der zugehörige Testfall trägt seither einen **erfundenen** Ableitungswert — er prüft die Regel („jede Ableitung wird abgewiesen") statt den einen Wert, den es gerade gibt, und ist damit strenger als das echte Beispiel es war.
+
+  | | prüft | hält bis |
+  |---|---|---|
+  | `name !== "Elternteil"` | eine **Schreibweise** | zur zweiten abgeleiteten Art |
+  | `ableitung === null` | das **Merkmal** | immer |
+
+  **Dieselbe Familie wie `ilike 'junior%'` gegen `mitgliedtypen.hauptkontakt_pflicht`:** die Regel „Minderjährige brauchen einen Hauptkontakt" nach dem Namen des Mitgliedtyps zu prüfen funktioniert, bis jemand „Juniorenmitglied" in „U18" umbenennt oder einen zweiten Jugendtyp anlegt. Und wie die Spaltenköpfe der Pflichtfeld-Matrix, die am 05.08.2026 auf `Juniormitglied` und `Funktionär` zeigten, während die Typen `Juniorenmitglied` und `Funktionär/in` heissen.
+
+  **Die Prüfung ist mechanisch:** wo ein Vergleich gegen eine Zeichenkette steht, die aus der Datenbank stammt, gehört die Frage dazu — *welche Eigenschaft meine ich eigentlich, und steht sie als Spalte da?* Steht sie nicht, ist das der eigentliche Befund.
+
+- **Ein Komponententest prüft die Komponente, nicht ihren Einbau — und der Unterschied ist unsichtbar.**
+
+  Am 28.08.2026 hatte die Bilanz-Karte im Team-Tab **fünf grüne
+  Komponententests**, und Didi meldete, sie erscheine nicht. Die fünf prüfen
+  „gib ihr Spiele, dann rendert sie eine Tabelle". **Keiner prüfte, ob sie je
+  in den Baum kommt.**
+
+  Dass die Ursache diesmal woanders lag (ein nicht gepushter Stand), ändert
+  nichts an der Lücke: die Verdrahtung war zufällig richtig, und wäre sie es
+  nicht gewesen, hätte **kein einziger Test etwas gemeldet**. Dieselbe Familie
+  wie die Modale hinter dem frühen Return und wie `TableTab`, das in der
+  Datei, in der es steht, nirgends gerendert wird und erst über zwei
+  Prop-Ketten ankommt.
+
+  **Der Test gehört deshalb an den EINBAU, nicht an die Komponente** —
+  `src/modules/__tests__/teamSpielplanTab.test.jsx` rendert den Tab und
+  prüft die Reihenfolge im Dokument:
+
+  ```jsx
+  const hdrs = screen.getAllByText(/^(Spielplan|Bilanz|Tabelle)$/).map(e => e.textContent);
+  expect(hdrs).toEqual(['Spielplan', 'Bilanz', 'Tabelle']);
+  ```
+
+  Die Reihenfolge steht dort mit Absicht: die Platzierung war der Streitpunkt,
+  und `toBeTruthy()` auf drei Überschriften hätte auch dann gehalten, wenn die
+  Bilanz wieder unter der Verbandstabelle landet.
+
+  ⚠ **Und die Frage davor ist noch billiger und wird trotzdem übersprungen:
+  WER RENDERT DAS EIGENTLICH?** Ich habe die Karte in `TableTab` eingebaut,
+  weil dort die Ligatabelle steht — und erst auf Nachfrage gemessen, dass
+  `TableTab` in `TermineModul.tsx` definiert, aber in `TeamModul.tsx:375`
+  gerendert wird. Ein Funktionsname (`TableTab`) ist kein Beleg für einen Ort.
+
+- **Ein Erklärsatz, der eine Platzierung geradebiegen muss, ist das Eingeständnis der falschen Platzierung.**
+
+  Dieselbe Karte hing zuerst unter der Verbandstabelle und trug darunter zwei
+  Zeilen, die erklärten, dass sie **nicht** die Gruppe zeigt. Der Satz war als
+  Sorgfalt gedacht. Er war das Symptom: unter dem eigenen Spielplan gelesen —
+  wo sie seit dem 28.08.2026 steht — braucht sie eine Zeile statt zwei, weil
+  die Sache dann von selbst stimmt.
+
+  Die Frage beim nächsten Mal: *Wenn ich erklären muss, was das hier nicht
+  ist — steht es dann am richtigen Ort?*
+
+- **Keine Komponente, die bei fehlenden Daten `null` zurückgibt.** Eine Sektion, die still verschwindet, ist von einer nicht gerenderten nicht zu unterscheiden — bei der Fehlersuche kostet genau diese Ununterscheidbarkeit die meiste Zeit. Stattdessen eine Karte mit einem Satz, der sagt, was fehlt und wo es herkommt. (`MitgliedtypFelderSektion` ohne Mitgliedtypen ist das Muster.) Gilt nicht für bewusste Sichtbarkeitsregeln — ein Feld auf „Gibt es nicht" verschwindet richtigerweise ganz.
+
+### Bevor eine neue CSS-Klasse entsteht
+
+Zwei Prüfungen, in dieser Reihenfolge. Beide Fehler sind am 04.08.2026 an einem Tag passiert.
+
+**1. Nach dem Muster suchen, nicht nach dem Namen.** Die Frage ist nicht „gibt es `cc-section-label`?", sondern „stellt das Portal irgendwo schon dasselbe dar?". Konkret: eine Abschnittsüberschrift wurde als `cc-section-label` neu erfunden, obwohl `cc-section-title` seit langem existiert und an einem Dutzend Stellen benutzt wird (`InfoTab`, `VerlaufTab`, `KaderRollenTab`, `MitgliederKonfigTab`, `ElternKinderSektion`, `ElternPortalSection`). Ergebnis: zwei Klassen für dasselbe, die auseinanderdriften. Also erst im Code nach der Darstellung suchen — `grep -rn "cc-section" src --include=*.tsx` —, dann entscheiden.
+
+**2. Erst dann prüfen, ob der Name frei ist:**
+
+```bash
+grep -n "^\.cc-<name>{" src/styles/cc.css
+```
+
+CSS hat keine Kollisionswarnung: ist der Name schon vergeben, **überschreibt die spätere Definition die frühere lautlos**. Kein Fehler, kein Hinweis im Build — nur ein Element, das anderswo plötzlich anders aussieht. Der Bug erscheint dann an einer Stelle, die niemand angefasst hat.
+
+## Datenbank-Workflow
+
+`supabase/schema.sql` ist der Schema-Dump (Tabellen, Policies, RLS, Funktionen — keine Nutzdaten) und beim Nachschlagen von Spalten/Policies die verlässlichste Quelle. Nach DB-Änderungen neu dumpen und committen — das Projekt ist verlinkt, es genügt:
+
+```bash
+npx supabase db dump --linked -f supabase/schema.sql
+```
+
+Der Dump ersetzt die Datei komplett. Vorher gegenprüfen, dass er nichts verliert: Zahl der `CREATE TABLE`, `CREATE POLICY`, `CREATE INDEX` und `ADD CONSTRAINT` gegen die alte Fassung vergleichen — ein abgebrochener Dump fällt sonst erst auf, wenn jemand das Schema nachbaut.
+
+> **Ein `CHECK` zählt dabei nicht mit.** `pg_dump` schreibt CHECK-Constraints **inline in das `CREATE TABLE`**, nicht als eigenes `ADD CONSTRAINT` — anders als Primär-, Fremd- und Unique-Schlüssel. Eine neue Tabelle mit einem CHECK ergibt deshalb ein `ADD CONSTRAINT` weniger, als man beim Zählen der Constraints im Skript erwartet. Wer das nicht weiss, vermutet einen Verlust, wo keiner ist. (Am 19.08.2026 bei `mitgliedtyp_feldkonfig` aufgelaufen: erwartet +6, gezählt +5, korrekt war +5 — der sechste ist `mitgliedtyp_feldkonfig_modus_check` und steht in Zeile 1174 mitten im `CREATE TABLE`.) Zum Gegenprüfen: `grep -c "CONSTRAINT .* CHECK" supabase/schema.sql`.
+
+> **Die Zählprüfung hat vier blinde Flecken.** Sie zählt nur Objekte in `public`, und vier wichtige Dinge liegen woanders — alle fallen durch jede Zählung, weil sie in *keiner* der vier Kategorien vorkommen. **Die vollständige Liste samt Nachbau-Reihenfolge steht in `ARCHITECTURE.md` → „`schema.sql` baut die Datenbank NICHT nach"; hier nur die Kurzfassung:**
+> - `ALTER PUBLICATION "supabase_realtime" ADD TABLE …` für `nachrichten` und `nachrichten_antworten`. Die Publication ist global, nicht schemagebunden. Ohne diese Zeilen bekommt ein nachgebautes Portal keine Live-Nachrichten — und weil nichts fehlschlägt, merkt es niemand.
+> - Die Trigger auf `auth.users` (`on_auth_user_created`, `on_auth_user_login`). Sie stehen in **keinem** `public`-Dump; `schema.sql` enthält nur die Funktionen `handle_new_user`/`handle_user_login`, ohne jeden Aufrufer. Deshalb liegen sie separat in **`supabase/auth_triggers.sql`** und müssen nach `schema.sql` eingespielt werden — sonst kann sich nach einem Nachbau niemand registrieren.
+> - **Der cron-Auftrag `sfv-sync-stuendlich`** (seit 15.08.2026). `cron.job` liegt im Schema `cron`. Ohne ihn läuft der SFV-Sync nie wieder, und auch das fällt nicht auf: die Anzeige zeigt schlicht den Stand vom Tag des Nachbaus. Liegt in **`supabase/cron_sfv_sync.sql`**.
+
+  > ⚠ **`cron.schedule` PRUEFT DEN BEFEHL NICHT.** Es speichert eine
+  > Zeichenkette. Der Einrichtungsblock kann fehlerfrei durchlaufen und einen
+  > Befehl hinterlegen, der jede Stunde scheitert — am 21.08.2026 zweimal
+  > hintereinander erlebt: eine Variable, die nur im äusseren Block deklariert
+  > war (`v_anz is not a known variable`), und danach ein `Content-Type:
+  > text/plain`, den `net.http_post` ablehnt. Beide Male meldete das
+  > Einrichten „Wächter steht".
+  >
+  > **Den gespeicherten Befehl deshalb einmal ausführen, bevor man ihm glaubt:**
+  >
+  > ```sql
+  > begin;
+  >   do $probe$ declare c text; begin
+  >     select command into c from cron.job where jobname = '…';
+  >     execute c;
+  >   end $probe$;
+  > rollback;
+  > ```
+  >
+  > `pg_net` stellt seine Anfragen transaktional in die Warteschlange — ein
+  > Rollback nimmt einen Ping also mit zurück, es geht nichts nach draussen.
+  >
+  > ⚠ **Und der Tag des äusseren Dollar-Quotings darf im Befehl nirgends
+  > vorkommen, auch nicht in einem Kommentar.** Ein `$waechter$` im Kommentartext
+  > beendet den Block mittendrin; der Fehler zeigt dann auf eine Stelle, die
+  > mit der Ursache nichts zu tun hat.
+
+  > ⚠ **`cron.job_run_details.status = 'succeeded'` heisst NUR „abgesetzt".** Es ist das Ergebnis des `select net.http_post(…)` — also, dass die Anfrage in die Warteschlange gelegt wurde. Über die ANTWORT sagt es nichts. Die steht in **`net._http_response`**, und nur dort:
+  >
+  > ```sql
+  > select status_code, left(content,120), created at time zone 'Europe/Zurich'
+  >   from net._http_response order by created desc limit 5;
+  > ```
+  >
+  > Beleg vom 21.08.2026: der Job meldete stündlich `succeeded` mit `1 row`, während jeder Aufruf mit **401 UNAUTHORIZED_NO_AUTH_HEADER** zurückkam — der Befehl schickt `X-Sync-Key`, aber keinen `Authorization`-Header, und Supabase weist das am Gateway ab, bevor die Function startet. Der Sync stand 14 Stunden, und `job_run_details` sah die ganze Zeit grün aus.
+  >
+  > ⚠ **Und `net._http_response` reicht nur ein paar Stunden zurück** — pg_net räumt selbst auf; am 21.08.2026 lagen dort sechs Zeilen, die älteste fünf Stunden alt. Die Tabelle sagt, ob es JETZT klemmt, nie seit wann. Dafür sind `api_sync_log` und `api_verbindungen.letzter_sync` die Quelle.
+  >
+  > **Das Eigentliche daran: es gibt keinen Alarm.** Ein ausgefallener Lauf schreibt keine Zeile in `api_sync_log` — und „keine neue Zeile" sieht genauso aus wie „es gab nichts zu tun".
+> - **Der Storage-Bucket `sfv-logos`** (seit 20.08.2026). `storage.buckets` liegt im Schema `storage`. Ohne ihn erscheinen keine Vereinswappen, und der Sync legt sie ins Leere ab. Liegt in **`supabase/migration_sfv_logos.sql`**.
+>
+> **Das gemeinsame Merkmal: keines der vier bricht laut.** Registrierung, Live-Nachrichten, Sync, Wappen — alle hören einfach auf zu funktionieren. Wer etwas ausserhalb von `public` anlegt, trägt es in die Tabelle in `ARCHITECTURE.md` ein; eine Migrationsdatei allein genügt nicht, sie ist Protokoll und keine Quelle fürs Nachbauen.
+>
+> Beim regulären `supabase db dump --linked` sind die `ALTER PUBLICATION` enthalten; ein `pg_dump --schema=public` verliert sie. Die auth-Trigger fehlen in beiden Fällen. Wird der Dump länger nicht gepflegt, läuft er auseinander: am 27.07.2026 fehlten ihm `elternkontakte.profil_geprueft_at`, `vereine.slug` samt `vereine_slug_unique` und die Funktion `check_email_bekannt()` — alle drei erst durch eine Regenerierung von `database.types.ts` aufgefallen. Edge Function `supabase/functions/invite-user` versendet Einladungs-Mails über die Auth-Admin-API.
+
+> **⚠ `>` in PowerShell 5.1 schreibt UTF-16LE.** Nicht nur bei `gen types` —
+> bei **jedem** Befehl. Am 20.08.2026 lag `src/database.types.ts` so mit
+> 300 KB statt 145 KB im Repository: Git hielt die Datei für binär
+> (`Bin 140356 -> 300554 bytes` — kein Zeilendiff, keine Review, keine
+> Konfliktauflösung), `grep` fand nichts darin, und Build wie Typecheck liefen
+> trotzdem durch, weil TypeScript das BOM versteht. Nichts schlug fehl, und
+> niemand sah es.
+>
+> **Deshalb gibt es `npm run gen:types`** (`scripts/gen-types.mjs`). Die
+> Supabase-CLI kann nur nach stdout schreiben — sie hat kein Flag für eine
+> Zieldatei —, also übernimmt das Skript die Umleitung und schreibt immer
+> UTF-8, gleich aus welcher Shell es gestartet wird. Es prüft ausserdem, dass
+> die Antwort `export type Database` enthält, bevor es die Datei überschreibt:
+> ohne das machte ein Netzwerkfehler aus einem gescheiterten Aufruf eine leere
+> Typdatei, und der nächste Typecheck meldete hunderte Fehler an Stellen, die
+> niemand angefasst hat.
+>
+> **Für alles andere gilt die Regel weiter.** Wer in PowerShell eine Datei
+> schreibt, die eingecheckt wird, nimmt `| Out-File -Encoding utf8` oder
+> `| Set-Content -Encoding utf8` — oder führt den Befehl über Git Bash aus.
+> Zum Nachsehen: `head -c 2 datei | od -c` → `FF FE` heisst falsch.
+>
+> Eine Regel, an die jemand denken muss, ist die schwächste Lösung. Wo ein
+> Befehl wiederholt vorkommt, gehört die Umleitung ins Skript statt in die
+> Anleitung.
+>
+> **✅ Seit dem 05.09.2026 gibt es dafür eine Prüfung: `npm run check:encoding`**
+> (`scripts/check-encoding.mjs`, in CI). Sie hält jede eingecheckte **Textdatei**
+> gegen drei Dinge, die Werkzeuge still falsch behandeln — **NUL-Byte**, **BOM**
+> (UTF-8 wie UTF-16) und **kaputtes UTF-8**. Sie hätte den Fall oben gefunden.
+>
+> ⚠ **Der Anlass war ein zweiter Fall derselben Familie, und er ist die
+> unangenehmere Hälfte:** `src/domains/spiele/spielerAusgabe.ts` enthielt **ein
+> rohes NUL-Byte** in einem Stringliteral (`let letztesTeam = "\0"`, als Byte
+> statt als Escape). Funktional harmlos — ein Wächterwert, den kein
+> Mannschaftsname trifft. Für Werkzeuge nicht: `grep` meldete
+> `Binary file … matches` **ohne eine einzige Trefferzeile**.
+>
+> **Der Schaden ist nie die Datei, sondern die Suche, die sie nicht findet.**
+> Bei der Bestandsaufnahme zum WordPress-Export lief
+> `grep -rniE "wordpress|wp_post|wp-json" src/` — und übersprang genau die
+> Datei, die den bestehenden WordPress-Pfad enthielt. Der Plan entstand danach
+> unter der Annahme, es gebe keinen.
+>
+> ⚠ **Und beim Beheben ist es sofort wieder passiert:** der erste Versuch,
+> das Byte durch `\0` zu ersetzen, schrieb erneut ein NUL — ein Backslash war
+> auf dem Weg durch die Shell verschwunden. Zuverlässig ging es erst mit
+> `Buffer.from([0x5C, 0x30])`. **Wo eine Escape-Ebene mitredet, schreibt man
+> Bytes, nicht Zeichen.**
+>
+> Gegengeprobt am 05.09.2026 mit vier Attrappen (NUL, UTF-8-BOM, UTF-16LE,
+> latin1) — alle vier rot, danach wieder grün. Eine Prüfung, die nie rot war,
+> ist ungeprüft.
+>
+> ⚠ **UND SIE HAT INNERHALB EINER STUNDE IHREN ERSTEN ECHTEN FUND GEMACHT —
+> in einer Datei, die ich selbst gerade geschrieben hatte.**
+> `docs/plan_wordpress_spieldaten.md` trug **drei** NUL-Bytes: in genau dem
+> Abschnitt, der das NUL-Byte-Problem beschreibt. Beim Schreiben über eine
+> Shell-Heredoc war `\0` dreimal zu einem echten NUL geworden.
+>
+> **Das ist der Beleg dafür, dass die Regel nicht genügt hätte.** Ich kannte
+> das Problem, hatte es eine Stunde zuvor behoben, schrieb gerade darüber —
+> und habe es trotzdem erneut erzeugt. Nicht aus Unachtsamkeit, sondern weil
+> die Umkodierung an einer Stelle passiert, an die man nicht denkt, während
+> man etwas anderes tut. **Gegen so etwas hilft kein Vorsatz, nur eine
+> Prüfung, die danach läuft.**
+>
+> ⚠ **UND SIE HAT BIS ZUM 09.09.2026 GENAU DIE DATEIEN NICHT ANGESEHEN, DIE
+> GERADE ENTSTANDEN WAREN.** Sie las `git ls-files` — also den **Index**.
+> Eine neue Datei steht dort noch nicht; sie ist aber der Zustand, in dem
+> ein Werkzeug soeben geschrieben hat. Die Prüfung sah also alles ausser
+> dem Frischen.
+>
+> **Der einzige sichtbare Hinweis war eine Zahl, die sich nicht bewegte:**
+> nach drei neuen Dateien meldete sie zweimal „354 Textdateien geprueft".
+> Dieselbe Familie wie die 16 verlorenen Testdateien — es fehlt etwas, und
+> nichts meldet es ausser einer Zahl, auf die niemand schaut.
+>
+> ⚠ **Der Kommentar daneben hat die Lücke bewacht.** Er begründete sie mit
+> „was nicht im Index steht, kann niemanden überraschen" — ein plausibler
+> Satz an einer falschen Stelle, und der ist schwerer zu entdecken als gar
+> keiner. Behoben mit `--cached --others --exclude-standard` (357 statt
+> 354; Gegenprobe mit einer neuen, **ungetrackten** NUL-Datei: rot).
+
+**Wer eine `check:*`-Prüfung dazuschreibt, gibt ihr eine Gegenprobe.** Nicht
+weil es sich gehört, sondern weil eine Prüfung, die nie rot war, keine
+Prüfung ist, sondern eine Behauptung. Die billigste Form: eine Attrappe je
+Fehlerart anlegen, laufen lassen, wieder entfernen — bei
+`check-encoding.mjs` waren das vier Dateien und zwei Minuten.
+
+**`supabase/schema.sql` deckt nur das Schema `public` ab.** Zwei Dinge stehen deshalb nicht darin und gehen beim Nachbauen verloren, wenn man sie nicht kennt:
+
+- **Trigger auf `auth.users`** → `supabase/auth_triggers.sql`. Dort liegen `on_auth_user_created` (ruft `handle_new_user`) und `on_auth_user_login` (ruft `handle_user_login`). In `schema.sql` stehen nur die Funktionen, ohne jeden Aufrufer — ohne diese Datei kann sich nach einem Nachbau niemand registrieren. Nach `schema.sql` einspielen.
+- **Extensions und die Realtime-Publication.** `CREATE EXTENSION` liegt in den Schemas `extensions`/`vault`, `ALTER PUBLICATION "supabase_realtime" ADD TABLE …` (für `nachrichten` und `nachrichten_antworten`) ist global. `supabase db dump` nimmt beides mit, ein blosses `pg_dump --schema=public` **nicht** — wer ohne Docker dumpt, verliert diese sieben Zeilen still und damit die Live-Zustellung der Nachrichten.
+
+Ohne Docker (z.B. wenn Docker Desktop nicht läuft) geht ein Dump auch direkt über den Session-Pooler mit lokalem `pg_dump`; die Verbindungsdaten stehen in `supabase/.temp/pooler-url`. Das Ergebnis ist dann aber um die oben genannten sieben Zeilen ärmer und in der Schreibweise abweichend (kein `IF NOT EXISTS`/`OR REPLACE`) — als Ersatz für den regulären Dump nur mit Gegenprüfung verwenden.
+
+## Weitere Dokumente
+
+- `ARCHITECTURE.md` — Regeln, Checklisten, das **Personen-Modell** (Anlass, Zielstruktur, Zuordnungsentscheidungen, sechs Etappen), Datenbankregeln, Session-Historie. Ordnerstruktur und Regeln sind am 04.08.2026 auf den Ist-Stand gebracht worden. Die **Session-Abschnitte ab „Session 17" sind Archiv**: sie beschreiben Stände von damals (noch `.jsx`, `theme.jsx` als Design-System) und werden bewusst nicht rückwirkend korrigiert. Bei Widerspruch gilt der Code.
+- `ELTERN_LOGIK.md` — n:m-Modell `elternkontakte`/`eltern_kinder` und die Entknüpfungs-/Supporter-Logik (teilweise noch nicht implementiert). **Wird vom Personen-Umbau abgelöst** — siehe `ARCHITECTURE.md` → Personen-Modell.
+- `supabase/etappe1_personen.sql` — Etappe 1 des Personen-Umbaus, blockweise ausführbar. Die Blockfolge ist absichtlich **nicht** alphabetisch (A → D → B → C): `LANGUAGE sql`-Funktionen werden bei `CREATE` validiert, und die Funktionen aus B greifen auf `person_id` zu, das erst D anlegt.
+- `supabase/etappe2b_backfill_person_id.sql` — legt Personen für Mitgliedschaften nach, die zwischen Etappe 1 und 2b entstanden sind. **Voraussetzung** für die Kindersuche, die mit `personen!inner` filtert.
+- `supabase/etappe3_eltern.sql` — Etappe 3 (Elternkontakte auf `personen`), ausgeführt am 05.08.2026. Blockfolge A–G; **Block F ist der Kern**: `eltern_kinder.person_id` wird NOT NULL und Bezugspunkt, `eltern_id` nullable und Altlast. Seither gilt für den Code: `elternkontakte` wird weder gelesen noch geschrieben, `beziehung` und `hauptkontakt` hängen an `eltern_kinder`, der Portal-Zugang an `benutzer.person_id`. Die Tabelle `elternkontakte` steht noch und fällt erst in Etappe 6.
+- `supabase/etappe2a_merge.sql` — Etappe 2a (Merge über E-Mail-Gleichheit), ausgeführt am 05.08.2026. Reihenfolge `0 → A → B → C → D`; Block C schreibt und löscht, ein Rückbau wie in Etappe 1 ist **nicht** möglich. Enthält die Sperrabfrage 2a-0, die vor jedem künftigen Merge (Fairgate-Import) erneut leer sein muss.
+- `supabase/migration_mandant_schluessel.sql` — 13 Tabellen von global auf `(verein_id, …)` umgestellt, ausgeführt am 05.08.2026. **Enthält den Hinweis, dass fünf `onConflict`-Zeilen im Code mitgeändert werden mussten** — ohne sie schlägt jedes Speichern fehl. Am Ende ein Nachtrag vom 14.08.2026: eine der drei Ausnahmen war keine.
+- `supabase/migration_portal_zugang.sql` — legt die Sicht `portal_zugang` an (`person_id`, `hat_zugang`) und gibt sie `authenticated` frei. Läuft bewusst **ohne** `security_invoker`, damit auch ein Trainer die Portal-Spalte der Elternliste sieht — mit RLS von `benutzer` bekäme er für alle „Kein Zugang", ohne Fehlermeldung. **Für jede andere Sicht gilt das Gegenteil:** ohne `security_invoker = true` umgeht eine Sicht die RLS vollständig. Begründung, Umfang der Preisgabe und die Regel, dass hier nie eine Spalte ohne Rechteprüfung dazukommt: `ARCHITECTURE.md` → „Die Sicht `portal_zugang` — die eine Ausnahme".
+- `supabase/migration_api_verbindungen_mandant.sql` — `api_verbindungen.key` von global auf `(verein_id, key)`, ausgeführt am 14.08.2026. Nachtrag zur Migration darüber: die Spalte hält keinen Schlüssel, sondern den Namen des Anschlusses (`fairgate`, `football_ch`, …), und global eindeutig hätte der erste Verein ihn allen anderen weggenommen.
+- `supabase/migration_sfv_spielplan.sql` — SFV Club API, Teil A: SFV-Spalten und Sync-Schlüssel auf `spiele`, Zuordnungsspalten auf `teams`, neue Tabelle `ranglisten`, Eintrag `football_ch` in `api_verbindungen`. Ausgeführt am 14.08.2026. **Läuft nach `migration_api_verbindungen_mandant.sql`.** Die Feldhoheit steht in `api_verbindungen.sync_felder` und ist Vertrag, nicht Dokumentation: der Sync schreibt nur, was unter `sfv` und `abgeleitet` steht — `treffpunkt`, `notes` und `venue_addr` gehören dem Verein und überleben jeden Lauf.
+- `supabase/migration_pflichtfelder_fein.sql` — Pflichtfeld-Matrizen auf feine Feldnamen (`adresse` → `strasse`/`plz`/`ort`), `vorname_nachname` entfernt, Mitgliedtypen ohne Einträge befüllt. Ausgeführt am 05.08.2026.
+- `supabase/migration_ist_admin.sql` — Adminstatus als Kennzeichen `benutzer.ist_admin` statt als Rollenwert, ausgeführt am 05.08.2026. Stellt auch `is_admin()` und `is_admin_or_above()` um. `database.types.ts` wurde dabei von Hand nachgezogen (`ist_admin`, und `person_id` aus Etappe 1, das ebenfalls fehlte) — das nächste `supabase gen types` erzeugt dieselben Zeilen, es ist also kein Sonderweg, sondern ein Vorziehen.
+- `supabase/etappe4_vorbereitung.sql` / `etappe4_benutzer.sql` — Etappe 4: `benutzer` an die Person, Registrierung auf `personen` umgestellt, harter Riegel gegen verwaiste Auth-Konten.
+- `supabase/etappe5_supporter.sql` — Etappe 5: Supporter als Mitgliedtyp, Portalrolle `mitglied` aktiviert, partieller Index `mitglieder_eine_aktive_mitgliedschaft`.
+- `supabase/etappe6a_altspalten_mitglieder.sql` — Etappe 6a: 18 Personenfelder aus `mitglieder` gestrichen. Sicherheitskopie in `_etappe6_altspalten_mitglieder`. Enthält die Begründung, warum `rolle`, `position`/`rueckennr` und vier weitere Spalten bleiben.
+- `supabase/etappe6b_position_rueckennr.sql` — `position` und `rueckennr` gehören an die Kaderzeile, nicht ans Mitglied.
+- `supabase/etappe6c_restliche_altspalten.sql` — `hat_portal_zugang`, `eltern`, `datenstatus`, `notizen`, `fairgate_sync_at`. Enthält auch die neue Fassung von `handle_new_user()`.
+- `supabase/auth_triggers.sql` — die zwei Trigger auf `auth.users`, die in keinem `public`-Dump stehen.
+- `supabase/cron_sfv_sync.sql` — der stündliche Zeitplan des SFV-Sync (pg_cron + pg_net, Ausweis aus dem Vault). Steht ebenfalls in keinem Dump, weil `cron.job` nicht im Schema `public` liegt. Enthält auch die zwei Abfragen zum Nachschauen: `cron.job_run_details` sagt, ob der Aufruf abgesetzt wurde, `api_sync_log` sagt, ob der Lauf gelang.
+- `supabase/migration_sfv_sync.sql` — Laufsperre (`api_verbindungen.sync_laeuft_seit`) und die Korrektur der Feldhoheit (`ht_resultat` gehört dem Verein, der Spielplan-Endpunkt liefert keine Halbzeit). Ausgeführt am 14.08.2026; enthält am Ende den Nachtrag über den ausgefallenen Block A.
+- `README.md` — Produktüberblick, Rollen, Einrichtung eines neuen Vereins.
+
+## Bekannte Defekte
+
+- Vier fast gleiche Kaderrollen-Typen nebeneinander: `KaderRolle` (`types.ts`), `KaderRolleDb` (`roleUtils`), `KaderRolleOption` (`useMemberMeta`), `RolleOption` (`RollenAuswahlListe`).
+- **Mitglied anlegen prüft nicht auf Dubletten.** `NeuesMitgliedModal` → `insertMitglied()` schreibt ohne Abgleich gegen den Bestand; zweimal abgeschickt heisst zweimal in der Datenbank. Nachweis: zwei Zeilen „Test User" <test@fch-test.ch>, angelegt am 26.07.2026 fünf Sekunden auseinander, in Etappe 2a entfernt. Der Unique-Index `personen_email_pro_verein` fängt das **noch nicht** ab — `insertMitglied()` schreibt weiterhin nach `mitglieder`, nicht nach `personen`. Ein Doppelklick-Schutz im Formular bleibt offen.
+  *Für Elternkontakte ist der Fall seit Etappe 3 erledigt:* `insertElternkontakt()` läuft über `findeOderLegePersonAn()`, führt über die E-Mail zusammen und übersetzt `23505` in „Diese E-Mail ist bereits vergeben." Derselbe Weg steht `insertMitglied()` noch bevor.
+
+Behoben in der TS-Migration (Session 18): das nicht importierte `supabase` in `clubcampus` (ReferenceError statt Login-Screen, sobald die Env-Variablen fehlten), das undefinierte `vereinId` an `ProfileView`, sowie das Phantomfeld `geprueft` in `MemberHero` und `InfoTab` (Datenprüfungs-Status stand konstant auf „offen"/„Ausstehend").
+
+Behoben mit der SQL-Migration vom 26.07.2026 + Typ-Regenerierung: `mitglieder.eintrittsdatum`, `elternkontakte.supporter` und `benutzer.vorname/nachname/telefon` sind jetzt echte Spalten. `database.types.ts` wurde neu generiert; die früheren Bridge-/Extension-Typen in `types.ts` (Elternkontakt-`supporter`, DbUser-`vorname/nachname/telefon`, Mitglied-`eintrittsdatum`) sind entfernt. Damit greifen die früher stillen Schreibpfade (u. a. die Supporter-Logik beim Entknüpfen des letzten Kindes).
+
+Behoben am 05.08.2026 (Etappe 4 und 5):
+- **Der Registrierungsablauf war seit Etappe 3 kaputt.** `handle_new_user()` und `check_email_bekannt()` suchten in `mitglieder.email` (seit Etappe 2b eine Altspalte) und ersatzweise in `elternkontakte` (seit Etappe 3 abgelöst). Ein neuer Elternteil konnte sich nicht registrieren, und wer seine Adresse im Portal geändert hatte, wurde nicht gefunden. Beide suchen jetzt in `personen`.
+- **Verwaiste Auth-Konten entstanden lautlos.** Bei unbekannter E-Mail brach der Trigger still ab; die `auth.users`-Zeile blieb stehen. Jetzt wirft er, und Supabase rollt mit zurück.
+- **`role = 'mitglied'` wurde gesetzt, ohne dass die Rolle aktiv war.** Sie stand in `portal_rollen` mit `aktiv = false` und fehlte in `types.ts`, `getPermissions` und `NAV_BY_ROLE`.
+- **`mitglieder.eltern` enthielt 391 Zeilen mit dem falschen Inhalt** — Name, E-Mail, Telefon, Beziehung, aber kein `benutzer_id`. Der Filter, der die Kinder eines Elternteils suchte, konnte deshalb nie einen Treffer haben; Eltern bekamen nie einen Datenprüfungs-Hinweis für ihre Kinder. Die Lücke steht jetzt als `kinderVonElternteil()` an einer Stelle in `getProfilCheck` und wartet auf einen eigenen Schritt.
+- **487 Kaderrollen im Funktionenfeld** — in `mitglieder` UND in `personen` (Etappe 1 hatte sie mitkopiert). `ableitRolle()` prüft nur `funktionen.length > 0` und machte damit jeden zum Funktionär, der gerade in keinem Kader stand. Übrig blieben acht echte Einträge auf sechs Ämter.
+- **`mitglieder.rolle` war bei 493 von 512 aktiven Mitgliedern leer.** `ableitUndSaveRolle()` läuft nur bei Kader-, Team- oder Funktionsänderungen — wer nie eine hatte, ging nie durch die Funktion. Vorher fiel es nicht auf, weil das fälschliche „Spieler" im Funktionenfeld die Ableitung angestossen hatte. Am 05.08.2026 einmalig aus `mitgliedtypen.standard_rolle` nachgezogen.
+- **Zwei Zeilen trugen `rolle = 'Spieler'` mit grossem S** — ein Wert, den `portal_rollen` nicht kennt und mit dem weder `getPermissions` noch `NAV_BY_ROLE` etwas anfangen. Zum Prüfen: jeder Wert in `mitglieder.rolle` muss in `portal_rollen` vorkommen.
+
+Behoben am 05.08.2026 (Adminstatus):
+- **`ableitUndSaveRolle()` degradierte Administratoren stillschweigend.** `benutzer.role` ist ein berechneter Wert, und `ableitRolle()` kennt `administrator` gar nicht — ein Admin, der auch Juniorentrainer ist, wurde beim nächsten Kader-Eintrag zum Trainer. Dasselbe beim Login über `useDbUser`. Der Adminstatus liegt jetzt in `benutzer.ist_admin` und wird von der Ableitung nicht mehr angefasst; `role` bleibt der berechnete Wert und ist `administrator`, solange das Kennzeichen gesetzt ist. Alle Vergleiche auf `role === "administrator"` funktionieren dadurch unverändert.
+
+Behoben am 05.08.2026 (Pflichtfelder):
+- **Die Portalrolle war beim Anlegen wählbar, obwohl sie ein berechneter Wert ist.** `ableitRolle()` bestimmt sie aus den Kader-Rollen, ersatzweise aus `mitgliedtypen.standard_rolle`, dann aus den Funktionen; `ableitUndSaveRolle()` schreibt sie nach `mitglieder.rolle` **und** `benutzer.role` — bei jeder Kader-Zuweisung, jeder Änderung an Teams oder Funktionen, und beim Login nochmals über `useDbUser`. Eine im Modal gewählte Rolle hielt also nur bis zum ersten dieser Ereignisse. Das Feld ist entfernt; stattdessen wird die Rolle direkt nach dem Anlegen abgeleitet, sonst zeigte die Liste `-`. Von Hand setzen geht im Profil (`PortalTab`), wo man sieht, was die Ableitung ergeben hat.
+- **`Mitgliedtyp` in `types.ts` war unvollständig** — `id`, `standard_rolle` und `beitragsinfo` fehlten. Ergänzt; der Eintrag unter „Bekannte Defekte" entfällt damit.
+- **Drei Mitgliedtypen liessen sich nicht anlegen** — bei Passiv-, Ehren- und Freimitglied verlangte die Matrix `email`, während `NeuesMitgliedModal` das Feld über eine `PASSIV_TYPEN`-Liste ausblendete. Die Prüfung schlug an, das Feld fehlte.
+- **Die Spaltenköpfe der Pflichtfeld-Matrix waren fest verdrahtet** (`Juniormitglied`, `Funktionär`). Die echten Typen heissen `Juniorenmitglied` und `Funktionär/in` — Häkchen schrieben Zeilen für nicht existierende Typen, `Pausenmitglied` und `Supporter` hatten keine Spalte. Deshalb stand bei Juniorenmitglied nichts in der Matrix: es liess sich nicht ankreuzen. Quelle sind jetzt `dbMitgliedtypen`.
+- **`adresse` wirkte nirgends** — die Matrix schrieb `adresse`, das Formular fragte `strasse`/`plz`/`ort`; unbekannte Feldnamen wurden still übersprungen, der Adressblock erschien gar nicht.
+- **`ahv_nr`, `nationalitaet`, `heimatort`** standen in der Prüfliste ohne Eingabefeld. Sie werden jetzt gerendert und gespeichert.
+
+Behoben beim Abschluss der Modul-Migration (Sport-Module):
+- **Acht tote `verein_id`-Schreibpfade** — die DB lehnt Zeilen ohne `verein_id` still ab (siehe verein_id-Regel oben): `KaderModul` (Kader-Upsert), `TrainingsplanModul` (`trainingsplaetze`, `trainings`, `trainingsplan_vorlagen`/`_slots`/`_ausnahmen`), `TeamsVerwaltungModul` (`teams`-Insert via `toDbData`, `team_module`-Upsert). `vereinId` wird jetzt via Prop durchgereicht (clubcampus → TeamView/TeamsVerwaltung → Modul), Guards ergänzt.
+- **`TrainingsplanModul`**: der Slot-Upsert schrieb in die nicht existierende Spalte `end_haelfte` statt `end_half` → der ganze Slot-Upsert scheiterte, `end_half` wurde nie persistiert.
+- **`TrainingsplanModul` / `TermineModul`**: KW-Berechnung rechnete `Date − Date` statt `getTime() − getTime()`.
+- **`TermineModul`**: `toggleCancel` referenzierte das nicht existierende `week_nrAusnahmen` (statt `kwAusnahmen`) → ReferenceError beim Absagen eines Trainings (folgenlos nur, weil `ATT_EVENTS`/`window.storage` im Demo leer liefen).
+- **`TeamModul`**: `parseEvDate` war gar nicht definiert (nur lokal in `TermineModul`) und `EventsList` las die nirgends definierten `kannVerwalten`/`meineTeams` → latente ReferenceErrors, bislang folgenlos weil `ATT_EVENTS` leer ist bzw. der Code-Pfad tot war. Helper ergänzt bzw. als Props geführt.
+- **`DashboardModul`**: Eltern-Dashboard warf `ReferenceError` durch undefinierte `kannSchreiben`/`kannVerwalten`/`isTrainer`/`isAdmin`.
+- **`TeamsVerwaltungModul`**: der exportierte, aber nirgends gerenderte `TeamsAdminView` las `navToTeam`/`onNavToTeamDone`, die nicht in seiner Prop-Liste standen.
+- Diverse zur Laufzeit wirkungslose Props (nicht durchgereicht/gespreadet) bereinigt: `mb`/`title`/`className` auf `Row`/`Btn`/`PersonPicker`, tote `window.storage`-/`ROLLE_MAP`-Reste.
+
+## Offene Punkte aus Session 23 (05.08.2026)
+
+### ✅ Personenseite statt Modal — beide Modale gefallen am 21.08.2026
+
+Auftrag: `docs/auftrag_personenseite.md`. Schritte 1–4 geliefert.
+
+Mitglied, Elternteil und Supporter sind **dieselbe Person**, also dieselbe
+Seite. `MemberDetail` trägt seit Schritt 1 auch eine Person ohne
+Mitgliedschaft; **den Unterschied macht genau eine Zeile** — welche Achse der
+Feldkonfiguration gilt:
+
+```ts
+getFeldkonfig(mitgliedId == null ? OHNE_MITGLIEDSCHAFT : fuerMitgliedtyp(raw.mitgliedtyp), feldkonfig)
+```
+
+Alles Weitere folgt daraus. Kein `if (istSupporter)` auf der Seite: wo eine
+solche Abfrage nötig schiene, kennt die Konfiguration den Fall noch nicht.
+
+| war | ist |
+|---|---|
+| `SupporterModal` (190 Z.) | Personenseite, Achse `ohne_mitgliedschaft` |
+| `ElternkontaktModal` (265 Z.) | dieselbe |
+| `ElternPortalSection` (63 Z.) | Portal-Tab |
+| `ElternKinderSektion` (215 Z.) + `KindSucheModal` | **ersatzlos** — siehe unten |
+| `ElternFelder` / `validateElternkontakt` | eigene Datei `ElternFelder.tsx` (sie ERFASSEN, das Modal ZEIGTE) |
+
+**Was ersatzlos weggefallen ist**, vollständig: Kinderliste am Elternteil,
+Hauptkontakt-Stern von dort, „Kind hinzufügen" von der Elternseite aus,
+„Entfernen" pro Elternteil. Die ersten drei gibt es weiter **vom Kind aus**
+(`ElternTab`), das vierte als Sammelaktion in der Elternliste. Keine Fähigkeit
+fällt weg, nur die Richtung.
+
+**Offen: der Kinder-Tab.** Dort gehören Beziehung und Hauptkontakt-Stern hin
+— beide hängen an `eltern_kinder`, nicht an der Person. Der fertige Inhalt
+dafür liegt im Git-Verlauf: `ElternKinderSektion.tsx`, `KindSucheModal.tsx`
+und `elternService.sucheKinder()`, gelöscht im Commit zu Schritt 4
+(21.08.2026). Nicht als tote Datei stehengelassen — eine Datei, die niemand
+rendert, läuft still am Schema vorbei.
+
+> **Der Verlauf hat weiterhin keinen Platz an einer Person.**
+> `mitglieder_aenderungen` und `mitglieder_aktivitaeten` führen beide
+> `mitglied_id bigint NOT NULL` — der Verlauf gehört der MITGLIEDSCHAFT.
+> Deshalb trägt `tab_verlauf` ein `nur_mitgliedschaft` und ist auf der Achse
+> `ohne_mitgliedschaft` strukturell `aus`; die Karte „gibt es noch nicht" aus
+> dem Supporter-Modal ist mit ihm gefallen.
+>
+> Die Frage bleibt offen: Bezugspunkt auf `person_id` umstellen (dann
+> überlebt der Verlauf einen Austritt und die Rückkehr), oder beides
+> nebeneinander führen. Das ist eine Migration und gehört in einen eigenen
+> Auftrag.
+
+Ebenfalls offen: `MemberHero` und `MemberDetail` liegen weiterhin unter
+`modules/members/`. Der Umzug nach `src/shared/person/` (laut
+`ARCHITECTURE.md` die Voraussetzung) ist **nachträglich** zu machen — die
+Seite trägt beide Fälle bereits.
+
+### Supporter-Liste überarbeiten
+
+Der Tab steht (`SupporterListView`), aber Spalten, Filter und gespeicherte Ansichten sind nur das Nötigste:
+
+- **Spalten**: heute Name, E-Mail, Telefon, PLZ/Ort, Portal-Zugang — aus `ALL_COLS` gezogen. `Eintritt` ist am 20.08.2026 entfallen: es kommt aus `mitglieder.eintrittsdatum` und ist bei einer Person ohne Mitgliedschaft strukturell leer, hätte also in **jeder** Zeile „-" gezeigt. Ein „dabei seit" für Supporter bräuchte eine eigene Angabe. Was sonst dazugehört (wie erreichbar, welche Anlässe, Beitrag?) ist nicht durchdacht.
+- **Filter**: nur Portal-Zugang.
+- **Gruppierung**: nur Portal-Zugang und Wohnort.
+- **`savedViews`**: bewusst weggelassen — die Vorlagen „Standard" und „Verwaltung" bestehen aus Spalten, die es hier nicht gibt (Mitgliedschaft, Teams, Kaderrollen). Eigene Ansichten speichern funktioniert, `ListView` legt sie unter `viewTyp="supporter"` ab. Eigene Vorlagen fehlen.
+
+Filter, Sortierung und Gruppierung laufen über dieselben Funktionen wie die Mitgliederliste (`filterMembers`, `sortMembers`, `buildGroups`) — ein Supporter **ist** eine `MemberRow`, seit dem Rückbau über `mapSupporter()` statt über eine Zeile in `mitglieder`. Das soll so bleiben; zu überarbeiten ist die Auswahl, nicht die Mechanik.
+
+### ⚠ `/api/team/list` heisst „Teams" und liefert nicht alle Teams
+
+Befund vom 10.09.2026. **Kein Fehler des Verbands — eine Falle für jeden,
+der den Namen liest und die Bedeutung annimmt.**
+
+| | |
+|---|---|
+| **gemessen** | die Verbandsseite führt **34** Mannschaften des FCH, alle mit Spielplan. `/api/team/list?SeasonId=…&ClubId=…` gibt **21** heraus |
+| **gemessen** | der Endpunkt hat **zwölf** optionale Parameter, und sein Parametersatz ist **Zeichen für Zeichen derselbe** wie der von `/api/club/schedule` |
+| **gemessen** | `/api/club/schedule` liefert die Spiele **aller** Mannschaften — beide Endpunkte, dieselben Parameter, verschiedene Menge |
+| **vermutet** | die Teamliste gibt nur Mannschaften mit **Meisterschaftsbetrieb** heraus (also mit `LeagueId`). Die Stammdaten führen daneben Spieltyp **6 Turnier** und **8 Mini-Turniere** — die Betriebsform der jüngsten Jahrgänge, und genau die fehlen |
+
+⚠ **Weil beide Endpunkte denselben Filtersatz haben, kann es kein
+vergessener Parameter sein.** Ein Filter, den niemand setzt, greift nicht
+beim einen und beim anderen nicht.
+
+**Was daraus folgt, und es ist die eigentliche Lehre:**
+
+> **Ein Endpunktname ist eine Beschriftung, keine Zusage über die Menge.**
+> `summary: „return teamIds for the given club and season"` sagt nichts
+> darüber, welche Teams. Wer den Namen für die Definition hält, sucht den
+> Fehler anschliessend bei sich.
+
+⚠ **Und es hat einen Abend gekostet**, weil die Lücke sich als etwas
+anderes tarnte: erst als fehlende Zuordnung in ClubCampus, dann als
+Cache-Problem der Maske, dann als Saisonfehler. Keines davon traf zu — die
+Saison ist nachweislich richtig (der SFV benennt eine Saison nach dem
+Endjahr: `2027` = 2026/27, belegt in `sfv_stammdaten.json`).
+
+**Gemessen wird es mit `aktion: "teamprobe"`** (`sfv-sync`, liest, schreibt
+nichts): sie fragt die Teamliste ohne Filter und je Spieltyp, hält den
+Spielplan dagegen und nennt die Differenzmenge.
+
+⚠ **Und die andere Hälfte des Abends war eine leere Liste, die wie eine
+Antwort aussah.** `const { data } = await db.from("teams")…` ohne `error`,
+dann `?? []` — scheitert die Abfrage, rechnet der Lauf mit null
+Zuordnungen weiter und meldet **alle** Mannschaften als unzugeordnet. Der
+Fehlalarm sieht aus wie ein Befund. Berichtigt in `sync.ts`; die übrigen
+Stellen dieser Art im SFV-Sync sind gezählt und stehen aus.
+
+> **Ein Endpunkt, der nichts liefert, muss von einem unterschieden werden,
+> der nicht gefragt wurde.** (Didi, 10.09.2026)
+
+#### ⚠⚠ Das Ergebnis: die Website zeigt Daten, die die API nicht herausgibt
+
+**Und das ist der seltene Fall, in dem die Grenze wirklich beim Anbieter
+liegt** — nachgemessen statt angenommen, weil genau diese Schlussfolgerung
+sonst jede weitere Suche beendet, bevor sie beginnt.
+
+| gemessen woran | Ergebnis | von wem |
+|---|---|---|
+| **Swagger** (`docs/sfv/swagger_2026-08-28.json`) | 15 Pfade, **ein einziger** Spielplan-Endpunkt (`/api/club/schedule`), kein `matchplan`, kein Weg über Gruppen oder Wettbewerbe | hier |
+| **Parametersätze** | `/api/team/list` und `/api/club/schedule` haben denselben Satz aus 14 Parametern; `TeamId` und `GroupId` sind **optional** | hier |
+| **Verbandsseite** | 34 Mannschaften, **alle mit Spielplan**, nur die jüngsten ohne Tabelle | Didi |
+| **`aktion: "teamprobe"`** — Teamliste ohne Filter, je Spieltyp (1 · 6 · 8), Spielplan dagegengehalten | die API kennt die 13 auf **keinem** Weg | Didi |
+
+**Dreifach gemessen, nicht angenommen** — Spezifikation, Parameter, Aufruf.
+
+⚠ **Die naheliegende Erklärung war falsch, und zwar zweimal.** Erst schien
+es eine fehlende Zuordnung in ClubCampus, dann ein Cache der Maske, dann
+ein Saisonfehler. Keines traf zu; die Saison ist nachweislich richtig (der
+SFV benennt sie nach dem Endjahr, `2027` = 2026/27, belegt in
+`sfv_stammdaten.json`).
+
+**Was daraus praktisch folgt:** für diese Mannschaften gibt es über die API
+keinen Spielplan — nicht heute und mit keinem Parameter. Was die Website
+zeigen soll, ist deshalb eine Gestaltungsfrage und keine technische:
+`docs/uebergabe_teams_ohne_api.md`.
+
+**Die offene Frage an den FVRZ** steht dort ebenfalls: warum liefert
+`/api/team/list` nur Mannschaften mit Wettbewerbsteilnahme, während die
+Website alle führt — und gibt es einen Parameter, den die Swagger-Datei
+nicht nennt?
+
+#### ⚠ Die Auflösung (10.09.2026): es sind acht, und der Grund ist die Tabelle
+
+**Die Schnittstelle bedient nicht dieselbe Datenlage wie die Website.**
+
+> `/api/team/list` kennt Mannschaften, die in einem Wettbewerb **mit
+> Rangliste** stehen. Die jüngsten Jahrgänge spielen ohne Tabelle — dort
+> gibt es keine `teamId` und folglich keinen abrufbaren Spielplan.
+
+**Das ist kein Filter, den jemand vergessen hat, und keine Lücke.** Es
+sind zwei Sichten auf denselben Spielbetrieb, und die Schnittstelle
+bedient die eine.
+
+⚠ **UND JETZT DIE FALLE, DIE DABEI FAST DAS ERGEBNIS VERDOPPELT HÄTTE:**
+
+**„Junioren D (Futsal) a" und „Dd-Junioren" sind dieselbe Mannschaft.**
+Die Verbandsseite und ClubCampus benennen sie verschieden — und wer die
+beiden Listen über die NAMEN vergleicht, findet **13 fehlende statt 8**.
+Fünf davon sind Schreibweisen, keine Mannschaften.
+
+**Dieselbe Regel wie überall in diesem Projekt, hier über Systemgrenzen
+hinweg:** *ein Filter auf einen NAMEN prüft eine Schreibweise, ein Filter
+auf ein MERKMAL prüft die Sache.* Verglichen wird über `teamId`, nie über
+den Namen — auch dann nicht, wenn die Namen „offensichtlich" zusammen-
+gehören.
+
+#### ✅ Die 1:1-Zuordnung trägt — gemessen am 10.09.2026
+
+Die Frage lautete: hat dieselbe Mannschaft, die auf der Verbandsseite
+unter zwei Einträgen steht (Meisterschaft und Futsal), **zwei `teamId`**?
+Unsere Zuordnung ist 1:1 gebaut — eine `teams`-Zeile, eine Nummer.
+
+**Gemessen: `details.spiele.ohne_team` = 0 in vier aufeinanderfolgenden
+Läufen** (10.09.2026). Kein einziges geliefertes Spiel fällt durch die
+Zuordnung.
+
+⚠ **Was der Wert BELEGT und was nicht — der Unterschied ist die halbe
+Aussage:**
+
+| | |
+|---|---|
+| **belegt** | im gelieferten Klub-Spielplan steckt nichts, was wir nicht zuordnen können. Für alles, was ankommt, trägt 1:1 |
+| **nicht belegt** | dass es die zweite `teamId` nicht gibt. Deren Spiele könnten — wie die der acht ohne Tabelle — im Spielplan gar nicht erst stehen. Dann wäre `ohne_team` ebenfalls 0 |
+
+**Die richtige Formulierung ist deshalb: 1:1 trägt für den gesamten
+gelieferten Spielbetrieb.** Was die Schnittstelle nicht liefert, kann
+dieser Zähler nicht sehen — und über den Rest sagt er nichts.
+
+⚠ **Und die Basis ist vier Läufe, also gut vier Stunden.** Eine
+Futsal-Runde findet womöglich nur am Wochenende statt. Die Aussage wird
+mit jedem Lauf belastbarer; heute steht sie auf einem Abend.
+
+⚠ **Der fünfte Lauf meldet `null`, nicht `0`** — er stammt von vor der
+Umstellung, das Feld gab es da noch nicht. Genau der Unterschied, um den
+es an diesem Abend ging: **nicht gefragt ist nicht dasselbe wie nichts
+gefunden.** Wer die Reihe liest, darf die `null` nicht als Nullwert
+zählen.
+
+### ⚠ Die Vereinskennung beim Verband steht nirgends in ClubCampus
+
+Befund vom 10.09.2026, aufgefallen beim FVRZ-Link am Team.
+
+Die Adresse der Gruppentabelle beim Verband lautet
+
+```
+https://matchcenter.fvrz.ch/default.aspx?v=<VEREIN>&oid=11&lng=1&t=<sfv_team_id>&a=trr
+```
+
+`v=1516` ist die **Vereinsseite des FCH** beim FVRZ (belegt 05.09.2026,
+`migration_wp_export.sql:252`). Sie ist dieselbe Zahl wie die **ClubId**,
+die jeder SFV-Aufruf mitführt — und die steht **nur im Secret**
+`SFV_CLUB_ID`, nicht in einer Spalte.
+
+⚠ **Damit ist die Adresse für einen zweiten Verein nicht baubar.** Weder
+`vereine` noch `api_verbindungen` führen die Kennung; `api_verbindungen.key`
+ist der Name des Anschlusses, nicht seine Nummer. Wer die Adresse
+mandantenfähig bauen will, braucht sie als **Spalte**, nicht als Secret —
+ein Secret gilt projektweit, und projektweit gibt es genau einen Wert.
+
+⚠ **Und `oid=11` ist der Verband**, nicht der Verein. Ein Klub in einem
+anderen Regionalverband (SFV hat dreizehn) hat eine andere `oid`. Wer nur
+`v` mandantenfähig macht, hat die Hälfte gemacht.
+
+**Nicht zu verwechseln** (steht schon dreimal im Bestand und wird trotzdem
+verwechselt):
+
+| Zahl | was | wo sie steht |
+|---|---|---|
+| **1516** | ClubId — Aufrufe und `v=` im Matchcenter | Secret `SFV_CLUB_ID` |
+| **11057** | clubNumber — in Ranglisten und Matchdaten | `ranglisten.club_nummer` |
+| **11** | `oid`, der Regionalverband FVRZ | nirgends |
+
+**Heute folgenlos**, weil ein Verein im Portal steht und die Website ihm
+gehört: dort sind `v` und `oid` Konstanten der Installation. Es fällt an,
+sobald ein zweiter Verein dazukommt — dieselbe Familie wie
+`mitglieder_fairgate_id_key`.
+
+### `mitglieder_fairgate_id_key` ist global unique
+
+Fairgate-Nummern werden **pro Verein** vergeben. Der Schlüssel steht aber auf
+`UNIQUE (fairgate_id)` — beim zweiten Verein kollidieren `FG-00001` und
+`FG-00001`. Gehört zu den dreizehn Schlüsseln, die am 05.08.2026 auf
+`(verein_id, …)` umgestellt wurden, und ist durchgerutscht.
+
+Umstellen auf `(verein_id, fairgate_id)`, bevor ein zweiter Verein dazukommt.
+
+> **Korrigiert am 14.08.2026.** Hier stand, `api_verbindungen_key_key` sei
+> „absichtlich global (ein API-Schlüssel ist ein Geheimnis und muss projektweit
+> eindeutig sein)". Das war falsch: `api_verbindungen.key` ist kein Geheimnis,
+> sondern der Name des Anschlusses — `fairgate`, `football_ch`, `fvrz`,
+> `clubdesk`, `sfa`. Derselbe Wert wählt in `ApiTab` den Beschreibungstext aus
+> `API_INFOS`. In der ganzen Tabelle steht kein Geheimnis; der Hinweis im Tab
+> sagt es selbst („API-Keys werden aus Sicherheitsgründen nicht in der
+> Datenbank gespeichert"). Wirkung des Fehlers: der erste Verein, der einen
+> Anschluss anlegt, hätte ihn allen anderen weggenommen. Umgestellt auf
+> `(verein_id, key)` mit `supabase/migration_api_verbindungen_mandant.sql`.
+> Damit bleibt `mitglieder_fairgate_id_key` der letzte offene Fall —
+> `api_verbindungen_key_key` war es also nicht der einzige.
+
+### Von Hand gesetzte Rollen werden still überschrieben
+
+Der Portal-Tab erlaubt, die Rolle direkt zu setzen — `updateMitgliedRolle()`
+schreibt sie ohne Ableitung. Läuft danach `ableitUndSaveRolle()` (Kader-, Team-
+oder Funktionsänderung), ist die Einstellung weg, ohne dass es jemand merkt.
+
+Zu entscheiden: Gewinnt die Ableitung immer? Dann gehört das im Portal so
+beschriftet — „gilt bis zur nächsten Änderung". Oder bleibt eine manuell
+gesetzte Rolle? Dann braucht es ein Kennzeichen dafür.
+
+### ✅ Was ein Mitgliedtyp hat — erledigt am 19.08.2026
+
+Auftrag: `docs/auftrag_mitgliedtyp_konfig.md`. Alle vier Schritte geliefert.
+
+Was ein Mitgliedsprofil zeigt, lag an vier Stellen verstreut. Jetzt an einer:
+**`mitgliedtyp_feldkonfig`**, pro Mitgliedtyp und Schlüssel einer von drei
+Werten — **Pflicht · Freiwillig · Gibt es nicht**. Der dritte blendet aus,
+auch für die Verwaltung.
+
+| war | ist |
+|---|---|
+| `mitgliedtyp_pflichtfelder` | `mitgliedtyp_feldkonfig` (`domains/members/feldkonfig.ts`) |
+| `rolle_pflichtfelder` | **entfallen** — konnte nur addieren, nie wegnehmen |
+| `getFieldVisibility()` | **bleibt** — sie meint die Rolle des *Betrachters* |
+| `istSupporter` in `InfoTab` | **entfallen** — `istBereichSichtbar()` |
+| `SUPPORTER_TYP` | **entfallen** — `mitgliedtypen.zaehlt_als_mitgliedschaft` |
+
+**Eine fehlende Zeile bedeutet „freiwillig".** Gespeichert wird nur die
+Abweichung; ein neuer Mitgliedtyp braucht keine einzige Zeile und zeigt
+trotzdem ein vollständiges Profil. Das ist exakt das vorherige Verhalten —
+es gab nie eine Rückfallliste.
+
+**`getFieldVisibility` und die Konfiguration sind zwei Fragen**, nicht eine.
+Was es bei diesem Mitgliedtyp *gibt*, sagt die Konfiguration; wer es *sehen
+darf*, sagt die Rolle. `getSichtbarkeit()` in `memberUtils.tsx` verknüpft
+beides, und die Reihenfolge ist die Aussage: **„Gibt es nicht" gewinnt gegen
+jede Rolle.** Die Gegenrichtung bleibt — ein Trainer sieht die AHV-Nummer
+weiterhin nicht. Die Rollen-Seite („wer sieht was bei anderen") wartet
+unverändert auf die Gruppenrechte.
+
+Drei der acht `fv.*`-Schalter waren **doppelt belegt** (`showPass`,
+`showFairgateId`, `showNotizen`): sie regelten zugleich, wer etwas sehen darf
+UND ob es das Feld überhaupt gibt. Die zweite Bedeutung hat jetzt „Gibt es
+nicht". Ausserdem hingen Spielerpass und J+S-Nr. an *einem* Schalter — ein
+Junior hat einen Pass und keine J+S-Nummer, ein Trainer umgekehrt.
+
+**In der Neuanlage hing bis dahin die Sichtbarkeit am Pflicht-Häkchen**: was
+nicht Pflicht war, liess sich beim Anlegen gar nicht erfassen. Jetzt ist ein
+freiwilliges Feld sichtbar und darf leer bleiben.
+
+`mitgliedtyp_pflichtfelder` und `rolle_pflichtfelder` stehen noch in der
+Datenbank, werden aber von keiner Stelle mehr gelesen. Sie fallen in einer
+eigenen Migration, wie `elternkontakte`. **17 verwaiste Zeilen** der alten
+Tabelle (`Juniormitglied` 6, `Funktionär` 6, `Gönner` 5) sind bewusst nicht
+mitgewandert — Reste des am 05.08.2026 behobenen Spaltenkopf-Defekts.
+
+> ⚠ **`Gönner` ist hier ein protokollierter DATENWERT, keine Bezeichnung.**
+> Er stand so in der Tabelle und bleibt so stehen; ihn zu „berichtigen" hiesse,
+> den Befund zu fälschen. Wie der Verein die Sache nennt, steht unter „Was
+> «Supporter» in diesem Verein heisst". Der
+Fremdschlüssel auf `mitgliedtypen(id, verein_id)` verhindert beide Ursachen
+künftig.
+
+Migration: `supabase/migration_mitgliedtyp_feldkonfig.sql`.
+
+### ✅ Die Pflichtfeld-Matrizen wirken — berichtigt am 22.08.2026
+
+**Hier stand bis heute das Gegenteil der Wirklichkeit**, und das war
+gefährlicher als jeder tote Zweig: der Abschnitt behauptete, die Datenprüfung
+werte die Matrix nicht aus, und wer ihn las, hat danach nicht mehr
+nachgesehen. Der beschriebene Zustand endete mit dem 19.08.2026 — der Text
+blieb.
+
+**Was tatsächlich läuft.** `DatenpruefungMitglied` bekommt die Pflichtfelder
+aus der Matrix (`pflichtfelderFuer` → `pflichtfelderFuerZiel`), und zwar:
+
+| | Zeile |
+|---|---|
+| nennt die fehlenden Felder **namentlich** | `DatenpruefungMitglied.tsx:286–289` |
+| trennt „kann ich selbst" von „nur die Verwaltung" | 296–299 |
+| **sperrt** den Bestätigen-Knopf, solange etwas Eigenes fehlt | 232, 259 |
+| Knopftext deckt nur, was er kann: „Meine Angaben sind korrekt ✓" | 261 |
+
+Die Elternseite seit dem 21.08.2026 genauso, über `personenStand()`.
+
+⚠ **Und das Login-Overlay rendert genau diese Maske** — es ist keine dünne
+Aufforderung, sondern die vollständige Datenprüfung in einem Modal
+(`clubcampus.tsx`, Profil-Pflicht-Block). Die Felder sind darin ausfüllbar.
+Damit sperrt auch das Overlay; siehe „Die AHV-Pflicht sperrt 381 Mitglieder
+aus".
+
+**Was von der alten Beschreibung stimmt:** `getProfilFehlend()` und
+`markiereProfilGeprueft()` werden nach wie vor nirgends aufgerufen. Nur ist
+das nicht die fehlende Wirkung — die kommt über `pflichtfelderFuer()` —,
+sondern eine zweite, tote Rechnung daneben. Siehe den Punkt darunter.
+
+### ⚠ Die `auth.users`-Kette der Löschung ist ungeprüft — und warum niemand sie geprüft hat
+
+Stand 24.08.2026, nach dem ersten scharfen Lauf der **Sammellöschung**.
+
+Der Lauf hat funktioniert: zwei Personen (Heidi Studer, Peter Vogt), zwei
+Protokolleinträge zwei Sekunden auseinander, beide mit
+`abgeschlossen: true`, 914 → 912 Personen, die Liste sprang ohne Neuladen
+von 8 auf 6 Supporter.
+
+⚠ **Aber er hat den gefährlichsten Teil nicht berührt.** Keine der beiden
+Personen hatte ein Portal-Konto, also lief `auth.admin.deleteUser()` nicht.
+Genau dieser Aufruf ist am 23.08.2026 mit **„Database error loading user"**
+gescheitert, und genau er ist der Grund, warum die Reihenfolge in der Kette
+umgedreht wurde (erst Auth, dann `benutzer`).
+
+**Warum es niemand geprüft hat — und das ist keine Nachlässigkeit:**
+
+| | |
+|---|---|
+| Personen ohne Mitgliedschaft und ohne Kinder | 5 |
+| davon **mit** Konto | **1** |
+| und das ist | **das Administratorkonto des Auftraggebers** |
+
+`pruefeNichtSelbst` verhindert es ohnehin — und richtigerweise, denn wer sich
+selbst löscht, nimmt sein Konto mit und kann den Vorgang nicht zu Ende
+protokollieren. Die vier anderen Konten scheiden aus, weil sie an einer
+Mitgliedschaft oder an einem Kind hängen.
+
+⚠ **Ein Konto zu bauen, nur um es zu löschen, ist ausdrücklich abgelehnt**
+(Didi, 24.08.2026): die Adresse wäre danach verbrannt, und zwei sind schon
+so verloren gegangen. Der Preis ist höher als die Deckung.
+
+**Was das praktisch heisst:** die Löschkette ist bis `personen` belegt,
+darüber hinaus nur gelesen. Sobald ein echtes Konto ohne Mitgliedschaft und
+ohne Kinder entsteht — etwa ein ausgetretener Supporter mit Portal-Zugang —,
+ist das der erste Fall, an dem sich die Auth-Hälfte prüfen lässt. Bis dahin
+gilt sie als **ungeprüft**, nicht als funktionierend.
+
+### Der Abschluss-Vermerk im Löschprotokoll — was `abgeschlossen = null` heisst
+
+Seit dem 23.08.2026 trägt jeder `person_geloescht`-Eintrag in `audit_log`
+zwei Hälften: `vorher` wird **vor** der Kette geschrieben, `nachher` mit
+`{abgeschlossen: true}` **danach**.
+
+⚠ **Ein Eintrag ohne `nachher` ist kein Formfehler, sondern die Aussage.** Er
+sagt: es wurde begonnen und nicht zu Ende geführt. Beim ersten scharfen Lauf
+brach die Kette am Auth-Konto ab, und der Eintrag hiess trotzdem
+`person_geloescht` — für eine Datenschutzstelle ist ein Protokoll, das **mehr**
+behauptet als geschehen ist, schlechter als eines, das weniger sagt.
+(Entscheidung Didi, 23.08.2026: als Ergänzung am bestehenden Eintrag, nicht
+als zweiter. Zwei Einträge pro Löschung liessen sich auseinanderlesen, ein
+unvollständiger nicht.)
+
+⚠ **Die ersten zwei Zeilen im Bestand haben `nachher = null`, obwohl der
+zweite Lauf gelang.** Sie stammen von vor dieser Änderung. Wer die Tabelle
+liest, darf sie nicht als abgebrochen zählen:
+
+| Zeit | `abgeschlossen` | tatsächlich |
+|---|---|---|
+| 17:42 | `null` | **abgebrochen** (Auth-Konto) |
+| 17:52 | `null` | gelungen — vor dem Vermerk |
+| 18:20 | `true` | gelungen |
+
+### ⚠ DREI Rechnungen für die Portalrolle — und die dritte läuft bei jedem Login
+
+Befund vom 23.08.2026, beim Anlegen eines Trainer-Testzugangs.
+
+| | liest | ergibt für dieselbe Person |
+|---|---|---|
+| `handle_new_user()` (DB-Trigger, bei der **Registrierung**) | **nur** `mitgliedtypen.standard_rolle` | Aktivmitglied → **`spieler`** |
+| `ableitRolle()` (`roleUtils.ts`, bei jeder Kader-/Team-/Funktionsänderung) | **zuerst** die Kaderrollen | Kadereintrag mit `ist_trainer` → **`trainer`** |
+
+⚠ **BERICHTIGT AM 23.08.2026, NOCH AM SELBEN ABEND — ES SIND DREI, UND DIE
+DRITTE IST DIE, DIE TATSÄCHLICH LÄUFT.** Hier stand, die Rolle kippe
+„irgendwann von selbst, und niemand weiss wann". Gemessen an einer echten
+Registrierung: sie kippt **beim ersten Login**, und zwar durch eine dritte
+Regel, die ich beim ersten Durchgang übersehen hatte.
+
+`useDbUser` (`useAppData.js:283–308`) liest nach dem Anmelden die Kadereinträge
+und **schreibt die abgeleitete Rolle nach `benutzer.role` zurück**. Der
+Trainer-Testzugang bekam vom Trigger `spieler` und war nach dem ersten Login
+`trainer` — ohne dass jemand etwas angefasst hätte.
+
+| | wann | liest |
+|---|---|---|
+| `handle_new_user()` | Registrierung | `mitgliedtypen.standard_rolle` |
+| **`useDbUser`** | **jeder Login** | Kaderrollen über eine **feste Namensliste** im Code |
+| `ableitRolle()` | Kader-/Team-/Funktionsänderung | Kaderrollen über `kader_rollen.ist_trainer` |
+
+⚠ **Und die mittlere ist die schlechteste der drei.** `ROLLE_MAP` in
+`useDbUser` zählt sechs Kaderrollen **beim Namen** auf, statt `ist_trainer` zu
+lesen. Gemessen gegen die sechs Rollen, die es im Verein wirklich gibt:
+
+| Kaderrolle | `ist_trainer` | `ROLLE_MAP` | Personen |
+|---|---|---|---|
+| Trainer/in · Co-Trainer/in · Goalietrainer/in | true | `trainer` | 7 |
+| Spieler/in | false | `spieler` | 11 |
+| **Team-Admin** | **true** | **fehlt** → `spieler` | **1** |
+| Masseur/in | true | `funktionaer` ⚠ | 0 |
+| *Assistenz* | — | `funktionaer` | **gibt es nicht** |
+
+**Adrian Kern hat nur „Team-Admin"** — `ableitRolle()` macht ihn zum Trainer,
+`useDbUser` beim Login zum Spieler. Und weil `useDbUser` **zurückschreibt**,
+gewinnt beim Login die schlechtere Regel. Ein Filter auf Namen statt auf das
+Merkmal, genau wie unter „Ein Filter auf einen NAMEN prüft eine Schreibweise" —
+nur hier mit einem toten Schlüssel (`Assistenz`) und einer fehlenden Zeile
+(`Team-Admin`) zugleich.
+
+⚠ **Aufgefallen ist es nur, weil ich es falsch aufgeschrieben hatte.** In
+`testkonto_trainer.sql` stand „Erwartete Rolle: trainer"; ich hatte aus
+`ableitRolle()` gelesen und angenommen, das sei der Weg. Gemessen war es der
+Trigger, und der sagt `spieler`. **Ohne die Gegenprobe wäre der Zugang als
+„Trainer" in Betrieb gegangen und hätte Trainer-Rechte nie gehabt** — und
+jede Messung an ihm hätte etwas anderes geprüft als das, was drauf steht.
+Dieselbe Falle wie „Trainer Tester" mit der Rolle `supporter`, nur eine
+Ebene tiefer.
+
+⚠ **WIE VIELE ES HEUTE TRÄFE — gemessen am 23.08.2026, beide Regeln
+nachgebaut und über alle aktiven Mitglieder gerechnet:**
+
+| Trigger sagt | Ableitung sagt | Personen |
+|---|---|---|
+| `spieler` | **`trainer`** | **8** |
+| `mitglied` | **`funktionaer`** | **1** |
+| | **zusammen** | **9 von 512** |
+
+**Die acht sind die Trainer des Vereins.** Registrieren sie sich, bekommen sie
+vom Trigger `spieler`. ⚠ **Sieben davon berichtigt `useDbUser` beim ersten
+Login** — das Fenster ist also Sekunden, nicht Wochen, und der Befund ist
+deutlich kleiner als er hier zuerst stand. **Der achte ist Adrian Kern**, und
+bei ihm berichtigt sich nichts: „Team-Admin" fehlt in `ROLLE_MAP`, also bleibt
+er `spieler`, bis jemand `ableitUndSaveRolle()` auslöst. Zwei der acht sind
+Juniorenmitglieder, die nebenbei Co-Trainer sind.
+
+Die Abweichung geht **immer in dieselbe Richtung**: der Trigger gibt weniger
+als die Ableitung. Das ist die harmlosere Richtung — aber es heisst, dass
+genau die neun, die am meisten mit dem Portal arbeiten sollen, es beim ersten
+Anmelden am wenigsten können.
+
+Zum Nachzählen: die Abfrage steht im Kopf von `supabase/testkonto_trainer.sql`
+unter „Zwei Rechnungen für die Rolle".
+
+**Das ist die dritte Stelle dieser Art**, nach den drei Rechnungen für die
+Pflichtfelder und den zwei für den Portal-Zugang. Gemeinsames Merkmal: keine
+Prüfkette wird rot, weil **beide Antworten für sich genommen plausibel sind**.
+
+### ✅ `ROLLE_MAP` ist ersetzt — und der Trigger ist kein eigener Punkt mehr
+
+Repariert am 23.08.2026: `useDbUser` liest `kader_rollen.ist_trainer` statt
+einer Namensliste. Gemessen davor und danach, über alle 512 aktiven Mitglieder:
+
+| | weicht ab |
+|---|---|
+| beim Trigger (Registrierung) | **9** |
+| **nach dem ersten Login** | **1** |
+
+**Acht der neun sind damit erledigt** — sieben Trainer und Adrian Kern mit
+seinem „Team-Admin". Der Trigger schreibt zwar weiter `spieler`, aber
+`useDbUser` berichtigt es Sekunden später, und beide lesen jetzt dasselbe
+Merkmal.
+
+⚠ **Der eine Rest ist NICHT der Trigger, sondern der Zuschnitt von
+`useDbUser`.** Laura Imhof ist Passivmitglied (`standard_rolle = 'mitglied'`)
+mit Vereinsfunktionen; `ableitRolle()` macht daraus `funktionaer`. Die
+Rückschreibung in `useDbUser` läuft aber **nur, wenn es einen Kadereintrag
+gibt** — sie kennt Kaderrollen, keine Funktionen. Wer seine Rolle aus einem
+Amt bezieht, wird nie berichtigt.
+
+**Damit steht die Frage anders**, und das ist die Antwort auf „ist der Trigger
+noch ein eigener Punkt?": **nein.** Was bleibt, ist eine Person und eine
+strukturelle Lücke. Zwei Wege:
+
+**Entschieden (Didi, 23.08.2026): `useDbUser` ruft `ableitRolle()`.** Eine
+Quelle statt drei, statt die Ableitung ein drittes Mal nachzubauen. Sie braucht
+`mitgliedtyp` und `funktionen` an dieser Stelle — beides eine Abfrage.
+
+⚠ **Aber nicht vor dem Funktionär-Zugang.** Sonst hängt der
+`kader_write`-Befund aus `docs/auftrag_rls_gruppenrechte.md` an einem Umbau,
+der gerade läuft — und wenn dann etwas nicht stimmt, ist nicht zu
+unterscheiden, ob es die Policy war oder die Ableitung. Erst das Prüfmittel,
+dann der Umbau daran.
+
+⚠ **Solange mehrere Stellen dieselbe Frage beantworten, ist jede Reparatur an
+einer davon nur eine Verschiebung.** Das Ziel ist eine Quelle — und das ist
+`ableitRolle()`, weil sie als einzige das Merkmal liest statt eines Namens.
+
+### ⚠ Drei Rechnungen für dieselbe Frage — und 21 Tests hängen an der toten
+
+Befund vom 22.08.2026. „Welche Pflichtfelder sind leer, und welche davon kann
+die Person selbst füllen?" wird an **drei** Stellen beantwortet:
+
+| | wo | |
+|---|---|---|
+| `getProfilFehlend()` | `domains/app/getProfilCheck.ts:145` | **tot** — kein Aufrufer im ganzen Portal |
+| `fehlendSelbst` / `fehlendVerwaltung` | `DatenpruefungMitglied.tsx:225–231`, inline | lebendig |
+| `personenStand()` | `DatenpruefungEltern.tsx:125` | lebendig |
+
+Die beiden lebendigen trennen „selbst" von „Verwaltung" mit **verschiedener
+Mechanik**: `personenStand` über die Mengen `DARSTELLBAR`/`GESPERRT`,
+`DatenpruefungMitglied` über `k in form`. Zwei Wege zu derselben Aussage —
+dasselbe Muster wie `hat_portal_zugang` gegen den Join.
+
+⚠ **LÖSCHEN IST HIER NICHT AUFRÄUMEN, SONDERN DECKUNG VERLIEREN.** An
+`getProfilFehlend()` hängen **21 von 30 Testfällen** in
+`getProfilCheck.test.ts`:
+
+| describe | Fälle |
+|---|---|
+| `getProfilFehlend` | 9 |
+| `getProfilFehlend — Labels für die Anzeige` | 3 |
+| `Elternteil ohne Mitgliedschaft` | 4 |
+| `Kinder eines Elternteils` | 5 |
+
+Sie prüfen Verhalten, das das Produkt **braucht** — „meldet ein fehlendes
+Pflichtfeld des Kindes mit Namen davor", „richtet sich nach dem Mitgliedtyp
+DES KINDES, nicht des Elternteils". Nur prüfen sie es an einer Funktion, die
+niemand ruft. Wer die Funktion mit dem Satz „ist ja tot" entfernt, nimmt 70 %
+der Datei mit und merkt es an keiner roten Zeile.
+
+**Der Weg ist deshalb UMDREHEN, nicht löschen:** `getProfilFehlend()` wird die
+eine Quelle, und die beiden Masken rufen sie. Dann sind die 21 Fälle wieder
+Tests von etwas Lebendigem, und aus drei Rechnungen wird eine.
+
+⚠ **Nicht gleichzeitig mit einer Änderung an der Matrix** (Entscheidung Didi,
+22.08.2026): die Datenprüfung ist die Maske, die als nächstes 371 Familien
+betrifft. Sie in derselben Woche umzubauen, in der ihre Konfiguration
+geändert wird, macht jeden Fehler doppelt schwer zuzuordnen.
+
+### ✅ Vier Mitgliedtypen verlangten alle zehn Felder — gelockert am 19.08.2026
+
+**Erledigt.** Didi hat die Matrix in der neuen Oberfläche (Portalverwaltung →
+Benutzer & Rollen → „Was ein Mitgliedtyp hat") von Hand durchgegangen. Der
+Befund darunter ist **Archiv** und beschreibt den Stand *vor* dem Durchgang;
+er steht hier, weil er erklärt, warum das Anschliessen von
+`getProfilFehlend()` so lange warten musste.
+
+Befund vom 19.08.2026, aus derselben Bestandsaufnahme. `FELDER_TYP` hat zehn
+Einträge; so war `mitgliedtyp_pflichtfelder` gestellt:
+
+| Mitgliedtyp | Pflicht | Freiwillig | ohne Zeile |
+|---|---|---|---|
+| Juniorenmitglied | **10** | 0 | 0 |
+| Funktionär/in | **10** | 0 | 0 |
+| Ehrenmitglied | **10** | 0 | 0 |
+| Pausenmitglied | **10** | 0 | 0 |
+| Aktivmitglied | 9 | 1 | 0 |
+| Passivmitglied | 6 | 2 | 2 |
+| Supporter | 7 | 0 | 3 |
+| Freimitglied | 7 | 0 | 3 |
+
+Die vier oberen verlangen jedes einzelne Feld, einschliesslich AHV-Nummer,
+Nationalität, Heimatort und E-Mail. Ein Ehrenmitglied muss danach eine
+AHV-Nummer haben. Der Stand vom 05.08.2026 hatte diesen Typen sechs Felder
+gegeben (`migration_pflichtfelder_fein.sql`, Block B); seither ist erhöht
+worden.
+
+Wirksam ist das heute in der **Neuanlage**: ein Juniorenmitglied braucht zwölf
+ausgefüllte Felder, bevor das Formular abschickt (zehn aus der Matrix plus
+`vorname`/`nachname`).
+
+**Die Oberfläche steht seit dem 19.08.2026** (Portalverwaltung → Benutzer &
+Rollen → „Was ein Mitgliedtyp hat"). Die Migration hat die Zeilen wörtlich
+übernommen — verlustfrei und verhaltensneutral —, das Lockern bleibt ein
+Durchgang von Hand. „Gibt es nicht" hilft dabei nicht: zu viele Pflichtfelder
+sind eine Pflicht/Freiwillig-Frage, keine Existenzfrage.
+
+⚠ **Das war die Voraussetzung dafür, `getProfilFehlend()` anzuschliessen**
+(Abschnitt darüber) — solange vier Typen zehn Pflichtfelder verlangten, wäre
+danach kein Juniorenmitglied mehr durch die eigene Datenprüfung gekommen.
+Mit dem Durchgang vom 19.08.2026 ist die Blockade weg.
+
+### Wie viele Pflichtfelder fehlen — die Verteilung, gemessen am 23.08.2026
+
+Vor dem Ausrollen von Konten gemessen, über alle **512** aktiven Mitglieder,
+gegen die Matrix (`mitgliedtyp_feldkonfig`, `modus = 'pflicht'`):
+
+| fehlende Felder | Mitglieder | |
+|---|---|---|
+| **0** | **96** | 18.8 % |
+| **1** | **402** | 78.5 % |
+| 2 | 10 | |
+| 3 | 2 | |
+| 7 | 2 | ⚠ beide sind **Testpersonen von heute** |
+
+**Vier von fünf Mitgliedern fehlt genau ein Feld — und bei 381 der 416 ist es
+die AHV-Nummer.**
+
+| Feld | fehlt bei |
+|---|---|
+| `ahv_nr` | **381** |
+| `telefon` | 36 |
+| `heimatort` | 10 |
+| `strasse` | 5 |
+| `geburtsdatum` | 4 |
+| `plz` · `ort` · `geschlecht` | je 2 |
+
+⚠ **Was ein einziger Schalter bewirkt.** `Juniorenmitglied · ahv_nr` auf
+freiwillig:
+
+| | vollständig | mit Lücke |
+|---|---|---|
+| heute | 96 | **416** |
+| nach dem Schalter | **461** | **51** |
+| `ahv_nr` überall freiwillig | 465 | 47 |
+
+**Von 416 auf 51 — eine Grösse, die die Verwaltung von Hand erledigt.** Die
+zweite Zeile bringt fast nichts mehr dazu: die AHV-Nummer der Aktivmitglieder
+fehlt nur bei 9 von 121, dort hat die Pflicht Deckung.
+
+⚠ **Und das Overlay, das man beim Testen sieht, ist der Ausreisser.** Beide
+Personen mit sieben fehlenden Feldern sind die am 23.08.2026 angelegten
+Testzugänge — sie haben ausser Namen und E-Mail nichts. Wer daran die
+Zumutbarkeit beurteilt, beurteilt den schlimmsten denkbaren Fall. Die zwei
+echten Ausreisser (Daniel Vogel, Thomas Müller) vermissen **drei**.
+
+⚠ **Eine Warnung zur Messung selbst:** eine erste Fassung gruppierte die
+Ausreisser nach NAMEN und meldete „Adrian Schmid, 3 Felder, `ahv_nr, ahv_nr,
+telefon`". Die doppelte `ahv_nr` war der Hinweis — es sind **zwei
+verschiedene Personen gleichen Namens** mit je einer und zwei Lücken. Die
+Verteilung selbst gruppiert über `mitglieder.id` und ist davon nicht
+betroffen. Wer Personen zählt, zählt Ids.
+
+### ⚠ Die AHV-Pflicht sperrt 381 Mitglieder aus — seit dem 19.08.2026, unbemerkt
+
+Befund vom 22.08.2026. **Nicht mehr „die Prüfung prüft nichts" — das Gegenteil.**
+
+Der Eintrag „Die Pflichtfeld-Matrizen wirken in der Datenprüfung gar nicht"
+beschreibt einen Zustand, den es nicht mehr gibt. `DatenpruefungMitglied`
+bekommt die Pflichtfelder seit dem 19.08.2026 aus der Matrix
+(`pflichtfelderFuer`), nennt die fehlenden **namentlich**, trennt sie nach
+„kann ich selbst" und „nur die Verwaltung", und **sperrt** den
+Bestätigen-Knopf, solange etwas Eigenes fehlt. Die Elternseite seit dem
+21.08. genauso (`personenStand()`).
+
+**Das Login-Overlay rendert genau diese Maske.** Es ist keine dünne
+Aufforderung, sondern die vollständige Datenprüfung in einem Modal — die
+Felder sind darin ausfüllbar.
+
+**Und damit sperrt es.** Wer ein Pflichtfeld nicht ausfüllen kann, kommt am
+Overlay nicht vorbei; es bleibt nur *Abmelden*.
+
+| Mitgliedtyp | AHV-Modus | aktiv | **ohne AHV** |
+|---|---|---|---|
+| **Juniorenmitglied** | **Pflicht** | 388 | **371** |
+| **Aktivmitglied** | **Pflicht** | 120 | **9** |
+| Passivmitglied | freiwillig | 1 | 1 |
+| Ehren-, Pausen-, Freimitglied, Funktionär/in | — | 2 | 0 |
+| | | **510** | **381** |
+
+⚠ **371 der 381 sind Junioren.** Es verteilt sich nicht — es hängt an EINEM
+Schalter: `Juniorenmitglied · ahv_nr`. Bei den Aktivmitgliedern fehlt sie 9
+von 120, dort hat die Pflicht Deckung.
+
+**Warum es niemand gemerkt hat:** es gibt **fünf** Portal-Konten. Die Maske
+hat kaum einen Betrachter, und keiner davon ist Junior. Beim Ausrollen von
+Konten stünden 371 Familien vor einer Wand — nicht als Fehler, sondern als
+Regel, die jemand so eingestellt hat.
+
+⚠ **DIE SPERRE WEGZUNEHMEN IST KEIN NEBENEFFEKT, SONDERN DER PREIS.** Heute
+bestätigt niemand etwas, das er nicht ausgefüllt hat — `profil_geprueft_at`
+ist eine Unterschrift mit Deckung. Ohne Sperre ist sie wieder eine ohne, und
+der Zustand vor dem 19.08.2026 ist hergestellt: ein grünes Häkchen, das
+nichts bedeutet. Das war der Grund, aus dem die Kette überhaupt angeschlossen
+wurde.
+
+**Die Entscheidung liegt deshalb in der MATRIX, nicht im Code** (Didi,
+22.08.2026): ob die AHV-Nummer für alle Mitgliedtypen Pflicht sein soll oder
+nur dort, wo der Spielbetrieb sie verlangt. Steht `Juniorenmitglied · ahv_nr`
+auf freiwillig, schrumpft das Problem von 381 auf 10 — eine Grösse, die die
+Verwaltung von Hand erledigt, und die Sperre darf bleiben, wie sie ist.
+
+Zum Nachzählen:
+
+```sql
+select t.name, coalesce(k.modus,'(freiwillig)') as ahv,
+       count(m.id) as aktiv, count(m.id) filter (where coalesce(p.ahv_nr,'')='') as ohne
+  from public.mitgliedtypen t
+  left join public.mitgliedtyp_feldkonfig k on k.mitgliedtyp_id=t.id and k.schluessel='ahv_nr'
+  left join public.mitglieder m on m.mitgliedtyp=t.name and m.aktiv
+  left join public.personen p on p.id=m.person_id
+ where t.aktiv group by 1,2 order by 4 desc;
+```
+
+### ⚠ Die Matchdaten liegen seit dem Sync in der Datenbank und werden nirgends ausgewertet
+
+Gemessen am 29.08.2026, positionsgenau aus einem `--data-only`-Dump:
+
+| Tabelle | Zeilen | |
+|---|---|---|
+| `spiel_aufstellung` | **640** | über **42 Spiele**, 308 verschiedene `sfv_person_id`, 18 Teams |
+| `spiel_ereignisse` | **410** | Tore, Karten, Wechsel |
+| `sfv_zuordnung` | **0** | ⚠ leer |
+
+**Der Sync schreibt seit dem 19./20.08.2026 zuverlässig, und gelesen wird
+nichts davon für eine Auswertung.** Einsätze pro Spieler, Torschützen,
+Kartenstatistik, Einsatzminuten — die Grundlage liegt vollständig da. Das ist
+der Grund, warum an dieser Stelle jahrelang ein Seed-Generator stand: die
+Daten sahen aus, als gäbe es sie nicht.
+
+⚠ **Die Statistik ist also näher, als sie aussieht — aber genau eine Sache
+fehlt, und sie ist die ganze Arbeit: die Spielerzuordnung.**
+`spiel_aufstellung` führt die `sfv_person_id` des Verbands. Um daraus „Anna
+Beispiel hat 3 Tore" zu machen, braucht es die Abbildung auf `mitglieder`, und
+die steht in `sfv_zuordnung` — **mit null Zeilen bei 308 offenen Spielern**
+(Stand 29.08.2026; am 23.08. waren es 287, am 22.08. 265, am 21.08. 177 — die
+Zahl wächst mit jedem Lauf, weil Spiele dazukommen).
+
+**Ohne Zuordnung ist jede Auswertung anonym.** Man könnte heute schon zählen,
+wie viele Tore ein TEAM erzielt hat — aber nicht, wer sie geschossen hat. Und
+eine Statistik ohne Namen ist nicht die, nach der jemand fragt.
+
+⚠ **Und 27 % der offenen Spieler sind über den Zeitplan gar nicht
+erreichbar**: der Sync holt zehn Spiele je Lauf, ausgewählt nach Datum, nicht
+nach offener Zuordnung. Dafür gibt es die eigene Aktion `namen`
+(`namenLauf.ts`), die die Spiele nach der Frage wählt.
+
+**Die Oberfläche dafür steht** (`SfvSpielerZuordnung`, `matchdatenService.ts`).
+Was fehlt, ist der Durchgang von Hand — und die Entscheidung, ob er sich
+lohnt, bevor der Fairgate-Import die Mitgliederbasis ohnehin anfasst.
+
+⚠ **Zum Nachzählen, und die Zahl gehört gegengeprüft statt zitiert:**
+
+```sql
+select (select count(*) from public.spiel_aufstellung)                as aufstellung,
+       (select count(distinct sfv_person_id) from public.spiel_aufstellung) as offene_spieler,
+       (select count(*) from public.spiel_ereignisse)                 as ereignisse,
+       (select count(*) from public.sfv_zuordnung)                    as zugeordnet;
+```
+
+### ⚠ `api_verbindungen.active` und `auto_sync` — zwei Kennzeichen, zwei Leser
+
+Befund vom 20.08.2026, beim ersten Lauf von Hand aufgefallen.
+
+> **⚠ BERICHTIGT AM 05.09.2026 — `active` HAT SEIT DEM 21.08.2026 EINEN ZWEITEN
+> LESER, UND ES IST DER WÄCHTER.** Hier stand „**nur die Oberfläche**". Das war
+> am 20.08. richtig und ist es seit dem Tag darauf nicht mehr:
+> `cron_sync_waechter.sql` liest die Spalte an **zwei** Stellen —
+>
+> ```sql
+> where v.active is true and v.auto_sync is true        -- die Schleife
+> update public.api_verbindungen set wache_zuletzt = now() where active is true;
+> ```
+>
+> ⚠ **Der Satz war damit nicht bloss veraltet, sondern gefährlich:** wer ihn
+> liest, hält `active` für folgenlos und legt eine neue Zeile auf `false` — und
+> dann **schaut der Wächter sie nie an**. Ein Anschluss, der vom ersten Tag an
+> ausfällt, und ein Wächter, der schweigt. Genau die Verwechslung, gegen die
+> der Wächter gebaut wurde, eine Ebene höher.
+>
+> Aufgefallen beim Planen des WordPress-Exports
+> (`docs/plan_wordpress_spieldaten.md` §10.1), der als zweite Zeile in dieselbe
+> Tabelle kommt. **Jede neue Zeile in `api_verbindungen` gehört mit
+> `active = true` und `auto_sync = true` angelegt, samt Zählprobe darauf** —
+> sonst ist sie unüberwacht, ohne dass etwas fehlschlägt.
+
+| Spalte | wer liest sie | wer nicht |
+|---|---|---|
+| `active` | die Oberfläche (Stecker, Häkchenliste, Knopf „Sync starten" in `ApiTab`) **und der Wächter** (`cron_sync_waechter.sql`, seit 21.08.2026) | die Edge Function prüft sie **nirgends** (`sfv-sync/index.ts:113` filtert nur auf `auto_sync`) |
+| `auto_sync` | `sfv-sync/index.ts`, dort nur der Cron-Pfad (`if (perZeitplan)`) — **und der Wächter** | die Oberfläche zeigt sie nicht an |
+
+**Was daraus folgte.** `migration_sfv_spielplan.sql` legt den Eintrag mit
+`active = false` an („bleibt false, bis die Edge Function steht") — und
+niemand hat ihn nachgezogen, als sie stand. Sechs Tage lang zeigte die Kachel
+einen grauen Stecker für einen Anschluss, der **stündlich lief**. Schlimmer:
+der Knopf `Sync starten` hängt an `active` und hat deshalb nie gerendert.
+Beim Abschalten von `auto_sync` für den ersten Lauf von Hand gab es damit
+überhaupt keinen Auslöser mehr — der Cron fand nichts, und von Hand ging es
+nicht.
+
+**Dasselbe Muster wie `hat_portal_zugang`** gegen den Join auf `benutzer`
+(in Etappe 6c aufgelöst): zwei Stellen behaupten dieselbe Sache, eine davon
+veraltet, und die Abweichung fällt erst auf, wenn jemand sich auf die falsche
+verlässt. Die Lehre ist dieselbe — **eine Aussage, ein Ort.**
+
+**Zu entscheiden, zusammen mit der API-Kachel insgesamt:**
+
+- `active` in der Edge Function mitprüfen — dann heisst es wirklich
+  „Anschluss aus" und schaltet auch den Cron ab. Dann braucht `auto_sync`
+  eine eigene, engere Bedeutung („stündlich statt nur von Hand") oder fällt weg.
+- Oder `active` auf reine Anzeige beschränken und im Tab so benennen, dass
+  niemand es für einen Schalter hält.
+
+Bis dahin: **nach jeder Änderung an der Edge Function prüfen, ob `active`
+noch stimmt.** Zum Nachsehen:
+
+```sql
+select key, active, konfiguriert, auto_sync, letzter_sync
+  from public.api_verbindungen where key = 'football_ch';
+```
+
+Steht dort ein frisches `letzter_sync` bei `active = false`, ist das der Beleg,
+dass die Spalte reine Anzeige ist.
+
+### ⚠ Zwei eigene Teams gegeneinander ergeben EINE Zeile — dem Gastteam fehlt sein Auswärtsspiel
+
+Befund vom 28.08.2026, beim Messen der Gruppenfrage. **Heute null Fälle im
+Bestand — und genau deshalb steht er hier.**
+
+Der Schlüssel `(verein_id, sfv_match_id)` lässt je Spiel nur eine Zeile zu.
+Treffen zwei FCH-Teams aufeinander, bekommt sie das Heimteam:
+
+```ts
+// sync.ts:60-62
+/* Zwei eigene Teams gegeneinander: der Schlüssel (verein_id, sfv_match_id)
+   lässt nur EINE Zeile zu. Das Heimteam bekommt sie. */
+```
+
+**Für den Spielplan ist das richtig** — das Spiel steht einmal da, und beide
+Mannschaften finden es. **Für jede Rechnung über Spiele ist es falsch**, weil
+das Gastteam eine Partie weniger hat, als es gespielt hat. Eine
+Heim-/Auswärtstabelle zählt dem Gastteam sein Auswärtsspiel nicht mit; eine
+Bilanz „gespielt / gewonnen" ebenso wenig. **Der Fehler geht immer in
+dieselbe Richtung: zu Lasten der Auswärtsseite.**
+
+⚠ **Gemessen am 28.08.2026: 0 von 269 Spielen.** Nicht, weil es nicht
+vorkommen kann, sondern weil alle **21 FCH-Teams in 21 verschiedenen Gruppen**
+stehen — je genau eines pro Gruppe. In der Meisterschaft können sie sich
+strukturell nicht begegnen. Übrig bleiben **Cup und Trainingsspiele**, und
+dort ist der Fall bisher nicht eingetreten.
+
+**Damit ist es kein Defekt, den man sieht, sondern einer, der wartet.** Er
+tritt ein, sobald zwei FCH-Teams in dieselbe Gruppe geraten — bei den
+Junioren-Stufen mit mehreren Mannschaften ist das eine Frage der Einteilung,
+nicht der Wahrscheinlichkeit. Und dann fällt er nicht auf: die Tabelle rechnet
+weiter, nur eine Zeile zu wenig.
+
+**Der Zähler dafür steht bereits da und wird nirgends gelesen.**
+`erg.derbys` (`sync.ts:190`) zählt genau diese Spiele und steht in der
+Protokoll-Allowlist (`ergebnisTypen.ts:93`). Wer eine Rechnung über `spiele`
+baut, prüft ihn zuerst:
+
+```sql
+select gestartet_am::date, details->>'derbys'
+  from public.api_sync_log
+ where (details->>'derbys')::int > 0 order by gestartet_am desc;
+```
+
+**Zwei Wege, wenn der Fall eintritt** — zu entscheiden, wenn er eintritt, nicht
+vorher:
+
+| | |
+|---|---|
+| die Rechnung zählt Derbys doppelt (einmal je Seite) | billig, aber die Sonderregel steht dann in jeder Rechnung neu |
+| der Schlüssel wird `(verein_id, sfv_match_id, sfv_team_id)` | ehrlich, aber eine Migration — und jede Liste zeigt das Derby danach zweimal |
+
+✅ **Und ein zweiter, unabhängiger Punkt an derselben Stelle — inzwischen
+belegt.** `heimspiel` wird als `unsA` gesetzt (`sync.ts:85`), also aus der
+Annahme, Team A sei das Heimteam. **Die Spezifikation sagt das nirgends:**
+`Schedule` hat 31 Felder und darunter kein `isHomeTeam` — das gibt es nur in
+`MatchDetail`, `MatchEvent`, `Player` und `PlayerBench` (Swagger v26.7.10.1,
+geprüft 28.08.2026).
+
+**Gemessen am 24.08.2026 gegen den Spielort, über alle 269 Spiele:**
+
+| | |
+|---|---|
+| stimmen mit dem Platz überein | **265** |
+| Abweichungen | **4** — Heimspiele auf einem ausgelagerten Platz |
+
+Die Annahme trägt damit. Der Eintrag stand bis zum 05.09.2026 als
+„plausibel, aber eine Annahme" hier und war um elf Tage veraltet.
+
+⚠ **Eine Feinheit bleibt, und sie betrifft genau die vier:** der Spielort
+ist ein **korrelierter** Hinweis, kein direkter. Ein Heimspiel auf fremdem
+Platz und ein Auswärtsspiel sehen für diese Methode gleich aus — sie
+bestätigt also 265 und **schweigt** über 4, statt 269 zu bestätigen. Die
+vier sind erklärt, nicht gemessen.
+
+**Der direkte Beleg kostet null zusätzliche Aufrufe:**
+`/api/match/{id}` → `teams[].isHomeTeam` wird bei jedem Spiel ohnehin
+geholt und weggeworfen (siehe „`holeMatch` wird bei jedem Spiel aufgerufen
+und sein Ergebnis weggeworfen"). Wer den Aufruf einmal ausliest, hat die
+vier mit — und zwei leere Spalten dazu.
+
+⚠ **Das ist ab dem WordPress-Export nicht mehr nur eine innere Frage:**
+`heim_auswaerts` steht dort als Feld auf einer öffentlichen Seite.
+
+### Zwei Komponenten stehen noch innerhalb einer anderen
+
+Befund vom 21.08.2026, beim Herausziehen von `RolleField`. Die Regel dazu
+steht oben unter Konventionen; hier die zwei, die noch offen sind.
+
+**`MitgliedtypFelderSektion` — `ModusSchalter`, `AnAusSchalter`, `Zeile`.**
+Die relevantere der beiden: es ist die Oberfläche, mit der die
+Feldkonfiguration bedient wird — pro Mitgliedtyp und Schlüssel ein Dreifach-
+Schalter. Jeder Klick löst einen Render aus, und jeder Render montiert alle
+drei Komponenten neu. Für die Maus fällt das kaum auf; wer mit der Tastatur
+durch die Matrix geht, verliert nach jeder Änderung die Position.
+
+**`TrainingsplanModul` — `Btn2`.** Drei Verwendungen, ein Knopf, geringste
+Wirkung. Steht hier nur der Vollständigkeit halber.
+
+Beides ist ein kleiner Umbau: Komponente nach oben ziehen, die gelesenen
+Werte als Props durchreichen. Nicht dringend, aber billig — und `RolleField`
+hat gezeigt, dass dabei ein übersprungener Test zurückkommen kann.
+
+### ✅ Zwei Tests entschieden sich nach Rechnerlast — behoben am 22.08.2026
+
+`datenpruefungEltern` und `datenpruefungMitglied` liefen im vollen Durchgang
+in den 5-Sekunden-Timeout, einzeln aber in zwei Sekunden. Damit hiess **rot
+zwei Dinge** — Defekt oder langsamer Rechner —, und wer die beiden
+verwechselt, verliert immer dieselbe von beiden: wenn rot manchmal folgenlos
+ist, wird neu gestartet, bis es grün ist.
+
+**Die Ursache war nicht die Parallelität, sondern die Menge.** `vite.config.js`
+setzte `environment: 'jsdom'` **global**. Von 47 Testdateien brauchen aber nur
+**14** einen DOM — die Komponententests, alle `.jsx`. Die anderen 33 sind reine
+Logik und bezahlten trotzdem für eine jsdom-Instanz. In der Ausgabe war
+`environment` mit 428–485 s die grösste Position, während die Tests selbst
+70 s brauchten.
+
+Jetzt ist `node` die Vorgabe, und wer einen DOM braucht, sagt es oben in
+seiner Datei:
+
+```js
+// @vitest-environment jsdom
+```
+
+⚠ **Keine feste `maxWorkers`-Zahl, und das war die eigentliche Frage.** Sie
+hätte auf dieser Maschine (22 Kerne) etwas anderes bedeutet als in der
+Prüfkette (`ubuntu-latest`, 4 Kerne) — dort eine Bremse, hier eine
+Verschwendung. **Weniger Arbeit schlägt anders verteilte Arbeit.** Und
+`environmentMatchGlobs` schied aus: in Vitest 3 abgekündigt. Der Vermerk in
+der Datei steht dort, wo er gilt, und überlebt jeden Umbau der Konfiguration.
+
+**Gemessen, nicht gehofft:**
+
+| | vorher | nachher |
+|---|---|---|
+| die zwei Fälle unter voller Last | 7163 ms · 7144 ms | **912 ms · 1181 ms** |
+| `environment` der 33 Logikdateien | Anteil an ~500 s | **13 ms** |
+| `tests` gesamt | 70 s | 25 s |
+| drei Durchgänge hintereinander | 1 von 2 rot | **3 von 3 grün** |
+
+Die Wanduhr ändert sich kaum (~40 s): die 14 jsdom-Dateien laufen ohnehin
+parallel und bestimmen sie. Es ging nie um Geschwindigkeit, sondern darum,
+dass rot wieder eine Bedeutung hat.
+
+### ⚠ Der Portal-Zugang wird an drei Spalten gemessen — Rest von F2
+
+Befund vom 21.08.2026, beim Umbau der Personenseite. **Die Hälfte ist
+behoben, die andere steht.**
+
+Gesperrt wird der Login allein durch **`benutzer.aktiv`** — `useDbUser` meldet
+ab, wenn es `false` ist. Alles andere ist Verknüpfung, keine Sperre.
+
+**Behoben:** `portalZugangDeaktivieren()` setzte `mitglied_id = null` und
+filterte über `person_id`. Bei einer Person **ohne** Mitgliedschaft stand dort
+schon null — geschrieben wurde null über null, gelesen wird über `person_id`,
+und der Tab meldete „Zugang deaktiviert" und zeigte danach unverändert
+„Aktiv". Und beim Mitglied sperrte es den Login gar nicht. Beide Funktionen
+schalten jetzt `aktiv` und heissen `portalZugangDeaktivieren` /
+`portalZugangReaktivieren`; die Verknüpfung bleibt, wo sie ist. Ein Konto von
+seiner Person zu **trennen** wäre eine andere Aktion, und es gibt heute keine,
+die sie verlangt. *(Entschieden am 21.08.2026, Didi.)*
+
+**Offen bleibt die Anzeige.** `useAppData.loadDbMitglieder()` baut
+`hat_benutzer` und `benutzer_deaktiviert` über **`mitglied_id`** auf:
+
+```js
+(benutzerRes.data || []).forEach(b => {
+  if (b.mitglied_id) benutzerMap[b.mitglied_id] = { … };   // ← ohne Mitgliedschaft: nie
+});
+```
+
+Daraus folgen zwei Dinge:
+
+- Eine Person ohne Mitgliedschaft steht in dieser Liste ohnehin nicht; ihr
+  Portal-Status kommt aus `fetchSupporter`/`fetchAlleElternkontakte`, die über
+  `person_id` lesen. Zwei Wege zu derselben Aussage — dasselbe Muster wie
+  `hat_portal_zugang` gegen den Join (in Etappe 6c aufgelöst).
+- **`onUpdatePortalZugang(mitgliedId, aktiv)` erreicht sie nicht.** Es ist der
+  einzige Aufrufer, der `aktiv` beim Archivieren und Reaktivieren mitführt,
+  und seine Signatur beginnt mit einer Mitglieds-Id.
+
+Zusammenlegen, sobald jemand die Liste anfasst: eine Aussage, ein Ort — und
+das ist `benutzer.person_id`.
+
+### ⚠ 35 Stellen zeigen erfundene Daten — und die naheliegende Suche findet keine davon
+
+Gemessen am 28.08.2026, ausgelöst durch zwei Funde, die **nebenbei** anfielen:
+niemand hatte gesucht. Das Ergebnis der anschliessenden Suche:
+
+| Ebene | Stellen | |
+|---|---|---|
+| **2A — unbedingt sichtbar** | **35**, davon 2 erledigt → **33** | erscheint, egal wie die Datenlage ist |
+| 2B — sichtbar, sobald die echte Quelle leer ist | 11 | Rückfallwerte |
+| 1 — tote Reste | 14 | existiert, wird nie gerendert |
+
+Zählweise: eine Stelle = ein zusammenhängender Codeort, der **eine
+Anzeigeeinheit** erzeugt (eine Kachel-Gruppe, eine Card, eine Liste, ein
+Rückfallwert). Ein `.map()` über ein Demo-Array zählt einmal, nicht je Zeile.
+
+⚠ **`grep Math.random` findet NICHTS davon.** Es gibt genau eine Fundstelle
+(`TrainingsplanModul.tsx:1020`), und die erzeugt eine Slot-Id, keine
+Anzeigezahl. Wer so sucht, bekommt ein sauberes Ergebnis und hat nichts
+gefunden. Die 35 stecken in eigenen Generatoren, in `demoData`-Importen und
+in Rückfallwerten.
+
+**Die schlimmste Sorte mischt echt und erfunden.** Zwei Beispiele:
+
+| Stelle | echt | erfunden |
+|---|---|---|
+| `TeamModul.tsx:683-692` `StatsTab` | die **Namen** aus `dbMitglieder` | Spiele, Tore, Assists, Gelb, **Rot** |
+| `TermineModul.tsx:493-508` „Player of the Match" | das **Spiel** aus der Datenbank | die Spielerliste aus `ROSTER` |
+
+Bei `StatsTab` steht damit an einem echten Junioren eine erfundene rote Karte.
+Sichtbar über `:405` (`tab==="stats" && !limited`) für **alle Rollen ausser
+Spieler und Eltern**.
+
+⚠ **Und der Generator ist deterministisch, das ist der eigentliche Trick:**
+
+```ts
+const seed = (str) => str.split("").reduce((a,c) => a + c.charCodeAt(0), 0);
+const rnd  = (n,min,max) => { let s = seed(n + team); … };
+```
+
+Der Seed kommt aus Name + Teamname. **Die Zahlen ändern sich beim Neuladen
+nie.** Ein Zufallsgenerator, der springt, fällt in Sekunden auf; dieser sieht
+aus wie gepflegte Daten, gerade weil er stillsteht.
+
+**Weitere Stellen aus 2A, nach Wirkung geordnet:**
+
+| Stelle | wer sieht es | was dort steht |
+|---|---|---|
+| `clubcampus.tsx:443` | jeder ohne DB-Benutzer | die **ganze Identität** wird `USER_ACCOUNTS.trainer` — „Thomas Müller", `trainerTeams:["Cc-Junioren"]` |
+| `DashboardModul.tsx:72-131` | administrator | „Mitglieder total **187**", „Aktive Benutzer 134", „Sync-Fehler 2", Rollenverteilung, Audit-Einträge |
+| `DashboardModul.tsx:354-356` | **spieler** | Begrüssung „…, **Luca**" — ein fremder Vorname aus `ROSTER`, Zeile 1 |
+| `PlatzhalterModul.tsx:255-272` | **alle Rollen** | 17 erfundene News, u. a. „Saisonauftakt gelingt: 3:0 gegen FC Uster" |
+| `PlatzhalterModul.tsx:197-203` | **alle Rollen** | Dokumentenliste „Trainerhandbuch 2026 · 2.4 MB" **mit Download-Knopf** |
+| `HelferModul.tsx:708-720` | **alle Rollen** | Grümpelturnier mit Schichten und namentlichen Helfern |
+
+⚠ **„Mitglieder total 187" ist die Sorte, die am teuersten wird.** Die
+Datenbank führt 914 Personen und 512 aktive Mitgliedschaften. Die Zahl ist
+nicht offensichtlich falsch — sie ist plausibel, und genau deshalb wird sie
+zitiert.
+
+**Und `demoData.js` ist nur ZUM TEIL leergeräumt**, was die Liste unter
+„Migrationsstand" irreführend macht: `ATT_EVENTS`, `ATT_INITIAL`, `ATT_LOG`
+und `GANTT` sind leer — was daraus rendert, zeigt nichts. **Gefüllt und damit
+wirksam** sind `ROSTER`, `USER_ACCOUNTS`, `EVENTS`, `POLLS`, `HELPERS`,
+`HELPER_EVENTS`, `BUSES`, `MATERIAL`, `LOCKERS`, `MEDIA`, `WIKI`, `NEWS`.
+Ein Import allein sagt also nichts; es kommt darauf an, welches Symbol.
+
+**Die 11 Rückfälle (2B) sind die tückischsten**, weil sie genau dann greifen,
+wenn etwas fehlt — und dann etwas Plausibles zeigen statt zu sagen, dass es
+fehlt. Sieben davon setzen `"Cc-Junioren"` ein; `TeamsVerwaltungModul.tsx:150-197`
+erfindet bei leerem `dbTeams` **42 Teams samt Trainernamen**. Es ist dieselbe
+Familie wie „Mein Kind zeigt Demodaten" und wie der Verweis auf den
+„Kontakt-Tab", den es nie gab: **es trifft immer den, dem etwas fehlt.**
+
+⚠ **UND HIER IST DIE ERKLÄRUNG DER GANZEN FAMILIE, nicht nur der einen
+Stelle:** `DashboardAdmin` bekam weder `sb` noch `vereinId` noch
+`dbMitglieder` — nur `setActive` und `account`. **Die Komponente KONNTE
+nichts Echtes zeigen.** Wer sie gebaut hat, stand vor der Wahl, eine leere
+Seite abzuliefern oder etwas hinzuschreiben, und hat das Zweite gewählt.
+
+Dasselbe gilt für fast alle 33: `PlatzhalterModul` hat keinen Service für
+News, Material oder Busse; `HelferModul` keinen für Helfereinsätze; `StatsTab`
+keinen für Statistik. **Die erfundenen Werte sind nicht Nachlässigkeit,
+sondern der Abdruck einer fehlenden Anbindung.**
+
+Daraus folgt, wonach man sucht, wenn man die restlichen 33 angeht — **nicht
+nach `Math.random`, sondern nach Komponenten ohne Datenzugang:**
+
+```bash
+# Komponenten, die etwas anzeigen, aber weder sb noch einen Service kennen
+grep -rLn "from(\|Service\|use[A-Z].*(sb" src/modules/*.tsx
+```
+
+**Und die Regel beim Bauen, die den Fall gar nicht erst entstehen lässt:**
+eine Ansicht ohne Quelle bekommt eine Karte, die sagt, was fehlt — nie einen
+Platzhalterwert. Ein Platzhalter, der plausibel aussieht, wird zur Aussage,
+sobald ihn jemand liest; und niemand kommt zurück, um ihn zu ersetzen, weil
+die Seite ja gefüllt aussieht.
+
+
+**Zwei davon sind am 29.08.2026 gefallen** (Didi): `StatsTab` zeigt jetzt die
+Spieler ohne Zahlen und sagt, dass die Statistik fehlt; `DashboardAdmin`
+zeigt statt der fünf erfundenen Blöcke die Wege zu den Stellen, an denen die
+echten Zahlen stehen. **Beide ersetzt durch einen Satz, nicht durch eine
+bessere Zahl** — und beide mit einem Test, der festhält, dass die alten Werte
+nicht zurückkommen (`modules/__tests__/erfundeneWerte.test.jsx`, mit
+Strukturprüfung auf `rnd`/`charCodeAt`). Bleiben **33**.
+
+⚠ **Diese Liste ist kein Auftrag, alles auf einmal zu entfernen** — Phase 4
+(`ARCHITECTURE.md`) löst den grössten Teil davon auf. Sie ist die Antwort auf
+die Frage, wie gross der Rest ist, wenn man ihn zum ersten Mal zählt. **Wer
+eine dieser Stellen anfasst, ersetzt sie durch eine Karte, die sagt, was
+fehlt — nicht durch eine bessere erfundene Zahl.**
+
+### ⚠ „Mein Kind" zeigt einem Elternteil HEUTE Demodaten
+
+Befund vom 20.08.2026, beim ersten echten Elternkonto.
+
+```ts
+// clubcampus.tsx
+const myRosterId = account.rosterId || (role==="spieler"?1 : role==="eltern"?1 : …);
+```
+
+Für ein Elternteil ist das eine **fest verdrahtete 1** aus `demoData.js`.
+Dazu `meineTeams = []` — die Teams kommen aus `teamRollen`, und die füllt
+`useDbUser` nur bei gesetztem `mitglied_id`. `TeamView` fällt bei leerer Liste
+auf `ROSTER` und `trainerTeams = ["Cc-Junioren"]` zurück.
+
+**Der Menüeintrag heisst „Mein Kind" und zeigt ein fremdes.** Der Text ist ein
+statischer Eintrag in `NAV_BY_ROLE`; die App weiss vom echten Kind nichts.
+
+⚠ **Das ist schlimmer als ein fehlender Eintrag.** Wer eine leere Seite sieht,
+meldet sie. Wer eine gefüllte sieht, hält sie für richtig — und beim ersten
+Test hat sie genau deshalb den Verdacht in die falsche Richtung gelenkt: die
+Datenprüfung sagte „keine Kinder", „Mein Kind" zeigte eines, also schien der
+Fehler bei der Datenprüfung zu liegen. Beide fanden das Kind nicht; eines sah
+nur so aus.
+
+Bis das echte Team hängt: entweder den Eintrag für `eltern` ausblenden oder
+den Fallback auf `ROSTER` durch eine Karte ersetzen, die sagt, dass die
+Anbindung fehlt. Ein Platzhalter, der wie eine Funktion aussieht, ist keine.
+
+### ✅ Die cc.css-Dubletten sind weg — und eine davon war der Beleg
+
+Zwölf Klassen standen doppelt (Stand 05.08. und unverändert bis
+22.08.2026), dazu vier zusammengesetzte Selektoren. **Alle aufgelöst am
+22.08.2026**, geprüft mit einem Parser, der Blöcke zählt statt Zeilen: **0
+Dubletten**, auch bei `:hover` und im Dunkelmodus.
+
+⚠ **DAS ARGUMENT GEGEN DUBLETTEN STEHT IN `cc-mb-*`, und es ist schärfer als
+„es könnte mal falsch werden".** Drei Klassen derselben Familie, und **eine
+verhielt sich anders als die zwei anderen**:
+
+| Klasse | frühe Definition | späte | **galt** |
+|---|---|---|---|
+| `cc-mb-4` | Zeile 154 (ohne) | **226 (`!important`)** | **mit** |
+| `cc-mb-8` | 226 (`!important`) | **731 (ohne)** | **ohne** |
+| `cc-mb-16` | 226 (`!important`) | **801 (ohne)** | **ohne** |
+
+`cc-mb-4` stach Komponentenregeln, `cc-mb-8` und `cc-mb-16` nicht — **allein
+weil die spätere Definition zufällig woanders stand.** Niemand hat das
+entschieden, und niemand konnte es sehen: die drei stehen in derselben Zeile
+nebeneinander im Code und sahen dort gleich aus.
+
+Jetzt trägt die ganze Familie kein `!important` mehr. Gemessen vor dem
+Entfernen: **kein einziger Verwender** konkurriert mit einer
+`margin-bottom`-Regel, das `!important` war überall wirkungslos. (Hätte einer
+es gebraucht, wäre das der eigentliche Befund gewesen — dann läge der Fehler
+in der Komponentenregel, nicht im Abstand.)
+
+**Was sonst entschieden wurde**, jeweils mit dem Bild als Massstab:
+
+| Klasse | | |
+|---|---|---|
+| `cc-hero-back` | identische Dublette | gelöscht, Bild unverändert |
+| `cc-btn-ghost` | die **gerahmte** Fassung war tot — die spätere überschrieb sie für **alle acht** Verwender | gelöscht, Bild unverändert |
+| `cc-btn-success` / `-danger` | je **ein** Verwender (`PortalTab`, vollbreite Knöpfe) | die kleine 12px-Fassung gelöscht, die grosse galt ohnehin |
+| `cc-check-icon` | zwei Grüntöne — und die späte verlor `flex-shrink:0` | **Farbe zusammengeführt**: dunkleres Grün UND `flex-shrink:0`. Eine Farbänderung, die niemand bestellt hat, gehört nicht in einen Aufräum-Durchgang |
+| `cc-ml-toolbar` | die zweite ergänzte nur | zusammengelegt |
+| `cc-ml-view-custom`, `cc-table-wrap-inner` | Redigierreste | die ärmere gelöscht |
+| `cc-role-chip-trainer` | zwei Brauntöne, hell und dunkel | je der spätere behalten, im Hell- **und** Dunkelmodus gleich entschieden |
+
+⚠ **`cc-btn-ghost` war keine Wartung, sondern eine Entscheidung — und der ORT
+hat sie beantwortet, nicht die Klasse.** Von acht Verwendern sitzen zwei im
+Eingabefeld (AHV-Auge, `position:absolute`) und vier in einer
+Abschnittsüberschrift; alle sechs brauchen den randlosen Knopf. Zwei stehen
+neben anderen Knöpfen, und nur einer davon — `PlatzhalterModul`, Sekundär
+neben Primär — wollte den gerahmten. Der nimmt jetzt `<Btn variant="outline">`,
+die Komponente, die es dafür längst gab.
+
+**Zum Nachprüfen** (Zeilen zu zählen genügt nicht — mehrere Regeln stehen auf
+einer Zeile, und `@media`-Inhalt zählt nicht mit):
+
+```bash
+python - <<'EOF'
+import io, re, collections
+s = re.sub(r"/\*.*?\*/", "", io.open("src/styles/cc.css", encoding="utf-8").read(), flags=re.S)
+vor = collections.Counter(); i = 0; n = len(s); ss = 0
+while i < n:
+    if s[i] == "{":
+        sel = s[ss:i].strip(); t, j = 1, i+1
+        while j < n and t:
+            t += (s[j] == "{") - (s[j] == "}"); j += 1
+        if not sel.startswith("@"):
+            for x in (y.strip() for y in sel.split(",")):
+                if x: vor[re.sub(r"\s+", " ", x)] += 1
+        i = j; ss = j; continue
+    i += 1
+print({k: v for k, v in vor.items() if v > 1} or "0 Dubletten")
+EOF
+```
+
+### ⚠ Zwei Schreibwege der Portalverwaltung treffen null Zeilen und melden Erfolg
+
+Befund vom 23.08.2026, **gemessen gegen die laufende Datenbank**, als
+`authenticated` mit der Identität eines echten Admins, in einer
+zurückgerollten Transaktion.
+
+`vereine` hat RLS an und genau **zwei** Policies — beide `FOR SELECT`. Für
+UPDATE gibt es keine:
+
+```
+update vereine set theme = … where id = <eigener Verein>   →  0 Zeilen
+dieselbe Anweisung ohne where                              →  0 Zeilen
+```
+
+**PostgREST antwortet darauf `204 No Content` ohne Fehler.** Der Code liest
+`error` — vorbildlich — und `error` ist `null`. Also:
+
+| Stelle | zeigt | tut |
+|---|---|---|
+| `AussehenTab` → Speichern | **„Theme gespeichert ✓"** | nichts |
+| `AussehenTab` → Standard wiederherstellen | **„Standard gespeichert ✓"** | nichts |
+| `PersonenartenSektion` → Austrittsziel | kein Fehler | nichts |
+
+⚠ **`error` zu lesen genügt hier nicht.** Die Regel „wer eine Abfrage
+schreibt, liest `error`" ist richtig und hat hier nichts gefangen: eine
+Änderung, die niemanden trifft, ist für PostgREST kein Fehler. Wer wissen
+will, ob geschrieben wurde, muss **zählen** — `select: "id"` und die Länge der
+Antwort, oder `count: "exact"`. Ein `update()`, dessen Ergebnis niemand
+ansieht, ist eine Behauptung.
+
+⚠ **UND ES VERSCHWINDET SPURLOS.** Die Oberfläche zeigt den neuen Wert sofort
+aus dem React-State und legt ihn in `localStorage["cc-theme"]` ab; beim
+nächsten Laden wird er als Flicker-Schutz zuerst angewendet. Dann überschreibt
+`loadTenant()` ihn mit dem Wert aus der Datenbank — **und löscht die
+localStorage-Kopie gleich mit** (`useAppData.js:35`). Die Änderung ist also
+nicht nur ungespeichert; nach einem harten Neuladen ist auch die Kopie weg.
+
+**Deshalb ist die Realtime-Verteilung des Brandings nie ausgelöst worden.** Die
+Subscription auf `UPDATE vereine` steht und funktioniert — nur hat das Portal
+in dieser Tabelle noch nie eine Zeile geändert. Ein Mechanismus, der auf ein
+Ereignis wartet, das es nicht geben kann.
+
+**Der Durchgang über alle 34 aus `src/` beschriebenen Tabellen fand genau
+diesen einen Fall.** `vereine` ist die einzige. Zum Wiederholen:
+
+```sql
+select cl.relname,
+       count(*) filter (where p.cmd in ('INSERT','ALL')) as ins,
+       count(*) filter (where p.cmd in ('UPDATE','ALL')) as upd,
+       count(*) filter (where p.cmd in ('DELETE','ALL')) as del
+  from pg_class cl
+  join pg_namespace n on n.oid = cl.relnamespace and n.nspname='public'
+  left join pg_policies p on p.schemaname='public' and p.tablename = cl.relname
+ where cl.relkind='r' and cl.relrowsecurity
+ group by 1 order by 1;
+```
+
+**Bereit, nicht ausgeführt:** `supabase/migration_vereine_schreibrecht.sql`.
+Probelauf mit `rollback` gemacht — danach 1 Zeile statt 0, für beide Spalten.
+
+⚠ **Die Reparatur ist eine SPALTEN-Allowlist, kein Pauschalrecht.** Eine blosse
+UPDATE-Policy gäbe jedem Vereinsadmin auch `vereine.slug` — und der Slug ist
+seit dem 23.08.2026 die Quelle des Linkziels in der Einladungs-Mail
+(`invite-user`). Wer ihn setzen kann, bestimmt, wohin ein Anmeldelink führt.
+**Genau dieser Ausgang ist am selben Tag geschlossen worden; er darf nicht
+durch die Reparatur wieder aufgehen.** Die Migration entzieht deshalb UPDATE
+und vergibt es spaltenweise neu (`theme`, `austritt_art_id`); im Probelauf
+wurde ein `update … set slug` mit `42501 permission denied` abgewiesen.
+
+### ⚠ 84 Schreibstellen ohne Gegenprobe — die andere Richtung
+
+Befund vom 23.08.2026. Der erste Durchgang fragte: *wo fehlt die Policy ganz?*
+Antwort: einmal (`vereine`). Der zweite fragt das Schwierigere: **wo gibt es
+eine Policy, aber ihre Bedingung kann eine Zeile ausschliessen — und der Code
+merkt es nicht, weil er nur `error` liest?**
+
+**132 Schreibstellen in `src/`, 122 davon unter einer Bedingung, die mehr
+verlangt als die Zugehörigkeit zum Verein. 84 davon zählen nicht nach.**
+
+⚠ **Das sind KEINE 84 Defekte, und wer die Zahl so weitergibt, macht die
+Liste wertlos** — dieselbe Falle wie die 758 Lint-Warnungen. Bei den meisten
+lautet die Bedingung `is_admin()`, und die Maske ist ohnehin nur für Admins
+erreichbar; dort ist der fehlende Nachweis eine Vorsichtslücke, kein Ausfall.
+**Die Frage, die zählt, ist nicht „prüft der Code nach?", sondern „kann jemand
+diese Maske erreichen, den die Policy abweist?"** Danach sortiert:
+
+| | Bedingung | wer die Maske erreicht | |
+|---|---|---|---|
+| **1** | `kader_write`: `get_my_role() IN (administrator, administration, trainer)` | ein **Funktionär** mit `team: schreiben` aus den Gruppenrechten | ⚠ **wird abgewiesen** |
+| **2** | `ansichten_write`: `benutzer_id = auth.uid() OR is_admin()` | jeder, dem eine **geteilte** Ansicht angezeigt wird | ⚠ Löschen/Ändern läuft ins Leere |
+| **3** | `is_admin()` (≈60 Stellen) | die UI prüft `role === "administrator"`, die Policy `benutzer.ist_admin` | zwei Quellen, heute einig |
+
+**Zu 1 — und es ist kein Einzelfall, sondern ein Muster.** `trainings_write`
+führt `funktionaer` in seiner Liste, `kader_write` nicht. Ob das Absicht war,
+steht nirgends. Der Funktionär kann die Kader-Maske über die Gruppenrechte
+bekommen, und dann tut jedes Speichern nichts. **Dieselbe Familie wie der
+schon vermerkte Übergang `get_my_role() = 'trainer'` in
+`spiel_ereignisse_write`** — Rollennamen fest in Policies, während die Rechte
+in der Oberfläche längst aus Gruppen kommen. Fällt mit den Gruppenrechten weg
+(`docs/auftrag_rls_gruppenrechte.md`).
+
+**✅ Zu 2 — der Lese-Teil ist repariert.** `ansichten_select` gab fremde
+Ansichten nur frei, wenn `ist_standard = true` — **die Spalte, die das Teilen
+steuert, heisst aber `geteilt`**. Die Liste FRAGT nach geteilten Ansichten
+(`memberService.ts:345`), und `useListView.ts:372` rendert eine eigene Gruppe
+„Geteilte Ansichten"; RLS filterte sie vorher weg. Kein Fehler, keine leere
+Meldung — nur eine Gruppe, die nie erschien.
+
+Gemessen im Probelauf, als Nicht-Autor: **vorher 0 sichtbare Ansichten,
+nachher 2** — und die private des Autors bleibt privat.
+`migration_ansichten_geteilt.sql`, 23.08.2026. `ist_standard` wurde dabei
+**ersetzt, nicht ergänzt**: die Spalte hat im ganzen Portal keinen Leser und
+keinen Schreiber, und eine Bedingung, die nie zutrifft, bleibt sonst als
+vermeintlicher Teilen-Schalter stehen.
+
+⚠ **Die Schreib-Hälfte bleibt offen und liegt bei den Gruppenrechten**: ob
+ein Nicht-Autor eine geteilte Ansicht auch ändern darf, ist eine Rechtefrage,
+keine Reparatur.
+
+**Zu 3 — heute einig, und das ist keine Absicherung.** Gemessen: 5 Konten, das
+eine mit `ist_admin = true` hat auch `role = 'administrator'`, die vier
+anderen beides nicht. Aber `role` ist ein **berechneter** Wert
+(`ableitUndSaveRolle()`), `ist_admin` ein gesetztes Kennzeichen — sie wurden
+am 05.08.2026 ausdrücklich getrennt. Läuft eines dem anderen davon, sieht ein
+Admin seine Maske und jeder Klick darin verpufft.
+
+⚠ **Und der Lese-Teil hatte heute keinen Nutzniesser** — nachgemessen, nachdem
+ich ihn als „behoben, wirkt" gemeldet hatte. Der gemessene Nicht-Autor war ein
+`funktionaer`, und `funktionaer` hat in `NAV_BY_ROLE` keinen Eintrag `members`;
+`mitglieder_ansichten` wird nur in `ListView` geladen, und die steht nur unter
+`members`. Beide Rollen, die dorthin kommen (`administrator`,
+`administration`), waren über `is_admin()` — das `ist_admin OR role =
+'administration'` prüft — ohnehin schon abgedeckt.
+
+**Eine Policy-Messung beantwortet „wer DARF?", nicht „wer KOMMT HIN?".** Die
+zweite Hälfte steht nicht in der Datenbank, sondern in `NAV_BY_ROLE`,
+`isModuleVisible()` und den Tab-Bedingungen. Die ausführliche Fassung samt
+beider Fehlerrichtungen steht in `docs/auftrag_rls_gruppenrechte.md` → „RLS zu
+messen ist nicht dasselbe wie Erreichbarkeit zu messen".
+
+**Die drei übrigen sind EIN Befund, nicht drei** — überall steht ein
+Rollenname fest in der Policy, während das Recht in der Oberfläche aus einer
+Gruppe kommt. Sie stehen deshalb seit dem 23.08.2026 in
+`docs/auftrag_rls_gruppenrechte.md` → „Vier Policies nennen Rollennamen",
+zusammen mit dem schon vermerkten `spiel_ereignisse_write`. Hier nicht
+doppelt führen.
+
+**Der Durchgang zum Wiederholen** liegt nicht als Skript im Repo (er braucht
+eine Datenbankverbindung, die die Prüfkette nicht hat). Die beiden Abfragen
+stehen im Eintrag darüber; der Rest ist ein Abgleich der Schreibstellen aus
+`src/` gegen `pg_policies`.
+
+### Die Supporter-Liste zeigt eine gelöschte Person weiter
+
+Befund vom 23.08.2026, beim ersten scharfen Löschlauf. Nach „Person löschen
+(DSGVO)" stand der Eintrag noch in der Liste — bis zum Neuladen, dann
+`7 von 7`.
+
+`onPersonGeloescht` in `MemberDetail` ruft `onClose(); onReload();`, und
+`onReload` lädt **`dbMitglieder`** neu. Die Supporter-Liste hat aber ihren
+eigenen Abruf (`fetchSupporter`), und der Eltern-Tab ebenso
+(`fetchAlleElternkontakte`). Beide bekommen davon nichts mit.
+
+⚠ **Es ist die harmlose Hälfte eines Musters, das schon zweimal teuer war:**
+eine Anzeige, die nach einer Handlung stehenbleibt, ist von einer Handlung,
+die nicht stattgefunden hat, nicht zu unterscheiden. Hier hat die Person
+tatsächlich aufgehört zu existieren — beim nächsten Mal könnte es umgekehrt
+sein.
+
+Zu tun: entweder bekommt `MitgliederModul` einen Auffrischer, der **alle
+drei** Listen kennt, oder die Listen laden bei einem Wechsel des Tabs neu.
+Die zweite Lösung ist billiger und deckt auch die Fälle ab, die niemand
+verdrahtet hat.
+
+### ⚠ `redirect_to` kennt den Verein nicht — zwei von drei Wegen
+
+Befund vom 23.08.2026, beim Nachmessen der Redirect-Allowlist.
+
+| Vorgang | Ziel | Slug dabei? |
+|---|---|---|
+| Einladung (`invite-user`) | `https://www.clubcampus.app/<slug>` | **ja**, aus `vereine.slug` |
+| Passwort zurücksetzen (`LoginScreen.tsx:86`) | `window.location.origin` | **nein** |
+| Registrierung bestätigen (`LoginScreen.tsx:67`) | keins gesetzt → Site-URL | **nein** |
+
+Die blosse Wurzel wird per `vercel.json` auf `/fcherrliberg` umgeleitet. **Wer
+beim zweiten Verein sein Passwort zurücksetzt oder seine Registrierung
+bestätigt, landet also im FCH-Portal** — nicht als Fehler, sondern als 307.
+
+⚠ **Die Redirect-Allowlist bei Supabase fängt das nicht ab**, im Gegenteil:
+sie lässt beide Ziele durch, weil beide stimmen. Es ist kein
+Konfigurationsproblem, sondern eines im Code — und es trifft ab dem zweiten
+Verein sofort, ohne dass etwas fehlschlägt.
+
+Zu tun: beide Aufrufe bekommen den Slug mit, so wie `invite-user` ihn hat.
+Beim Zurücksetzen steht er im Pfad (`getSlugFromPath()`), bei der
+Registrierung ebenso — die Anmeldemaske läuft bereits unter `/<slug>`.
+
+⚠ **Und ein Ziel muss zusätzlich in der Supabase-Redirect-Allowlist stehen**
+(Auth → URL Configuration). Steht es nicht drin, verschickt Supabase die Mail
+**trotzdem** — nur mit der Site-URL statt des Ziels. Kein Fehler, keine
+Meldung. Eingetragen am 23.08.2026: `https://www.clubcampus.app` (die nackte
+Adresse, für das Zurücksetzen) und `https://www.clubcampus.app/*` (ein
+Pfadsegment, für die Einladung). Ein Platzhalter spannt über **Pfade, nie über
+Hosts** — `https://*.vercel.app` wäre eine Preisgabe, dort kann jeder
+deployen.
+
+### ⚠ Wer eine Vereinsadresse kennt, bekommt das Konto dazu — ohne das Postfach
+
+Befund vom 23.08.2026, beim Nachgehen einer ganz anderen Frage (warum zwei
+Registrierungen zwei Anläufe brauchten). **Zwei Einstellungen, die einzeln
+vertretbar sind und zusammen eine Kette ergeben.**
+
+**1 · Die Registrierung verlangt keinen Nachweis über das Postfach.**
+Gemessen an allen fünf Konten:
+
+```
+confirmation_sent_at   NULL   bei allen
+email_confirmed_at     = created_at (0 Sekunden)
+last_sign_in_at        = created_at
+```
+
+„Confirm email" ist **aus**. Ein `signUp` legt das Konto an, bestätigt es
+sofort und meldet sofort an. Es geht **keine** Mail hinaus.
+
+⚠ **Damit ist der Satz in `testkonto_elternteil.sql` falsch**, der verlangt,
+die Adresse müsse ein erreichbares Postfach sein („die Registrierung schickt
+eine Bestätigungsmail"). Sie schickt keine. Der Satz ist dort berichtigt.
+
+**2 · Und es gibt ein öffentliches Orakel, das die Adressen bestätigt.**
+`check_email_bekannt` ist `SECURITY DEFINER` und für **`anon`** freigegeben.
+Gemessen gegen die laufende API, ohne jede Anmeldung, nur mit dem
+publishable key:
+
+```
+POST /rest/v1/rpc/check_email_bekannt   {"p_email":"…@outlook.com", "p_verein_id":"…"}
+→ 200 {"bekannt":true,"name":"Andrea Hauser","person_id":"73c0837b-…", …}
+```
+
+Es sagt nicht nur **ob**, sondern liefert **den Namen und die `person_id`**.
+
+**Die Kette:** eine Adresse kennen oder raten → das Orakel bestätigt sie und
+nennt die Person → damit registrieren → ein Konto **mit deren Rolle und deren
+Daten**, ohne je Zugriff auf das Postfach gehabt zu haben.
+
+| | |
+|---|---|
+| Personen mit E-Mail | **912 von 914** |
+| davon **ohne** Konto — also übernehmbar | **907** |
+| Rolle, die dabei herauskäme | `spieler` 506 · `eltern` 392 · `supporter` 7 · je 1 `mitglied`/`funktionaer` |
+
+⚠ **Der Admin ist nicht darunter** — seine Adresse hat bereits ein Konto und
+ist damit belegt. Das ist heute die einzige Sperre, und sie ist zufällig:
+sie gilt für jede Adresse, die schon vergeben ist, und für keine andere.
+
+⚠ **Und der Trainer-Export ist der Zünder.** Unter „Ein Trainer kann 914
+Adressen und AHV-Nummern exportieren" steht, wie man an die Liste kommt. Ohne
+Liste muss man Adressen raten; mit Liste hat man alle 907.
+
+**Zu entscheiden — beides sind Einstellungen, kein Code:**
+
+1. **„Confirm email" einschalten.** Die naheliegende Reparatur; sie bricht
+   die Kette an der entscheidenden Stelle. ⚠ Vorher prüfen, ob der
+   Mail-Versand für 394 Elternteile trägt — sonst wird aus einer Sperre eine
+   Wand beim Ausrollen.
+2. **`check_email_bekannt` für `anon` sperren** oder auf `{"bekannt": true|false}`
+   ohne Namen und ohne Id kürzen. Der Name wird im Formular nur als
+   Vorbelegung gebraucht; er lässt sich nach der Anmeldung setzen.
+
+**Beides zusammen, nicht eines davon.** Punkt 1 allein lässt das Orakel
+stehen (Namen zu fremden Adressen, unangemeldet); Punkt 2 allein lässt die
+Übernahme jeder bekannten Adresse offen.
+
+### ⚠ Der Bucket `mitglieder-fotos` ist für jeden eingeloggten Benutzer offen
+
+Befund vom 21.08.2026, beim Umstellen des Fotopfads auf `person_id`.
+
+```sql
+select policyname, cmd, qual from pg_policies
+ where schemaname='storage' and tablename='objects';
+```
+
+```
+mitglieder_fotos_select | SELECT | (bucket_id = 'mitglieder-fotos')
+mitglieder_fotos_update | UPDATE | (bucket_id = 'mitglieder-fotos')
+mitglieder_fotos_upload | INSERT |
+```
+
+**Die drei Policies prüfen nur den Bucket — weder den Pfad noch den Verein.**
+Jeder eingeloggte Benutzer kann damit **jedes Foto jedes Vereins** lesen,
+überschreiben und neue hochladen. Dieselbe Familie wie
+`mitglieder_select_priv`, nur ausserhalb von `public`.
+
+**Genau deshalb ist es so lange unbemerkt geblieben:** `storage.objects` liegt
+nicht in `public` und steht damit in **keinem** `schema.sql` — einer der vier
+blinden Flecken (siehe `ARCHITECTURE.md` → „`schema.sql` baut die Datenbank
+NICHT nach"). Wer die Rechte des Portals prüft, findet den Bucket nicht, weil
+er nirgends im Dump vorkommt.
+
+**Wirkt heute begrenzt, weil es nur einen Verein gibt.** Es blockiert aber —
+wie die Gruppenrechte — einen externen Pilotverein: ab dem zweiten Mandanten
+ist es eine echte Preisgabe. Gehört zu `docs/auftrag_rls_gruppenrechte.md`.
+
+> **Der neue Pfad macht die spätere Policy leichter.** Seit dem 21.08.2026
+> liegen Fotos unter `<person_id>/foto.<ext>` statt `<mitglied_id>/`. Eine
+> Policy kann damit über `personen.verein_id` filtern — ein direkter Weg vom
+> Pfadsegment zum Mandanten. Über `mitglied_id` wäre es ein Umweg über
+> `mitglieder`, und für Personen ohne Mitgliedschaft gäbe es gar keinen.
+
+### ⚠ Ein Trainer kann 914 Adressen und AHV-Nummern exportieren
+
+Befund vom 22.08.2026, beim Messen für den Listen-Auftrag. **Der bisher
+schärfste Beleg für `docs/auftrag_rls_gruppenrechte.md`** — drei Schichten,
+die einander schützen sollten, und keine tut es.
+
+**1 · Die Datenbank gibt alles frei.**
+
+```
+personen_select_priv | SELECT | verein_id = get_my_verein_id()
+                     |        | AND get_my_role() IN ('administrator','administration','trainer','funktionaer')
+```
+
+Jede Zeile, jede Spalte. Nicht die Eltern der eigenen Junioren — **alle 914
+Personen des Vereins**, mit Adresse, Geburtsdatum, AHV-Nummer, Nationalität
+und Heimatort. Die zwei engen Policies daneben (`personen_select_self`,
+`personen_select_kind`) schränken nichts ein: RLS ist **additiv**.
+
+**2 · Die Feldsichtbarkeit erreicht keine Liste.** `getFieldVisibility()` —
+die Funktion mit `showAdresse: lvl >= 5`, `showGebdat: lvl >= 3`, `showAhv`
+nur Verwaltung — wird an **genau einer Stelle** aufgerufen:
+`MemberDetail.tsx:188`, also auf der Profilseite. In `MitgliederModul`,
+`ElternListView`, `SupporterListView` und `ArchivView` kommt kein einziges
+`fv.` vor. **Die Mitgliederliste führt AHV-Nummer, Geburtsdatum und Adresse
+als Spalten — ohne jede Rollenprüfung.**
+
+**3 · ⚠ Und deshalb beruhigt der Export-Satz nicht.** „Der Export nimmt genau
+die sichtbaren Spalten mit" stimmt — `exportListData(rows, cols, …)` bekommt
+`cols` aus der Ansicht. Aber der Satz schützt nur, solange die **Anzeige**
+gefiltert ist, und sie ist es nicht. Wer an eine Liste kommt, exportiert
+**914 Adressen und AHV-Nummern in eine Datei** — CSV oder Excel, drei Klicks,
+kein Protokolleintrag.
+
+Heute hält allein die Oberfläche: der Eltern-Tab hängt an
+`istVerwaltung = role === "administrator" || role === "administration"`, ein
+Trainer sieht ihn nicht. **Das ist eine Sichtbarkeitsregel im Frontend, keine
+Rechteprüfung.** Über die API steht ihm dieselbe Menge offen, und in der
+Mitgliederliste, die er sehr wohl erreicht, hält ihn ohnehin nichts auf.
+
+Zu tun ist beides, und in dieser Reihenfolge: `personen_select_priv` auf das
+einengen, was eine Rolle wirklich braucht (das ist der Gruppenrechte-Auftrag,
+weil eine Rollenleiter dafür nicht taugt — der Trainer braucht die Handynummer
+seiner Junioren, der Kassier nicht), und `getFieldVisibility` an die Listen
+anschliessen. Das Zweite allein wäre ein Versprechen ohne Deckung — im Portal
+ausgeblendet, über die API sichtbar. Genau der Grund, aus dem die Seite „Wer
+sieht was bei anderen" zurückgestellt wurde.
+
+### ⚠ `is_trainer_or_above()` prüft einen Rollennamen, den es nicht gibt
+
+Befund vom 19.08.2026.
+
+```sql
+select role in ('administrator','administration','funktionär','trainer')
+```
+
+**`funktionär` mit Umlaut** — die Rollen-Keys sind aber normalisiert
+(`funktionaer`, siehe `roleUtils.ts:19` und `portal_rollen`). Der Zweig
+trifft nie zu; ein Funktionär gilt für diese Funktion als nicht berechtigt.
+
+**Wirkt heute nicht.** Die Funktion ist definiert und an `anon`,
+`authenticated` und `service_role` freigegeben, steht aber **in keiner
+Policy**. Genau das macht sie gefährlich: ein Loch, das keine Fehlermeldung
+erzeugt: Wer sie das nächste Mal in einer Policy verwendet, bekommt eine
+Prüfung, die stiller strenger ist als gedacht — Funktionäre kommen nicht
+durch, und niemand sieht warum.
+
+**Reparieren oder streichen gehört zum Gruppenrechte-Auftrag**
+(`docs/auftrag_rls_gruppenrechte.md`), der die Rollenprüfungen ohnehin
+anfasst. Bis dahin: nicht verwenden. `migration_matchdaten.sql` umgeht sie
+bewusst und vermerkt den Grund.
+
+### ⚠ Übergang: `get_my_role() = 'trainer'` in `spiel_ereignisse_write`
+
+Eingebaut am 19.08.2026 mit `migration_matchdaten.sql`:
+
+```sql
+is_admin() or get_my_role() = 'trainer'
+          or hat_modul_recht('schedule','schreiben')
+```
+
+**Der mittlere Zweig ist genau das, was die Gruppenrechte abschaffen sollen:
+ein Rollenname, fest in einer Policy.** Er steht dort nicht aus Bequemlichkeit,
+sondern weil zwei Dinge zusammenkommen:
+
+1. `hat_modul_recht()` liest ausschliesslich `benutzer_funktionen →
+   portal_funktionen → portal_gruppen`. Die Rolle steht dort nicht drin — ein
+   Trainer ohne Gruppenzugehörigkeit bekommt für **jedes** Modul `false`.
+2. `schedule` ist ausgerechnet das Modul, auf dem der Trainer am wenigsten
+   hat: `APP_ZUGRIFF_DEFAULT` gibt ihm dort `lesen`, während er bei `team`,
+   `training` und `events` `verwalten` hat. Die Stufe kann „mindestens so viel
+   wie ein Trainer" nicht ausdrücken.
+
+**Er verschwindet mit dem Umbau.** Sobald die Gruppenrechte stehen und der
+Trainer seine Stufen über eine Gruppe bekommt statt über den Rollennamen,
+fällt der Zweig ersatzlos weg — die Policy ist dann `is_admin() or
+hat_modul_recht('schedule','schreiben')`.
+
+Bis dahin gilt: **kein Funktionär kann Matchdaten korrigieren**, solange
+seiner Gruppe nicht `schedule: schreiben` gesetzt wird. Das ist ein
+Konfigurationsschritt in der Portalverwaltung, kein Codewechsel.
+
+### ⚠ `mitglied_id` ist in VIER Tabellen der falsche Typ — und das ist auch ein Löschproblem
+
+Befund vom 19.08.2026, **berichtigt und erweitert am 23.08.2026**.
+
+**`mitglieder.id` ist `bigint`.** Ursprünglich stand `mitglied_id` in **acht**
+Tabellen als `uuid` — ein Join auf `mitglieder` ist dort unmöglich. Vier davon
+sind inzwischen umgestellt und tragen einen Fremdschlüssel:
+
+| | |
+|---|---|
+| ✅ **behoben** (`bigint` + FK) | `anwesenheiten`, `helper_einsatz_pflicht_mitglied`, `helper_zuteilungen`, `team_helfer_zuteilungen` |
+| ⚠ **offen** (`uuid`, kein FK) | `abstimmung_antworten`, `aufgebote`, `bus_anmeldungen`, `material_ausleihen` |
+
+Dazu unverändert `news.mitglied_ids` als `uuid[]`.
+
+⚠ **Wer hier „acht" liest, plant eine Migration, die zur Hälfte schon gelaufen
+ist.** Deshalb steht die Zahl nicht mehr im Titel allein — nachzählen:
+
+```sql
+select table_name, data_type from information_schema.columns
+ where table_schema='public' and column_name='mitglied_id'
+ order by data_type, table_name;
+```
+
+**Keine der vier hat einen Fremdschlüssel auf `mitglieder`** — sonst wäre es
+beim Anlegen aufgefallen. Genau das ist die Lehre: ein fehlender
+Fremdschlüssel lässt einen Typfehler jahrelang unbemerkt stehen.
+
+### ⚠ Es ist nicht nur ein Typproblem, sondern ein LÖSCHPROBLEM
+
+Aufgefallen am 23.08.2026 beim Durchrechnen der Löschkette (Etappe 3b), und
+es steht sonst nirgends:
+
+**Die vier sind für das Löschen einer Person gerade deshalb gefährlich, WEIL
+sie keinen Fremdschlüssel haben.** Sie verweisen auf ein Mitglied über eine
+`uuid`, die eine `bigint`-Id gar nicht aufnehmen kann. Beim Löschen bliebe
+dort eine Waise stehen — und **nichts würde sich beschweren**: kein `23503`,
+keine Meldung, keine Kaskade. Ein Fremdschlüssel hätte den Löschvorgang
+entweder aufgehalten oder aufgeräumt; ohne ihn tut er beides nicht.
+
+⚠ **Und die Löschvorschau kann sie nicht prüfen.** Sie kann nicht zählen, was
+sie nicht joinen kann. Deshalb nennt die Vorschau sie **ausdrücklich als
+„nicht prüfbar"** statt sie zu übergehen — der einzige Punkt, an dem sie
+etwas NICHT weiss, gehört auf den Schirm und nicht in eine Fussnote.
+
+**Wirkt heute nirgends:** alle vier sind **leer** (gemessen 23.08.2026) und
+warten auf Phase 4 (Aufgebote, Termine, Bus, Material). Sobald sie Zeilen
+bekommen, entsteht mit jedem Löschen ein stiller Rest.
+
+**Vor Phase 4 nachziehen**, mit Fremdschlüssel auf `mitglieder(id, verein_id)`
+wie in `migration_matchdaten.sql`. Solange die Tabellen leer sind, ist es ein
+`alter column … type bigint` ohne Datenverlust — mit Zeilen darin wäre es eine
+Migration mit Abbildung.
+
+**Und `aufgebote` ist eine davon.** Der geplante Vergleich „wer war aufgeboten
+und hat nicht gespielt" braucht den Join Aufgebot ↔ Aufstellung über das
+Mitglied — `uuid` gegen `bigint` geht nicht. Der Vergleich scheitert, bevor
+ihn jemand baut.
+
+### Wer sieht was bei anderen — wartet auf die Gruppenrechte
+
+Die zweite Hälfte: eine Matrix Rolle × Feld, die festlegt, wer welches Feld bei
+**anderen** Mitgliedern sieht. Die eigenen Daten sieht jeder vollständig.
+
+**Bewusst zurückgestellt.** Zwei Gründe:
+
+1. Solange die Rechte an Rollennamen hängen statt an Gruppen, würde die Seite
+   eine Rollenleiter zementieren — und eine Leiter passt nicht: Der Trainer
+   braucht die Handynummer seiner Junioren, der Kassier nicht, obwohl
+   „Funktionär" in `portal_rollen` über „Trainer" steht.
+2. Ohne Wirkung in der Datenbank wäre es ein Versprechen ohne Deckung — im
+   Portal ausgeblendet, über die API sichtbar. Postgres kann keine Spalten pro
+   Rolle ausblenden; es bräuchte Sichten.
+
+Reihenfolge deshalb: Mitgliedtyp-Konfiguration → Gruppenrechte
+(`docs/auftrag_rls_gruppenrechte.md`) → diese Seite, dann mit Wirkung in der
+Datenbank.
+
+`feldsichtbarkeit` hat bereits die richtige Form `(feld_key, role, sichtbar)`,
+wird aber **nie geladen** — der Tab „Feldsichtbarkeit" ist leer und der
+Umschalter unerreichbar. Nicht abbauen, anschliessen.
+
+### Die Portalverwaltung ist nach Technik geordnet, nicht nach Absicht
+
+Vier Kategorien, vierzehn Tabs. Wer einen Mitgliedtyp einrichtet, braucht drei
+Orte; wer einen Benutzer anlegt, zwei. Dazu heisst „Benutzer & Rollen" sowohl
+Kategorie als auch Tab darin, und Rollen liegen an vier Stellen (Portal-Rollen,
+Kader-Rollen, Mitglieder-Konfiguration, Module & Rechte).
+
+Vorschlag vom 17.08.2026 — vier Kategorien nach Absicht:
+
+| Kategorie | Tabs |
+|---|---|
+| Mitglieder | Mitgliedtypen · Kader-Rollen · Vereinsfunktionen |
+| Zugang | Konten · Portal-Rollen · Gruppen & Funktionen |
+| Was wer darf | Module & Rechte · Wer sieht was · Team-Module |
+| Verein | Aussehen · API-Verbindungen · Audit-Logs |
+
+Kader-Rollen wandern zu den Mitgliedern (Vereinsangabe, keine Berechtigung),
+„Design-System" fällt raus (Entwicklerseite). Ob „Gruppen & Funktionen" später
+zu den Mitgliedern gehört, entscheidet sich mit den Gruppenrechten — siehe dort
+den Abschnitt „Ein Amt und ein Rechtebündel heissen beide Funktion".
+
+**Unabhängig von allem anderen, jederzeit machbar.**
+
+### Supporter: Teil A erledigt am 20.08.2026 — Teil B offen
+
+Auftrag: `docs/auftrag_supporter_rueckbau.md`.
+
+**Am 17.08.2026 entschieden**, durch die Vereinsstatuten: Supporter steht nicht
+in Artikel 6, ist also **keine Mitgliedschaft**. Herleitung in
+`ARCHITECTURE.md` unter „Supporter ist keine Mitgliedschaft" und „Was ein
+Mitglied ist — die Statuten des FCH".
+
+Kurz: eine Person ohne Mitgliedschaft, die erreichbar bleibt, sich für
+Helferschichten einträgt und bestimmte News erhält. Er darf eine Vereinsfunktion
+haben, aber keine Funktionärsrechte auf Mitgliederdaten.
+
+**Teil A ist gebaut** (`supabase/migration_supporter_rueckbau.sql`):
+
+| war | ist |
+|---|---|
+| `macheZumSupporter()` legt eine Mitgliedschaft an | **entfallen** — ein Supporter entsteht durch das Fehlen, nicht durch einen Schreibvorgang |
+| `SupporterListView` filtert `mitglieder` | `fetchSupporter()` liest `personen` |
+| Mitgliedtyp „Supporter" | `aktiv = false` (nicht gelöscht: `mitgliedtyp_feldkonfig` hängt daran) |
+| `benutzer_funktionen` kennt nur `seit` | `bis date` dazu — Artikel 8 spricht von einem Zeitpunkt |
+
+**Wer dazugehört, sind zwei Ausschlüsse**, keine Merkmale: eine Person ohne
+jede Zeile in `mitglieder` und ohne jede Zeile in `eltern_kinder`. Es gibt
+kein Kennzeichen „ist Supporter" und soll keines geben. Auch eine *beendete*
+Mitgliedschaft schliesst aus — sonst stünde dieselbe Person im Archiv und
+unter den Supportern.
+
+**Was noch offen ist (Teil B):**
+
+- ~~Das **schlanke Supporter-Modal**.~~ ✅ Gebaut am 20.08.2026 und am
+  21.08.2026 wieder **gefallen**: `MemberDetail` trägt die Person ohne
+  Mitgliedschaft jetzt selbst. Es war als Platzhalter mit Ablaufdatum
+  angelegt, und das Datum ist eingetreten.
+- ~~**„Mitglied werden"** und der Austritt in die Gegenrichtung, beide mit
+  **Rückfrage**.~~ ✅ Erledigt mit Etappe 2 (22.08.2026). Die Antworten kommen
+  jetzt aus der Datenbank statt aus dem Code: die Mitgliedtypen aus
+  `mitgliedtypen` (damit ist **Pausenmitglied** erstmals wählbar — der Typ, der
+  wörtlich „kommt vielleicht wieder" bedeutet), das Austrittsziel aus
+  `vereine.austritt_art_id`. Offen bleibt dieselbe Rückfrage beim Entkoppeln
+  des letzten Kindes und beim Funktionär, der sein Amt niederlegt.
+- **Personensuche in der Neuanlage**, nach dem Muster von `ElternSucheModal`
+  — schliesst zugleich „Mitglied anlegen prüft nicht auf Dubletten".
+- Helferanfragen als zweite Empfängerliste (News ist erledigt, siehe unten).
+
+### ✅ Archiv: zwei Wege, fünf Unterschiede — vereinheitlicht am 22.08.2026
+
+Es gab zwei Wege ins Archiv, den Knopf „Archivieren" und die Antwort „Archiv"
+im Austrittsdialog. Sie taten **fünf verschiedene Dinge**, und in zweien war
+der härtere der mildere:
+
+| | Knopf | Austritt → Archiv |
+|---|---|---|
+| `deaktiviert_am` | jetzt | wählbarer Tag |
+| `deaktiviert_von` | gesetzt | **leer** |
+| Kadereinträge | **blieben aktiv** | wurden beendet |
+| Ämter (`bis`) | **blieben offen** | bekamen ein Ende |
+| Portal-Konto | deaktiviert | **blieb aktiv** |
+
+**Nur eines davon war je Absicht — und die Absicht war falsch.** Im Code stand
+seit dem 20.08.2026: *„Beim Archiv bleibt sie stehen — das Konto wird ohnehin
+vom Aufrufer deaktiviert."* Der Aufrufer hat es **nie** getan; `fuehreAustrittAus`
+enthielt keinen solchen Aufruf. Ein ausgetretenes Mitglied blieb angemeldet.
+
+⚠ **Ein Kommentar, der eine andere Stelle zusichert, ist eine Behauptung ohne
+Prüfung** — und wer ihn liest, prüft erst recht nicht nach. Dieselbe Familie
+wie „wer liest diese Spalte?": eine Hälfte gebaut, die andere angenommen.
+Aufgefallen ist es nur, weil jemand die zwei Wege nebeneinandergelegt hat.
+
+Beim Kader dagegen gibt es **keine Absicht** — `archiviereMitglied()` schrieb
+seit ihrer ersten Fassung drei Spalten und hat den Kader nie mitgedacht.
+
+**Entschieden (Didi, 22.08.2026): der Austritt ist der vollständige Weg, der
+Knopf bleibt als Abkürzung — aber er tut dasselbe.** Beide rufen jetzt
+`beendeVerknuepfungen()` in `memberService.ts`. Übrig bleiben zwei gewollte
+Unterschiede: das Datum (Knopf heute, Austritt rückdatierbar) und dass der
+Knopf festhält, wer geklickt hat — `deaktiviert_von` setzt seither **auch** der
+Austritt.
+
+⚠ **Dass es niemanden getroffen hat, lag an der Datenlage** — keines der drei
+ausgetretenen Mitglieder hatte ein Konto, und keine archivierte Person stand in
+einem aktiven Kader. Beides gemessen, nicht angenommen. Eine Datenlage ist
+keine Absicherung.
+
+### ⚠ `mitgliedtypen.standard_rolle` hat keinen Fremdschlüssel
+
+`personenarten.standard_rolle` hat seit dem 22.08.2026 einen auf
+`portal_rollen(verein_id, name)`; `mitgliedtypen.standard_rolle` nicht — und
+genau dieses Fehlen liess am 05.08.2026 zwei Zeilen mit `rolle = 'Spieler'`
+(grosses S) zu, einen Wert, den weder `getPermissions` noch `NAV_BY_ROLE`
+kennen. Der Schlüssel ist zu haben: `portal_rollen` trägt
+`UNIQUE (verein_id, name)`.
+
+Nachzuziehen mit einer kleinen Migration. Vorher prüfen, ob alle bestehenden
+Werte in `portal_rollen` vorkommen — sonst bricht das `ALTER`, und die Meldung
+von Postgres nennt die Zeile nicht:
+
+```sql
+select t.name, t.standard_rolle from public.mitgliedtypen t
+  left join public.portal_rollen r
+    on r.verein_id = t.verein_id and r.name = t.standard_rolle
+ where t.standard_rolle is not null and r.name is null;
+```
+
+### ⚠ Drei Nebenbefunde aus dem Supporter-Rückbau (20.08.2026)
+
+**1. `zaehlt_als_mitgliedschaft` hat keinen Leser mehr.** Die Spalte war die
+Vorarbeit vom 17.08.2026: die Listentrennung sollte nicht am Namen „Supporter"
+hängen, sondern an einem Merkmal. Mit dem Rückbau trennt nicht mehr ein Filter,
+sondern die **Tabelle** — in `mitglieder` steht nur noch, was eine
+Mitgliedschaft ist.
+
+Der Filter in `MitgliederModul` ist deshalb **entfernt und nicht als
+Sicherheitsnetz stehengeblieben**: eine Zeile, die er heute wegnähme, wäre
+nirgends mehr zu sehen — nicht in der Mitgliederliste und nicht im
+Supporter-Tab, der ja gar nicht mehr aus `mitglieder` liest. Sie verschwände,
+ohne dass etwas fehlschlägt.
+
+Damit ist die Spalte ein Schalter ohne Wirkung — dasselbe Muster wie
+`api_verbindungen.active`. Entweder bekommt sie einen Leser (Mitgliederzählung,
+Beitragslauf) oder sie fällt. Nicht liegen lassen.
+
+**2. `NachrichtenModul.tsx:77` steht im Code, nicht in der Datenbank.**
+`ROLLEN_OPTS` ist eine feste Liste; die Zeile `supporter` ist ergänzt, aber die
+Quelle bleibt falsch — eine neue Portalrolle erscheint dort nie. Und **„Alle
+Mitglieder" meint dort alle Empfänger**, nicht die Mitglieder im Sinne der
+Statuten. Nach dem Rückbau ist das eine Aussage, die stimmen muss: die beiden
+Begriffe gehören getrennt beschriftet („Alle Mitglieder" ≠ „alle Erreichbaren"),
+sonst bekommt der Supporter die GV-Einladung.
+
+**3. ✅ `rolleLabelMap` liess die Konstanten gegen die Datenbank gewinnen —
+behoben am 20.08.2026.** In `memberMapper.ts` standen die acht fest
+verdrahteten Beschriftungen **hinter** denen aus `portal_rollen`, und
+`Object.fromEntries` lässt den letzten Eintrag gewinnen. Sie waren also keine
+Rückfallwerte, sondern Überschreibungen — für `administrator`,
+`administration`, `funktionaer`, `trainer`, `spieler`, `eltern`, `mitglied`
+und `supporter`, also praktisch jede Rolle. Wer eine umbenannte, sah davon
+nichts. Die Reihenfolge ist getauscht: Konstanten vorne, `dbPortalRollen`
+dahinter.
+
+**Der Weg dorthin ist die eigentliche Lehre.** Ich hatte den Test zuerst
+andersherum geschrieben — er hielt den Ist-Zustand fest („Supporter" statt
+„Supporter/in") und war grün.
+
+> **Didi:** ein Test, der den Ist-Zustand festhält, obwohl der Ist-Zustand
+> falsch ist, zementiert den Fehler und fällt ausgerechnet dann um, wenn ihn
+> jemand behebt. Er findet nichts, er bewacht etwas Falsches.
+
+Umgedreht war er rot — und blieb es genau eine Runde, bis die CI mit Exit-Code
+1 abbrach:
+
+> **Didi:** ein dauerhaft roter Test macht die Prüfkette wertlos — beim
+> nächsten echten Fehler schaut niemand mehr hin.
+
+**Beide Sätze zusammen ergeben die Regel:** ein Test prüft den Soll-Zustand,
+und rot ist ein Zustand für Stunden, nicht für Wochen. Wer den Soll-Zustand
+nicht sofort herstellen kann, markiert ihn `skip` mit Verweis auf die
+Entscheidung — aber lässt die Prüfkette nie dauerhaft rot stehen.
+
+
+
+
+### ⚠ Ein WERT ohne Feld — die umgekehrte Richtung, und sie sieht richtiger aus
+
+Gemessen am 10.09.2026 im Theme, als Vorarbeit zum Saison-Abgleich. Die
+Frage war die einfachste denkbare: *woher kommt das „2026/27" auf der
+Teamseite?*
+
+| | |
+|---|---|
+| Anzeige | `2026/27` |
+| Quelle | Postmeta `saison` am `fch_team`-Beitrag |
+| ⚠ Feldgruppe in ACF | **keine** — `saison` ist dort nur am `fch_person` definiert |
+| geschrieben von | `saeen.php:1998` und `:2049` — für **zwei** Mannschaften |
+| die anderen 19 | haben den Wert gar nicht; was dort steht, kommt aus einem Rückfall |
+
+**Es ist kein gepflegtes Feld, sondern ein Rest der Saat.** Im Backend gibt
+es keine Maske dafür; wer den Wert ändern will, findet nichts.
+
+⚠ **Und das ist die UMGEKEHRTE Richtung des bekannten Fehlers, nicht
+dieselbe.** Die Regel „wer eine Spalte anlegt, nennt die Stelle, die sie
+liest" fängt den Fall *Feld ohne Wert*. Hier ist es ein *Wert ohne Feld*:
+
+| | | |
+|---|---|---|
+| Spalte angelegt, niemand liest sie | `mitgliedtypen.zaehlt_als_mitgliedschaft` | sieht aus wie fehlende Daten |
+| **Wert da, kein Feld dazu** | **`fch_team.saison`** | ⚠ **sieht aus wie gepflegte Daten** |
+
+**Die zweite ist die teurere.** Ein leeres Feld fällt jemandem auf. Ein
+gefülltes fällt niemandem auf — und deshalb war die naheliegende Annahme
+„das trägt jemand von Hand ein" ein halbes Jahr lang unwidersprochen. Sie
+war falsch: es trägt es niemand ein, weil es niemand kann.
+
+⚠ **Ich habe das als „ein Feld in der Allowlist, das nie gefüllt wird"
+zusammengefasst bekommen und es steht hier ausdrücklich anders.** Weder gibt
+es ein `fch_team_saison` noch einen Allowlist-Eintrag dazu; die Regel
+„erlaubt, aber nicht gefordert" trifft einen anderen Fall. Eine Zusammen-
+fassung, die den Befund in die geläufigere Kategorie schiebt, macht ihn
+unauffindbar — gesucht würde dann in der Allowlist, und dort steht nichts.
+
+**Die Prüfung, die beide Richtungen findet, ist eine einzige Frage**, und
+sie gehört an das erste Auftreten eines Werts: *wer schreibt das, und wer
+kann es ändern?* Fehlt eine der beiden Antworten, ist es ein Befund — egal
+in welche Richtung die Lücke zeigt.
+
+**Was daraus folgt.** Die Saison kommt seit dem 10.09.2026 aus der
+Ranglisten-Ablage (`saison_name` je Gruppe, Schreibweise des Verbands), aus
+**derselben Zeile** wie Liga und Gruppe. Das Postmeta bleibt als Rückfall
+stehen und wird nicht überschrieben — es zu entfernen wäre eine Änderung
+an zwei Beiträgen ohne Gegenwert.
+
+### ⚠ „Success. No rows returned" — eine Migration, die ihre Arbeit verschweigt
+
+10.09.2026. `migration_bench_ausbau.sql` sollte melden, wie viele Zeilen
+ihr `delete` trifft — die Zahl war ausdrücklich bestellt, weil „zwanzig"
+eine Messung von vorher war und sich bis zur Ausführung ändern konnte:
+
+```sql
+get diagnostics anz = row_count;
+raise notice 'Nur-aus-/bench geloescht: % Zeilen', anz;
+```
+
+**Der Supabase-SQL-Editor zeigt `NOTICE` nicht an.** Zurück kam
+
+```
+Success. No rows returned
+```
+
+⚠ **Und die Zahl ist damit endgültig weg**, nicht bloss ungesehen: die
+Zeilen sind gelöscht, und `ist_bank` — die Spalte, über die man sie
+nachzählen könnte — hat dieselbe Migration gestrichen. Es gibt keinen
+zweiten Weg dorthin.
+
+**Das ist wieder „berechnet, geliefert, nicht gezeigt", aber mit einer
+neuen Ursache:** nicht eine vergessene Anzeige, sondern ein **Kanal, den
+der Leser nicht rendert**. Der Wert war korrekt berechnet, die Meldung
+korrekt formuliert, und niemand sieht sie.
+
+| | |
+|---|---|
+| `raise notice` | in `psql` sichtbar, **im Supabase-Editor nicht** |
+| `select` | überall sichtbar — der Editor zeigt Zeilen |
+
+**Die Regel: was eine Migration berichten soll, berichtet sie als
+`select`, nicht als `notice`.** Und wenn die Zahl nach der Migration
+nicht mehr herstellbar ist, wird sie **davor** gemessen — als eigene
+Abfrage, die man laufen lässt, bevor man schreibt.
+
+⚠ **Der Satz „Success. No rows returned" ist dabei selbst das Symptom.**
+Er liest sich wie eine Bestätigung und heisst hier: *ich habe dir nichts
+gesagt.* Dieselbe Ununterscheidbarkeit wie „keine neue Zeile in
+`api_sync_log`" — gelungen und nichts zu tun sehen gleich aus.
+
+### ⚠ Zwei kaputte Prüfregeln an einem Tag — und sie waren auf ENTGEGENGESETZTE Weise kaputt
+
+10.09.2026, beide in `scripts/check-plugin.mjs`. Der Satz dazu ist Didis:
+
+> **Wenn eine Regel bei ihrer eigenen Positivkontrolle scheitert, ist die
+> Regel kaputt — nicht der Code.**
+
+⚠ **Hier wurden die beiden Fälle zuerst als einer zusammengefasst
+(„die Prüfung war zu eng gebaut"). Sie sind es nicht, und der Unterschied
+ist der ganze Nutzen des Eintrags** — die zwei Fehlerrichtungen brauchen
+verschiedene Gegenmittel:
+
+| | Regel | kaputt wie | gefunden von |
+|---|---|---|---|
+| **A** | „`CC_FELDER` führt kein Teamfeld" | **zu locker** — sie las `b.konstanten`, das es **nie gab**. Sie hätte immer eine leere Liste geliefert und **wäre für immer grün gewesen** | ihrer eigenen Positivkontrolle, in derselben Minute |
+| **B** | „kein Schreibaufruf fasst einen `fch_team`-Beitrag an" | **zu absolut** — sie verbot *jedes* Schreiben. Als der Entscheid kippte und der Export `liga`/`gruppe` schreiben SOLLTE, verbot sie das Gewollte | Didi, beim Auftrag zum Umbau |
+
+⚠ **Und B war zusätzlich löchrig**, was der eigentliche Skandal ist: sie
+suchte Funktionen, die **beides** enthalten — einen Schreibaufruf *und* den
+Bezeichner `CC_TYP_TEAM`. `cc_schreibe_teamfelder()` bekommt die Beitrags-Id
+**übergeben** und nennt `CC_TYP_TEAM` nirgends. Die Regel blieb also grün,
+während genau die Funktion entstand, die sie verbieten sollte. **Meine
+Gegenprobe hatte nur getragen, weil ich den Bezeichner zufällig in
+dieselbe Funktion geschrieben hatte.**
+
+**Damit war B gleichzeitig zu eng UND zu weit** — sie verbot, was erlaubt
+werden sollte, und liess durch, was sie treffen sollte. Das ist kein
+Widerspruch, sondern das Kennzeichen einer Regel, die am **falschen
+Merkmal** hängt: sie prüfte, was *dasteht* (ein Bezeichner), nicht was
+*geschieht* (ein Schreibvorgang an einem Team).
+
+**Die drei Lehren, in der Reihenfolge ihrer Wirkung:**
+
+1. **Jede Regel bekommt eine Positivkontrolle, und die ist Pflicht, nicht
+   Kür.** Sie hat A in derselben Minute gefangen. Ohne sie stünde dort bis
+   heute eine Prüfung, die nichts prüft — und die schlimmer ist als keine,
+   weil sie das Gefühl von Deckung erzeugt.
+2. **Eine Regel nennt die engste wahre Zusage, nicht die bequemste.**
+   „Niemand schreibt an `fch_team`" war bequem und wurde falsch, sobald
+   sich die Absicht änderte. Ersetzt durch zwei engere, die an einer
+   **benannten Funktion** hängen: *„`cc_schreibe_teamfelder` legt kein Team
+   an und löscht keines"* und *„…fasst nur `liga`, `gruppe` und
+   `abgleich_stand` an"*. Beide überleben eine Absichtsänderung, weil sie
+   die Absicht selbst beschreiben.
+3. ⚠ **Eine Regel, die einen BEZEICHNER sucht, prüft eine Schreibweise.**
+   Dieselbe Familie wie `name !== "Elternteil"` und wie `\b` gegen deutsche
+   Bezeichner — nur diesmal im Prüfwerkzeug selbst, also an der Stelle, an
+   der niemand mehr nachsieht.
+
+**Und die vierte, die über `check-plugin` hinausgeht:** eine Regel, die
+eine Zusage über das Produkt festhält, veraltet mit der Zusage. Wer einen
+Entscheid umdreht, sucht **zuerst die Prüfungen, die ihn festhalten** —
+sonst meldet die Prüfkette den gewollten Zustand als Defekt, und der
+nächste Reflex ist, die Regel zu löschen statt sie zu verengen.
+
+### ⚠⚠ Die Edge Functions gingen bis zum 10.09.2026 UNGEPRÜFT durch die Kette
+
+`wp-export` v17 ging raus und **bootete nicht**. Im Browser meldete es sich so:
+
+```
+Access to fetch … blocked by CORS policy: Response to preflight
+request doesn't pass access control check: It does not have HTTP ok status
+```
+
+⚠ **Und das ist die falsche Fährte, die der Ausfall selbst legt.** Es sah
+aus wie ein Problem mit den CORS-Kopfzeilen — also mit dem Code, der
+`OPTIONS` beantwortet. Der war unverändert. Gemessen:
+
+| | |
+|---|---|
+| `OPTIONS /functions/v1/wp-export` | **503** |
+| `POST` mit gültigem Schlüssel | `{"code":"BOOT_ERROR"}` |
+| `OPTIONS` auf `sfv-sync`, `invite-user`, `person-loeschen` | **200** |
+
+**Eine Function, die nicht startet, kann auch den Preflight nicht
+beantworten** — und der Browser sieht nur, dass die Vorab-Anfrage keinen
+200 bekommt, also nennt er CORS. Dieselbe Familie wie „eine Meldung nennt
+das letzte Glied der Kette, nicht das gerissene", nur diesmal von einem
+fremden Werkzeug erzeugt.
+
+**Die Ursache war eine Zeile:**
+
+```ts
+const sRes = await db.from("spiele")…         // Zeile 849, seit langem
+const sRes = await db.from("sfv_personen")…   // Zeile 900, neu
+```
+
+`Cannot redeclare block-scoped variable` — im selben Block, also ein
+Fehler, der beim Modulstart wirft.
+
+⚠ ⚠ **UND DIE GANZE PRÜFKETTE WAR GRÜN:** `typecheck`, alle sechs
+`check:*`, 1024 Tests in 68 Dateien. Der Grund stand längst in mehreren
+Dateiköpfen dieses Projekts — nur als Bemerkung, nicht als Befund:
+
+> *„Diese Datei importiert von esm.sh und wird von tsc und vitest nicht
+> geprüft."*
+
+Daraus folgte bisher die richtige Konsequenz, **Entscheidungen** nach
+`src/` zu verlagern (`wpNutzlast.ts`, `ergebnisTypen.ts`, `wpLauf.ts`).
+**Der Rest der Datei blieb ungeprüft — und „ungeprüft" hiess: bis zum
+Deploy.** Bei vier Functions mit zusammen über 3000 Zeilen war das keine
+Restlücke, sondern der grösste unbewachte Bereich der Codebasis.
+
+**✅ Seit dem 10.09.2026 gibt es `npm run check:deno`**
+(`scripts/check-deno.mjs`, in CI). Sie ruft `deno check` über die
+`index.ts` jeder Function — von dort zieht Deno den ganzen Importgraphen
+mit, inklusive der `src/`-Dateien und der esm.sh-Typen.
+
+| | |
+|---|---|
+| findet | Syntax- und Typfehler, die den Start verhindern |
+| findet **nicht** | ob eine Abfrage die richtigen Zeilen trifft, ob eine Policy sie durchlässt, ob die Logik stimmt |
+
+**Ein grüner Lauf heisst „sie startet", nicht „sie tut das Richtige."**
+
+⚠ **Ohne `deno` und ohne Docker meldet sie ROT, nicht „übersprungen".**
+Eine Prüfung, die bei fehlendem Werkzeug grün sagt, schweigt genau dann,
+wenn sie gebraucht wird — dieselbe Leiter wie in `php-lauf.mjs`.
+
+Gegengeprobt mit dem echten Fehler: `nRes` zurück in `sRes` benannt → rot
+mit `TS2451`, zurückgesetzt → grün. **Eine Prüfung, die nie rot war, ist
+keine Prüfung.**
+
+⚠ **Die Lehre über diesen Fall hinaus:** wo im Kopf einer Datei steht
+*„das prüft hier niemand"*, ist das kein Hinweis, sondern ein offener
+Punkt. Er hat hier zwei Wochen überlebt, weil er wie eine Erklärung
+aussah statt wie eine Lücke.
+
+### ⚠ Die Rückennummer ist kein Schlüssel — auch nicht innerhalb eines Spiels
+
+Nebenbefund vom 10.09.2026, beim Nachtragen des Namens für den
+Ausgewechselten. Er ist deshalb wertvoll, weil der naheliegende Weg
+**funktioniert hätte, meistens** — und der Rest hätte plausibel ausgesehen.
+
+Die Frage war: der Verlauf zeigt „für Nr. 9", also nur eine Nummer. Lässt
+sie sich über `spiel_aufstellung` auflösen? Die Tabelle kennt für dasselbe
+Spiel `rueckennr` **und** `sfv_person_id` — der Name wäre eine Verknüpfung
+entfernt.
+
+**Gebraucht wurde der Weg nicht** (`ein_sfv_person_id` liegt seit dem
+19.08.2026 in `spiel_ereignisse` und wurde nur nie gelesen). Aber er wäre
+gebaut worden, wenn die Id gefehlt hätte, und dann hätte er Folgendes
+getan:
+
+| | |
+|---|---|
+| Schlüssel der Aufstellung | `(verein_id, spiel_id, sfv_person_id)` |
+| geschrieben wird | **jeder eigene Spieler** — `istEigener` filtert nach `clubNumber`, nicht nach Mannschaft |
+
+⚠ **Bei zwei eigenen Mannschaften gegeneinander stehen beide Kader unter
+DERSELBEN `spiel_id`.** Der Klub ist derselbe, also sind beide „eigen".
+Eine 9 gibt es dann zweimal, und ein Nachschlagen über die Nummer träfe
+**die falsche Person** — im selben Spiel, mit einem existierenden Namen,
+ohne dass etwas fehlschlägt.
+
+**Heute null Fälle**, weil alle 21 Mannschaften in 21 verschiedenen Gruppen
+stehen (gemessen 28.08.2026) — dieselbe Datenlage, die schon den
+Derby-Eintrag oben zu einem wartenden statt einem sichtbaren Defekt macht.
+**Eine Datenlage ist keine Absicherung.**
+
+⚠ **Und die zweite Hälfte gilt immer, nicht nur im Derby:** `rueckennr` ist
+in beiden Tabellen **nullable**. Ein Nachschlagen über `null` findet
+entweder nichts oder — schlimmer — die erste Zeile, die ebenfalls keine
+Nummer trägt.
+
+> **Die Kennung mitnehmen, nicht aus einer Anzeigeangabe zurückrechnen.**
+> Eine Rückennummer ist eine Beschriftung für Menschen auf dem Platz, kein
+> Schlüssel. Dieselbe Familie wie „ein Filter auf einen NAMEN prüft eine
+> Schreibweise" — nur ist eine Zahl noch verführerischer, weil sie
+> aussieht wie eine Id.
+
+### ⚠ `wettbewerb` ist der SPIELTYP, `liga` ist der Wettbewerb — und wir senden beide
+
+Gemessen am 10.09.2026 in `docs/sfv/sfv_stammdaten.json`, ausgelöst durch
+die Meldung der Website-Seite, bei Cupspielen stehe „schlicht «Cup»" statt
+„Regional Cup".
+
+**Das stimmt — und es ist kein Fehlstand, sondern eine Verwechslung von
+zwei Feldern, die beide ankommen.**
+
+| unser Feld | SFV-Feld | Inhalt | Beispiel Cup |
+|---|---|---|---|
+| `wettbewerb` | `matchTypeName` | die **Betriebsart** | `Cup` |
+| `liga` | `leagueName` | der **Wettbewerb** | `Schweizer Cup U-18`, `Cup AJF (4./5. Liga)` |
+
+Die Stammdaten führen `Spieltyp` als eigene Liste mit **fünfzehn**
+### ⚠⚠ DIE ELF LISTEN DES VERBANDS — mit Sollzahl, ein für alle Mal
+
+Gemessen am 11.09.2026 aus `docs/sfv/sfv_stammdaten.json`. **Die Zahl in
+Klammern ist Pflicht:** eine Liste ohne Sollzahl kann man nicht
+gegenprüfen, und genau das hat mich an zwei Tagen **viermal** gefangen.
+
+| Liste | Einträge | wo sie im Portal auftaucht |
+|---|---|---|
+| Saison | **1** | `spiele.sfv_saison_id` |
+| **Liga** | **352** | `spiele.liga` · `teams.sfv_liga_name` |
+| Organisation | 17 | der Regionalverband (`oid=11` = FVRZ) |
+| **Spieltyp** | **15** | `spiele.sfv_spiel_typ` — 3 = Trainingsspiele |
+| Resultattyp | 11 | `leseHalbzeit()` filtert auf `resultTypeId = 1` |
+| **Spielstatus** | **12** | `spiele.sfv_status` — `MATCHDATEN_STATUS` holt nur 2 |
+| Spielerposition | 35 | `spiel_aufstellung.position_name` |
+| Rollenkategorie | 28 | `rolle_kategorie` |
+| RollenUkategorie | 2 | — |
+| **Ereignistyp** | **30** | `spiel_ereignisse.typ_id` — `verlaufArt()` kennt 4 |
+| **Ereignissubtyp** | **100** | `subtyp_id` — 2 Eigentor, 4 Penalty |
+
+⚠ **Und die Zahl „elf Listen" stand bereits im Papier und ist richtig** —
+sie ist die einzige Aufzählung dieser Familie, die von Anfang an ihre
+Sollzahl trug.
+
+#### Die vier Fälle, in denen sie fehlte
+
+| | im Papier stand | tatsächlich | Folge |
+|---|---|---|---|
+| Spielstatus | **5** | **12** | ich hielt „3 forfait" für unmöglich |
+| Spieltyp | **7**, mit „kurze Liste" davor | **15** | — |
+| Ereignissubtyp | — | **100** | — |
+| Ereignistyp | **5** (implizit über `verlaufArt`) | **30** | — |
+
+> ⚠ **„Kurze Liste" war die schlimmste Formulierung von allen**: sie
+> erklärt die Kürze zur Eigenschaft der **Sache** statt zur Eigenschaft
+> des **Zitats.**
+
+#### ✅ Und ein Gegenbeispiel, das es richtig macht
+
+`ROLLE_BEKANNT` (`assignmentRoleId` 0–3) trägt **keine** Sollzahl — und
+das ist korrekt: **`sfv_stammdaten.json` führt `assignmentRole` gar
+nicht.** Es gibt keine massgebliche Liste, nur eine Zählung über den
+Bestand. Und genau das steht daneben: *„gezählt und nicht gelesen"*.
+
+> **Eine Liste ohne Sollzahl ist richtig, wenn sie sagt, dass es keine
+> gibt.** Falsch ist sie nur, wenn eine massgebliche Liste existiert und
+> das Zitat sie verschweigt.
+
+### ⚠ `subtyp_id` statt `subtyp` — ein Filter auf den Klartext wäre eine Schreibweise
+
+Entschieden am 11.09.2026 beim Bau von `ereignis_zusatz`.
+
+```ts
+if (subtypId === SUBTYP_EIGENTOR) return "eigentor";   // 2
+if (subtypId === SUBTYP_PENALTY) return "penalty";     // 4
+```
+
+⚠ **`spiel_ereignisse.subtyp` trägt den Klartext des Verbands** — und
+`subtyp === "Eigentor"` wäre genau der Namensfilter, den dieses Papier an
+einem halben Dutzend Stellen als Fehler führt. Er hielte, bis der Verband
+„Eigentor (E)" schreibt oder eine Sprache ergänzt.
+
+⚠ **Und der Klartext ist nachweislich unzuverlässig:** bei Subtyp 0 steht
+dort `-`, ein Strich statt eines leeren Werts — aufgefallen am 05.09.2026,
+als er beinahe so auf die Website gegangen wäre.
+
+**Dieselbe Regel wie `ableitung === null` statt `name !== "Elternteil"`,
+wie `kader_rollen.ist_trainer` statt einer Namensliste, und wie
+`hauptkontakt_pflicht` statt `ilike 'junior%'`.**
+
+
+Einträgen — die vollständige steht unter „Es gibt FÜNFZEHN Spieltypen".
+Dort steht keine Wettbewerbsbezeichnung und kann keine stehen.
+
+> ⚠ **HIER STANDEN SIEBEN, mit dem Wort „kurze Liste" davor** — und genau
+> das hat am 11.09.2026 dazu geführt, dass ich 3, 5, 7, 10 und 20–24 für
+> unmöglich hielt. **Eine unvollständige Aufzählung wird für vollständig
+> gehalten, GERADE WEIL sie aufzählt** — und ein „kurz" davor macht es
+> schlimmer, weil es die Kürze zur Eigenschaft der Sache erklärt statt zur
+> Eigenschaft des Zitats. Die Namen liegen in der Liste `Liga` — 46 Einträge
+allein mit „Cup" darin.
+
+⚠ **Der Feldname `wettbewerb` ist damit die eigentliche Falle.** Er
+verspricht, was `liga` trägt. Dieselbe Familie wie `runde`, das den
+Gruppennamen führt, und wie `/api/team/list`, das Teams mit Rangliste
+liefert: **eine Beschriftung, die mehr behauptet als der Inhalt hält, wird
+irgendwann von jemandem geglaubt, der nicht nachsieht.**
+
+**Bevor irgendwo etwas gebaut wird, das „den Wettbewerb" braucht: `liga`
+lesen.** Und wer die zwei zusammenführen will, benennt vorher um — nicht
+den Inhalt, sondern das Feld.
+
+⚠ **Was dagegen wirklich fehlt, ist die RUNDE bei Cupspielen** (13 von 13
+leer). `runde` kommt aus `groupName`, und ein Cupspiel hat keine Gruppe.
+Der Spielplan führt daneben `roundNbr`, `playDay` und `playDayName` — alle
+drei kommen bei jedem Abruf ohnehin mit. **Was sie bei einem Cupspiel
+enthalten, ist ungemessen:** die Swagger-Datei hat zu keinem eine
+Beschreibung, und in der aufgezeichneten Beispielantwort ist kein Cupspiel.
+Erst messen, dann eine Spalte.
+
+### ⚠ Ein ausgefallener Sync-Lauf hinterlässt KEINE Spur — zum zweiten Mal
+
+Festgehalten am 10.09.2026 auf Didis Anweisung. **Kein Bau, ein offener
+Punkt mit Vorschlag.**
+
+`api_sync_log` bekommt seine Zeile am **Ende** eines Laufs. Wirft der Lauf
+vorher — und `sync.ts` wirft bei jedem Datenbankfehler —, wird nichts
+geschrieben. Damit sehen zwei völlig verschiedene Lagen gleich aus:
+
+| | in `api_sync_log` |
+|---|---|
+| der Lauf ist gescheitert | **keine Zeile** |
+| es gab nichts zu tun | **keine Zeile** |
+
+⚠ **Das ist derselbe blinde Fleck wie am 20./21.08.2026**, als der Sync
+14 Stunden stillstand und `cron.job_run_details` die ganze Zeit
+`succeeded` meldete — weil dort nur steht, dass die Anfrage **abgesetzt**
+wurde.
+
+⚠ ⚠ **BERICHTIGT AM 10.09.2026, NOCH AM SELBEN TAG.** Hier stand: *„Und
+es ist eben wieder eingetreten: nach `migration_spiele_spieltag.sql`
+schrieb der laufende Code weiter nach `sfv_runde`, jeder Lauf endete in
+`42703`."*
+
+**Das war ERSCHLOSSEN, nicht gemessen** — und es traf nicht zu. Didi hat
+nachgesehen: der Lauf um **08:17 steht auf `ok`**. Die Migration lief
+danach, der Deploy um 08:37 wieder danach; **in das Fenster fiel gar kein
+Lauf**. Es gab keinen einzigen gescheiterten Sync.
+
+**Wie der Fehlschluss entstand:** ich habe aus zwei richtigen Tatsachen —
+der Code schrieb `sfv_runde`, die Spalte hiess `sfv_spieltag` — auf ein
+Ereignis geschlossen, das ich nie gesehen hatte. Beide Prämissen stimmten,
+die Folgerung nicht, weil eine dritte fehlte: **wann genau lief was.**
+
+⚠ **Und die Ironie ist der Grund, warum es hier stehen bleibt:** ich habe
+den fehlenden Beleg als Beleg genommen. „Die einzige Spur ist eine Lücke"
+hiess in Wahrheit „ich habe keine Spur" — und aus keiner Spur lässt sich
+kein Ausfall ableiten. **Genau die Ununterscheidbarkeit, die dieser
+Abschnitt beschreibt, hat mich selbst zum Falschen greifen lassen: ich
+konnte «gescheitert» und «nichts zu tun» nicht auseinanderhalten und habe
+das erste angenommen.**
+
+Der blinde Fleck ist damit belegter als vorher — nur an einem anderen
+Fall, und der Fall bin ich.
+
+**Der Beleg ist immer eine Abwesenheit** — und eine Abwesenheit fällt
+niemandem auf.
+
+⚠ **`net._http_response` hilft nicht.** Dort steht die Antwort des
+Gateways, und pg_net räumt selbst auf: am 21.08.2026 lagen dort sechs
+Zeilen, die älteste fünf Stunden alt. Die Tabelle sagt, ob es JETZT
+klemmt, nie seit wann.
+
+#### Der Vorschlag: die Zeile ZUERST schreiben, nicht zuletzt
+
+Dieselbe Bauart wie beim Löschprotokoll (23.08.2026), und aus demselben
+Grund:
+
+1. **Vor** dem ersten Abruf eine Zeile mit `status = 'laeuft'` und
+   `gestartet_am`.
+2. Am Ende dieselbe Zeile auf `ok` / `warnung` / `fehler` setzen.
+3. Der Fehlerzweig schreibt die Meldung hinein, statt sie mit dem Wurf
+   verschwinden zu lassen.
+
+Damit heisst eine Zeile auf `laeuft`, die älter als ein paar Minuten ist,
+**genau eine Sache**: der Lauf ist gestorben. Kein Rätselraten über
+Lücken.
+
+⚠ **Und der Wächter braucht dann keine Lückensuche mehr**, sondern eine
+einzige Bedingung: *gibt es eine Zeile im Zustand `laeuft`, die älter ist
+als die Laufsperre?* Das ist billiger und ehrlicher als „seit wann kam
+nichts mehr".
+
+⚠ **Ein Eintrag ohne Abschluss ist kein Formfehler, sondern die
+Aussage** — derselbe Satz wie beim `person_geloescht`-Protokoll. Wer die
+Tabelle liest, darf `laeuft` nicht als „läuft gerade" zählen, ohne aufs
+Alter zu sehen.
+
+**Was es kostet:** ein zusätzliches `insert` je Lauf und ein `update`
+statt eines `insert` am Ende.
+
+⚠ ⚠ **BERICHTIGT AM 10.09.2026 — DER SATZ DARUNTER WAR ZUR HÄLFTE
+FALSCH.** Hier stand: *„`wp-export` macht es beim scharfen Lauf bereits
+so, der Sync nicht."* Gemessen im Quelltext: **der Sync machte es schon
+richtig** — `insert` mit `status: "laeuft"` vor dem Lauf, `update`
+danach und im `catch`. Falsch war es nur bei der Aktion `namen`, und
+`wechselnachtrag` schrieb gar keine Zeile, obwohl er `spiel_ereignisse`
+ändert.
+
+**Wieder erschlossen statt gemessen**, am selben Tag zum zweiten Mal:
+ich hatte aus „der Befund gilt" auf „er gilt überall" geschlossen, ohne
+die zweite Stelle anzusehen.
+
+✅ **Behoben am 10.09.2026.** `namen` und `wechselnachtrag` schreiben die
+Zeile jetzt vorher; alle drei tragen `api_sync_log.aktion`.
+
+⚠ **Der Anlass für `aktion` war eine Zeile, die niemand deuten konnte:**
+08:26:15, `status = ok`, `details->'spiele' = null`. Dass es ein
+`namen`-Lauf war, ist **abgeleitet, nicht gemessen** — nach
+`api_sync_log` schreiben genau zwei Stellen, und der Sync schreibt immer
+`details.spiele`, also bleibt nur `namen`. Die Fallunterscheidung ist
+vollständig, aber sie bleibt ein Schluss. **Der dritte an einem Tag, und
+zwei davon waren falsch** — deshalb steht er hier als Schluss und nicht
+als Tatsache.
+
+Genau das soll die Spalte künftig überflüssig machen: ablesen statt
+ableiten.
+
+⚠ **Der Satz „`laeuft` heisst nicht «läuft gerade»" steht mit Absicht an
+zwei Orten** — als Spaltenkommentar in der Datenbank und als Doc-Comment
+an `LAUF_LAEUFT`. Wer die Tabelle im SQL-Editor liest, hat den Code nicht
+daneben; wer den Code liest, die Datenbank nicht. **Der Preis ist, dass
+sie auseinanderlaufen können** — dieselbe Doppelung, die dieses Projekt
+sonst auflöst. Sie steht hier trotzdem, weil die Alternative ist, dass
+einer der beiden Leser den Satz gar nicht sieht. Wer ihn ändert, ändert
+beide. Die
+Leseproben (`teamprobe`, `cupprobe`, `wechselprobe`, `rohschluessel`)
+protokollieren **absichtlich nicht** — sie ändern nichts, und eine Zeile
+je Auskunft wäre Rauschen in einer Tabelle, die von Änderungen handelt.
+
+Gehalten wird das von `src/domains/sfv/__tests__/protokollSpur.test.ts`:
+wer schreibt, protokolliert — und zwar vorher. **Gegengeprobt an der
+echten Datei:** `aktion`/`laeuft` entfernt → rot, zurückgesetzt → grün.
+
+### ⚠⚠ UNSERE NAMEN STANDEN BEIM GEGNER — die Nummern-Brücke, 11.09.2026
+
+Auf der Spielseite Junioren Ba – FC Fällanden vom 30.08. stand **viermal**:
+
+```
+„FC Fällanden ersetzt durch Levin Rutishauser"   ← in der 55. bei UNS eingewechselt
+„FC Fällanden ersetzt durch Louis Pfenninger"    ← bei uns in der 46.
+„FC Fällanden ersetzt durch Luis Sanchez Alonso" ← bei uns in der 59.
+„FC Fällanden ersetzt durch Alessio Graeser"     ← bei uns in der 80.
+```
+
+**Derselbe Mensch, im selben Verlauf, auf beiden Seiten.** Eine öffentliche
+Seite behauptete, ein Spieler von uns sei für den Gegner eingewechselt
+worden. **Entscheid B, andersherum** — nicht Gegnernamen bei uns, sondern
+unsere Namen beim Gegner.
+
+**Die Regel war vollständig aufgeschrieben und zu zwei Dritteln gebaut:**
+
+| Grenze | |
+|---|---|
+| dasselbe Spiel | ✅ `${spiel_id}:${nummer}` als Schlüssel |
+| genau ein Treffer | ✅ `menge.size === 1` |
+| **`ist_eigener` beidseitig** | ⚠ nur auf der **Aufstellungsseite** |
+
+Der Kommentar an `baueNummernBruecke()` sagte sie **wörtlich**: *„`ist_eigener`
+auf BEIDEN Seiten, dasselbe Spiel, und bei zwei Kandidaten gar keiner."*
+
+⚠ **Es ist der Kommentar-über-eine-andere-Stelle, zum wiederholten Mal** —
+und diesmal von demjenigen geschrieben, der die Regel eine Woche zuvor ins
+Papier gesetzt hat. Die Brücke filterte, was sie AUFNAHM. Wer sie BEFRAGT,
+stand nicht unter ihrer Aufsicht.
+
+⚠ ⚠ **UND SIE KONNTE DORT NICHT GEPRÜFT WERDEN: `beschreibeGewechselten()`
+BEKAM `ist_eigener` GAR NICHT.** Der Parameter war ein
+`Pick<EreignisZeile, "ein_sfv_person_id" | "ein_rueckennr">` — die Seite war
+im Typ nicht ausdrückbar. **Eine Grenze, die eine Funktion nicht sehen kann,
+kann sie nicht ziehen**, und kein Werkzeug meldet das: ein zu schmaler `Pick`
+ist für `tsc` kein Fehler, sondern eine Absicht.
+
+Seither ist es **Pflichtfeld**, nicht optional. Der Unterschied ist die
+Prüfung: der Compiler nennt jede Aufrufstelle, die es nicht liefert.
+Gemessen dabei — **kein einziger Produktionsaufrufer fehlte, nur die
+Testfälle.**
+
+#### ⚠ Warum der Testfall grün war, der genau danach benannt ist
+
+Es gab einen Fall mit dem Titel *„schweigt bei zwei Namen unter derselben
+Nummer"*, und im Kommentar darüber stand *„die 9 gibt es in beiden
+Mannschaften"*. Er war grün, und er war **richtig** grün:
+
+| | |
+|---|---|
+| er prüfte | `baueNummernBruecke()` — die **Aufstellungsseite** |
+| die war | **korrekt gebaut** |
+| die Ereignisseite prüfte | **kein Fall** — die Funktion kannte das Feld nicht |
+
+> **Geprüft war die Hälfte, die gebaut wurde, nicht die, die fehlte.**
+
+Dieselbe Familie wie „ein Komponententest prüft die Komponente, nicht ihren
+Einbau". Und die Testobjekte trugen zwei Felder — **ein Test kann eine
+Unterscheidung nicht prüfen, die sein eigener Eingabetyp nicht kennt.**
+
+#### ⚠ Das zweite Loch, das erst beim Schreiben des Testfalls auffiel
+
+Es gibt **zwei** Wege zu einem Namen — die Brücke **und** die Zuordnungskarte
+(`namen`, aus `sfv_personen`). Meine Grenze stand zuerst **zwischen** ihnen,
+also nur vor der Brücke. Löste die Kennung eines gegnerischen Wechsels
+zufällig in unserer Karte auf, stünde der Name genauso falsch da.
+
+⚠ ⚠ **BERICHTIGT AM 11.09.2026, am selben Tag.** Hier stand: *„für
+`spiel_ereignisse.ein_sfv_person_id` gibt es **keinen** CHECK."*
+**Falsch.** `spiel_ereignisse_fremde_anonym_check` deckt **beide** Spalten
+ab — `ist_eigener OR (sfv_person_id IS NULL AND ein_sfv_person_id IS NULL)`.
+**Ein fremdes Ereignis kann gar keine auflösbare Personennummer tragen;
+dieser zweite Weg war nie erreichbar.**
+
+Die Grenze bleibt, wo sie ist — sie kostet nichts, und vor allen Quellen zu
+stehen ist die richtige Stelle. ⚠ **Aber die Begründung war wieder eine
+Behauptung über eine andere Stelle, die ich nicht nachgesehen habe** —
+geschrieben in demselben Absatz, der genau davor warnt. Vierter Fall in
+zwei Tagen, und der billigste von allen: **ein `grep` auf `schema.sql`
+hätte ihn verhindert.**
+
+> **Eine Grenze, die vor allen Quellen steht, muss die Frage nicht
+> beantworten.** Sie steht seither ganz vorne, und der zweite Fall hält es
+> fest.
+
+Gegengeprobt: Grenze ausgeschaltet → **beide** neuen Fälle rot.
+
+### ⚠ `/events` kennt Spieler, die `/players` nicht listet — in VIER Spielen
+
+Gemessen am 11.09.2026 über den ganzen Bestand: **fünf Ereignisse in vier
+Spielen** nennen eine `sfv_person_id`, zu der es in `spiel_aufstellung`
+derselben Partie keine Zeile gibt.
+
+| Spiel | Fälle |
+|---|---|
+| 4379006 | 1 |
+| 4391599 | 2 |
+| 4378093 | 1 |
+| 4393089 | 1 |
+
+⚠ **BERICHTIGT AM 11.09.2026 NACH DEM NACHHOL-LAUF: es sind fünf, nicht
+sieben.** Die erste Messung lief, während zwei der Spiele noch in der
+eingefrorenen Zone lagen — ihre Aufstellung war unvollständig, ihre
+Ereignisse nicht. **Die eingefrorene Zone erklärt zwei der sieben, nicht
+alle.**
+
+⚠ **UND ALLE FÜNF STEHEN AUF DER AUSGEWECHSELTEN-SEITE.** Gemessen mit
+beiden Rollen getrennt (`sfv_person_id` gegen `ein_rueckennr`):
+
+| Spiel | raus_ohne_zeile | rein_ohne_zeile |
+|---|---|---|
+| 4379006 | 1 | **0** |
+| 4391599 | 2 | **0** |
+| 4393089 | 1 | **0** |
+| 4378093 | 1 | **0** |
+
+> **`rein_ohne_zeile` ist überall 0 — die Nummern-Brücke findet JEDEN
+> Eingewechselten.** Die Hälfte, die ich für die schwächere hielt, trägt
+> vollständig.
+
+⚠ Das ist die zweite Korrektur an derselben Sache an einem Tag: erst hat
+meine Abfrage nur `sfv_person_id` geprüft und damit genau die Rolle
+gemessen, die ohnehin funktioniert — und dann stand die Zahl sieben im
+Papier, obwohl zwei davon aus einem Zustand stammten, den es nicht mehr
+gab. **Eine Zahl in einem Dokument ist eine Messung von damals.**
+
+**Fünf von rund 1000 Ereignissen. Ein Randbefund**, festgehalten mit Datum
+und beim nächsten Durchlauf neu zu messen — **kein Bau.**
+
+⚠ ⚠ **UND EINE AUFSTELLUNGSZEILE AUS EREIGNISSEN ZUSAMMENZUSETZEN IST
+AUSDRÜCKLICH ABGELEHNT** (Didi, 11.09.2026, und die Begründung ist meine
+eigene): eine Zeile, die wir uns selbst ableiten, wäre von einer gelieferten
+nicht mehr zu unterscheiden — **und genau diese Ununterscheidbarkeit ist der
+teuerste Fehler in diesem Papier.** Wenn je, dann mit eigenem Merkmal und
+eigenem Zähler.
+
+#### ⚠⚠ UND 4395750 GEHÖRT NICHT DAZU — ich hatte den Befund am falschen Spiel behauptet
+
+**Das ist der eigentliche Eintrag hier, nicht die fünf Fälle.**
+
+Bei 4395750 (Senioren 50+, 9 eigene Zeilen) tauchten drei Namen im Verlauf
+auf — André Kym, Lars Haussmann, Benedetto Montana —, und ich habe daraus
+geschlossen: *„Damit ist `/events` für dieses Spiel vollständiger als
+`/players`."*
+
+**Gemessen: falsch.** Alle drei stehen in den neun Aufstellungszeilen.
+
+⚠ **Der Fehlschluss ist sauber benennbar, und er ist nicht Flüchtigkeit:**
+ich habe den WEG mit der EXISTENZ verwechselt.
+
+| | |
+|---|---|
+| richtig | der Name des Ausgewechselten kommt über `beschreibeWer()` aus `sfv_personen` — **nie** aus der Aufstellung |
+| **falsch daraus geschlossen** | „also steht er nicht in der Aufstellung" |
+
+**Der Weg sagt nichts über die Existenz.** Er ist derselbe, ob der Mensch
+zusätzlich in der Aufstellung steht oder nicht — die Funktion sieht sie gar
+nicht an. Meine Prämisse war richtig, die Folgerung war ein *non sequitur*,
+und die Zwischenfrage hätte eine Abfrage gekostet.
+
+⚠ **Dritter Fall derselben Klasse in zwei Tagen** — nach „der Sync macht es
+überall falsch" und „ein ausgefallener Lauf hat keine Spur hinterlassen".
+Gemeinsames Merkmal: **ein richtig verstandener Mechanismus, auf einen Fall
+angewendet, den niemand gemessen hat.** Und jedes Mal klang es plausibler
+als eine blosse Vermutung, gerade weil der Mechanismus stimmte.
+
+
+### ⚠ EIN ZUSTAND DARF WIEDERKOMMEN, EIN EREIGNIS NICHT — dieselbe Regel wäre hier ein Abschalter
+
+Gefunden am 11.09.2026 beim Anbau der Wachstumsfrage an den Sync-Wächter.
+**Nicht durch einen Fehler — durch die Frage, ob die bestehende Regel
+passt.**
+
+Der Wächter meldet einen Ausfall nur, *„wenn zu diesem Anschluss keine
+UNGELESENE Meldung steht"*. Das ist richtig: ein Ausfall wird behoben,
+und wer die Meldung liest und nichts tut, soll sie wiederbekommen.
+
+⚠ **Für die zweite Frage — „welche Tabelle nähert sich der stillen
+1000-Zeilen-Grenze?" — wäre dieselbe Regel ein Abschalter gewesen:**
+
+| | |
+|---|---|
+| **Zustand** (Ausfall) | geht vorbei. Solange er anhält, darf die Meldung wiederkommen |
+| **Ereignis** (Schwelle überschritten) | ⚠ **geht NIE vorbei.** Eine Tabelle fällt nicht wieder unter 800 |
+
+Mit der Ausfall-Regel hätte die Meldung nach **jedem Lesen** erneut
+genagt — für immer, ohne dass sich etwas ändern kann. **Und nach dem
+dritten Mal schaltet sie jemand ab.**
+
+> **Dieselbe Abstumpfung wie bei den 758 Lint-Warnungen und beim dauerhaft
+> roten Prüfmittel** — nur hätte hier nicht Nachlässigkeit sie erzeugt,
+> sondern eine Regel, die an einer anderen Stelle richtig ist.
+
+Deshalb steht dort `not exists (… referenz_id = …)` **ohne** `gelesen` —
+je Tabelle genau einmal, für immer.
+
+#### ⚠ Und die zweite Trennung im selben Block: was auf `/fail` geht
+
+Eine wachsende Tabelle ist **kein Ausfall**. Sie kommt deshalb nicht in
+`v_ausfaell` und schickt den Totmannschalter nicht auf `/fail` — sonst
+stünde healthchecks ab der ersten Meldung **dauerhaft rot**, und damit
+wäre das Prüfmittel wertlos, das den 14-Stunden-Ausfall vom 20.08.2026
+gemeldet hätte.
+
+**Die Frage beim nächsten Anbau lautet also zweimal dasselbe:** *geht das
+je wieder weg?* Wenn nein, gehört es weder in eine Wiederholung noch in
+einen Alarm.
+
+#### Drei Entscheidungen daneben, jede mit ihrem Grund
+
+| | |
+|---|---|
+| **`n_live_tup > 600` als Vorfilter, gezählt wird echt** | ⚠ `n_live_tup` ist eine **Schätzung** des Statistiksammlers und hinkt nach einem grossen Insert nach. 200 Zeilen Reserve unter der Schwelle; entschieden wird auf `count(*)` |
+| **`md5('tabelle:'‖name)::uuid` als `referenz_id`** | ⚠ zeigt auf **keine Zeile** — ein abgeleiteter, stabiler Schlüssel, nur damit „je Tabelle einmal" überhaupt greifen kann |
+| **vor dem Ping, nicht danach** | wirft die Schleife, unterbleibt der Ping und healthchecks meldet. **Ein Fehler ist damit laut.** Danach ginge erst das „ok" hinaus und der Fehlschlag bliebe in `cron.job_run_details` liegen |
+
+#### ⚠ Was diese Meldung NICHT weiss, und sie sagt es selbst
+
+> *„Ob sie irgendwo ungepagt gelesen wird, sagt diese Meldung NICHT; das
+> steht im Code."*
+
+**Ohne diesen Satz liest jemand die Meldung als Befund**, sucht einen
+Fehler, findet keinen — `personen` wird seit dem 11.09.2026 gepagt
+gelesen — und schaltet sie ab. **Eine Prüfung, die ihren eigenen
+Zuschnitt nennt, kann nicht für mehr genommen werden, als sie ist.**
+
+Die andere Hälfte ist Teil A (`check:paging`, `docs/vorschlag_paginierung_sichtbar.md`):
+der Code weiss, **was** ungepagt liest, und nicht, wie gross es ist; die
+Datenbank weiss es umgekehrt. **Keiner der beiden genügt allein.**
+
+
+### ⚠⚠ „KEINE EREIGNISSE" IST NICHT „NIE GEHOLT" — ein Widerspruch, den es nicht gab
+
+Am 11.09.2026 wurde ein Widerspruch untersucht, der keiner war: **14
+Spiele** schienen `matchdaten_geholt_am = null` zu tragen, während der
+Lauf `kandidaten_neu = 0` meldete. Beides zugleich ist unmöglich — also
+musste eines falsch sein.
+
+**Gemessen: alle vierzehn tragen die Marke.** Zwei davon frisch vom
+rollenden Nachlauf (13:17 und 14:17), Status, Verein und Match-Id überall
+korrekt. `kandidaten_neu = 0` stimmte.
+
+⚠ **Der Fehler lag in der Abfrage.** Sie las `max(e.zuletzt_synchronisiert)`
+aus der **Ereignistabelle** — und die war leer, weil der Verband zu diesen
+Spielen **keinen Verlauf führt.**
+
+| die Abfrage fragte | gelesen wurde sie als |
+|---|---|
+| gibt es Ereignisse zu diesem Spiel? | wurde dieses Spiel je geholt? |
+
+> **Wer nach dem Zustand einer Zeile fragt, liest die Spalte DIESER
+> Zeile** — nicht ein Aggregat über etwas, das an ihr hängt.
+> `matchdaten_geholt_am` steht in `spiele`; ein `max(…)` über
+> `spiel_ereignisse` beantwortet eine andere Frage.
+
+⚠ **Dieselbe Verwechslung wie bei den 207** (Didis eigene Einordnung):
+dort wurden „fehlende Namen" als „fehlende Zeilen" gelesen, hier „keine
+Ereignisse" als „nie geholt". **Eine Abfrage, die über eine Nebentabelle
+joint, misst die Anwesenheit der Nebentabelle, nicht die der Sache.**
+
+⚠ **Und die teure Hälfte: beide Lesarten sind plausibel.** Die falsche
+hat eine halbe Untersuchung gekostet, samt einer Vermutung über
+gescheiterte Läufe, die es nie gab — an demselben Tag, an dem schon
+zweimal erschlossen statt gemessen wurde. **Eine Zahl, die überrascht,
+gehört zuerst gegen das Werkzeug gehalten, das sie erzeugt hat.**
+
+Die vierzehn selbst sind kein Befund: der Verband führt zu ihnen keinen
+Verlauf, so wie zu Wald und Pfäffikon im Abschnitt darunter.
+
+
+### ✅ Die gelb-Frage ist ohne `isPlayer` beantwortet — und zwar deckungsgleich
+
+Gemessen am 11.09.2026 über `spiel_ereignisse`, `typ_id = 3`
+(Verwarnung), `ist_eigener`:
+
+| | |
+|---|---|
+| eigene Verwarnungen | **42** |
+| mit Rückennummer | **37** |
+| **ohne Nummer UND ohne Aufstellungszeile** | **5** |
+| Rest | **0** |
+
+**Kein Rest.** Die fünf ohne Nummer sind Trainer und Betreuer; sie stehen
+in keiner Aufstellungszeile, seit `/bench` am 10.09.2026 ausgebaut wurde.
+
+⚠ **Die eigentliche Lehre ist nicht die Antwort, sondern warum sie
+tragfähig ist: die Näherung war genau, WEIL ihre Aufteilung aufgeht.**
+
+> **37 + 5 = 42, ohne Rest — eine Aufteilung, die aufgehen muss, prüft
+> sich selbst.** Hätte dort ein Rest gestanden, wäre die Erklärung eine
+> Vermutung geblieben, und die Frage hätte eine Spalte gekostet.
+
+Dieselbe Bauart wie `zaehlung_stimmt` im Export und wie
+506 + 499 + 661 + 616 = 2282 beim Aufstellungs-Join. **Eine einzelne Zahl
+kann nur behauptet werden; eine Aufteilung kann man nachrechnen.**
+
+Damit sind auch die **88,1 %** auf der Gegnerseite erklärt, ohne dass
+`isPlayer` gespeichert werden muss: Karten gegen Personen ohne
+Trikotnummer.
+
+#### ⚠ Der Satz gilt trotzdem — der Anlass ist weg, die Lage nicht
+
+Der Verband liefert `isPlayer`, `roleId`, `roleCategoryId` und
+`roleCategoryName` bei **jedem** Abruf mit, und sie werden in derselben
+Zeile verworfen.
+
+> ⚠ **„Der Verband hat die Nummer vergessen" und „diese Person hat keine
+> Nummer" sehen in unseren Daten gleich aus.**
+
+Für die **eigene** Seite trennt die Aufstellung sie — deshalb ging die
+Messung oben auf. Für die **fremde** gibt es diese Brücke nicht
+(Entscheid B: keine `sfv_person_id`, kein Name), und dort bliebe die
+Frage offen, wenn sie je gestellt würde. **Heute wird sie nicht gestellt,
+und das ist der einzige Grund, warum die Spalte nicht gebraucht wird.**
+
+
+### ⚠⚠ EINE PRÜFUNG HINTER DEM FILTER, DEN SIE PRÜFEN SOLL, KANN NUR „IN ORDNUNG" SAGEN
+
+Befund des Theme-Chats, 11.09.2026. Der Unterfeld-Melder im
+WordPress-Empfänger war **in die falsche Richtung gebaut** — und er war
+grün, seit es ihn gab.
+
+```php
+foreach ( array_diff( $gesendet, $vorhanden ) as $name )   // 0.9.15
+//                   ↑ die KONSTANTE           ↑ ACF
+```
+
+`$gesendet` war an allen drei Aufrufstellen `CC_VERLAUF_FELDER` bzw.
+`CC_AUFSTELLUNG_FELDER`. Er beantwortete also: *„führen wir einen Namen,
+den ACF nicht kennt?"* — ein Wächter gegen das Auseinanderlaufen der
+Konstante. Nützlich. **Nur nicht die Frage.**
+
+⚠ **Käme `rueckennr` statt `nummer` in der Nutzlast, fiele der Name
+weiterhin wortlos weg** — und zwar nicht erst bei ACF, sondern **eine
+Stufe früher an unserer eigenen Allowlist**: `cc_schreibe_verlauf()`
+kopiert ausschliesslich die Namen aus `CC_VERLAUF_FELDER`. ACF sieht ihn
+nie.
+
+| Richtung | fängt | Beispiel |
+|---|---|---|
+| **Nutzlast → Konstante** | der Sender schickt einen Namen, den **wir** nicht kopieren | `rueckennr` statt `nummer` |
+| **Konstante → ACF** | wir kopieren einen Namen, den der **Zielrepeater** verwirft | `ein_nummer`, zwei Wochen |
+
+**Beide sind echt, beide sind verschieden, und gebaut war nur die
+zweite.**
+
+#### ⚠⚠ Und die Falle beim Reparieren: die rohe Nutzlast, nicht die gesäuberte
+
+Der naheliegende Anschluss ist die Variable, die dort ohnehin steht —
+`$wert` bzw. `$zeilen`. **Beide sind bereits durch den Filter gelaufen,
+den die Prüfung prüfen soll.** Die unbekannten Namen sind darin schon
+weg; der Melder wäre strukturell leer gewesen und hätte für immer „in
+Ordnung" gesagt.
+
+> **Eine Prüfung hinter dem Filter, den sie prüfen soll, kann nur „in
+> Ordnung" sagen.**
+
+Dieselbe Familie wie `zaehleVerlaufNamen()`, das den eigenen Ausgabetext
+wieder zerlegte, und wie die zweite Abfrage in `kindService.ts`, die „ist
+lesbar?" statt „wurde geschrieben?" fragte.
+
+#### ⚠ Zwei Listen, und sie mussten verschieden heissen
+
+`unbeachtete_unterfelder` trägt seit 0.9.16 die **erste** Richtung — damit
+es dasselbe bedeutet wie `unbeachtete_felder` eine Ebene darüber. Die
+zweite heisst jetzt `unterfelder_ohne_acf`.
+
+⚠ **Die Umbenennung war der Preis für die Reparatur, nicht Kosmetik.**
+Zwei Felder mit gleichlautendem Namen und **entgegengesetzter Richtung**
+wären genau die Falle, die dieses Papier an einem Dutzend Stellen führt:
+eine Beschriftung, die mehr behauptet als der Inhalt hält, wird irgendwann
+von jemandem geglaubt, der nicht nachsieht.
+
+#### Die Rekursion ersetzt den Parameter — eine dritte Ebene lief ungeprüft durch
+
+`marken` wurde über ein Argument erreicht (`cc_pruefe_unterfelder(…,
+'marken')`). ⚠ **Eine dritte Ebene wäre still durchgelaufen**, und der
+Parameter hätte bei jedem neuen Repeater von Hand nachgezogen werden
+müssen. `cc_nutzlast_pfade()` und `cc_acf_pfade()` steigen jetzt selbst
+hinab, beliebig tief.
+
+#### ⚠⚠ DIE POSITIVKONTROLLE MUSSTE DEN MELDER AUSFÜHREN, NICHT LESEN
+
+Didis Beobachtung, und sie ist der Kern: *„Heute meldet er nichts, weil
+alles deckungsgleich ist (Verlauf 10:10, Aufstellung 11:11, Marken 2:2).
+Das ist der Zustand, in dem ein funktionierender und ein toter Melder
+gleich aussehen."*
+
+**Alle 25 Regeln in `check:plugin` sind statisch** — sie lesen den
+Quelltext und sagen, dass etwas dasteht. **Keine kann sagen, dass es das
+Richtige tut.**
+
+Die 26. schneidet die vier reinen Funktionen mit dem PHP-Tokenizer aus
+der Datei, `eval`t sie und stellt acht Fragen. ⚠ **An der echten Funktion,
+nicht an einer Abschrift** — eine nachgebaute Kopie belegt, dass die Kopie
+funktioniert.
+
+**Gegengeprobt mit drei Sabotagen, jede einzeln zurückgesetzt:**
+
+| | Meldung |
+|---|---|
+| Rekursion herausgenommen | *„die dritte Ebene läuft ungeprüft durch"* |
+| `null` wie eine leere Liste behandelt | *„der Melder schlägt grundlos an"* |
+| **Funktion umbenannt** — der tote Melder | *„nicht alle Funktionen geschnitten"* |
+
+⚠ **Die dritte ist die wichtigste:** findet der Schnitt seinen Gegenstand
+nicht, ist das **rot** und nicht grün. Eine Kontrolle, die ohne ihren
+Gegenstand „ok" sagt, beruhigt — und das ist schlimmer als keine.
+
+Dazu `unterfelder_geprueft` (`gesendet:erlaubt:acf`, je Repeater) in
+**jeder** Antwort. Fehlt der Eintrag, ist der Melder nicht gelaufen; steht
+er da, hat er geprüft. Dieselbe Bauart wie `fremd_unveraendert`.
+
+#### ⚠⚠ UND MEINE EIGENE ÄNDERUNG HAT EINE REGEL BLIND GEMACHT — grün
+
+Die Regel *„jeder Repeater wird auf unbekannte Unterfelder geprüft"*
+erkannte einen Repeater-Schreiber daran, dass er **eine der drei
+Konstanten nennt**. Mit 0.9.16 ruft `cc_schreibe_felder()` die Aufstellung
+über `cc_erlaubt_aufstellung()` — und **fiel damit aus dem Erkenner
+heraus**. Die Regel blieb grün und sah die eine Funktion nicht mehr an,
+für die sie gebaut worden war.
+
+> **Eine Regel, die einen BEZEICHNER sucht, prüft eine Schreibweise** —
+> dieselbe Familie wie `name !== "Elternteil"` und wie `\b` gegen deutsche
+> Bezeichner, nur im Prüfwerkzeug selbst, also an der Stelle, an der
+> niemand mehr nachsieht. **Dritter Fall in zwei Tagen.**
+
+Behoben in beide Richtungen: der Erkenner kennt die neuen Namen, **und**
+daneben steht eine Regel, die an einer **Funktion** hängt statt an einem
+Namen — *„wer die Aufstellung säubert, meldet sie auch"*.
+`cc_saeubere_aufstellung()` kann nicht verschwinden, ohne dass das Feature
+verschwindet; ein Konstantenname schon.
+
+⚠ **Und sie prüft sich selbst auf die leere Menge:** hätte die Säuberung
+keinen Aufrufer mehr, ginge die Schleife leer aus und die Regel wäre grün,
+ohne etwas zu prüfen. **Das ist in dieser Datei schon viermal passiert.**
+
+#### ⚠ Der fehlende Änderungsverlauf hat eine falsche Behauptung ERZEUGT
+
+Ich hatte gemeldet, 0.9.13 und 0.9.14 seien **nie auf dev** gewesen.
+Gemessen (Didi, 11.09.2026): beide liegen dort als Commits, übersprungen
+wurde keine.
+
+**Woher die Annahme kam, und das ist der Eintrag:** der Änderungsverlauf
+im Kopf **unserer** Datei endete bei 0.9.12. Ich habe ihn als Aussage über
+**sein** Repository gelesen.
+
+> **Eine Lücke in der eigenen Buchführung liest sich wie eine Lücke in der
+> Wirklichkeit.**
+
+Dieselbe Familie wie „ein Kommentar, der eine ANDERE Stelle zusichert" —
+nur umgekehrt: hier hat nicht ein falscher Satz getäuscht, sondern ein
+**fehlender**. Und der Satz im Kopf derselben Datei sagt es wörtlich: *„Wer
+diese Datei inhaltlich ändert, erhöht sie."* Die Fassung wurde erhöht, der
+Verlauf nicht — **eine Regel, an die jemand denken muss, ist die
+schwächste Lösung**, und sie hat hier zweimal hintereinander versagt.
+Nachgetragen für 0.9.13 bis 0.9.16.
+
+
+### ⚠⚠ ZWEI PRÜFUNGEN AN EINEM TAG, DIE HINTER DEM FILTER STANDEN
+
+Der Satz selbst steht eine Bildschirmseite weiter oben, beim
+Unterfeld-Melder. Was fehlte, ist der **zweite Fall** — und dass es zwei
+am 11.09.2026 waren, zwei Stunden auseinander.
+
+| | was sie ansah | warum sie grün war |
+|---|---|---|
+| **Unterfeld-Melder** | die **Konstante** gegen ACF | die unbekannten Namen fielen schon an unserer eigenen Allowlist heraus |
+| **`nutzlast_fassung`** | ein **selbstgebautes Objekt** statt dessen, was `baueNutzlast()` liefert | das Feld lag in der Attrappe, nicht in der Nutzlast |
+
+⚠ ⚠ **`nutzlast_fassung` WURDE NIE GESCHICKT.** Gemessen am 11.09.2026:
+`NUTZLAST_FASSUNG` steht in `wpNutzlast.ts:97` als exportierte Konstante
+und kommt in **keiner** Nutzlast vor. **Die ganze Idee hätte vom ersten
+Lauf an nicht funktioniert** — und der Testfall war grün.
+
+**Die gemeinsame Form, und dafür steht der Eintrag:** beide Prüfungen
+sahen etwas an, das sie **selbst erzeugt hatten**. Die eine den
+gefilterten Wert, die andere die eigene Attrappe.
+
+> **Keine von beiden konnte jemals etwas anderes sagen als „in Ordnung".**
+
+Dieselbe Familie wie `zaehleVerlaufNamen()`, das den eigenen Ausgabetext
+wieder zerlegte, und wie **„eine Attrappe, die die Form abschreibt, prüft
+die Abschrift"** — dort steht die ausführliche Fassung.
+
+⚠ **Die Gegenmassnahme ist beide Male dieselbe: die Prüfung an das echte
+Erzeugnis hängen.** Für den Melder ist das die rohe Nutzlast; für die
+Fassung der Rückgabewert von `baueNutzlast()`, nicht ein daneben gebautes
+Objekt. **Wer eine Prüfung schreibt, fragt zuerst, wer das prüft, was sie
+ansieht — sie selbst oder der Code, um den es geht.**
+
+### ⚠ EIN ÄNDERUNGSVERLAUF AUS DER ABSICHT STATT AUS DEM ERZEUGNIS
+
+Dritte Ausprägung derselben Familie am 11.09.2026, und diese ist von mir,
+am selben Tag geschrieben.
+
+`git log -S"nutzlast_fassung" -- wordpress/wp-export-empfaenger.php` nennt
+**genau einen** Commit — `6b759e0`, den von heute. Das Wort steht im
+Empfänger ausschliesslich in einer Änderungsverlauf-Zeile, die ich selbst
+verfasst habe:
+
+> *„0.9.15 (11.09.2026): `nutzlast_fassung` in jeder Antwort…"*
+
+⚠ **Die Datei hat das Feld nicht und hatte es nie.** Ich habe den Eintrag
+aus dem **Commit-Titel** abgeschrieben (`NUTZLAST_FASSUNG und der
+Unterfeld-Melder`) — und die eine Hälfte davon war in `src/` gelandet,
+nicht im Empfänger.
+
+> **Ein Änderungsverlauf, der aus der Absicht geschrieben wird statt aus
+> dem Erzeugnis, ist eine Behauptung über eine andere Stelle.**
+
+⚠ Dieselbe Familie wie „ein Kommentar, der eine ANDERE Stelle zusichert" —
+nur ist die andere Stelle hier **dieselbe Datei**, zweihundert Zeilen
+tiefer. Der Abstand, der die Behauptung ungeprüft lässt, ist nicht der
+zwischen zwei Dateien, sondern der zwischen **dem, was man vorhatte, und
+dem, was man abgeliefert hat.** Berichtigt.
+
+### ⚠ EIN WIDERSPRUCH ZWISCHEN PAPIER UND CODE WIRD AM CODE AUFGELÖST
+
+Didi, 11.09.2026:
+
+> *„Das Papier hatte recht, die Datei nicht — und du hast es am Code
+> aufgelöst statt am Dokument. Die 630 Zeilen sind der unabhängige Beleg,
+> dass die Aufräumfunktion nie lief."*
+
+Die gemessene Hälfte dazu, 11.09.2026: **im ganzen Repository gibt es kein
+`delete`, kein `truncate` und keinen Job auf `api_sync_log`.** Das
+Protokoll wächst unbegrenzt — und 630 Zeilen seit dem 14.08.2026 sind
+genau das, was daraus folgt.
+
+> **Der Code ist das, was läuft; das Papier ist eine Messung von damals.
+> Wer die Datei an das Papier anpasst, macht aus einer erkannten
+> Abweichung eine bestätigte Behauptung.**
+
+⚠ **Und die zweite Hälfte ist die Bestandszahl.** Papier und Code sind
+beide **Beschreibungen** — die eine von damals, die andere von jetzt. 630
+Zeilen sind keine Beschreibung.
+
+> **Wo zwei Beschreibungen streiten, entscheidet eine dritte Quelle, die
+> keine Beschreibung ist.**
+
+⚠ Dieselbe Richtung wie die Selbstauskunft vom selben Tag, nur
+**gespiegelt**: dort las sich eine Lücke in der eigenen Buchführung wie
+eine Lücke in der Wirklichkeit (siehe „Der fehlende Änderungsverlauf hat
+eine falsche Behauptung ERZEUGT"). Hier hatte die Buchführung recht — und
+beinahe wäre sie der Datei angeglichen worden.
+
+
+### ⚠⚠ `cron.schedule` PRÜFT NICHT, OB DIESELBE SACHE SCHON UNTER ANDEREM NAMEN LÄUFT
+
+Gemessen am 11.09.2026 in der laufenden Datenbank, nachdem der Verdacht aus
+dem Repository kam:
+
+```
+jobid  jobname                    schedule        active
+  1    sfv-sync-stuendlich        17 * * * *      ja
+  3    sync-waechter-stuendlich   47 * * * *      ja   ← der alte
+  8    wp-export-abholer          */15 * * * *    ja
+  9    sync-waechter              */30 * * * *    ja   ← der neue
+```
+
+**Zwei Wächter liefen parallel.** Am 10.09.2026 um 19:50 hatte eine
+Erweiterung dem Auftrag einen neuen Namen gegeben — und `cron.schedule`
+ersetzt einen **gleichnamigen** Auftrag und legt sonst einen zweiten an.
+
+> ⚠ ⚠ **HIER STAND „drei Wochen", UND DAS WAR ERSCHLOSSEN STATT GEMESSEN.**
+> Ich hatte das Alter des ÄLTEREN Auftrags (21.08.2026) für die Dauer der
+> Überschneidung genommen. Gemessen sind es **rund ein Tag** — der zweite
+> Auftrag entstand am 10.09.2026 um 19:50.
+>
+> **Die Dauer einer Überschneidung bemisst sich am JÜNGEREN der beiden.**
+> Der ältere sagt nur, wie lange es ihn gibt, nicht wie lange sie sich
+> überlagern. Ein Fehler, der sich in eine Zahl kleidet und deshalb wie
+> eine Messung aussieht.
+
+> **Beim Umbenennen eines Auftrags bleibt der alte stehen.** Es gibt keine
+> Meldung, keinen Konflikt und keine Prüfung: die Datenbank sieht zwei
+> Aufträge und findet daran nichts.
+
+⚠ **Und die Regel, die das Nagen verhindert, hat es zusätzlich verdeckt.**
+Beide prüfen vor dem Schreiben auf eine **ungelesene** Meldung derselben Art
+— der zweite fand also die Meldung des ersten und schwieg. **Die Doppelung
+war nach aussen unsichtbar, gerade weil beide richtig gebaut waren.**
+
+#### ⚠⚠ Die naheliegende Reparatur wäre die schlimmste gewesen
+
+Der Reflex heisst *„zwei Aufträge, also den neueren behalten"*. Gemessen:
+
+| | Ausfall | Export | Nachlauf | Wachstum | **Totmannschalter** |
+|---|---|---|---|---|---|
+| `sync-waechter-stuendlich` | ✅ | ❌ | ❌ | ✅ | **✅** |
+| `sync-waechter` (`*/30`) | ✅ | ✅ | ✅ | ❌ | **❌** |
+
+**Keiner konnte alles, und der Totmannschalter stand in genau einem.** Wer
+den neueren behält, entfernt die einzige Einrichtung, die den Ausfall des
+Wächters **selbst** meldet — und **Schweigen ist von Zufriedenheit nicht zu
+unterscheiden.** Genau das Loch, gegen das der Totmannschalter gebaut wurde,
+eine Ebene höher.
+
+⚠ **Das ist der Grund, warum die Frage „welchen löschen?" die falsche war.**
+Die richtige lautet: *was kann jeder von beiden, das der andere nicht kann?*
+Sie kostet einen Vergleich und verhindert einen stillen Verlust.
+
+#### ⚠ Und das ALTER war kein Argument — auch dort, wo es stimmte
+
+Die Reihenfolge der `jobid` (1 · 3 · 8 · 9) deckt sich hier mit der
+Entstehungsreihenfolge: `cron.jobid` kommt aus einer Sequenz, und eine
+Sequenz vergibt keine Nummer zweimal. **Die Vermutung „der mit der höheren
+Nummer ist der neuere" traf also zu.**
+
+> ⚠ **Und sie hätte trotzdem zur falschen Entscheidung geführt.** „Den
+> neueren behalten" war nicht deshalb falsch, weil das Alter falsch
+> bestimmt war, sondern weil **das Alter nichts über den Inhalt sagt.**
+
+**Ein richtig abgeleitetes Merkmal, das die Frage nicht beantwortet, ist
+gefährlicher als ein falsches** — es hält jeder Nachprüfung stand und führt
+trotzdem am Ziel vorbei. Dieselbe Familie wie der Filter auf einen Namen,
+der eine Schreibweise prüft statt der Sache.
+
+**Entschieden hat am Ende eine Messung des INHALTS:** die Länge des
+gespeicherten Befehls je Auftrag, gegen die Länge, die jede Fassung der
+Datei erzeugt.
+
+-Marken steht, steht danach in
+`cron.job`**, Zeichen für Zeichen, bis auf die Zeilenenden. Die
+CRLF-Rechnung ist der Beleg dafür, nicht nur eine Zuordnung.
 
 #### Was daraus folgt — drei Regeln
 
