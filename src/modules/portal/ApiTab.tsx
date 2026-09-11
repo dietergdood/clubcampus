@@ -338,21 +338,34 @@ export function ApiTab({loading,isMobile,mobileKachel,apiVerbindungen,tab,sb=nul
     zeilen.push(z("ohne_laufstempel") === 0
       ? "Alle tragen einen Laufstempel — jeder stammt aus einem Export"
       : `${z("ohne_laufstempel")} ohne Laufstempel, davon ${z("ohne_laufstempel_sichtbar")} öffentlich sichtbar`);
-    /* ⚠ WAS ER NICHT WEISS, STEHT DANEBEN. Er läuft über fch_spiel;
-       Personen kennt er nicht. Ohne diesen Satz wird eine richtige
-       Antwort für die Antwort auf eine andere Frage gehalten. */
-    /* ⚠ ⚠ DIE VERNEINUNG STEHT VORNE, UND DAS IST DER GANZE UNTERSCHIED.
-       Bis zum 11.09.2026 stand hier „Nur Spiele. Personen und Teams stehen
-       nicht in dieser Auskunft." — und wurde als AUFZAEHLUNG gelesen:
-       jemand hat daraus geschlossen, die Auskunft liefere Personen und
-       Teams, und einen Widerspruch zur Anzeige gemeldet, den es nicht gab.
+    /* ⚠ ⚠ PERSONEN — seit 0.9.18 die Hälfte, für die der Knopf gebaut
+       wurde. Bis dahin zeigte er 270 Spiele und musste dazuschreiben,
+       dass er Personen gar nicht kennt.
 
-       **Eine Verneinung, die nach der Aufzaehlung kommt, wird ueberlesen.**
-       Der Leser hat die Namen schon aufgenommen, bevor das „nicht"
-       eintrifft. Dieselbe Familie wie ein Zaehler, dessen Name mehr
-       behauptet als er misst — nur in einem Satz statt in einem Feld. */
-    zeilen.push("⚠ Gezählt werden ausschliesslich Spiel-Beiträge. Nach Personen "
-      + "fragt diese Auskunft gar nicht erst — keine Route des Empfängers listet sie.");
+       ⚠ `vorhanden: false` heisst „den Beitragstyp gibt es dort nicht"
+       und ist KEINE Null — sonst liest sich eine fehlende Einrichtung
+       wie ein leerer Bestand. */
+    const pers = (d.personen ?? {}) as Record<string, unknown>;
+    if (pers.vorhanden === false) {
+      zeilen.push("⚠ Den Beitragstyp fch_person gibt es drüben nicht — nicht gezählt, nicht leer.");
+    } else {
+      const g = Number(pers.gesamt ?? 0), mn = Number(pers.mit_nummer ?? 0);
+      const on = Number(pers.ohne_nummer ?? 0);
+      zeilen.push(`${g} Personen stehen drüben · ${mn} mit Verbandsnummer · ${on} ohne`);
+      /* ⚠ DIE ZAHL, DIE ZAEHLT, BEKOMMT IHRE BEDEUTUNG DANEBEN.
+         „232 ohne Nummer" ist eine Zahl; „über die Nummer nie erreichbar"
+         ist eine Auskunft. */
+      if (on > 0) {
+        zeilen.push(`⚠ Die ${on} ohne Nummer sind über die Nummer nie erreichbar — `
+          + "sie bleiben auf dem Stand ihres CSV-Imports.");
+      }
+    }
+    /* Teams — die dritte Menge, getrennt ausgewiesen. */
+    const tm = (d.teams ?? {}) as Record<string, unknown>;
+    zeilen.push(`${Number(tm.gesamt ?? 0)} Teams · ${Number(tm.mit_sfv_id ?? 0)} mit SFV-Nummer`
+      + ` · ${Number(tm.ohne_sfv_id ?? 0)} ohne`
+      + (Number(tm.sfv_id_doppelt ?? 0) > 0
+         ? ` · ⚠ ${Number(tm.sfv_id_doppelt)} mit doppelter Nummer` : ""));
     return zeilen;
   }
 

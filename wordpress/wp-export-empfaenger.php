@@ -4,7 +4,7 @@
  *
  * Plugin Name: ClubCampus Export
  * Description: Nimmt Spielplan, Verlauf und Ranglisten aus ClubCampus entgegen.
- * Version:     0.9.17
+ * Version:     0.9.18
  *
  * ⚠ ⚠  STAND 10.09.2026: DIESE DATEI **IST** DER EMPFAENGER  ⚠ ⚠
  *
@@ -142,6 +142,21 @@ const CC_ROUTE      = 'clubcampus/v1';
    Auskunft, die „laeuft drueben der neue Empfaenger?" beantworten koennte,
    beantwortet sie nicht mehr.
 
+   0.9.18 (11.09.2026): `bestand` zaehlt auch PERSONEN und TEAMS.
+   ⚠ ⚠  ANLASS: der Knopf „Bestand drueben" wurde gebaut, um die Frage zu
+         beantworten, die an einem Tag dreimal offen war — und beantwortete
+         sie nicht. Er zeigte 270 Spiele und musste dazuschreiben, dass er
+         Personen gar nicht kennt.
+   ⚠     **Ein Knopf, der seinen eigenen Zuschnitt entschuldigen muss, ist
+         am falschen Zuschnitt gebaut.**
+   ⚠     OHNE KLARNAMEN: gezaehlt wird, und die `sfv_person_id` kommt als
+         Liste mit. Fuer die Schnittmenge genuegt die Nummer; ein Name
+         waere eine Preisgabe ohne Gegenwert.
+   ⚠     `ohne_nummer` ist die Zahl, die zaehlt — diese Personen sind ueber
+         die Nummer NIE erreichbar und bleiben auf dem Stand ihres
+         CSV-Imports stehen.
+   ⚠     `personen.vorhanden = false` heisst „den Beitragstyp gibt es hier
+         nicht" und ist KEINE Null.
    0.9.17 (11.09.2026): `/status` nennt die UNTERFELDER der Repeater —
    was ACF kennt, was wir schicken, und was dabei wortlos wegfaellt.
    ⚠ ⚠  ANLASS: `sfv_person_id` kam an KEINER der 33 Aufstellungszeilen
@@ -427,9 +442,14 @@ const CC_ROUTE      = 'clubcampus/v1';
    einander), `autoload` wird nach dem Schreiben geprueft und notfalls
    berichtigt, `/status` nennt Empfaenger, Version, Metaschluessel und die
    Team-Zuordnung. */
-const CC_VERSION    = '0.9.17';
+const CC_VERSION    = '0.9.18';
 const CC_TYP_SPIEL  = 'fch_spiel';
 const CC_TYP_TEAM   = 'fch_team';
+/* ⚠ NUR ZUM ZAEHLEN. Dieses Plugin legt keine Person an und aendert
+   keine — 'fch_person' steht im Kopf unter NIE. Der Typ steht hier,
+   damit `bestand` die Frage beantworten kann, wie viele drueben
+   stehen; siehe cc_personen_lage(). */
+const CC_TYP_PERSON = 'fch_person';
 /* ⚠ DER SCHLUESSEL, AN DEM DIE GANZE ZUORDNUNG HAENGT — Meta am
    fch_team-Beitrag, gepflegt von der Redaktion (Plan §1). Stimmt er
    nicht, ist `cc_team_karte()` leer, und der Lauf meldet `ohne_team`:
@@ -1835,6 +1855,93 @@ function cc_titel_nachziehen( int $post_id ): void {
  *   eine Schwelle von 20 bei einem Stapel von zwei umfiel. Sind es viele,
  *   ist eine lange Liste die ehrliche Auskunft.
  */
+/**
+ * Wie viele Personen stehen drueben, und wie viele tragen eine Nummer?
+ *
+ * ⚠ ⚠  OHNE KLARNAMEN — und das ist keine Sparsamkeit. Die Frage lautet
+ *       „welche erreichen wir?", und dafuer genuegen ZAHLEN und die
+ *       NUMMERN. Ein Name waere eine Preisgabe ohne Gegenwert; die
+ *       Schnittmenge rechnet sich ueber `sfv_person_id`, und die haben
+ *       wir ohnehin.
+ *
+ * ⚠  `ohne_nummer` IST DIE ZAHL, DIE ZAEHLT. Diese Personen sind ueber
+ *    die Nummer NIE erreichbar — fuer sie ist der Abgleich strukturell
+ *    blind, unabhaengig von jedem Filter. Sie bleiben auf dem Stand
+ *    ihres CSV-Imports stehen und laufen auseinander.
+ *
+ * ⚠  Und die Liste `nummern` erlaubt die Schnittmenge auf der anderen
+ *    Seite: wie viele der gesendeten wuerden gefunden, und wie viele
+ *    stehen hier und dort nicht. **Zwei Zahlen nebeneinander sind eine
+ *    Auskunft, zwei Listen sind eine Aufgabe** — deshalb kommt die
+ *    Liste mit, aber gerechnet wird drueben.
+ */
+function cc_personen_lage(): array {
+	if ( ! post_type_exists( CC_TYP_PERSON ) ) {
+		/* ⚠ null-Semantik wie bei cc_unterfelder(): „gibt es hier nicht"
+		   ist KEINE Null. Wer beides gleich liest, meldet einen fehlenden
+		   Beitragstyp als leeren Bestand. */
+		return array( 'vorhanden' => false );
+	}
+	$ids = get_posts(
+		array(
+			'post_type'   => CC_TYP_PERSON,
+			'post_status' => CC_TEAM_ZUSTAENDE,
+			'numberposts' => -1,
+			'fields'      => 'ids',
+		)
+	);
+	$nummern = array();
+	$ohne    = 0;
+	foreach ( $ids as $id ) {
+		$nr = trim( (string) get_post_meta( (int) $id, 'sfv_person_id', true ) );
+		if ( '' === $nr ) {
+			$ohne++;
+			continue;
+		}
+		$nummern[] = $nr;
+	}
+	sort( $nummern );
+	return array(
+		'vorhanden'   => true,
+		'gesamt'      => count( $ids ),
+		'mit_nummer'  => count( $nummern ),
+		'ohne_nummer' => $ohne,
+		'nummern'     => $nummern,
+	);
+}
+
+/**
+ * Und dasselbe fuer Teams — die dritte Menge, nach der `bestand` bisher
+ * nicht gefragt hat.
+ *
+ * ⚠ `cc_team_karte()` setzt bei Mehrdeutigkeit 0 ein; das wird hier
+ *   getrennt ausgewiesen statt mitgezaehlt. Eine Zahl, die zwei Faelle
+ *   zusammenwirft, ist keine Auskunft.
+ */
+function cc_teams_lage(): array {
+	$karte     = cc_team_karte();
+	$mehrfach  = 0;
+	foreach ( $karte as $tid ) {
+		if ( 0 === $tid ) {
+			++$mehrfach;
+		}
+	}
+	$alle = get_posts(
+		array(
+			'post_type'   => CC_TYP_TEAM,
+			'post_status' => CC_TEAM_ZUSTAENDE,
+			'numberposts' => -1,
+			'fields'      => 'ids',
+		)
+	);
+	return array(
+		'gesamt'        => count( $alle ),
+		'mit_sfv_id'    => count( $karte ) - $mehrfach,
+		'sfv_id_doppelt' => $mehrfach,
+		'ohne_sfv_id'   => count( $alle ) - count( $karte ),
+	);
+}
+
 function cc_route_bestand(): WP_REST_Response {
 	$fehlt = cc_voraussetzungen();
 	if ( array() !== $fehlt ) {
@@ -1914,6 +2021,13 @@ function cc_route_bestand(): WP_REST_Response {
 			   sfv_match_id fasst der Export nie an. Bleibt diese Zahl
 			   konstant, hat er die Grenze eingehalten. */
 			'handbeitraege'             => cc_zaehle_handbeitraege(),
+			/* ⚠ ⚠ SEIT 0.9.18. Bis dahin hiess die Route `bestand` und
+			   beantwortete nur die Spielfrage — und die Karte im Portal
+			   musste dazuschreiben, was sie NICHT zeigt. Ein Knopf, der
+			   seinen eigenen Zuschnitt entschuldigen muss, ist am falschen
+			   Zuschnitt gebaut. */
+			'personen'                  => cc_personen_lage(),
+			'teams'                     => cc_teams_lage(),
 			'beitraege'                 => $zeilen,
 		),
 		200

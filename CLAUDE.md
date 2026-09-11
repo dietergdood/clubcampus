@@ -8734,6 +8734,52 @@ höchstens danach erwähnt — und nie als Liste.**
 dass sie nicht selbst zur Falschauskunft werden.
 
 
+### ⚠⚠ DER UNTERFELD-MELDER HAT BEIM ERSTEN ECHTEN EINSATZ EINEN STUMMEN AUSFALL GEFUNDEN
+
+11.09.2026, nachmittags. `ereignis_zusatz` fällt drüben weg — wir senden
+es, das Theme führt das Unterfeld nicht.
+
+⚠ **Und es wäre nicht aufgefallen.** Die Spielseite liest das Wort
+„Eigentor“ weiterhin aus `text`; der Zwischenstand stimmte also. Der
+Verlust hätte erst in dem Moment zugeschlagen, in dem jemand den Zusatz
+aus `text` entfernt — **und dann hätte sich der Halbzeitstand um zwei Tore
+verschoben, ohne Fehlermeldung.**
+
+> **Der Melder hat nicht theoretisch funktioniert, sondern einen realen,
+> stummen Ausfall gefunden, bevor jemand ihn gesucht hat.** (Didi)
+
+⚠ **Das ist der Beleg, den eine Prüfung sonst nie bekommt.** Eine
+Positivkontrolle zeigt, dass sie anschlägt, wenn man sie sabotiert — sie
+sagt nichts darüber, ob je etwas zu finden war. **Hier gab es etwas, und
+zwar am ersten Tag.**
+
+#### Die Kette, die ihn möglich gemacht hat
+
+| | |
+|---|---|
+| 0.9.15 | der Melder überhaupt — er verglich die **Konstante** gegen ACF |
+| **0.9.16** | ⚠ **die andere Richtung**, ausgelöst durch die Frage des Theme-Chats: was die Nutzlast bringt und wir nicht kopieren |
+| **0.9.17** | `/status` nennt die Unterfelder **ohne Schreiblauf** |
+
+⚠ **Gefunden hat es die Richtung, die zuerst NICHT gebaut war.** Die
+ursprüngliche Fassung hätte geschwiegen: `ereignis_zusatz` steht in
+unserer Allowlist, der Vergleich Konstante↔Konstante bleibt leer. **Erst
+der Vergleich gegen ACF hat es gesehen.**
+
+#### ⚠ Und der Fall reiht sich in die teuerste Familie dieses Papiers
+
+Ein Feld, das wortlos wegfällt, während eine zweite Quelle dieselbe
+Information noch trägt — `text` statt `ereignis_zusatz` — **sieht wie ein
+funktionierendes System aus.** Dieselbe Bauart wie:
+
+- `ein_nummer`, vier Tage ins Leere, weil die Nummer sonst nirgends stand
+- `spiel_nr`, dessen Rückfallzweig die Nummer des Verbands zeigte
+- der Zähler, der 431 Klarnamen meldete, wo 0 waren
+
+**Gemeinsames Merkmal: die Anzeige stimmt, und die Quelle ist eine
+andere als gedacht.**
+
+
 ### ✅ VIER SPIELE, DEREN VERLAUF NICHT ZUM RESULTAT PASST — alle vier erklärt, keines ein Fehler bei uns
 
 Gemeldet von der Website-Seite am 11.09.2026, gemessen über alle 68
