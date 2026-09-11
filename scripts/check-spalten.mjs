@@ -164,6 +164,31 @@ for (const datei of dateien("supabase")) {
     if (!istPublic) fremd.add(alias);
   }
 
+  /* ⚠ ⚠  EINE SPALTENLISTE AM ALIAS ERFINDET NAMEN, DIE ES GEBEN DARF.
+
+     Standard-SQL erlaubt `… as f(spalte, spalte)` — bei `values`, bei
+     Funktionen, bei Unterabfragen. Die Namen darin sind gültig und stehen
+     in keinem Schema.
+
+     Gefunden am 11.09.2026 an der eigenen Prüfkette: die Gegenprobe des
+     Sync-Wächters benutzt
+       cross join (values ('1 Ausfall', 'letzter_sync'), …) as f(frage, marke)
+     und `f.marke` wurde als erfundene Spalte gemeldet. **Ein Melder, der
+     grundlos anschlägt, wird nach dem dritten Mal abgeschaltet** — und
+     dieser hätte bei völlig gültigem SQL angeschlagen.
+
+     ⚠ Aufgenommen werden die Namen, nicht der Alias: `f.marke` ist damit
+     bekannt, ein Tippfehler `f.mark` weiterhin ein Befund. Die Grenze
+     bleibt also eng. */
+  const aliasSpalten = new Set();
+  const SPALTENLISTE = /\)\s*(?:as\s+)?[a-z][a-z0-9_]*\s*\(([^()]*)\)/gi;
+  for (const m of text.matchAll(SPALTENLISTE)) {
+    for (const teil of m[1].split(",")) {
+      const name = teil.trim().toLowerCase();
+      if (/^[a-z][a-z0-9_]*$/.test(name)) aliasSpalten.add(name);
+    }
+  }
+
   const zeilen = text.split("\n");
   zeilen.forEach((zeile, i) => {
     for (const m of zeile.matchAll(/\b([a-z][a-z0-9_]*)\.([a-z][a-z0-9_]*)\b/g)) {
@@ -171,6 +196,7 @@ for (const datei of dateien("supabase")) {
       if (PRAEFIXE.has(links)) continue;
       if (fremd.has(links)) continue;
       if (spalten.has(rechts) || eigene.has(rechts)) continue;
+      if (aliasSpalten.has(rechts)) continue;
       /* Eine Tabelle als rechte Seite (`cron.job`) ist keine Spalte —
          Tabellennamen stehen ebenfalls im Dump. */
       if (dump.includes(`"public"."${rechts}"`)) continue;
