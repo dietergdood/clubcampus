@@ -4,7 +4,7 @@
  *
  * Plugin Name: ClubCampus Export
  * Description: Nimmt Spielplan, Verlauf und Ranglisten aus ClubCampus entgegen.
- * Version:     0.9.20
+ * Version:     0.9.21
  *
  * ⚠ ⚠  STAND 10.09.2026: DIESE DATEI **IST** DER EMPFAENGER  ⚠ ⚠
  *
@@ -141,6 +141,20 @@ const CC_ROUTE      = 'clubcampus/v1';
    `/status` fuer zwei verschiedene Fassungen dieselbe Zahl, und die eine
    Auskunft, die „laeuft drueben der neue Empfaenger?" beantworten koennte,
    beantwortet sie nicht mehr.
+
+   0.9.21 (12.09.2026): `geschwister` — liegt eine ZWEITE Kopie dieses
+   Plugins im selben Ordner?
+   ⚠ ⚠  ANLASS: der DRITTE Fall seit dem 09.09.2026, in dem eine Datei
+         antwortete, die niemand gemeint hatte — und jedes Mal sagte
+         /status „bereit". Zuletzt lagen zwei Kopien in mu-plugins,
+         0.9.20 und 0.9.11; geantwortet hat die alte.
+   ⚠ ⚠  `empfaenger` HAT NICHT GEHOLFEN, obwohl es dafuer gebaut war:
+         die antwortende Datei trug den ERWARTETEN Namen, und die Kopie
+         mit dem unerwarteten Namen war die richtige.
+   ⚠     Erkannt wird an `clubcampus/v1` im Quelltext, nicht am
+         Dateinamen — der Name ist beliebig, die Route nicht.
+   ⚠     Eine leere Liste heisst „ich bin allein". Jeder Eintrag ist ein
+         Befund.
 
    0.9.20 (11.09.2026): `bestand` liefert je Person drei
    VERGLEICHSMERKMALE — Nummer, E-Mail-Hash, Name-plus-Jahrgang-Hash.
@@ -463,7 +477,7 @@ const CC_ROUTE      = 'clubcampus/v1';
    einander), `autoload` wird nach dem Schreiben geprueft und notfalls
    berichtigt, `/status` nennt Empfaenger, Version, Metaschluessel und die
    Team-Zuordnung. */
-const CC_VERSION    = '0.9.20';
+const CC_VERSION    = '0.9.21';
 const CC_TYP_SPIEL  = 'fch_spiel';
 const CC_TYP_TEAM   = 'fch_team';
 /* ⚠ NUR ZUM ZAEHLEN. Dieses Plugin legt keine Person an und aendert
@@ -1134,6 +1148,12 @@ function cc_route_status(): WP_REST_Response {
 			),
 			/* Der Schluessel, an dem die Team-Zuordnung haengt. Steht er hier,
 			   muss ihn niemand aus dem Quelltext holen. */
+			/* ⚠ ⚠ ANDERE KOPIEN IM SELBEN ORDNER — seit 0.9.21. Eine leere
+			   Liste heisst „ich bin allein"; jeder Eintrag ist ein Befund,
+			   denn zwei Kopien laden beide, und welche gewinnt, entscheidet
+			   das Alphabet. */
+			'geschwister'      => cc_geschwister(),
+			'geladen_aus'      => basename( dirname( __FILE__ ) ),
 			'meta_schluessel'  => CC_META_TEAM_SFV,
 			/* ⚠ ⚠  DIE NAMEN SAGEN, WESSEN TEAMS GEZAEHLT WERDEN  ⚠ ⚠
 			   Umbenannt am 10.09.2026, alter Wortlaut: `teams_gesamt`,
@@ -1918,6 +1938,61 @@ function cc_namensschluessel( string $roh ): string {
 	return implode( ' ', $teile );
 }
 
+/**
+ * Liegt eine ZWEITE Kopie dieses Plugins im selben Ordner?
+ *
+ * ⚠ ⚠  DIE FRAGE, DIE DREIMAL EINEN ABEND GEKOSTET HAT — 09.09., 10.09.
+ *       und 11.09.2026. Jedes Mal antwortete eine Datei, die niemand
+ *       gemeint hatte, und jedes Mal sagte /status „bereit".
+ *
+ *       Zuletzt lagen in mu-plugins:
+ *         fch-clubcampus-empfaenger.php   0.9.20
+ *         wp-export-empfaenger.php        0.9.11   ← diese antwortete
+ *
+ * ⚠ ⚠  UND `empfaenger` HAT NICHT GEHOLFEN, obwohl es genau dafuer
+ *       gebaut war. Es meldet `basename(__FILE__)` — und die antwortende
+ *       Datei trug den ERWARTETEN Namen. **Die Kopie mit dem
+ *       unerwarteten Namen war die richtige.** Ein Name unterscheidet
+ *       nur, wenn der Falsche auffaellt.
+ *
+ *       > Eine Fassungsangabe, die aus dem geladenen Code stammt, sagt
+ *       > nichts darueber, WELCHE Datei geladen wurde. Sie ist korrekt
+ *       > und beantwortet die falsche Frage. (Didi, 11.09.2026)
+ *
+ * ⚠  DESHALB SIEHT SIE IN DEN ORDNER, nicht in sich selbst. Das ist die
+ *    einzige Auskunft, die eine Datei ueber ihre Geschwister geben kann —
+ *    und sie beantwortet von innen, wofuer es sonst einen `find` auf dem
+ *    Server braucht.
+ *
+ * ⚠  Erkannt wird an der Routen-Konstante im Quelltext, nicht am
+ *    Dateinamen: der Name ist beliebig, die Route ist es nicht. Genau
+ *    daran ist die Suche zuletzt gescheitert.
+ *
+ * Sie liest nur und gibt nie einen Pfad ausserhalb von wp-content heraus.
+ */
+function cc_geschwister(): array {
+	$ordner = dirname( __FILE__ );
+	$mich   = basename( __FILE__ );
+	$raus   = array();
+	foreach ( (array) glob( $ordner . '/*.php' ) as $datei ) {
+		if ( basename( (string) $datei ) === $mich ) {
+			continue;
+		}
+		/* ⚠ Nur der Anfang: die Datei kann gross sein, und die Kennzeichen
+		   stehen im Kopf. 8 KB reichen fuer Kopf, Version und Routen. */
+		$kopf = (string) @file_get_contents( (string) $datei, false, null, 0, 8192 );
+		if ( '' === $kopf || false === strpos( $kopf, 'clubcampus/v1' ) ) {
+			continue;
+		}
+		$v = preg_match( '/Version:\\s*([0-9.]+)/', $kopf, $m ) ? $m[1] : '?';
+		$raus[] = array(
+			'datei'   => basename( (string) $datei ),
+			'version' => $v,
+		);
+	}
+	return $raus;
+}
+
 function cc_personen_lage(): array {
 	if ( ! post_type_exists( CC_TYP_PERSON ) ) {
 		/* ⚠ null-Semantik wie bei cc_unterfelder(): „gibt es hier nicht"
@@ -2112,6 +2187,7 @@ function cc_route_bestand(): WP_REST_Response {
 			   genau die Frage offen, die man bei einem ueberraschenden Wert
 			   zuerst stellt. */
 			'empfaenger'                => basename( __FILE__ ),
+			'geschwister'               => cc_geschwister(),
 			'version'                   => CC_VERSION,
 			'personen'                  => cc_personen_lage(),
 			'teams'                     => cc_teams_lage(),

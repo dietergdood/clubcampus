@@ -8977,6 +8977,79 @@ ist. **Rot wird aber nur, was noch jemand ruft** — und das Entfernte ruft
 niemand mehr, genau deshalb wurde es entfernt.
 
 
+### ⚠⚠ DRITTER FALL: EINE DATEI ANTWORTET, DIE NIEMAND GEMEINT HAT — UND SIE TRUG DEN RICHTIGEN NAMEN
+
+Gelöst am 12.09.2026. Zwei Kopien lagen in `mu-plugins`:
+
+```
+fch-clubcampus-empfaenger.php   0.9.20
+wp-export-empfaenger.php        0.9.11   ← diese antwortete
+```
+
+WordPress lädt alphabetisch; beide wurden geladen, die zweite gewann.
+
+| | |
+|---|---|
+| 09.09.2026 | die Datei lag im falschen Ordner |
+| 09.09.2026 | eine **fremde** Datei trug denselben Namen |
+| **12.09.2026** | ⚠ **zwei eigene Kopien, und die alte gewann** |
+
+**Dreimal, und jedes Mal sagte `/status` „bereit“.**
+
+#### ⚠⚠ Und `empfaenger` hat nicht geholfen, obwohl es genau dafür gebaut war
+
+Die Auskunft nennt seit dem 09.09.2026 `basename(__FILE__)` — als Antwort
+auf *„antwortet meine Datei oder eine zweite mit gleichem Namen?“*
+
+> ⚠ **Die antwortende Datei trug den ERWARTETEN Namen. Die Kopie mit dem
+> unerwarteten Namen war die richtige.**
+
+**Ein Name unterscheidet nur, wenn der Falsche auffällt.** Hier fiel der
+Richtige auf — und niemand sah hin, weil er unauffällig aussah.
+
+> **Eine Fassungsangabe, die aus dem geladenen Code stammt, sagt nichts
+> darüber, WELCHE Datei geladen wurde. Sie ist korrekt und beantwortet die
+> falsche Frage.** (Didi, 12.09.2026)
+
+⚠ Dieselbe Familie wie *„eine Prüfung, die nur das letzte Glied sieht“* —
+nur eine Ebene darunter: **hier ist die Auskunft nicht falsch, sondern
+vollständig wahr über den falschen Gegenstand.**
+
+#### Warum `bereit` es nicht sehen konnte — und nie können wird
+
+`cc_voraussetzungen()` prüft fünf Dinge: ACF zweimal, `fch-core`, und die
+zwei Beitragstypen. ⚠ **Alle fünf sind Eigenschaften der
+WordPress-Installation, keine der antwortenden Datei.** Zwei Kopien im
+selben WordPress bekommen beide fünfmal „ja“.
+
+> **Eine Auskunft über sich selbst kann einen Doppelgänger nicht erkennen:
+> welche Datei auch antwortet, sie antwortet wahrheitsgemäss über sich.**
+
+#### Die Reparatur sieht in den ORDNER, nicht in sich selbst
+
+`cc_geschwister()` (0.9.21) listet die anderen `.php` im selben Verzeichnis,
+die `clubcampus/v1` im Kopf führen — **mit Dateiname und Fassung.**
+
+| | |
+|---|---|
+| erkannt wird an der **Route** im Quelltext | der Name ist beliebig, die Route nicht — **genau daran ist die Suche zuletzt gescheitert** |
+| eine **leere Liste** heisst „ich bin allein“ | jeder Eintrag ist ein Befund |
+| gelesen werden **8 KB** je Datei | Kopf, Version und Routen stehen vorne |
+
+⚠ **Sie beantwortet von innen, wofür es sonst einen `find` auf dem Server
+braucht** — und der war am 12.09.2026 die einzige der vier Fragen, die kein
+Backend beantworten konnte.
+
+⚠ **Ein `defined()`-Riegel gegen doppeltes Laden hätte NICHT gereicht:** er
+wirkt erst, wenn BEIDE Kopien ihn tragen. Die alte trug ihn nicht — und die
+alte war das Problem. **Eine Gegenmassnahme, die die Mitwirkung des Fehlers
+braucht, ist keine.**
+
+**Positivkontrolle:** die Funktion wird aus der echten Datei geschnitten und
+gegen drei Attrappen ausgeführt — eine Kopie mit Route, eine fremde Datei,
+sie selbst. Gefunden wird genau die erste.
+
+
 ### ✅ VIER SPIELE, DEREN VERLAUF NICHT ZUM RESULTAT PASST — alle vier erklärt, keines ein Fehler bei uns
 
 Gemeldet von der Website-Seite am 11.09.2026, gemessen über alle 68
