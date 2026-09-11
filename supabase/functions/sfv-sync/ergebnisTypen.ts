@@ -35,6 +35,27 @@ export interface MatchdatenErgebnis {
    * zusammenzaehlt, merkt nicht, wenn einer von beiden nichts schreibt.
    */
   aufstellung_fremd: number;
+  /**
+   * Was der Verband roh geliefert hat — VOR jedem Filter.
+   *
+   * ⚠ ⚠ SIE IST DIE BEZUGSGROESSE, OHNE DIE DIE ANDEREN NICHTS SAGEN.
+   * Am 11.09.2026 trugen vier Spiele 8 bis 10 eigene Zeilen, eines bei
+   * 21 Ereignissen. Weniger als elf kann keine Mannschaft aufstellen —
+   * aber ob der Verband weniger lieferte oder `bildeAufstellung` sie
+   * verwarf, war nicht zu trennen, weil das Verwerfen niemand zaehlte.
+   *
+   * `geliefert = zeilen + fremd + eigen_ohne_person + fremd_ohne_nummer
+   *  + gegner_doppel` muss aufgehen. Eine Aufteilung, die aufgehen MUSS,
+   * prueft sich selbst; eine einzelne Zahl kann nur behauptet werden.
+   */
+  aufstellung_geliefert: number;
+  /** Eigene Spieler, die der Verband ohne `personId` schickt. Sie werden
+      verworfen — ohne sie ist die Zeile nie zuordenbar. ⚠ Bis zum
+      11.09.2026 geschah das lautlos. */
+  eigen_ohne_person: number;
+  /** Gegnerzeilen ohne Rueckennummer. Sie haetten keinerlei Identitaet:
+      kein Name, keine Person, keine Nummer. */
+  fremd_ohne_nummer: number;
   /** Gegnerzeilen, die sich (Team, Nummer) teilten und verschmolzen wurden.
       ⚠ Erwartung 0 — jede andere Zahl ist eine Unstimmigkeit BEIM VERBAND
       und keine Eigenschaft unserer Kette. Sie wird gezaehlt, damit das
@@ -334,6 +355,12 @@ export function fuersProtokoll(erg: LaufErgebnis): Record<string, unknown> {
       zuordnungen_gesamt: md.zuordnungen_gesamt,
       namen_geschrieben: md.namen_geschrieben,
       aufstellung_fremd: md.aufstellung_fremd,
+      /* ⚠ Alle drei ins Protokoll, immer, auch als Null — sie sind reine
+         Zahlen und nennen keine Person. Erst zusammen beantworten sie,
+         ob eine kurze Aufstellung vom Verband kommt oder von uns. */
+      aufstellung_geliefert: md.aufstellung_geliefert,
+      eigen_ohne_person: md.eigen_ohne_person,
+      fremd_ohne_nummer: md.fremd_ohne_nummer,
       gegner_doppel: md.gegner_doppel,
       halbzeit: md.halbzeit,
       paesse_geschrieben: md.paesse_geschrieben,

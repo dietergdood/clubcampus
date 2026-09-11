@@ -104,6 +104,39 @@ CREATE OR REPLACE FUNCTION "public"."check_email_bekannt"("p_email" "text", "p_v
 ALTER FUNCTION "public"."check_email_bekannt"("p_email" "text", "p_verein_id" "uuid") OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "public"."export_wartet"("p_verein_id" "uuid") RETURNS integer
+    LANGUAGE "sql" STABLE SECURITY DEFINER
+    SET "search_path" TO 'public'
+    AS $$
+  with stand as (
+    select coalesce(
+             (select v.letzter_sync from public.api_verbindungen v
+               where v.verein_id = p_verein_id and v.key = 'wordpress'),
+             '-infinity'::timestamptz) as seit
+  )
+  select (
+    (select count(*) from public.spiele s, stand
+      where s.verein_id = p_verein_id and s.zuletzt_geaendert > stand.seit)
+    +
+    (select count(*) from public.ranglisten r, stand
+      where r.verein_id = p_verein_id and r.zuletzt_geaendert > stand.seit)
+    +
+    (select count(*) from public.spiel_aufstellung a, stand
+      where a.verein_id = p_verein_id and a.zuletzt_geaendert > stand.seit)
+    +
+    (select count(*) from public.spiel_ereignisse e, stand
+      where e.verein_id = p_verein_id and e.zuletzt_geaendert > stand.seit)
+  )::integer;
+$$;
+
+
+ALTER FUNCTION "public"."export_wartet"("p_verein_id" "uuid") OWNER TO "postgres";
+
+
+COMMENT ON FUNCTION "public"."export_wartet"("p_verein_id" "uuid") IS 'Wie viele Zeilen haben sich seit dem letzten WordPress-Export INHALTLICH geaendert? VIER Quellen: spiele, ranglisten, spiel_aufstellung, spiel_ereignisse — alles, was die Nutzlast traegt. ⚠ Wer eine Quelle ergaenzt, ergaenzt sie hier mit, sonst laeuft der Export nicht, obwohl etwas wartet.';
+
+
+
 CREATE OR REPLACE FUNCTION "public"."get_my_mitglied_id"() RETURNS bigint
     LANGUAGE "sql" STABLE SECURITY DEFINER
     AS $$
@@ -400,6 +433,45 @@ $$;
 
 
 ALTER FUNCTION "public"."set_updated_at"() OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."stempel_zuletzt_geaendert"() RETURNS "trigger"
+    LANGUAGE "plpgsql"
+    AS $$
+declare
+  alt_j jsonb;
+  neu_j jsonb;
+begin
+  if tg_op = 'INSERT' then
+    new.zuletzt_geaendert := now();
+    return new;
+  end if;
+
+  alt_j := to_jsonb(old) - 'zuletzt_synchronisiert' - 'stand_vom'
+                         - 'zuletzt_geaendert' - 'matchdaten_geholt_am';
+  neu_j := to_jsonb(new) - 'zuletzt_synchronisiert' - 'stand_vom'
+                         - 'zuletzt_geaendert' - 'matchdaten_geholt_am';
+
+  if alt_j is distinct from neu_j then
+    new.zuletzt_geaendert := now();
+  else
+    -- ⚠ AUSDRUECKLICH den alten Wert behalten. Ohne diese Zeile traegt
+    --   `new` den Wert, den der Schreibende mitgeschickt hat — und ein
+    --   `upsert`, der die Spalte nicht nennt, setzt sie auf den Default,
+    --   also auf now(). Der Trigger repariert damit auch, was er nicht
+    --   angefasst hat.
+    new.zuletzt_geaendert := old.zuletzt_geaendert;
+  end if;
+  return new;
+end
+$$;
+
+
+ALTER FUNCTION "public"."stempel_zuletzt_geaendert"() OWNER TO "postgres";
+
+
+COMMENT ON FUNCTION "public"."stempel_zuletzt_geaendert"() IS 'Setzt zuletzt_geaendert nur bei INHALTLICHER Aenderung. Vergleicht die Zeile als jsonb OHNE die Laufstempel — sonst waere jeder stuendliche Sync-Lauf eine Aenderung. Angelegt 10.09.2026.';
+
 
 
 CREATE OR REPLACE FUNCTION "public"."update_updated_at"() RETURNS "trigger"
@@ -1851,7 +1923,8 @@ CREATE TABLE IF NOT EXISTS "public"."ranglisten" (
     "fairplay_punkte" integer,
     "stand_vom" timestamp with time zone DEFAULT "now"(),
     "created_at" timestamp with time zone DEFAULT "now"(),
-    "sfv_saison_name" "text"
+    "sfv_saison_name" "text",
+    "zuletzt_geaendert" timestamp with time zone DEFAULT "now"() NOT NULL
 );
 
 
@@ -1875,6 +1948,10 @@ COMMENT ON COLUMN "public"."ranglisten"."stand_vom" IS 'Zeitpunkt des Abrufs, ni
 
 
 COMMENT ON COLUMN "public"."ranglisten"."sfv_saison_name" IS 'SFV seasonName, z.B. „2026/2027" — die Schreibweise des Verbands. NULL bei Zeilen aus Laeufen vor dem 10.09.2026. Nicht aus sfv_saison_id ableiten: die Benennung gehoert dem Verband.';
+
+
+
+COMMENT ON COLUMN "public"."ranglisten"."zuletzt_geaendert" IS 'Wie bei spiele. ⚠ NICHT stand_vom: das ist der Laufstempel und aendert sich stuendlich fuer jede Zeile.';
 
 
 
@@ -1980,7 +2057,7 @@ CREATE TABLE IF NOT EXISTS "public"."spiel_aufstellung" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "verein_id" "uuid" NOT NULL,
     "spiel_id" "uuid" NOT NULL,
-    "sfv_person_id" integer NOT NULL,
+    "sfv_person_id" integer,
     "sfv_team_id" integer,
     "rueckennr" integer,
     "position_id" integer,
@@ -1991,13 +2068,10 @@ CREATE TABLE IF NOT EXISTS "public"."spiel_aufstellung" (
     "zuletzt_synchronisiert" timestamp with time zone DEFAULT "now"() NOT NULL,
     "erstmals_gesehen" timestamp with time zone DEFAULT "now"() NOT NULL,
     "name" "text",
-    "ist_bank" boolean DEFAULT false NOT NULL,
-    "rolle_id" integer,
-    "rolle_kategorie_id" integer,
-    "rolle_kategorie" "text",
     "ist_eigener" boolean DEFAULT true NOT NULL,
     "rolle_zuweisung_id" integer,
     "rolle_zuweisung" "text",
+    "zuletzt_geaendert" timestamp with time zone DEFAULT "now"() NOT NULL,
     CONSTRAINT "spiel_aufstellung_fremde_ohne_person" CHECK (("ist_eigener" OR (("sfv_person_id" IS NULL) AND ("name" IS NULL))))
 );
 
@@ -2006,6 +2080,10 @@ ALTER TABLE "public"."spiel_aufstellung" OWNER TO "postgres";
 
 
 COMMENT ON TABLE "public"."spiel_aufstellung" IS 'Aufstellung EIGENER Spieler aus /api/match/{id}/players. Fremde Zeilen werden nicht gespeichert. Nicht zu verwechseln mit `aufgebote`: das Aufgebot steht vor dem Spiel und deckt sich nie ganz mit der Aufstellung danach.';
+
+
+
+COMMENT ON COLUMN "public"."spiel_aufstellung"."sfv_person_id" IS 'SFV personId. ⚠ NULL bei Gegnerzeilen — erzwungen von spiel_aufstellung_fremde_ohne_person (Entscheid B, 10.09.2026): eine Personennummer ist ueber dieselbe Schnittstelle in einen Namen aufzuloesen und bliebe dauerhaft hier stehen. Fuer eigene Zeilen immer gesetzt; sie ist dort der Schluesselteil.';
 
 
 
@@ -2021,22 +2099,6 @@ COMMENT ON COLUMN "public"."spiel_aufstellung"."name" IS 'Klarname aus der SFV-A
 
 
 
-COMMENT ON COLUMN "public"."spiel_aufstellung"."ist_bank" IS 'Kommt die Zeile aus /api/match/{id}/bench statt aus /players? ⚠ /players liefert NUR die Startelf — gemessen 10.09.2026: 207 von 207 Eingewechselten fehlten. Die Bank ist ein eigener Abruf, keine Ableitung aus von_minute.';
-
-
-
-COMMENT ON COLUMN "public"."spiel_aufstellung"."rolle_id" IS 'SFV roleId, die feinere Rolle innerhalb der Kategorie. ⚠ Ungemessen, was sie enthaelt — mitgeschrieben, von nichts gelesen. Wer sie liest, misst sie vorher.';
-
-
-
-COMMENT ON COLUMN "public"."spiel_aufstellung"."rolle_kategorie_id" IS 'SFV roleCategoryId. 1 = Spieler, 3 = Trainer, 4 = Funktionaer, 9 = Betreuer (sfv_stammdaten.json → Rollenkategorie). ⚠ /bench liefert NICHT nur Ersatzspieler: die FVRZ-Seite zeigt zu Spiel 4393132 fuenf Ersatzspieler, zwei Trainer und einen Abwesenden. Die Anzeige nimmt nur 1.';
-
-
-
-COMMENT ON COLUMN "public"."spiel_aufstellung"."rolle_kategorie" IS 'SFV roleCategoryName im Klartext — mitgeschrieben, damit eine unerwartete Kategorie auffaellt, statt still durch den Filter zu fallen.';
-
-
-
 COMMENT ON COLUMN "public"."spiel_aufstellung"."ist_eigener" IS 'Gehoert diese Zeile zu unserem Klub? Aus clubNumber gegen vereine.sfv_club_nummer. ⚠ Bis 10.09.2026 gab es nur eigene Zeilen — der Vorgabewert true ist deshalb fuer den Bestand richtig und nicht geraten.';
 
 
@@ -2046,6 +2108,10 @@ COMMENT ON COLUMN "public"."spiel_aufstellung"."rolle_zuweisung_id" IS 'SFV assi
 
 
 COMMENT ON COLUMN "public"."spiel_aufstellung"."rolle_zuweisung" IS 'SFV assignmentRoleName im Klartext. Mitgeschrieben, damit ein unbekannter Wert AUFFAELLT statt still als „start" durchzufallen — dieselbe Regel wie bei unbekannten Ereignistypen.';
+
+
+
+COMMENT ON COLUMN "public"."spiel_aufstellung"."zuletzt_geaendert" IS 'Wann sich an dieser Zeile INHALTLICH etwas geaendert hat. ⚠ NICHT zuletzt_synchronisiert: das ist der Laufstempel und wird stuendlich fuer jede Zeile neu gesetzt.';
 
 
 
@@ -2074,6 +2140,7 @@ CREATE TABLE IF NOT EXISTS "public"."spiel_ereignisse" (
     "ein_sfv_person_id" integer,
     "ein_rueckennr" integer,
     "zuletzt_synchronisiert" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "zuletzt_geaendert" timestamp with time zone DEFAULT "now"() NOT NULL,
     CONSTRAINT "spiel_ereignisse_fremde_anonym_check" CHECK (("ist_eigener" OR (("sfv_person_id" IS NULL) AND ("ein_sfv_person_id" IS NULL)))),
     CONSTRAINT "spiel_ereignisse_herkunft_check" CHECK (("herkunft" = ANY (ARRAY['sfv'::"text", 'verein'::"text"]))),
     CONSTRAINT "spiel_ereignisse_schicht_check" CHECK (((("herkunft" = 'sfv'::"text") AND ("sfv_event_id" IS NOT NULL) AND ("ersetzt_ereignis_id" IS NULL) AND ("geaenderte_felder" IS NULL) AND ("korrigiert_von" IS NULL)) OR (("herkunft" = 'verein'::"text") AND ("sfv_event_id" IS NULL) AND ("korrigiert_von" IS NOT NULL) AND ((("ersetzt_ereignis_id" IS NOT NULL) AND ("array_length"("geaenderte_felder", 1) > 0)) OR (("ersetzt_ereignis_id" IS NULL) AND ("geaenderte_felder" IS NULL))))))
@@ -2092,6 +2159,10 @@ COMMENT ON COLUMN "public"."spiel_ereignisse"."geaenderte_felder" IS 'Welche Fel
 
 
 COMMENT ON COLUMN "public"."spiel_ereignisse"."typ_id" IS 'SFV Ereignistyp: 1 Tor, 2 Aus-/Einwechslung, 3 Verwarnung, 4 Ausschluss, 9 Assist. Vollstaendig in docs/sfv/sfv_stammdaten.json. Assist ist ein SFV-Typ wie jeder andere — woher die Zeile stammt, sagt herkunft, nicht der Typ.';
+
+
+
+COMMENT ON COLUMN "public"."spiel_ereignisse"."zuletzt_geaendert" IS 'Wie bei spiel_aufstellung.';
 
 
 
@@ -2130,7 +2201,8 @@ CREATE TABLE IF NOT EXISTS "public"."spiele" (
     "zuletzt_synchronisiert" timestamp with time zone,
     "matchdaten_geholt_am" timestamp with time zone,
     "sfv_spiel_nr" "text",
-    "sfv_spieltag" "text"
+    "sfv_spieltag" "text",
+    "zuletzt_geaendert" timestamp with time zone DEFAULT "now"() NOT NULL
 );
 
 
@@ -2186,6 +2258,10 @@ COMMENT ON COLUMN "public"."spiele"."sfv_spiel_nr" IS 'matchNumber des SFV. NICH
 
 
 COMMENT ON COLUMN "public"."spiele"."sfv_spieltag" IS 'SFV playDayName. GEMESSEN am 10.09.2026: enthaelt den WOCHENTAG („Samstag"), nicht den Rundennamen. Wird von keiner Anzeige gelesen — die Website zeigt den Wochentag ohnehin aus dem Datum. Hiess bis dahin sfv_runde, was eine falsche Zusage war.';
+
+
+
+COMMENT ON COLUMN "public"."spiele"."zuletzt_geaendert" IS 'Wann sich an dieser Zeile INHALTLICH etwas geaendert hat — gesetzt von einem Trigger, nicht vom schreibenden Code. ⚠ NICHT zu verwechseln mit zuletzt_synchronisiert: das haelt fest, wann ein Lauf war, und wird stuendlich fuer alle Zeilen neu gesetzt, auch ohne Aenderung.';
 
 
 
@@ -3496,6 +3572,22 @@ CREATE OR REPLACE TRIGGER "pe_ts" BEFORE UPDATE ON "public"."portal_einstellunge
 
 
 CREATE OR REPLACE TRIGGER "personen_updated_at" BEFORE UPDATE ON "public"."personen" FOR EACH ROW EXECUTE FUNCTION "public"."update_updated_at"();
+
+
+
+CREATE OR REPLACE TRIGGER "ranglisten_zuletzt_geaendert" BEFORE INSERT OR UPDATE ON "public"."ranglisten" FOR EACH ROW EXECUTE FUNCTION "public"."stempel_zuletzt_geaendert"();
+
+
+
+CREATE OR REPLACE TRIGGER "spiel_aufstellung_zuletzt_geaendert" BEFORE INSERT OR UPDATE ON "public"."spiel_aufstellung" FOR EACH ROW EXECUTE FUNCTION "public"."stempel_zuletzt_geaendert"();
+
+
+
+CREATE OR REPLACE TRIGGER "spiel_ereignisse_zuletzt_geaendert" BEFORE INSERT OR UPDATE ON "public"."spiel_ereignisse" FOR EACH ROW EXECUTE FUNCTION "public"."stempel_zuletzt_geaendert"();
+
+
+
+CREATE OR REPLACE TRIGGER "spiele_zuletzt_geaendert" BEFORE INSERT OR UPDATE ON "public"."spiele" FOR EACH ROW EXECUTE FUNCTION "public"."stempel_zuletzt_geaendert"();
 
 
 
@@ -5633,6 +5725,12 @@ GRANT ALL ON FUNCTION "public"."check_email_bekannt"("p_email" "text", "p_verein
 
 
 
+GRANT ALL ON FUNCTION "public"."export_wartet"("p_verein_id" "uuid") TO "anon";
+GRANT ALL ON FUNCTION "public"."export_wartet"("p_verein_id" "uuid") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."export_wartet"("p_verein_id" "uuid") TO "service_role";
+
+
+
 GRANT ALL ON FUNCTION "public"."get_my_mitglied_id"() TO "anon";
 GRANT ALL ON FUNCTION "public"."get_my_mitglied_id"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."get_my_mitglied_id"() TO "service_role";
@@ -5720,6 +5818,12 @@ GRANT ALL ON FUNCTION "public"."rls_auto_enable"() TO "service_role";
 GRANT ALL ON FUNCTION "public"."set_updated_at"() TO "anon";
 GRANT ALL ON FUNCTION "public"."set_updated_at"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."set_updated_at"() TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."stempel_zuletzt_geaendert"() TO "anon";
+GRANT ALL ON FUNCTION "public"."stempel_zuletzt_geaendert"() TO "authenticated";
+GRANT ALL ON FUNCTION "public"."stempel_zuletzt_geaendert"() TO "service_role";
 
 
 

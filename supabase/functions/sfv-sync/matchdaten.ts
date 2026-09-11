@@ -67,6 +67,10 @@ export interface AufstellungZeile {
 
 export function bildeAufstellung(
   p: SfvRoh, unsere: number | null, vereinId: string, spielId: string, jetzt: string,
+  /** ⚠ Optional, damit kein Aufrufer zum Zaehlen gezwungen ist — aber wer
+      zaehlen WILL, bekommt den Grund und nicht bloss die Menge. Ohne den
+      Grund waere die Zahl eine zweite Frage statt einer Antwort. */
+  verworfen?: string[],
 ): AufstellungZeile | null {
   /* ⚠ ⚠  ENTSCHEID B (10.09.2026): DIE GEGNERAUFSTELLUNG KOMMT MIT —
      Rueckennummer und Position, KEINE Person.
@@ -89,14 +93,33 @@ export function bildeAufstellung(
 
   /* Ohne personId ist eine EIGENE Zeile nicht wiedererkennbar und damit
      wertlos — lieber gar nicht anlegen als eine, die nie zugeordnet
-     werden kann. */
-  if (eigen && personId === null) return null;
+     werden kann.
+
+     ⚠ ⚠  UND GENAU HIER VERSCHWINDEN ZEILEN, OHNE DASS ETWAS FEHLSCHLAEGT.
+     Gemessen am 11.09.2026: vier Spiele tragen 8 bis 10 eigene Zeilen,
+     eines davon bei 21 Ereignissen. Weniger als elf kann keine
+     Mannschaft aufstellen — es ist also entweder ein abgebrochener
+     Abruf oder dieser Filter.
+
+     **Und die beiden waren nicht zu unterscheiden, weil niemand
+     zaehlte.** Der Aufrufer sah eine Liste und wusste nicht, ob sie so
+     kam oder so uebrig blieb. Dieselbe Klasse wie ein leerer catch: aus
+     einem Ausfall wird eine Datenlage. Seither nennt `verworfen` den
+     Grund, und `geliefert` steht daneben — drei Zahlen, die aufgehen
+     muessen. */
+  if (eigen && personId === null) {
+    verworfen?.push("eigen_ohne_person");
+    return null;
+  }
 
   /* ⚠ Und eine FREMDE Zeile ohne Nummer hat ueberhaupt keine Identitaet:
      kein Name, keine Personennummer, keine Nummer. Sie waere von jeder
      anderen ununterscheidbar — und der zweite Schluessel
      (verein_id, spiel_id, sfv_team_id, rueckennr) griffe nicht. */
-  if (!eigen && nummer === null) return null;
+  if (!eigen && nummer === null) {
+    verworfen?.push("fremd_ohne_nummer");
+    return null;
+  }
 
   return {
     verein_id: vereinId,

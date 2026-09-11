@@ -154,6 +154,39 @@ describe("Anonymitaet — erstes Netz: die Allowlist beim Uebernehmen", () => {
     expect(bildeAufstellung(ohne, UNSERE, "v1", "s1", JETZT)).toBeNull();
   });
 
+  it("⚠ nennt den Grund, statt lautlos null zu liefern", () => {
+    /* ⚠ ⚠ ANLASS, 11.09.2026: vier Spiele trugen 8 bis 10 eigene Zeilen,
+       eines davon bei 21 Ereignissen. Weniger als elf kann keine
+       Mannschaft aufstellen — aber ob der Verband weniger lieferte oder
+       diese Funktion sie verwarf, war NICHT ZU TRENNEN, weil das
+       Verwerfen niemand zählte.
+
+       Ein stiller Filter macht aus einem Ausfall eine Datenlage. Genau
+       dieselbe Klasse wie ein leerer catch. */
+    const verworfen: string[] = [];
+    bildeAufstellung(
+      { clubNumber: UNSERE, teamId: 38309, personId: null, jerseyNumber: 7 },
+      UNSERE, "v1", "s1", JETZT, verworfen,
+    );
+    bildeAufstellung(
+      { clubNumber: FREMD, teamId: 37931, personId: 1, jerseyNumber: null },
+      UNSERE, "v1", "s1", JETZT, verworfen,
+    );
+    expect(verworfen).toEqual(["eigen_ohne_person", "fremd_ohne_nummer"]);
+  });
+
+  it("zählt nichts, wenn die Zeile durchkommt", () => {
+    /* Die Gegenprobe: der Zähler darf nicht bei jeder Zeile anschlagen,
+       sonst misst er die Menge statt der Ausfälle. */
+    const verworfen: string[] = [];
+    const z = bildeAufstellung(
+      { clubNumber: UNSERE, teamId: 38309, personId: 500, jerseyNumber: 7 },
+      UNSERE, "v1", "s1", JETZT, verworfen,
+    );
+    expect(z).not.toBeNull();
+    expect(verworfen).toEqual([]);
+  });
+
   it("⚠ eine EIGENE Zeile ohne Nummer bleibt dagegen bestehen", () => {
     /* Sie hat eine Identitaet — die Personennummer. Der Unterschied ist
        nicht Willkuer, sondern die Frage, ob die Zeile wiedererkennbar

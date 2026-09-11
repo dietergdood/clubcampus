@@ -58,8 +58,8 @@ describe("Türen in die Tabelle spiele", () => {
        sync.ts            der Spielplan-Upsert — die EINZIGE Tür, an der
                           schneideAufFeldhoheit() steht */
     expect(tueren()).toEqual([
-      "matchdatenLauf.ts:240 update",
-      "matchdatenLauf.ts:252 update",
+      "matchdatenLauf.ts:266 update",
+      "matchdatenLauf.ts:278 update",
       "sync.ts:318 upsert",
     ]);
   });

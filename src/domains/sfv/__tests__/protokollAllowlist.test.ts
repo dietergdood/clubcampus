@@ -39,6 +39,10 @@ const LAUF: LaufErgebnis = {
     eigene_unzugeordnet: 177, zuordnungen_gesamt: 0,
     namen_geschrieben: 42,
     aufstellung_fremd: 11, gegner_doppel: 0, paesse_geschrieben: 0,
+    /* ⚠ Die Aufteilung geht auf: 156 + 11 + 2 + 0 + 0 = 169. Sie ist
+       hier mit Absicht STIMMIG gesetzt — ein Testwert, der nicht aufgeht,
+       macht aus der Selbstprobe eine Behauptung. */
+    aufstellung_geliefert: 169, eigen_ohne_person: 2, fremd_ohne_nummer: 0,
     halbzeit: { da: 3, fehlt: 0, leer: 1, ohne_halbzeit: 2 },
     pass_konflikte: ["Mitglied 633: zwei Passnummern"],
     nachzug_meldungen: 0, fehler: 0, fehlermeldungen: [],
@@ -54,11 +58,28 @@ describe("fuersProtokoll", () => {
        Ein neues Feld in MatchdatenErgebnis macht diesen Fall rot. */
     const md = fuersProtokoll(LAUF).matchdaten as Record<string, unknown>;
     expect(Object.keys(md).sort()).toEqual([
-      "aufstellung_fremd", "aufstellung_zeilen", "eigene_unzugeordnet", "ereignisse_zeilen",
-      "fehler", "fehlermeldungen", "gegner_doppel", "halbzeit", "nachzug_meldungen", "namen_geschrieben",
+      "aufstellung_fremd", "aufstellung_geliefert", "aufstellung_zeilen",
+      "eigen_ohne_person", "eigene_unzugeordnet", "ereignisse_zeilen",
+      "fehler", "fehlermeldungen", "fremd_ohne_nummer",
+      "gegner_doppel", "halbzeit", "nachzug_meldungen", "namen_geschrieben",
       "paesse_geschrieben", "pass_konflikte",
       "spiele_geholt", "zuordnungen_gesamt",
     ]);
+  });
+
+  it("die Aufstellungszahlen gehen auf — geliefert = geschrieben + verworfen", () => {
+    /* ⚠ ⚠ DIE SELBSTPROBE, und sie ist der Grund für die drei neuen Zahlen.
+       Am 11.09.2026 trugen vier Spiele 8 bis 10 eigene Zeilen, eines bei
+       21 Ereignissen — und es war NICHT zu sagen, ob der Verband weniger
+       lieferte oder `bildeAufstellung` sie verwarf, weil das Verwerfen
+       niemand zählte.
+
+       Gehen die Zahlen auseinander, misst eine der Stellen etwas anderes
+       als die andere. Eine einzelne Zahl kann das nicht melden. */
+    const md = fuersProtokoll(LAUF).matchdaten as Record<string, number>;
+    const summe = md.aufstellung_zeilen + md.aufstellung_fremd
+      + md.eigen_ohne_person + md.fremd_ohne_nummer + md.gegner_doppel;
+    expect(summe).toBe(md.aufstellung_geliefert);
   });
 
   it("behaelt die Zahlen, die das Protokoll braucht", () => {

@@ -55,6 +55,10 @@ export async function laufeMatchdaten(
 ): Promise<MatchdatenErgebnis> {
   const erg: MatchdatenErgebnis = {
     spiele_geholt: 0, aufstellung_zeilen: 0, ereignisse_zeilen: 0,
+    /* ⚠ Was der Verband GELIEFERT hat, roh, vor jedem Filter. Ohne sie
+       ist „nur neun Spieler" nicht von „wir haben neun uebrig gelassen"
+       zu unterscheiden — und genau das war am 11.09.2026 die Frage. */
+    aufstellung_geliefert: 0, eigen_ohne_person: 0, fremd_ohne_nummer: 0,
     eigene_unzugeordnet: 0, zuordnungen_gesamt: 0, namen_geschrieben: 0, aufstellung_fremd: 0, gegner_doppel: 0,
     halbzeit: { da: 0, fehlt: 0, leer: 0, ohne_halbzeit: 0 }, paesse_geschrieben: 0, pass_konflikte: [], nachzug_meldungen: 0, fehler: 0, fehlermeldungen: [],
   };
@@ -116,11 +120,33 @@ export async function laufeMatchdaten(
          Stapel sonst mit 21000 ab — genau das ist am 10.09.2026 mit den
          zwei Listen passiert. `gegner_doppel` zaehlt solche Faelle,
          statt sie stillschweigend zu schlucken. */
+      /* ⚠ ⚠  DREI ZAHLEN, DIE AUFGEHEN MUESSEN — seit dem 11.09.2026.
+
+         `bildeAufstellung` verwirft Zeilen, und bis heute zaehlte das
+         niemand: eine eigene ohne personId und eine fremde ohne Nummer
+         fielen lautlos weg. Der Aufrufer sah eine Liste und konnte nicht
+         sagen, ob sie so kam oder so uebrig blieb.
+
+         **Gemessen am 11.09.2026:** vier Spiele mit 8 bis 10 eigenen
+         Zeilen, eines davon bei 21 Ereignissen. Weniger als elf kann
+         keine Mannschaft aufstellen — aber ob der Verband weniger
+         lieferte oder dieser Filter zuschlug, war nicht zu trennen.
+
+         ⚠ Eine Aufteilung, die aufgehen MUSS, prueft sich selbst; eine
+         einzelne Zahl kann nur behauptet werden. Dieselbe Bauart wie
+         `zaehlung_stimmt` im Export. */
+      const verworfen: string[] = [];
       const rohZeilen = [
         ...rohAufstellung
-          .map((p) => bildeAufstellung(p, unsereClubNummer, v.verein_id, spiel.id, jetzt)),
+          .map((p) => bildeAufstellung(p, unsereClubNummer, v.verein_id, spiel.id, jetzt, verworfen)),
       ].filter((z): z is NonNullable<typeof z> => z !== null);
       const rohFremd = rohZeilen.filter((z) => !z.ist_eigener).length;
+
+      erg.aufstellung_geliefert += rohAufstellung.length;
+      for (const grund of verworfen) {
+        if (grund === "eigen_ohne_person") erg.eigen_ohne_person += 1;
+        else erg.fremd_ohne_nummer += 1;
+      }
       const aufstellung = verschmelzeAufstellung(rohZeilen);
 
       const ereignisse = rohEreignisse
