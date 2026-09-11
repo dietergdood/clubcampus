@@ -3849,6 +3849,101 @@ Datenbank genau das tut**. Wer eine KÜRZUNG nachstellen will, setzt
 912 vorhanden → `fetchSupporter` gibt `null`, nicht eine Liste mit einem
 Eintrag. **Eine Prüfung, die nie rot war, ist keine Prüfung.**
 
+### ✅ `seite` trennt nicht allein — `seite` gegen `heim_auswaerts` trennt exakt
+
+Geprüft am 11.09.2026, Anlass eine Frage der Website-Seite. **Ergebnis:
+kein neues Feld nötig, und der Befund geht als GEPRÜFT zurück statt als
+offene Stelle.**
+
+```ts
+seite: z.ist_eigener === heimspiel ? "heim" : "gast",
+```
+
+**`seite` ist `ist_eigener` XOR `heimspiel`**, und `heim_auswaerts` steht
+in derselben Nutzlast am Spiel. Die Kodierung ist damit **verlustfrei
+umkehrbar**:
+
+```js
+ist_eigener = (zeile.seite === "heim") === (spiel.heim_auswaerts === "heim")
+```
+
+| `heim_auswaerts` | `seite` | heisst |
+|---|---|---|
+| heim | heim | **uns** |
+| heim | gast | Gegner |
+| auswaerts | gast | **uns** |
+| auswaerts | heim | Gegner |
+
+⚠ **Für sich allein trennt `seite` NICHT** — unsere Spieler stehen bei
+Heimspielen auf `heim`, bei Auswärtsspielen auf `gast`. Über den ganzen
+Bestand ist `gast` deshalb gemischt; die Website-Seite hat im Verlauf 210
+von 504 Gastzeilen als eigene gemessen.
+
+**Gemessen am 11.09.2026:**
+
+| | Spiele | eigene Zeilen | fremde |
+|---|---|---|---|
+| Auswärts | 37 | 506 | 499 |
+| Heim | 45 | 661 | 616 |
+
+⚠ **Und die Summe ist eine Gegenprobe, die niemand gesucht hat:**
+506 + 499 + 661 + 616 = **2282** — exakt die Zeilenzahl von
+`spiel_aufstellung`. **Der Join hat keine Zeile verloren**: keine
+verwaiste Aufstellungszeile, kein Spiel, das fehlt. Eine Aufteilung, die
+aufgeht, prüft sich selbst.
+
+#### ⚠ Der einzige Fall, der es bräche — und er bräche AUCH die Alternative
+
+Zwei eigene Mannschaften gegeneinander: `ist_eigener` ist auf **beiden**
+Seiten wahr, beide bekommen dieselbe `seite`. **Und ein `klub`-Unterfeld
+trüge auf beiden Seiten denselben Vereinsnamen.**
+
+**Gemessen: null Fälle.** Zwei unabhängige Wege sagen dasselbe:
+
+| | |
+|---|---|
+| die Abfrage über `spiel_aufstellung` | leer |
+| **`erg.derbys` im Sync** (`sync.ts:190`) | **0**, seit dem 28.08.2026 |
+
+> **Zwei Wege, eine Zahl.** `erg.derbys` zählt beim Schreiben des
+> Spielplans, die Abfrage zählt die geschriebenen Aufstellungszeilen —
+> sie haben nichts miteinander zu tun und stimmen überein.
+
+Alle 21 Mannschaften stehen in 21 verschiedenen Gruppen; in der
+Meisterschaft können sie sich strukturell nicht begegnen. ⚠ **Kommt je
+ein Fall, hilft nur `sfv_team_id`** — weder `seite` noch `klub`. Sie steht
+an `spiel_aufstellung` und **nicht** in der Nutzlast.
+
+#### ⚠ Warum KEIN `klub`-Unterfeld an der Aufstellung
+
+**Elfmal derselbe Vereinsname je Spiel ist eine Aussage je ZEILE über
+etwas, das am SPIEL steht.** (Didi, 11.09.2026.) Das ist die Regel „eine
+Aussage, ein Ort", und sie gilt hier schärfer als beim Verlauf: dort trägt
+`klub` zusätzlich den **Gegnernamen** — eine Angabe, die sonst fehlte.
+Hier trüge es nichts, was nicht schon dasteht.
+
+⚠ **Und es löste den einen Fall nicht, für den man es bauen würde.** Ein
+Feld, das elfmal dasselbe sagt und beim Ausnahmefall trotzdem zweideutig
+ist, ist der schlechteste der drei Wege.
+
+#### ⚠⚠ Die Scheinlösung, die funktioniert und trotzdem falsch ist
+
+In der Aufstellung ist `sfv_person_id` bei fremden Zeilen **immer** `null`
+und bei eigenen **immer** gesetzt — eine eigene Zeile ohne Personennummer
+wird gar nicht erst angelegt (`eigen_ohne_person`). **Sie wäre heute ein
+zuverlässiger Unterscheider.**
+
+> ⚠ **Sie ist ein Nebeneffekt von Entscheid B, keine Aussage über
+> Zugehörigkeit.** Fiele die Personennummer je weg — ein Datenschutz-
+> Entscheid, eine Änderung beim Verband, ein neuer CHECK —, bräche die
+> Trennung **still**, und die Gegenseite hätte keinen Grund
+> nachzusehen.
+
+**`heim_auswaerts` ist die Angabe, die es MEINT.** Dieselbe Familie wie
+„ein Filter auf einen NAMEN prüft eine Schreibweise": hier prüft der
+Filter ein **Nebenprodukt** statt der Sache.
+
+
 ### ⚠⚠ `update_field()` VERWIRFT UNBEKANNTE UNTERFELDER STILL — unsere Prüfung sieht das nicht
 
 Befund der Website-Seite, 11.09.2026. **`ein_nummer` ging seit 0.9.7 ins
