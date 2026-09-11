@@ -134,6 +134,50 @@ const SEITE = 1000;
  * Abweichung geworfen: eine unvollstaendige Aufstellung auf einer
  * oeffentlichen Seite ist schlimmer als ein Lauf, der abbricht.
  */
+/**
+ * Was die Gegenstelle geantwortet hat und diese Function NICHT weitergibt.
+ *
+ * ⚠ ⚠  DIE ANDERE HAELFTE VON `unbeachtete_felder`. Der Empfaenger meldet
+ *       seit 0.7.0, was in der Nutzlast ankommt und keine Allowlist
+ *       fuehrt. **Fuer den Rueckweg gab es nichts** — und am 12.09.2026
+ *       fielen dort dreimal Auskuenfte heraus:
+ *
+ *         bestand  →  personen, teams   seit 0.9.18 geliefert, verworfen
+ *         status   →  unterfelder       seit 0.9.17 geliefert, verworfen
+ *         status   →  geschwister       seit 0.9.21 geliefert, verworfen
+ *
+ * ⚠ ⚠  UND DAS ENDE KANN ES NICHT SEHEN. Die Kachel sah keinen Schluessel
+ *       `personen` und schloss auf eine alte Fassung DRUEBEN. Zweimal
+ *       wurde deshalb an der falschen Stelle gesucht.
+ *
+ *       **Berechnet, geliefert, nicht DURCHGEREICHT** — eine Stufe
+ *       frueher als der bekannte Fall, und schwerer zu sehen, weil das
+ *       Fehlen am Ende wie eine Aussage ueber den Anfang aussieht.
+ *
+ * ⚠  Sie ersetzt KEINE Allowlist. Das eigene Antwortobjekt bleibt Feld
+ *    fuer Feld gebaut — sonst reiste ein neues Feld der Gegenseite still
+ *    mit. Dies hier ist der Melder daneben: er sagt, was dabei liegen
+ *    blieb, und ueberlaesst die Entscheidung dem Menschen.
+ *
+ * ⚠  Eine STATISCHE Regel dafuer ist am 12.09.2026 gescheitert: sie las
+ *    die Zeichenketten der PHP-Routen und meldete 31 Befunde — WP_Query-
+ *    Argumente, Zeilenschluessel, PHP-Funktionsnamen. **Ein Melder mit 31
+ *    Fehlalarmen wird abgeschaltet.** Zur Laufzeit ist die Menge exakt.
+ */
+function nichtDurchgereicht(
+  wp: Record<string, unknown>, unsere: Record<string, unknown>,
+): string[] {
+  /* Rohdaten, die diese Function bewusst zusammenfasst statt weiterzugeben. */
+  const VERARBEITET = new Set([
+    "beitraege", "gesamt", "handbeitraege", "ohne_laufstempel",
+    "ohne_laufstempel_sichtbar", "spiele_gesamt", "spiele_abgleich",
+    "benutzer", "bereit", "fehlt", "hinweis",
+  ]);
+  return Object.keys(wp)
+    .filter((k) => !(k in unsere) && !VERARBEITET.has(k))
+    .sort();
+}
+
 async function alleSeiten<T>(
   wieviele: number,
   seite: (von: number, bis: number) => PromiseLike<{ data: unknown; error: unknown }>,
@@ -947,8 +991,36 @@ async function holeBestand(
     abgleich = baueAbgleich(await holeKandidaten(db, vereinId), wpPers.merkmale);
   }
 
-  return {
+  /* ⚠ ⚠ DIE DURCHREICHE, UND SIE HAT EINEN TAG GEFEHLT.
+
+     `cc_personen_lage()` und `cc_teams_lage()` stehen seit 0.9.18 im
+     Empfaenger, die Karte zeigt sie seit demselben Tag — und dazwischen
+     baute diese Funktion ihr eigenes Antwortobjekt und liess beide
+     weg. **Drei Stellen, zwei gebaut.**
+
+     ⚠ Die Karte meldete daraufhin `eine Fassung vor 0.9.18` — eine
+     richtige Aussage ueber die Antwort, die sie bekam, und eine falsche
+     ueber die Gegenstelle. Gesucht wurde zweimal drueben.
+
+     ⚠ ⚠ Es ist derselbe Fehler wie `berechnet, geliefert, nicht
+     gezeigt` — nur eine Stufe frueher: **berechnet, geliefert, nicht
+     DURCHGEREICHT.** Und er ist schlimmer, weil das Ende nicht sagen
+     kann, dass in der Mitte etwas fehlt: die Karte sieht nur, dass der
+     Schluessel nicht da ist, und schliesst auf den Absender.
+
+     ⚠ Weitergereicht wird ausdruecklich Feld fuer Feld, nicht per
+     Spread ueber `wp`: ein neues Feld der Gegenseite reiste sonst still
+     mit. Dieselbe Regel wie bei jeder Allowlist in diesem Projekt. */
+  const ergebnis = {
     ...(abgleich ? { abgleich } : {}),
+    ...(wp.personen !== undefined ? { personen: wp.personen } : {}),
+    ...(wp.teams !== undefined ? { teams: wp.teams } : {}),
+    ...(wp.geschwister !== undefined ? { geschwister: wp.geschwister } : {}),
+    /* ⚠ Datei und Fassung der Gegenstelle — seit 0.9.19 in jeder Antwort.
+       Ohne sie kann die Karte nicht sagen, WER geantwortet hat, und eine
+       Auskunft ohne Herkunft wurde an einem Tag dreimal falsch gelesen. */
+    ...(wp.empfaenger !== undefined ? { empfaenger: wp.empfaenger } : {}),
+    ...(wp.version !== undefined ? { version: wp.version } : {}),
     ziel: host,
     hinweis:
       "Nachsehen, nicht schreiben. Es wurde nichts geändert und nichts protokolliert."
@@ -969,6 +1041,9 @@ async function holeBestand(
     gesamt_laut_wordpress: Number(wp.gesamt ?? 0),
     seiten_einig: zeilen.length === Number(wp.gesamt ?? 0),
   };
+  /* ⚠ Immer da, auch als leere Liste — eine nicht gestellte Frage
+     und ein leerer Befund duerfen nicht gleich aussehen. */
+  return { ...ergebnis, nicht_durchgereicht: nichtDurchgereicht(wp, ergebnis) };
 }
 
 
@@ -1013,7 +1088,7 @@ async function holeStatus() {
   }
 
   /* Aufgezählt, nicht durchgereicht — dieselbe Regel wie überall sonst. */
-  return {
+  const ergebnis = {
     ziel: host,
     hinweis: "Nachsehen, nicht schreiben. Nichts geändert, nichts protokolliert.",
     bereit: wp.bereit === true,
@@ -1035,6 +1110,21 @@ async function holeStatus() {
        einem Abend zweimal fuer ClubCampus-Teams gehalten. Wieviele Teams
        ClubCampus fuehrt, steht in `probe.teams`, nicht hier. */
     meta_schluessel: String(wp.meta_schluessel ?? "—"),
+    /* ⚠ ⚠ DIESELBE LUECKE WIE IN holeBestand, ZWEIMAL MEHR.
+
+       `unterfelder` gibt es im Empfaenger seit 0.9.17, `geschwister` seit
+       0.9.21 — und diese Funktion baute ihr eigenes Antwortobjekt und
+       liess beide weg.
+
+       ⚠ ⚠ DAS ERKLAERT EINEN GANZEN STRANG: zwei Tage lang wurde
+       `unterfelder.aufstellung.faellt_weg` gesucht. Der Theme-Chat konnte
+       es lesen, weil er direkt im Backend nachsah; ueber unsere Kachel
+       war es NIE erreichbar. Gesucht wurde folglich drueben.
+
+       ⚠ Feld fuer Feld, nicht per Spread: ein neues Feld der Gegenseite
+       reiste sonst still mit. */
+    ...(wp.unterfelder !== undefined ? { unterfelder: wp.unterfelder } : {}),
+    ...(wp.geschwister !== undefined ? { geschwister: wp.geschwister } : {}),
     wp_teams: Number(wp.wp_teams ?? 0),
     wp_teams_mit_sfv_id: Number(wp.wp_teams_mit_sfv_id ?? 0),
     wp_teams_sfv_id_doppelt: Number(wp.wp_teams_sfv_id_doppelt ?? 0),
@@ -1043,7 +1133,10 @@ async function holeStatus() {
     /* ⚠ Die entscheidende Zahl: Beiträge mit sfv_match_id, ALLE Status. */
     spiele_des_exports: Number(wp.spiele_abgleich ?? 0),
     als_benutzer: String(wp.benutzer ?? ""),
+    /* ⚠ Auch hier — dieselbe Luecke hat hier zweimal zugeschlagen. */
+    nicht_durchgereicht: [] as string[],
   };
+  return { ...ergebnis, nicht_durchgereicht: nichtDurchgereicht(wp, ergebnis) };
 }
 
 
