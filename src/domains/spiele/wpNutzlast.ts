@@ -1128,22 +1128,67 @@ export interface AufstellungQuelle {
  * ⚠ Und gezählt wird nur, wo es eine Zeile GIBT. Fehlt sie, ist das eine
  * andere Sache (`rein_ohne_zeile`) und keine Uneinigkeit.
  */
+export interface WechselWiderspruch {
+  /** Der Verlauf wechselt ihn ein, die Aufstellung führt ihn als STARTELF.
+      Muster 4395750 (11.09.2026): Nr. 9 trägt 1/70/70. */
+  eigen_als_start: number;
+  fremd_als_start: number;
+  /** Der Verlauf wechselt ihn ein, die Aufstellung sagt NICHT GESPIELT.
+      Muster 4378093 (11.09.2026): alle Ersatzspieler 0/0/0, beide Seiten. */
+  eigen_als_nicht_eingesetzt: number;
+  fremd_als_nicht_eingesetzt: number;
+}
+
+export function leererWechselWiderspruch(): WechselWiderspruch {
+  return {
+    eigen_als_start: 0, fremd_als_start: 0,
+    eigen_als_nicht_eingesetzt: 0, fremd_als_nicht_eingesetzt: 0,
+  };
+}
+
 export function zaehleWechselWiderspruch(
   ereignisse: { typ_id: number; subtyp_id: number | null; ist_eigener: boolean;
                 ein_rueckennr: number | null }[],
   aufstellung: AufstellungQuelle[],
-): { eigen: number; fremd: number } {
-  const raus = { eigen: 0, fremd: 0 };
+): WechselWiderspruch {
+  const raus = leererWechselWiderspruch();
   for (const e of ereignisse) {
     if (e.typ_id !== TYP_WECHSEL || e.ein_rueckennr == null) continue;
     const zeile = aufstellung.find(
       (a) => a.ist_eigener === e.ist_eigener && a.rueckennr === e.ein_rueckennr,
     );
     if (!zeile) continue;
-    /* Eingewechselt heisst `von_minute > 1`. Steht dort 1 oder 0, sagt die
-       Aufstellung etwas anderes als der Verlauf. */
-    if (zeile.von_minute != null && zeile.von_minute <= 1) {
-      if (e.ist_eigener) raus.eigen += 1; else raus.fremd += 1;
+
+    /* ⚠ ⚠  UEBER rolleAus(), NICHT ueber eine eigene Bedingung.
+
+       Ein zweiter Ausdruck fuer dieselbe Frage laeuft still auseinander —
+       das Papier fuehrt es an einem Dutzend Stellen als teuersten Fehler.
+       Hier haette er es sofort getan: die erste Fassung dieser Funktion
+       fragte `von_minute <= 1` und warf damit BEIDE Muster in einen Topf,
+       obwohl sie Gegenteiliges bedeuten.
+
+       ⚠ Und sie haette das dritte Muster verfehlt: bei 4378093 tragen die
+       Ersatzspieler `0/0/0`, und 0 ist nicht null — `aufstellung_ohne_minuten`
+       greift dort NICHT, denn es verlangt `spielzeit === null && von === null`. */
+    const b = rolleAus(zeile);
+    if (b.rolle === "eingewechselt") continue;
+
+    /* ⚠ DIE ZWEI MUSTER SIND NICHT DASSELBE, und der Unterschied ist die
+       ganze Aussage:
+
+         als START gefuehrt             der Verband sagt „spielte von Beginn"
+         als NICHT EINGESETZT gefuehrt  der Verband sagt „spielte gar nicht"
+
+       Gemessen am 11.09.2026 an zwei Spielen, die beide keine
+       Wechselpfeile zeigten und aus entgegengesetzten Gruenden. Wer sie
+       zusammenzaehlt, hat eine Zahl und keinen Befund. */
+    const zuStart = b.rolle === "start";
+    if (e.ist_eigener) {
+      if (zuStart) raus.eigen_als_start += 1;
+      else raus.eigen_als_nicht_eingesetzt += 1;
+    } else {
+      if (zuStart) raus.fremd_als_start += 1;
+      else raus.fremd_als_nicht_eingesetzt += 1;
     }
   }
   return raus;

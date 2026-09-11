@@ -18,6 +18,7 @@ import {
   verlaufArt, verlaufMinute, bildeVerlauf, bildeSpiel, zaehleVerlaufNamen,
   TYP_WECHSEL, TYP_ASSIST, SUBTYP_ZWEITE_VERWARNUNG,
   hatDoppelabstand, sammleMarken, markeSchluessel, zaehleWechselWiderspruch,
+  leererWechselWiderspruch,
   spielerAnzeige, rolleAus, ROLLE_ERSATZ_ID, ROLLE_KEIN_EINSATZ_ID,
   ROLLE_CAPTAIN_ID, baueAufstellung, leereAufstellungZahlen,
 } from "../wpNutzlast.ts";
@@ -1101,14 +1102,15 @@ describe("zaehleWechselWiderspruch — Verlauf gegen Aufstellung", () => {
     const r = zaehleWechselWiderspruch(
       [wechselEreignis(false, 9)], [zeile(false, 9, 1)],
     );
-    expect(r).toEqual({ eigen: 0, fremd: 1 });
+    expect(r.fremd_als_start).toBe(1);
+    expect(r.fremd_als_nicht_eingesetzt).toBe(0);
   });
 
   it("stimmt die Zeile überein, ist es kein Widerspruch", () => {
     const r = zaehleWechselWiderspruch(
       [wechselEreignis(false, 9)], [zeile(false, 9, 40)],
     );
-    expect(r).toEqual({ eigen: 0, fremd: 0 });
+    expect(r).toEqual(leererWechselWiderspruch());
   });
 
   it("zählt eigene und fremde getrennt", () => {
@@ -1116,7 +1118,8 @@ describe("zaehleWechselWiderspruch — Verlauf gegen Aufstellung", () => {
       [wechselEreignis(true, 5), wechselEreignis(false, 9)],
       [zeile(true, 5, 1), zeile(false, 9, 1)],
     );
-    expect(r).toEqual({ eigen: 1, fremd: 1 });
+    expect(r.eigen_als_start).toBe(1);
+    expect(r.fremd_als_start).toBe(1);
   });
 
   it("⚠⚠ prüft die SEITE, nicht nur die Nummer", () => {
@@ -1126,13 +1129,13 @@ describe("zaehleWechselWiderspruch — Verlauf gegen Aufstellung", () => {
     const r = zaehleWechselWiderspruch(
       [wechselEreignis(false, 9)], [zeile(true, 9, 1)],
     );
-    expect(r).toEqual({ eigen: 0, fremd: 0 });
+    expect(r).toEqual(leererWechselWiderspruch());
   });
 
   it("ohne Aufstellungszeile wird nicht gezählt", () => {
     /* Eine fehlende Zeile ist eine andere Sache und keine Uneinigkeit. */
     const r = zaehleWechselWiderspruch([wechselEreignis(false, 9)], []);
-    expect(r).toEqual({ eigen: 0, fremd: 0 });
+    expect(r).toEqual(leererWechselWiderspruch());
   });
 
   it("ein Tor ist kein Wechsel", () => {
@@ -1140,15 +1143,41 @@ describe("zaehleWechselWiderspruch — Verlauf gegen Aufstellung", () => {
       [{ typ_id: 1, subtyp_id: null, ist_eigener: true, ein_rueckennr: 9 }],
       [zeile(true, 9, 1)],
     );
-    expect(r).toEqual({ eigen: 0, fremd: 0 });
+    expect(r).toEqual(leererWechselWiderspruch());
   });
 
-  it("eine Zeile ohne Minuten wird nicht gezählt", () => {
-    /* Sie sagt gar nichts — das ist ohne_minuten, nicht Widerspruch. */
-    const r = zaehleWechselWiderspruch(
-      [wechselEreignis(false, 9)], [zeile(false, 9, null)],
-    );
-    expect(r).toEqual({ eigen: 0, fremd: 0 });
+  it("⚠ eine Zeile OHNE JEDE Minutenangabe landet bei als_start", () => {
+    /* ⚠ Der Fall, den ich beim Schreiben falsch erwartet hatte — und der
+       Code hat recht.
+
+       Trägt die Zeile weder von_minute noch bis_minute noch spielzeit,
+       fällt `rolleAus()` auf die Zuweisung zurück, und die ergibt hier
+       `start`. Der Verlauf sagt `eingewechselt` — also ein Widerspruch,
+       und er gehört gezählt.
+
+       ⚠ Er landet im selben Topf wie das 4395750-Muster, obwohl die Zeile
+       nichts BEHAUPTET statt etwas Falsches zu behaupten. Das ist eine
+       bewusste Vereinfachung: ob der Fall überhaupt vorkommt, ist
+       ungemessen (`aufstellung_ohne_minuten` steht daneben und
+       beantwortet genau das). **Ein eigener Topf für einen Fall, den
+       niemand gemessen hat, wäre ein Zähler ohne Frage.** */
+    const ohneAlles = { ist_eigener: false, sfv_person_id: null, name: null,
+      rueckennr: 9, position_name: null, von_minute: null,
+      bis_minute: null, spielzeit: null, rolle_zuweisung_id: 0 };
+    const r = zaehleWechselWiderspruch([wechselEreignis(false, 9)], [ohneAlles]);
+    expect(r.fremd_als_start).toBe(1);
+  });
+
+  it("⚠⚠ das 4378093-Muster: 0/0/0 ist NICHT dasselbe wie 1/70/70", () => {
+    /* Beide Spiele zeigten keine Wechselpfeile, aus entgegengesetzten
+       Gründen — und die erste Fassung dieses Zählers warf sie in einen
+       Topf. Der Unterschied ist die ganze Aussage. */
+    const nullNull = { ist_eigener: false, sfv_person_id: null, name: null,
+      rueckennr: 9, position_name: null, von_minute: 0,
+      bis_minute: 0, spielzeit: 0, rolle_zuweisung_id: 2 };
+    const r = zaehleWechselWiderspruch([wechselEreignis(false, 9)], [nullNull]);
+    expect(r.fremd_als_nicht_eingesetzt).toBe(1);
+    expect(r.fremd_als_start).toBe(0);
   });
 });
 

@@ -59,7 +59,7 @@ import type { EreignisZeile } from "../../../src/domains/spiele/matchdatenAnzeig
 import {
   bildeSpiel, zaehleVerlaufNamen, hatDoppelabstand,
   baueAufstellung, leereAufstellungZahlen, sammleMarken,
-  zaehleWechselWiderspruch,
+  zaehleWechselWiderspruch, leererWechselWiderspruch,
 } from "../../../src/domains/spiele/wpNutzlast.ts";
 /* ⚠ Der Zeitraum ist RECHNUNG, keine Zusage — er gehoert dorthin, wo tsc
    und vitest ihn lesen koennen. Diese Datei importiert von esm.sh und wird
@@ -1176,7 +1176,7 @@ async function laufeProbe(
      denselben Spieler in der 40. ein. **Gefunden wurde es über ein Bild
      auf der Website**, weil die Gegneraufstellung keine Wechselpfeile
      zeigte — und nicht über eine Zahl. */
-  const wechselWiderspruch = { eigen: 0, fremd: 0 };
+  const wechselWiderspruch = leererWechselWiderspruch();
   let spieleMitAufstellung = 0;
   /* Geholt, aber der Verband fuehrt keine Aufstellung — die Zeilen, die
      drueben ausdruecklich geleert werden. */
@@ -1225,8 +1225,9 @@ async function laufeProbe(
         namen, aufZahlen,
       );
       const ww = zaehleWechselWiderspruch(ereignisse, aufZeilen);
-      wechselWiderspruch.eigen += ww.eigen;
-      wechselWiderspruch.fremd += ww.fremd;
+      for (const k of Object.keys(wechselWiderspruch) as (keyof typeof wechselWiderspruch)[]) {
+        wechselWiderspruch[k] += ww[k];
+      }
     } else if (s.matchdaten_geholt_am) {
       /* ⚠ ⚠  DIE AUSDRUECKLICH LEERE LISTE — Entscheid Didi, 10.09.2026.
 
@@ -1314,8 +1315,7 @@ async function laufeProbe(
       /* ⚠ Beide Seiten getrennt, beide immer da. Die Gegnerseite ist seit
          Entscheid B genauso Bestand wie unsere — und bis zum 11.09.2026
          wurde sie von keinem Zähler gegen den Verlauf gehalten. */
-      verlauf_gegen_aufstellung_eigen: wechselWiderspruch.eigen,
-      verlauf_gegen_aufstellung_fremd: wechselWiderspruch.fremd,
+      ...wechselWiderspruch,
       /* ⚠ Bleibt gezaehlt, AUCH wenn korrigiert wurde. Die Korrektur
          macht den Befund unsichtbar, nicht ungeschehen. Heute: 1. */
       aufstellung_unplausibel: aufZahlen.unplausibel,
