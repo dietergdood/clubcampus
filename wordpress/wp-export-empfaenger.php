@@ -4,7 +4,7 @@
  *
  * Plugin Name: ClubCampus Export
  * Description: Nimmt Spielplan, Verlauf und Ranglisten aus ClubCampus entgegen.
- * Version:     0.9.14
+ * Version:     0.9.15
  *
  * ⚠ ⚠  STAND 10.09.2026: DIESE DATEI **IST** DER EMPFAENGER  ⚠ ⚠
  *
@@ -353,7 +353,7 @@ const CC_ROUTE      = 'clubcampus/v1';
    einander), `autoload` wird nach dem Schreiben geprueft und notfalls
    berichtigt, `/status` nennt Empfaenger, Version, Metaschluessel und die
    Team-Zuordnung. */
-const CC_VERSION    = '0.9.14';
+const CC_VERSION    = '0.9.15';
 const CC_TYP_SPIEL  = 'fch_spiel';
 const CC_TYP_TEAM   = 'fch_team';
 /* ⚠ DER SCHLUESSEL, AN DEM DIE GANZE ZUORDNUNG HAENGT — Meta am
@@ -1339,6 +1339,10 @@ function cc_schreibe_felder( int $post_id, array $spiel ): array {
 		   zu beantworten — und die Website-Seite musste im Backend
 		   nachsehen. */
 		if ( 'aufstellung' === $feld ) {
+			/* ⚠ Auch der VERSCHACHTELTE Repeater: eine Grenze, die eine
+			   Ebene tiefer offen ist, sieht wie eine ganze aus. */
+			cc_pruefe_unterfelder( $post_id, 'aufstellung', CC_AUFSTELLUNG_FELDER );
+			cc_pruefe_unterfelder( $post_id, 'aufstellung', CC_MARKEN_FELDER, 'marken' );
 			$GLOBALS['cc_aufstellung_zeilen'] += count( (array) $wert );
 			if ( count( (array) $wert ) > 0 ) {
 				$GLOBALS['cc_aufstellung_spiele']++;
@@ -1395,6 +1399,94 @@ function cc_unbeachtete_felder( array $spiel ): array {
  *   „eine gerechnete Zahl, die von der eingetragenen abweicht, waere
  *   schlimmer als keine." Kommt kein Zwischenstand mit, bleibt das Feld leer.
  */
+/**
+ * Welche Unterfelder kennt der Repeater DRUEBEN?
+ *
+ * ⚠ ⚠  ANLASS: `ein_nummer` schrieb von 0.9.7 bis zum 11.09.2026 ins
+ * Leere — zwei Wochen, in jeder Nutzlast, ohne eine einzige Meldung.
+ *
+ * ACF schreibt einen Repeater als Ganzes. **Schluessel, die keinem
+ * Unterfeld entsprechen, fallen wortlos weg** — kein Rueckgabewert, keine
+ * Warnung, kein Eintrag irgendwo.
+ *
+ * ⚠ Und `cc_unbeachtete_felder()` sieht das NICHT: sie vergleicht
+ * ausschliesslich die obersten Feldnamen gegen CC_FELDER. Was innerhalb
+ * eines Repeaters steht, durchlaeuft die Pruefung nie.
+ *
+ * > **Eine Grenze, die eine Ebene tiefer offen ist, sieht wie eine ganze
+ * > aus.**
+ *
+ * ⚠ Doppelt tueckisch: `cc_schreibe_felder()` meldet `verlauf` als
+ * geschrieben, sobald `update_field` lief — **es lief ja auch.** Dass ein
+ * Feld geschrieben wurde, ist keine Aussage ueber den INHALT einer Zeile.
+ *
+ * @return string[] Unterfeldnamen, oder `null` wenn die Feldgruppe des
+ *                  Beitrags den Repeater gar nicht fuehrt.
+ */
+function cc_unterfelder( int $post_id, string $repeater, string $verschachtelt = '' ): ?array {
+	$key = cc_feld_schluessel( $post_id, $repeater );
+	if ( null === $key ) {
+		return null;
+	}
+	$feld = function_exists( 'acf_get_field' ) ? acf_get_field( $key ) : null;
+	if ( ! is_array( $feld ) || ! isset( $feld['sub_fields'] ) ) {
+		return null;
+	}
+
+	/* ⚠ ⚠ EINE EBENE TIEFER, wenn danach gefragt wird. `marken` steckt
+	   INNERHALB von `aufstellung` — und eine Grenze, die eine Ebene
+	   tiefer offen ist, sieht wie eine ganze aus. Genau dieselbe
+	   Begruendung wie bei cc_saeubere_aufstellung(), die den
+	   verschachtelten Repeater seit 0.9.7 mitschneidet. */
+	if ( '' !== $verschachtelt ) {
+		$treffer = null;
+		foreach ( (array) $feld['sub_fields'] as $u ) {
+			if ( isset( $u['name'] ) && $u['name'] === $verschachtelt ) {
+				$treffer = $u;
+				break;
+			}
+		}
+		if ( ! is_array( $treffer ) || ! isset( $treffer['sub_fields'] ) ) {
+			return null;
+		}
+		$feld = $treffer;
+	}
+
+	$raus = array();
+	foreach ( (array) $feld['sub_fields'] as $u ) {
+		if ( isset( $u['name'] ) && '' !== $u['name'] ) {
+			$raus[] = (string) $u['name'];
+		}
+	}
+	return $raus;
+}
+
+/**
+ * Namen, die wir in einen Repeater schreiben und die er nicht kennt.
+ *
+ * ⚠ SIE SCHREIBT NICHTS UND AENDERT NICHTS. Sie nennt Namen, damit ein
+ * fehlendes Unterfeld nicht wie eine fehlende Lieferung aussieht.
+ *
+ * ⚠ `null` von `cc_unterfelder()` heisst „nicht feststellbar" und ist
+ * KEINE leere Liste: gaebe es hier `array_diff` gegen `array()`, meldete
+ * die Pruefung ALLE Namen als unbekannt, sobald ACF fehlt oder der
+ * Repeater nicht in der Feldgruppe steht. **Ein Melder, der grundlos
+ * anschlaegt, wird nach dem dritten Mal abgeschaltet.**
+ */
+function cc_pruefe_unterfelder(
+	int $post_id, string $repeater, array $gesendet, string $verschachtelt = ''
+): void {
+	$vorhanden = cc_unterfelder( $post_id, $repeater, $verschachtelt );
+	$pfad = '' === $verschachtelt ? $repeater : $repeater . '.' . $verschachtelt;
+	if ( null === $vorhanden ) {
+		$GLOBALS['cc_unterfelder_unbekannt'][ $pfad ] = true;
+		return;
+	}
+	foreach ( array_diff( $gesendet, $vorhanden ) as $name ) {
+		$GLOBALS['cc_unbeachtete_unterfelder'][ $pfad . '.' . $name ] = true;
+	}
+}
+
 function cc_schreibe_verlauf( int $post_id, array $verlauf ): int {
 	$zeilen = array();
 	foreach ( $verlauf as $z ) {
@@ -1413,6 +1505,7 @@ function cc_schreibe_verlauf( int $post_id, array $verlauf ): int {
 		$GLOBALS['cc_ohne_feldschluessel']['verlauf'] = true;
 		return 0;
 	}
+	cc_pruefe_unterfelder( $post_id, 'verlauf', CC_VERLAUF_FELDER );
 	update_field( $key, $zeilen, $post_id );
 	return count( $zeilen );
 }
@@ -1693,6 +1786,8 @@ function cc_route_spiele( WP_REST_Request $req ) {
 	$GLOBALS['cc_aufstellung_zeilen'] = 0;
 	$GLOBALS['cc_aufstellung_spiele'] = 0;
 	$GLOBALS['cc_aufstellung_je_spiel'] = array();
+	$GLOBALS['cc_unbeachtete_unterfelder'] = array();
+	$GLOBALS['cc_unterfelder_unbekannt'] = array();
 
 	$vorhanden = cc_abgleich_kandidaten();
 	$teamKarte = cc_team_karte();
@@ -1880,6 +1975,14 @@ function cc_route_spiele( WP_REST_Request $req ) {
 	$erg['aufstellung_zeilen'] = (int) ( $GLOBALS['cc_aufstellung_zeilen'] ?? 0 );
 	$erg['aufstellung_spiele'] = (int) ( $GLOBALS['cc_aufstellung_spiele'] ?? 0 );
 	$erg['aufstellung_je_spiel'] = (array) ( $GLOBALS['cc_aufstellung_je_spiel'] ?? array() );
+	/* ⚠ ⚠ Namen, die wir in einen Repeater schreiben und den der Zielrepeater
+	   nicht kennt. So schrieb ein_nummer zwei Wochen ins Leere. */
+	$erg['unbeachtete_unterfelder'] = array_keys(
+		(array) ( $GLOBALS['cc_unbeachtete_unterfelder'] ?? array() ) );
+	sort( $erg['unbeachtete_unterfelder'] );
+	/* ⚠ Getrennt: „nicht feststellbar" ist KEINE leere Liste. */
+	$erg['unterfelder_unbekannt'] = array_keys(
+		(array) ( $GLOBALS['cc_unterfelder_unbekannt'] ?? array() ) );
 
 	return new WP_REST_Response( $erg, 200 );
 }

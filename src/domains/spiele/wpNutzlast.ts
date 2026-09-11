@@ -60,6 +60,42 @@ export type WpStatus = "normal" | "verschoben" | "abgesagt" | "forfait";
 /** Die fünf Arten, die der Verlauf im Theme kennt. */
 export type WpVerlaufArt = "tor" | "gelb" | "gelbrot" | "rot" | "wechsel";
 
+/**
+ * Die FASSUNG der Nutzlast — hochzuzählen, wenn ein Feld dazukommt,
+ * wegfällt oder seine Bedeutung wechselt.
+ *
+ * ⚠ ⚠  ANLASS: EIN DEPLOY, DER DIE NUTZLAST ÄNDERT, LÖST NICHTS AUS.
+ *
+ * `export_wartet()` zählt geänderte ZEILEN. Nach einem Deploy sind die
+ * Zeilen unverändert — also wartet nichts, und die neuen Felder gehen
+ * nicht hinaus. **Dreimal passiert**: bei `liga`, bei `aufstellung` und
+ * am 11.09.2026 bei den drei Verlaufsfeldern. Jedes Mal brauchte es
+ * einen Knopfdruck, und jedes Mal hat es jemand zufällig gemerkt.
+ *
+ * ── Warum die Entscheidung in die Function wandert ────────────────────
+ *
+ * `export_wartet()` ist eine SQL-Funktion und **kann die Fassung im Code
+ * nicht kennen**. Sie bräuchte einen zweiten Wert, den jemand beim
+ * Deploy schreibt — und wer `npx supabase functions deploy` direkt
+ * aufruft, schreibt ihn nicht. Dieselbe „jemand muss daran denken"-
+ * Schwäche, gegen die das Ganze gebaut wird.
+ *
+ * **Deshalb ruft der Abholer seit dem 11.09.2026 IMMER, und die Function
+ * entscheidet selbst** — sie ist der einzige Ort, der beide Hälften
+ * kennt: die geänderten Zeilen UND die eigene Fassung.
+ *
+ * > Heute entschied SQL, und der Code wusste nicht, warum er läuft.
+ *
+ * Der Preis sind vier Leerläufe je Stunde mit je zwei Abfragen.
+ *
+ * ⚠ Und die verbleibende Schwäche ist benannt: jemand muss diese Zahl
+ * hochzählen. **Sie steht dafür neben den Feldern, die sie beschreibt,
+ * und im selben Commit** — nicht in einer späteren Sitzung, nicht in
+ * einem SQL-Block. Gehalten wird es von `nutzlastFassung.test.ts`: ändert
+ * sich ein Feldname, ist der Fall rot, und er nennt beide Stellen.
+ */
+export const NUTZLAST_FASSUNG = 3;
+
 export interface WpVerlaufZeile {
   /** Text, nicht Zahl — damit „45+2" hineinpasst. */
   minute: string;

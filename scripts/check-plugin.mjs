@@ -271,6 +271,32 @@ const REGELN = [
     erwarteImKontrollfall: 1,
   },
   {
+    /* ⚠ ⚠ ANLASS: ein_nummer schrieb von 0.9.7 bis zum 11.09.2026 ins
+       Leere — zwei Wochen, ohne eine einzige Meldung. ACF verwirft
+       unbekannte UNTERFELDER wortlos, und cc_unbeachtete_felder()
+       vergleicht nur die oberste Ebene.
+
+       Eine Grenze, die eine Ebene tiefer offen ist, sieht wie eine
+       ganze aus. */
+    frage: "jeder Repeater wird auf unbekannte Unterfelder geprueft",
+    pruefe: (b) => {
+      const offen = [];
+      for (const [name, f] of Object.entries(b.funktionen)) {
+        const schreibt = (f.rufe ?? []).includes("update_field");
+        const prueft = (f.rufe ?? []).includes("cc_pruefe_unterfelder");
+        /* Nur Funktionen, die einen REPEATER schreiben — erkennbar an
+           einer der drei Unterfeldlisten. */
+        const repeater = (f.bezeichner ?? []).some((x) =>
+          ["CC_VERLAUF_FELDER", "CC_AUFSTELLUNG_FELDER", "CC_MARKEN_FELDER"]
+            .includes(x));
+        if (schreibt && repeater && !prueft) offen.push(name);
+      }
+      return offen;
+    },
+    kontrolle: "<?php function f() { foreach (CC_VERLAUF_FELDER as $x) {} update_field(1,2,3); }",
+    erwarteImKontrollfall: 1,
+  },
+  {
     frage: "cc_schreibe_teamfelder legt kein Team an und loescht keines",
     pruefe: (b) => (b.funktionen.cc_schreibe_teamfelder?.rufe ?? [])
       .filter(r => ["wp_insert_post", "wp_update_post", "wp_delete_post", "wp_trash_post"].includes(r)),
