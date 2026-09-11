@@ -999,9 +999,40 @@ Der Dump deckt das Schema **`public`** ab. Vier Dinge tun das nicht, und alle vi
 | **Trigger auf `auth.users`** (`on_auth_user_created`, `on_auth_user_login`) | `supabase/auth_triggers.sql` | Niemand kann sich registrieren. `schema.sql` enthält nur die Funktionen `handle_new_user`/`handle_user_login` — **ohne jeden Aufrufer**. |
 | **Realtime-Publication** (`ALTER PUBLICATION supabase_realtime ADD TABLE nachrichten, nachrichten_antworten`) | im regulären `supabase db dump` enthalten — aber **nicht** in `pg_dump --schema=public` | Nachrichten kommen nicht live an. Nichts schlägt fehl, es passiert nur nichts. |
 | **cron-Auftrag** `sfv-sync-stuendlich` (`cron.job`, Schema `cron`) | `supabase/cron_sfv_sync.sql` | Der SFV-Sync läuft nie wieder. Die Anzeige zeigt schlicht den Stand vom Tag des Nachbaus. |
+| **cron-Auftrag** `sync-waechter-stuendlich` | `supabase/cron_sync_waechter.sql` | Kein Ausfall wird gemeldet, und **der Totmannschalter schweigt** — healthchecks.io hält das für gesund. Enthält seit dem 11.09.2026 auch die Wachstumsfrage an die Tabellen. |
+| **cron-Auftrag** `sync-waechter` (⚠ anderer Name, `*/30`) | `supabase/cron_waechter_export.sql`, abgelöst von `cron_waechter_nachlauf.sql` | Export-Rückstand und stehender Nachlauf werden nicht gemeldet. ⚠ **Siehe die Warnung unter der Tabelle.** |
+| **cron-Auftrag** `wp-export-abholer` (`*/15`) | `supabase/cron_wp_export.sql` | Die Website bekommt keine neuen Spieldaten mehr. Nichts schlägt fehl; der Stand friert ein. |
+| **cron-Auftrag** `sync-log-aufraeumen-taeglich` | `supabase/cron_sync_log_aufraeumen.sql` | `api_sync_log` wächst wieder unbegrenzt und läuft in die stille 1000-Zeilen-Grenze von PostgREST. |
 | **Storage-Bucket** `sfv-logos` (`storage.buckets`) | `supabase/migration_sfv_logos.sql` | Vereinswappen erscheinen nicht, und der Sync legt sie ins Leere ab. |
 
-**Das gemeinsame Merkmal: keines davon bricht laut.** Registrierung, Live-Nachrichten, Sync, Wappen — alle vier hören einfach auf zu funktionieren, ohne Fehlermeldung. Deshalb fällt es beim Nachbauen nicht auf, sondern Wochen später.
+**Das gemeinsame Merkmal: keines davon bricht laut.** Registrierung, Live-Nachrichten, Sync, Wappen, Wächter, Abholer — alle hören einfach auf zu funktionieren, ohne Fehlermeldung. Deshalb fällt es beim Nachbauen nicht auf, sondern Wochen später.
+
+> ⚠ ⚠ **ZWEI WÄCHTER UNTER ZWEI NAMEN, UND KEINER KANN ALLES** (gemessen am 11.09.2026 im Repository, nicht in der Datenbank).
+>
+> `cron_sync_waechter.sql` legt `sync-waechter-stuendlich` an (Minute 47).
+> `cron_waechter_export.sql` legte am 10.09.2026 einen **zweiten** Auftrag
+> unter dem Namen `sync-waechter` an (`*/30`) — und **es gibt nirgends ein
+> `cron.unschedule`**, das den ersten entfernt.
+>
+> | Auftrag | Ausfall | Export | Nachlauf | Wachstum | **Totmannschalter** |
+> |---|---|---|---|---|---|
+> | `sync-waechter-stuendlich` | ✅ | ❌ | ❌ | ✅ | ✅ |
+> | `sync-waechter` (`*/30`) | ✅ | ✅ | ✅ | ❌ | ❌ |
+>
+> ⚠ **Der Totmannschalter steht in genau einem der beiden.** Wer die zwei
+> bemerkt und „den neueren behält", nimmt damit die einzige Einrichtung
+> weg, die den Ausfall des Wächters selbst meldet — **und Schweigen ist
+> von Zufriedenheit nicht zu unterscheiden.** Genau das Loch, gegen das
+> der Totmannschalter gebaut wurde, eine Ebene höher.
+>
+> **Was tatsächlich läuft, sagt nur die Datenbank:**
+>
+> ```sql
+> select jobname, schedule, active from cron.job order by jobname;
+> ```
+>
+> **Zusammenzulegen zu einem Auftrag mit allen fünf Fragen** — offen seit
+> dem 11.09.2026.
 
 **Reihenfolge beim Nachbau:**
 
@@ -1009,6 +1040,9 @@ Der Dump deckt das Schema **`public`** ab. Vier Dinge tun das nicht, und alle vi
 1. supabase/schema.sql              ← das Grundschema
 2. supabase/auth_triggers.sql       ← sonst keine Registrierung
 3. supabase/cron_sfv_sync.sql       ← sonst kein Sync
+3b. supabase/cron_sync_waechter.sql  ← sonst meldet kein Ausfall sich
+3c. supabase/cron_wp_export.sql      ← sonst keine Spieldaten auf der Website
+3d. supabase/cron_sync_log_aufraeumen.sql  ← sonst waechst das Protokoll ins Limit
 4. supabase/migration_sfv_logos.sql ← Bucket (Block A daraus genügt)
 5. prüfen: ALTER PUBLICATION für nachrichten + nachrichten_antworten
 ```
