@@ -106,7 +106,7 @@ export function ApiTab({loading,isMobile,mobileKachel,apiVerbindungen,tab,sb=nul
      der auf der oeffentlichen Website schreibt, und steht bereits als
      eigener, abgesetzter Knopf mit Zielangabe da. Ein zweiter Weg dorthin
      waere ein Weg zu wenig Nachdenken. */
-  const [auskunft,setAuskunft]=useState<{titel: string; zeilen: string[]; fehler?: boolean}|null>(null);
+  const [auskunft,setAuskunft]=useState<{titel: string; zeilen: string[]; fehler?: boolean; roh?: unknown}|null>(null);
   const [auskunftLaeuft,setAuskunftLaeuft]=useState<string|null>(null);
 
   /** Was vom Lauf angezeigt wird — aufgezaehlt, nicht ausgeschlossen. */
@@ -353,7 +353,17 @@ export function ApiTab({loading,isMobile,mobileKachel,apiVerbindungen,tab,sb=nul
       return;
     }
     if(was==="bestand"){
-      setAuskunft({titel:"Bestand drüben", zeilen: deuteBestand(daten)});
+      /* ⚠ ⚠ DIE ROHANTWORT GEHOERT DAZU, UND ZWAR AUFKLAPPBAR.
+
+         Am 12.09.2026 wurde zweimal auf der falschen Seite gesucht,
+         weil die Karte eine Deutung zeigte und niemand sehen konnte,
+         WORAUS sie stammt. Die Antwort musste jedes Mal vorgelesen
+         werden — und ein Wert, der durch eine Nacherzaehlung geht,
+         verliert seine Herkunft.
+
+         ⚠ Zugeklappt, nicht weggelassen: sie ist lang und interessiert
+         nur, wenn die Deutung ueberrascht. Genau dann aber sofort. */
+      setAuskunft({titel:"Bestand drüben", zeilen: deuteBestand(daten), roh: daten});
       return;
     }
     /* ⚠ Rohschluessel UNGEDEUTET anzeigen — das Filtern hat den Befund
@@ -508,6 +518,31 @@ export function ApiTab({loading,isMobile,mobileKachel,apiVerbindungen,tab,sb=nul
                              color:auskunft.fehler?"var(--danger,#ef4444)":"var(--text)"}}>
                   {auskunft.zeilen.join(String.fromCharCode(10))}
                 </pre>
+                {/* ⚠ ⚠ DIE ROHANTWORT, ZUGEKLAPPT.
+
+                    Am 12.09.2026 wurde zweimal auf der falschen Seite
+                    gesucht, weil die Karte eine DEUTUNG zeigte und
+                    niemand sehen konnte, woraus sie stammt. Die Antwort
+                    musste jedes Mal vorgelesen werden — und ein Wert,
+                    der durch eine Nacherzählung geht, verliert seine
+                    Herkunft. Genau das führt dieses Papier als teuersten
+                    Fehler des Tages.
+
+                    ⚠ Zugeklappt, nicht weggelassen: sie interessiert nur,
+                    wenn die Deutung überrascht — dann aber sofort und
+                    ohne Umweg über ein Terminal. */}
+                {auskunft.roh!==undefined&&(
+                  <details style={{marginTop:8}}>
+                    <summary style={{fontSize:12,cursor:"pointer",color:"var(--sub)"}}>
+                      Rohantwort — was tatsächlich zurückkam
+                    </summary>
+                    <pre style={{fontSize:11,whiteSpace:"pre-wrap",wordBreak:"break-word",
+                                 margin:"8px 0 0",maxHeight:320,overflow:"auto",
+                                 color:"var(--sub)"}}>
+                      {JSON.stringify(auskunft.roh,null,2)}
+                    </pre>
+                  </details>
+                )}
               </Card>
             </>
           )}

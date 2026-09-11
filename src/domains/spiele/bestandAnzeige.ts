@@ -84,6 +84,20 @@ export function deuteBestand(d: Record<string, unknown>): string[] {
       + "Vergleichsmerkmale. Drüben läuft eine Fassung vor 0.9.20.");
   }
 
+  /* ⚠ ⚠ UNSERE EIGENE FASSUNG ZUERST. Zweimal an zwei Tagen wurde aus
+     einer Meldung über die Gegenstelle geschlossen, während die eigene
+     Änderung gar nicht deployt war.
+
+     **Wer eine Herkunftsangabe verlangt, schuldet sie selbst.**
+
+     Fehlt sie, ist die Function älter als der 12.09.2026 — und dann ist
+     jede Aussage dieser Karte über drüben wertlos, weil die Felder
+     unterwegs verworfen werden. Der Satz sagt das. */
+  zeilen.push(d.function_fassung
+    ? `Unsere Function: Fassung ${String(d.function_fassung)}`
+    : "⚠ ⚠ Unsere Function nennt keine Fassung — sie ist nicht deployt. "
+      + "Alles darüber sagt nichts über drüben: die Felder werden unterwegs verworfen.");
+
   /* ⚠ WER GEANTWORTET HAT — steht seit 0.9.19 in der Antwort selbst.
      Fehlt es, ist die Gegenstelle aelter als 0.9.19, und auch DAS ist
      eine Auskunft. */

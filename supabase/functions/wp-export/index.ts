@@ -213,6 +213,34 @@ async function alleSeiten<T>(
 
 /** Die gueltigen Aktionen — eine Liste, aus der die Pruefung UND die
     Fehlermeldung lesen. Zwei Orte koennten auseinanderlaufen. */
+/**
+ * ⚠ ⚠  UNSERE EIGENE FASSUNG — und sie hat bis zum 12.09.2026 gefehlt.
+
+ * Wir haben vom Empfaenger verlangt, dass jede Antwort Datei und Fassung
+ * nennt (0.9.19), weil eine Auskunft ohne Herkunft dreimal falsch gelesen
+ * wurde. **Diese Function hat dieselbe Auskunft nie gegeben.**
+ *
+ * Die Folge war derselbe Fehler, nur in die andere Richtung: die Kachel
+ * meldete `eine Fassung vor 0.9.18`, und zweimal wurde daraus auf die
+ * Gegenstelle geschlossen — waehrend unsere eigene Aenderung nicht
+ * deployt war.
+ *
+ * > **Wer eine Herkunftsangabe verlangt, schuldet sie selbst.**
+ *
+ * ⚠  VON HAND ERHOEHT, wie beim Empfaenger. Ein Zeitstempel des Builds
+ *    waere bequemer und sagte nur, WANN — nicht WAS. Die Zahl steht fuer
+ *    einen Stand, den jemand entschieden hat.
+ *
+ * ⚠  WER DIESE DATEI INHALTLICH AENDERT, ERHOEHT SIE. Sonst meldet die
+ *    Kachel fuer zwei verschiedene Staende dieselbe Zahl — und die eine
+ *    Auskunft, die `laeuft drueben mein Deploy?` beantworten koennte,
+ *    beantwortet sie nicht mehr.
+ *
+ *    46  12.09.2026  Durchreiche von personen/teams/unterfelder/
+ *                    geschwister, nichtDurchgereicht(), diese Angabe
+ */
+const FUNCTION_FASSUNG = 46;
+
 const AKTIONEN = ["probe", "export", "bestand", "status", "ranglisten"];
 
 /* ⚠ 30 Minuten, und die Zahl ist NICHT geraten — sie ist die Antwort auf
@@ -1012,6 +1040,9 @@ async function holeBestand(
      Spread ueber `wp`: ein neues Feld der Gegenseite reiste sonst still
      mit. Dieselbe Regel wie bei jeder Allowlist in diesem Projekt. */
   const ergebnis = {
+    /* ⚠ Wer ANTWORTET hier — unsere Seite. Ohne sie ist `laeuft mein
+       Deploy?` von `antwortet drueben etwas Altes?` nicht zu trennen. */
+    function_fassung: FUNCTION_FASSUNG,
     ...(abgleich ? { abgleich } : {}),
     ...(wp.personen !== undefined ? { personen: wp.personen } : {}),
     ...(wp.teams !== undefined ? { teams: wp.teams } : {}),
@@ -1089,6 +1120,9 @@ async function holeStatus() {
 
   /* Aufgezählt, nicht durchgereicht — dieselbe Regel wie überall sonst. */
   const ergebnis = {
+    /* ⚠ Wer ANTWORTET hier — unsere Seite. Ohne sie ist `laeuft mein
+       Deploy?` von `antwortet drueben etwas Altes?` nicht zu trennen. */
+    function_fassung: FUNCTION_FASSUNG,
     ziel: host,
     hinweis: "Nachsehen, nicht schreiben. Nichts geändert, nichts protokolliert.",
     bereit: wp.bereit === true,
