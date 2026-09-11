@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import {
   bildeAufstellung, bildeEreignis, istEigener, istKorrekturUeberfluessig,
   leseHalbzeit, waehleKandidaten, NACHZUG_TAGE, bildeOffeneNamen,
+  aeltesteHolungStunden,
   bildeSfvPerson, entdoppleSfvPersonen, verschmelzeAufstellung,
   zaehleVerbandKorrekturen, gegnerUnveraendert, verlaufUnveraendert,
 } from "../../../../supabase/functions/sfv-sync/matchdaten.ts";
@@ -372,46 +373,133 @@ describe("waehleKandidaten", () => {
   it("nimmt neue Spiele vor Wiederholungen", () => {
     /* Ein fehlender Spielbericht faellt auf, eine um eine Stunde verzoegerte
        Korrektur nicht. */
-    const gewaehlt = waehleKandidaten([
+    const w = waehleKandidaten([
       s("alt", "2026-08-17", "2026-08-17T20:00:00Z"),
       s("neu", "2026-08-16", null),
     ], jetzt, 10);
-    expect(gewaehlt.map((x) => x.id)).toEqual(["neu", "alt"]);
+    expect(w.spiele.map((x) => x.id)).toEqual(["neu", "alt"]);
   });
 
   it("haelt die Obergrenze ein", () => {
     const viele = Array.from({ length: 25 }, (_, i) => s(`n${i}`, "2026-08-18", null));
-    expect(waehleKandidaten(viele, jetzt, 10)).toHaveLength(10);
+    expect(waehleKandidaten(viele, jetzt, 10).spiele).toHaveLength(10);
   });
 
-  it("holt ein bereits geholtes Spiel nur in der Woche danach nach", () => {
-    const gewaehlt = waehleKandidaten([
+  it("⚠⚠ holt ein laengst geholtes Spiel NACH — umgedreht am 11.09.2026", () => {
+    /* ⚠ ⚠ DIESER FALL HIELT DIE GEGENTEILIGE ZUSAGE FEST und ist beim
+       Umdrehen von selbst rot geworden — genau wofuer er da war. Er hiess
+       „holt ein bereits geholtes Spiel NUR in der Woche danach nach".
+
+       **Die Zusage war die Ursache eines Defekts:** 62 Spiele lagen am
+       11.09.2026 zwischen den Toepfen — schon geholt, aelter als sieben
+       Tage — und trugen wochenlang die Form vom Tag ihres Abrufs. Jede
+       Aenderung an der Verarbeitung erreichte nur das Fenster.
+
+       Der rollende Nachlauf nimmt das am laengsten nicht Geholte, zwei
+       Plaetze je Lauf. Das Fenster behaelt seinen Vorrang. */
+    const w = waehleKandidaten([
       s("frisch", "2026-08-15", "2026-08-15T20:00:00Z"),
       s("laengst", "2026-06-01", "2026-06-01T20:00:00Z"),
     ], jetzt, 10);
-    expect(gewaehlt.map((x) => x.id)).toEqual(["frisch"]);
+    expect(w.spiele.map((x) => x.id).sort()).toEqual(["frisch", "laengst"]);
+    expect(w.fenster).toBe(1);
+    expect(w.alt).toBe(1);
+  });
+
+  it("⚠ der Nachlauf nimmt das AELTESTE zuerst", () => {
+    /* `matchdaten_geholt_am` IST die Reihenfolge und pflegt sich selbst —
+       kein Zeiger, den jemand fuehren muesste. */
+    const w = waehleKandidaten([
+      s("mitte", "2026-06-01", "2026-07-01T20:00:00Z"),
+      s("aeltest", "2026-06-01", "2026-05-01T20:00:00Z"),
+      s("juengst", "2026-06-01", "2026-08-01T20:00:00Z"),
+    ], jetzt, 10);
+    expect(w.spiele.map((x) => x.id)).toEqual(["aeltest", "mitte"]);
+    expect(w.alt).toBe(2);
+  });
+
+  it("⚠⚠ der Nachlauf bekommt seine Plaetze auch bei vollem Fenster", () => {
+    /* ⚠ Der Grund fuer „garantiert" statt „was uebrig bleibt": bei einem
+       Spielwochenende mit zwoelf Partien bliebe nichts uebrig, der
+       Durchgang stuende still — und ein stillstehender Durchgang ist
+       genau der Ausfall, den niemand bemerkt. */
+    const fenster = Array.from({ length: 20 }, (_, i) =>
+      s(`f${i}`, "2026-08-18", "2026-08-18T20:00:00Z"));
+    const alt = Array.from({ length: 5 }, (_, i) =>
+      s(`a${i}`, "2026-06-01", `2026-05-0${i + 1}T20:00:00Z`));
+    const w = waehleKandidaten([...fenster, ...alt], jetzt, 12);
+    expect(w.spiele).toHaveLength(12);
+    expect(w.alt).toBe(2);
+    expect(w.fenster).toBe(10);
+  });
+
+  it("⚠ NIE Geholtes verdraengt den Nachlauf — es ist der Rueckstand", () => {
+    /* `alt` ist per Definition schon einmal geholt worden und kann warten;
+       `neu` hat noch gar nichts. */
+    const neu = Array.from({ length: 12 }, (_, i) => s(`n${i}`, "2026-08-18", null));
+    const alt = [s("a", "2026-06-01", "2026-05-01T20:00:00Z")];
+    const w = waehleKandidaten([...neu, ...alt], jetzt, 12);
+    expect(w.neu).toBe(12);
+    expect(w.alt).toBe(0);
+  });
+
+  it("⚠ die drei Zahlen gehen auf", () => {
+    /* Eine Aufteilung, die aufgehen MUSS, prueft sich selbst. */
+    const w = waehleKandidaten([
+      s("neu", "2026-08-18", null),
+      s("fenster", "2026-08-15", "2026-08-15T20:00:00Z"),
+      s("alt", "2026-06-01", "2026-05-01T20:00:00Z"),
+    ], jetzt, 12);
+    expect(w.neu + w.fenster + w.alt).toBe(w.spiele.length);
   });
 
   it("nimmt ein Spiel genau am Rand der Frist noch mit", () => {
     const rand = new Date(jetzt.getTime() - NACHZUG_TAGE * 24 * 60 * 60 * 1000);
-    const gewaehlt = waehleKandidaten(
+    const w = waehleKandidaten(
       [s("rand", rand.toISOString().slice(0, 10), "2026-08-12T20:00:00Z")], jetzt, 10,
     );
-    expect(gewaehlt).toHaveLength(1);
+    expect(w.spiele).toHaveLength(1);
+    expect(w.fenster).toBe(1);
   });
 
   it("laesst Spiele ohne sfv_match_id liegen", () => {
     /* Turniere und interne Spiele haben keine — fuer sie gibt es beim SFV
        nichts zu holen. */
-    expect(waehleKandidaten([s("intern", "2026-08-18", null, null)], jetzt, 10)).toHaveLength(0);
+    expect(waehleKandidaten([s("intern", "2026-08-18", null, null)], jetzt, 10)
+      .spiele).toHaveLength(0);
   });
 
   it("nimmt innerhalb einer Gruppe das juengste zuerst", () => {
-    const gewaehlt = waehleKandidaten([
+    const w = waehleKandidaten([
       s("aelter", "2026-08-10", null),
       s("juenger", "2026-08-18", null),
     ], jetzt, 10);
-    expect(gewaehlt.map((x) => x.id)).toEqual(["juenger", "aelter"]);
+    expect(w.spiele.map((x) => x.id)).toEqual(["juenger", "aelter"]);
+  });
+});
+
+describe("aeltesteHolungStunden — die Zahl, die nicht luegen kann", () => {
+  const jetzt = new Date("2026-09-11T12:00:00Z");
+  const s = (geholt: string | null) =>
+    ({ id: "x", date: "2026-08-01", matchdaten_geholt_am: geholt, sfv_match_id: 1 });
+
+  it("rechnet die aelteste Holung in Stunden", () => {
+    expect(aeltesteHolungStunden([
+      s("2026-09-11T10:00:00Z"), s("2026-09-11T06:00:00Z"),
+    ], jetzt)).toBe(6);
+  });
+
+  it("⚠ null heisst: noch nie geholt — das ist keine Null", () => {
+    /* Der Unterschied ist die ganze Aussage: 0 hiesse „gerade eben",
+       null heisst „es gibt keinen Bezugspunkt". */
+    expect(aeltesteHolungStunden([s(null)], jetzt)).toBeNull();
+    expect(aeltesteHolungStunden([], jetzt)).toBeNull();
+  });
+
+  it("uebergeht unbrauchbare Zeitstempel, statt NaN zu liefern", () => {
+    expect(aeltesteHolungStunden([
+      s("kaputt"), s("2026-09-11T06:00:00Z"),
+    ], jetzt)).toBe(6);
   });
 });
 

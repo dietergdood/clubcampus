@@ -25,7 +25,7 @@ import {
   bildeAufstellung, verschmelzeAufstellung, bildeEreignis, leseHalbzeit, istKorrekturUeberfluessig, waehleKandidaten,
   passAenderungen, passKonflikte, leseSchiedsrichter,
   MATCHDATEN_STATUS, zaehleVerbandKorrekturen, gegnerUnveraendert,
-  verlaufUnveraendert,
+  verlaufUnveraendert, aeltesteHolungStunden, HOECHSTENS_SPIELE,
 } from "./matchdaten.ts";
 import type { KorrekturZeile, SfvRoh, SpielKandidat, VerlaufVergleich, FremdVergleich } from "./matchdaten.ts";
 import { ausBase64, erkenneBild, logoPfad, offeneLogos, LOGO_BUCKET } from "./logos.ts";
@@ -62,6 +62,8 @@ export async function laufeMatchdaten(
        zu unterscheiden — und genau das war am 11.09.2026 die Frage. */
     aufstellung_geliefert: 0, eigen_ohne_person: 0, fremd_ohne_nummer: 0,
     verband_hat_korrigiert: 0, fremd_unveraendert: 0, verlauf_unveraendert: 0,
+    kandidaten_neu: 0, kandidaten_fenster: 0, kandidaten_alt: 0,
+    kandidaten_gesamt: 0, aelteste_holung_stunden: null,
     eigene_unzugeordnet: 0, zuordnungen_gesamt: 0, namen_geschrieben: 0, aufstellung_fremd: 0, gegner_doppel: 0,
     halbzeit: { da: 0, fehlt: 0, leer: 0, ohne_halbzeit: 0 }, paesse_geschrieben: 0, pass_konflikte: [], nachzug_meldungen: 0, fehler: 0, fehlermeldungen: [],
   };
@@ -85,9 +87,34 @@ export async function laufeMatchdaten(
        lassen, „3 forfait" gebe es nicht. */
     .in("sfv_status", MATCHDATEN_STATUS);
 
-  const kandidaten = waehleKandidaten(
-    (kandidatenRoh ?? []) as unknown as SpielKandidat[], new Date(), hoechstens,
-  );
+  const alleKandidaten = (kandidatenRoh ?? []) as unknown as SpielKandidat[];
+  const wahl = waehleKandidaten(alleKandidaten, new Date(), hoechstens);
+  const kandidaten = wahl.spiele;
+
+  /* ⚠ ⚠  DREI ZAHLEN, DIE AUFGEHEN MUESSEN — sonst ist der Nachlauf
+     unbeobachtet, und ein Nachlauf, der still aussetzt, faellt
+     monatelang niemandem auf.
+
+     `neu + fenster + alt == spiele_geholt`. Eine Aufteilung, die aufgehen
+     MUSS, prueft sich selbst; eine einzelne Zahl kann nur behauptet
+     werden.
+
+     ⚠ `alt = 0` ist fuer sich genommen KEIN Befund: hat `neu` die
+     Plaetze gebraucht, ist es richtig. Erst die drei zusammen sagen,
+     warum. */
+  erg.kandidaten_neu = wahl.neu;
+  erg.kandidaten_fenster = wahl.fenster;
+  erg.kandidaten_alt = wahl.alt;
+
+  /* ⚠ DIE EINE ZAHL, DIE NICHT LUEGEN KANN. Laeuft der Durchgang, pendelt
+     sie um die Durchgangsdauer; waechst sie stetig, steht er. Sie wird
+     ueber ALLE Kandidaten gerechnet, nicht ueber die gewaehlten — sonst
+     maesse sie den Lauf statt den Rueckstand. */
+  erg.aelteste_holung_stunden = aeltesteHolungStunden(alleKandidaten, new Date());
+  /* Die Bezugsgroesse fuer die gerechnete Schwelle: wie viele Laeufe ein
+     voller Durchgang braucht. Ohne sie muesste der Waechter eine Zahl
+     raten, und eine geratene Schwelle ist nie durch einen Test gedeckt. */
+  erg.kandidaten_gesamt = alleKandidaten.length;
 
   const jetzt = new Date().toISOString();
   /* Die rohen Aufstellungen aller Spiele dieses Laufs — fuer die Paesse

@@ -3849,6 +3849,78 @@ Datenbank genau das tut**. Wer eine KÜRZUNG nachstellen will, setzt
 912 vorhanden → `fetchSupporter` gibt `null`, nicht eine Liste mit einem
 Eintrag. **Eine Prüfung, die nie rot war, ist keine Prüfung.**
 
+### ⚠⚠ EIN `INSERT` KANN NICHTS VERGLEICHEN — und damit war der Wächter taub
+
+`stempel_zuletzt_geaendert` vergleicht bei **UPDATE** den Inhalt und lässt
+den Stempel stehen. **Bei INSERT gibt es kein `old`** — er kann nichts
+vergleichen und setzt `now()`.
+
+Fremde Aufstellungszeilen gehen über `delete + insert` (der partielle
+Index ist über PostgREST nicht als `onConflict` erreichbar). Also:
+
+```
+delete + insert  →  zuletzt_geaendert = now(), immer
+                 →  export_wartet() > 0
+                 →  vollständiger WordPress-Export, 21 POSTs, stündlich
+```
+
+⚠ **Die teurere Hälfte ist nicht die Last.** Der Wächter fragt beim Export
+**„wartet etwas?"** statt „wann lief er zuletzt?" — mit ausdrücklicher
+Begründung: *ein Melder, der immer dasselbe sagt, wird nicht mehr
+gelesen.* **Genau diese Frage wird bedeutungslos, wenn stündlich etwas
+wartet.**
+
+#### Der Beleg, vier Protokollzeilen nebeneinander
+
+| Lauf | übersprungen | geschrieben | korrigiert |
+|---|---|---|---|
+| 12:17 | — | **141** | — |
+| 13:17 | — | **141** | 0 |
+| 14:17 | **141** | **0** | 0 |
+
+**Dreimal dieselben 141 Gegnerzeilen, ohne eine einzige inhaltliche
+Änderung.** Ab 14:17 keine.
+
+⚠ ⚠ **`fremd_unveraendert` ist das, was den Beleg trägt.** Ohne ihn wäre
+„0 geschrieben" von „der Zweig ist tot" nicht zu unterscheiden — und die
+Begründung dafür („ein Schreibvorgang, der ausbleibt, sieht von aussen aus
+wie einer, der nie vorgesehen war") hat sich **beim ersten Gebrauch**
+bewährt.
+
+#### Die zwei Entscheidungen beim Bauen, und die erste ist die wichtigere
+
+**1 · `null` und `undefined` gelten als gleich.** Die Datenbank liefert
+`null`, ein gebautes Objekt lässt das Feld womöglich weg.
+
+> ⚠ **Ohne diese Gleichsetzung wäre JEDER Lauf eine Änderung gewesen** —
+> also genau der Zustand, den die Reparatur beheben soll, **und an nichts
+> zu erkennen.** Die Prüfkette wäre grün, der Zähler stünde auf 0, und der
+> Befund sähe aus wie „der Vergleich greift nicht".
+
+**2 · `sfv_person_id` und `name` stehen in der Vergleichsliste**, obwohl
+ein CHECK sie bei fremden Zeilen auf `NULL` zwingt. Sie tragen heute keine
+Information — **aber eine Liste, die sich auf einen CHECK verlässt, ist
+eine Zusicherung über eine andere Stelle.**
+
+#### ⚠⚠ UND ICH HATTE EINE VON ZWEI IDENTISCHEN STELLEN REPARIERT
+
+Die Gegneraufstellung verglich seit Mittag. **Der Verlauf nicht** — und
+das Ersetzen des Verlaufs hatte ich **am selben Tag selbst gebaut**, also
+die Kollision dort **erst eingeführt**: vorher lief er über einen Upsert,
+unveränderte Zeilen wurden `UPDATE`t, der Trigger verglich, kein Stempel.
+**Für 70 von 71 Spielen gab es dort gar kein Problem.**
+
+⚠ **Aufgefallen ist es beim Formulieren der ERWARTUNG für die nächste
+Messung**, nicht beim Bauen. Ohne den Nachtrag hätte die Messung „die
+Reparatur wirkt nicht" ergeben — **und die Suche wäre beim Vergleich
+gelandet statt bei der zweiten Stelle.**
+
+> **Wer zwei gleichartige Schreibwege hat, repariert beide oder keinen.**
+> Dieselbe Familie wie „fünfmal derselbe Befund an sechs Stellen" und wie
+> „beide Listen" beim Löschen der Mitgliedschaft: **eine Menge, die man im
+> Kopf hat, ist nicht die Menge, die im Code steht.**
+
+
 ### ⚠⚠⚠ EINE FREMDE KENNUNG IST DIE KENNUNG IHRES SYSTEMS, NICHT DIE DER SACHE
 
 **Die wichtigste Regel des 10./11.09.2026, und sie ist an drei Feldern

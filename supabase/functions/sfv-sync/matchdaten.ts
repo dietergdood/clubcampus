@@ -768,9 +768,40 @@ export const MATCHDATEN_STATUS = [2];
 
 export const NACHZUG_TAGE = 7;
 
+/**
+ * Wie viele der Plaetze dem ROLLENDEN NACHLAUF gehoeren.
+ *
+ * ⚠ ⚠  ANLASS, gemessen am 11.09.2026: **62 Spiele waren wochenlang
+ * eingefroren**, zurueck bis zum 01.07. Sie lagen zwischen den beiden
+ * Toepfen — schon geholt (also nicht `neu`), aelter als sieben Tage (also
+ * nicht im Fenster) — und trugen die Form vom Tag ihres Abrufs: ohne
+ * Halbzeitstand, ohne die Rollenableitung aus den Minuten, ohne
+ * Gegnerzeilen nach Entscheid B.
+ *
+ * **Jede Aenderung an der Matchdaten-Verarbeitung erreichte nur die
+ * letzten sieben Tage.** Aufgeraeumt wurde von Hand, mit einem
+ * `update … set matchdaten_geholt_am = null` — genau der Handgriff, an
+ * den jemand denken muss, und nach der Regel dieses Projekts die
+ * schwaechste Loesung.
+ */
+export const NACHLAUF_PLAETZE = 2;
+
+/** Wie viele Spiele ein Lauf hoechstens holt. */
+export const HOECHSTENS_SPIELE = 12;
+
+export interface KandidatenWahl<T> {
+  spiele: T[];
+  /** Nie geholt. Vorrang ohne Deckel. */
+  neu: number;
+  /** Im Nachzugsfenster (Spieldatum nicht aelter als NACHZUG_TAGE). */
+  fenster: number;
+  /** Der rollende Nachlauf — das am laengsten nicht Geholte. */
+  alt: number;
+}
+
 export function waehleKandidaten<T extends SpielKandidat>(
-  spiele: T[], jetzt: Date, hoechstens = 10,
-): T[] {
+  spiele: T[], jetzt: Date, hoechstens = HOECHSTENS_SPIELE,
+): KandidatenWahl<T> {
   /* Auf den Tagesanfang normalisiert, weil `spiele.date` eine DATE-Spalte
      ohne Uhrzeit ist: `new Date("2026-08-12")` ist Mitternacht UTC. Gegen
      einen Zeitstempel verglichen fiele ein Spiel am Randtag je nach
@@ -785,13 +816,101 @@ export function waehleKandidaten<T extends SpielKandidat>(
   /* Innerhalb jeder Gruppe das juengste zuerst — was gerade gespielt wurde,
      interessiert am meisten. */
   const neuer = (a: T, b: T) => String(b.date ?? "").localeCompare(String(a.date ?? ""));
+  const imFenster = (s: T) =>
+    Boolean(s.date) && new Date(s.date as string).getTime() >= grenze;
 
-  const neu  = mitId.filter((s) => !s.matchdaten_geholt_am).sort(neuer);
-  const wieder = mitId
-    .filter((s) => s.matchdaten_geholt_am && s.date && new Date(s.date).getTime() >= grenze)
+  const neu = mitId.filter((s) => !s.matchdaten_geholt_am).sort(neuer);
+  const fenster = mitId
+    .filter((s) => s.matchdaten_geholt_am && imFenster(s))
     .sort(neuer);
 
-  return [...neu, ...wieder].slice(0, hoechstens);
+  /* ⚠ ⚠  KEIN ZEIGER, DEN JEMAND PFLEGEN MUSS.
+     `matchdaten_geholt_am` IST die Reihenfolge und haelt sich selbst
+     aktuell: wer geholt wurde, traegt `now()` und steht hinten an.
+
+     Daraus folgt dreierlei, und keines davon kostet etwas:
+       · kein Zustand, der veralten kann — keine Spalte, kein Cursor
+       · selbstheilend — bricht ein Lauf ab, sind dieselben Spiele
+         weiterhin die aeltesten
+       · ueberlebt jede Codeaenderung — nach einem Umbau holt der
+         Durchgang alles nach, ohne dass jemand etwas zuruecksetzt
+
+     ⚠ Damit ist der Versionsstempel aus `docs/vorschlag_matchdaten_
+     fenster.md` (Variante a) gegenstandslos: er sollte „was ist
+     veraltet?" beantworten, und die Reihenfolge tut es besser, weil
+     niemand eine Konstante hochzaehlen muss. */
+  const alt = mitId
+    .filter((s) => s.matchdaten_geholt_am && !imFenster(s))
+    .sort((a, b) => String(a.matchdaten_geholt_am)
+      .localeCompare(String(b.matchdaten_geholt_am)));
+
+  /* ⚠ ⚠  DIE AUFTEILUNG IST AUSGESCHRIEBEN, NICHT EIN `slice` AM ENDE.
+
+     Bis zum 11.09.2026 stand hier `[...neu, ...wieder].slice(0, 10)` —
+     wer leer ausging, entschied die REIHENFOLGE und nicht eine Absicht.
+     Eine Aufteilung, die niemand aufgeschrieben hat, kann auch niemand
+     pruefen. */
+  const raus: T[] = [];
+
+  /* 1 · Nie Geholtes hat Vorrang, ohne Deckel. Es ist der Rueckstand;
+         `alt` ist per Definition schon einmal geholt worden und kann
+         warten. */
+  raus.push(...neu.slice(0, hoechstens));
+
+  /* 2 · Der Nachlauf bekommt seine Plaetze GARANTIERT — solange `neu`
+         sie nicht braucht.
+
+     ⚠ Warum garantiert und nicht „was uebrig bleibt": bei einem
+     Spielwochenende mit zwoelf Partien bliebe nichts uebrig, der
+     Durchgang stuende still, und **ein stillstehender Durchgang ist
+     genau der Ausfall, den niemand bemerkt.** Zwei Plaetze kosten das
+     Fenster nichts, was es nicht verkraftet — ein verdraengtes
+     Fensterspiel kommt in der naechsten Stunde wieder. */
+  const fuerAlt = Math.min(NACHLAUF_PLAETZE, Math.max(0, hoechstens - raus.length));
+  const altGewaehlt = alt.slice(0, fuerAlt);
+
+  /* 3 · Das Fenster fuellt den Rest. */
+  const rest = Math.max(0, hoechstens - raus.length - altGewaehlt.length);
+  const fensterGewaehlt = fenster.slice(0, rest);
+
+  raus.push(...fensterGewaehlt, ...altGewaehlt);
+
+  return {
+    spiele: raus,
+    neu: Math.min(neu.length, hoechstens),
+    fenster: fensterGewaehlt.length,
+    alt: altGewaehlt.length,
+  };
+}
+
+/**
+ * Wie alt ist die aelteste Holung — in Stunden.
+ *
+ * ⚠ ⚠  DIE EINE ZAHL, DIE NICHT LUEGEN KANN. Laeuft der Durchgang,
+ * pendelt sie um die Durchgangsdauer und waechst nie unbegrenzt. **Waechst
+ * sie stetig, steht der Nachlauf** — und ein Nachlauf, der still aussetzt,
+ * faellt sonst monatelang niemandem auf.
+ *
+ * ⚠ Die Schwelle dafuer wird GERECHNET, nicht geraten: `kandidaten /
+ * plaetze` Laeufe sind ein voller Durchgang, und Alarm gibt es beim
+ * Doppelten davon. Damit steht keine Zahl im Code, die niemand gemessen
+ * hat — anders als die festen 120 Minuten im Waechter, die fuer den
+ * Export ein Fehlalarm-Generator gewesen waeren.
+ *
+ * @returns `null`, wenn noch nie etwas geholt wurde — das ist keine Null.
+ */
+export function aeltesteHolungStunden(
+  spiele: SpielKandidat[], jetzt: Date,
+): number | null {
+  let aeltest: number | null = null;
+  for (const s of spiele) {
+    if (!s.matchdaten_geholt_am) continue;
+    const t = new Date(s.matchdaten_geholt_am).getTime();
+    if (Number.isNaN(t)) continue;
+    if (aeltest === null || t < aeltest) aeltest = t;
+  }
+  if (aeltest === null) return null;
+  return Math.round((jetzt.getTime() - aeltest) / 36e5);
 }
 
 /* ── Nachzug: ist unsere Korrektur ueberfluessig geworden? ─────────────────

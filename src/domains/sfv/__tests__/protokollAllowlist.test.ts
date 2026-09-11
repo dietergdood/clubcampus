@@ -45,6 +45,8 @@ const LAUF: LaufErgebnis = {
     aufstellung_geliefert: 169, eigen_ohne_person: 2, fremd_ohne_nummer: 0,
     verband_hat_korrigiert: 5, fremd_unveraendert: 11,
     verlauf_unveraendert: 22,
+    kandidaten_neu: 0, kandidaten_fenster: 8, kandidaten_alt: 2,
+    kandidaten_gesamt: 50, aelteste_holung_stunden: 25,
     halbzeit: { da: 3, fehlt: 0, leer: 1, ohne_halbzeit: 2 },
     pass_konflikte: ["Mitglied 633: zwei Passnummern"],
     nachzug_meldungen: 0, fehler: 0, fehlermeldungen: [],
@@ -60,10 +62,13 @@ describe("fuersProtokoll", () => {
        Ein neues Feld in MatchdatenErgebnis macht diesen Fall rot. */
     const md = fuersProtokoll(LAUF).matchdaten as Record<string, unknown>;
     expect(Object.keys(md).sort()).toEqual([
+      "aelteste_holung_stunden",
       "aufstellung_fremd", "aufstellung_geliefert", "aufstellung_zeilen",
       "eigen_ohne_person", "eigene_unzugeordnet", "ereignisse_zeilen",
       "fehler", "fehlermeldungen", "fremd_ohne_nummer", "fremd_unveraendert",
-      "gegner_doppel", "halbzeit", "nachzug_meldungen", "namen_geschrieben",
+      "gegner_doppel", "halbzeit",
+      "kandidaten_alt", "kandidaten_fenster", "kandidaten_gesamt", "kandidaten_neu",
+      "nachzug_meldungen", "namen_geschrieben",
       "paesse_geschrieben", "pass_konflikte",
       "spiele_geholt", "verband_hat_korrigiert", "verlauf_unveraendert",
       "zuordnungen_gesamt",

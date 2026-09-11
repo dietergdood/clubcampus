@@ -92,6 +92,35 @@ export interface MatchdatenErgebnis {
       repariert, und das Ersetzen selbst hatte die Kollision hier ERST
       eingefuehrt (vorher lief der Verlauf ueber einen Upsert). */
   verlauf_unveraendert: number;
+  /**
+   * Die Aufteilung der Plaetze — drei Zahlen, die aufgehen MUESSEN:
+   * `neu + fenster + alt == spiele_geholt`.
+   *
+   * ⚠ ⚠ OHNE SIE IST DER NACHLAUF UNBEOBACHTET. Er faellt still aus, und
+   * das merkt monatelang niemand — alle Spiele haben ja Daten, nur eben
+   * die vom Tag ihres Abrufs.
+   *
+   * ⚠ `alt = 0` ist fuer sich KEIN Befund: hat `neu` die Plaetze
+   * gebraucht, ist es richtig. Erst die drei zusammen sagen, warum.
+   */
+  kandidaten_neu: number;
+  kandidaten_fenster: number;
+  kandidaten_alt: number;
+  /** Wie viele Spiele ueberhaupt in Frage kommen — die Bezugsgroesse der
+      GERECHNETEN Waechterschwelle (kandidaten / plaetze = ein voller
+      Durchgang). Ohne sie muesste der Waechter eine Zahl raten, und eine
+      geratene Schwelle ist nie durch einen Test gedeckt. */
+  kandidaten_gesamt: number;
+  /**
+   * Die aelteste Holung in Stunden.
+   *
+   * ⚠ ⚠ DIE EINE ZAHL, DIE NICHT LUEGEN KANN: laeuft der Durchgang,
+   * pendelt sie um die Durchgangsdauer und waechst nie unbegrenzt.
+   * **Waechst sie stetig, steht der Nachlauf.**
+   *
+   * ⚠ `null` heisst „noch nie etwas geholt" — das ist keine Null.
+   */
+  aelteste_holung_stunden: number | null;
   /** Gegnerzeilen, die sich (Team, Nummer) teilten und verschmolzen wurden.
       ⚠ Erwartung 0 — jede andere Zahl ist eine Unstimmigkeit BEIM VERBAND
       und keine Eigenschaft unserer Kette. Sie wird gezaehlt, damit das
@@ -400,6 +429,11 @@ export function fuersProtokoll(erg: LaufErgebnis): Record<string, unknown> {
       verband_hat_korrigiert: md.verband_hat_korrigiert,
       fremd_unveraendert: md.fremd_unveraendert,
       verlauf_unveraendert: md.verlauf_unveraendert,
+      kandidaten_neu: md.kandidaten_neu,
+      kandidaten_fenster: md.kandidaten_fenster,
+      kandidaten_alt: md.kandidaten_alt,
+      kandidaten_gesamt: md.kandidaten_gesamt,
+      aelteste_holung_stunden: md.aelteste_holung_stunden,
       gegner_doppel: md.gegner_doppel,
       halbzeit: md.halbzeit,
       paesse_geschrieben: md.paesse_geschrieben,
