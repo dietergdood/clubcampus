@@ -10,6 +10,9 @@
    kann, ist nur zu belegen, indem man sie ausfuehrt.** Deshalb liegt sie
    jetzt hier, mit Testfaellen fuer alle drei Zustaende.
    ═══════════════════════════════════════════════════════════════════ */
+
+import { deuteAbgleich } from "./personenAbgleich.ts";
+import type { AbgleichErgebnis } from "./personenAbgleich.ts";
 export function deuteBestand(d: Record<string, unknown>): string[] {
   const z = (k: string) => Number(d[k] ?? 0);
   const zeilen = [
@@ -67,6 +70,20 @@ export function deuteBestand(d: Record<string, unknown>): string[] {
       + (Number(tm.sfv_id_doppelt ?? 0) > 0
          ? ` · ⚠ ${Number(tm.sfv_id_doppelt)} mit doppelter Nummer` : ""));
   }
+  /* ⚠ ⚠ DIE FÜNF GRUPPEN — sie stehen nur da, wenn BEIDE Seiten sie
+     liefern können: der Empfänger ab 0.9.20 (`merkmale`) und unsere
+     Seite mit den Kandidaten.
+
+     Fehlt `abgleich`, ist das KEINE Null, sondern eine nicht gestellte
+     Frage — und die Karte sagt, welche Hälfte fehlt. Zum vierten Mal
+     an zwei Tagen dieselbe Unterscheidung. */
+  if (d.abgleich) {
+    for (const zeile of deuteAbgleich(d.abgleich as AbgleichErgebnis)) zeilen.push(zeile);
+  } else if ("personen" in d) {
+    zeilen.push("⚠ Keine Vorschau auf den Personenlauf — die Antwort trägt keine "
+      + "Vergleichsmerkmale. Drüben läuft eine Fassung vor 0.9.20.");
+  }
+
   /* ⚠ WER GEANTWORTET HAT — steht seit 0.9.19 in der Antwort selbst.
      Fehlt es, ist die Gegenstelle aelter als 0.9.19, und auch DAS ist
      eine Auskunft. */

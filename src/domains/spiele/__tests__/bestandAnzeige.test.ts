@@ -47,6 +47,34 @@ const NEU = {
   teams: { gesamt: 24, mit_sfv_id: 21, sfv_id_doppelt: 0, ohne_sfv_id: 3 },
 };
 
+describe("deuteBestand — die Vorschau auf den Personenlauf", () => {
+  it("⚠ ohne `abgleich`, aber mit `personen`: die Fassung drüben ist zu alt", () => {
+    const zeilen = deuteBestand(NEU).join(" | ");
+    expect(zeilen).toMatch(/Keine Vorschau auf den Personenlauf/);
+    expect(zeilen).toMatch(/Fassung vor 0\.9\.20/);
+    /* ⚠ Und keine erfundene Null — der vierte Fall derselben Art. */
+    expect(zeilen).not.toMatch(/0 Personen würden gesendet/);
+  });
+
+  it("mit `abgleich` erscheinen die fünf Gruppen", () => {
+    const mit = { ...NEU, abgleich: {
+      gesendet: 93, treffer_sfv: 22, treffer_email: 40,
+      treffer_name: 11, ohne_treffer: 20, personen_ohne_uns: 56,
+    } };
+    const zeilen = deuteBestand(mit).join(" | ");
+    expect(zeilen).toMatch(/93 Personen würden gesendet/);
+    expect(zeilen).toMatch(/22 über die Verbandsnummer gefunden/);
+    expect(zeilen).toMatch(/20 fallen durch alle drei/);
+    expect(zeilen).toMatch(/56 stehen drüben und nicht in dieser Sendung/);
+  });
+
+  it("⚠ eine ALTE Antwort zeigt gar keine Vorschau — auch keine leere", () => {
+    const zeilen = deuteBestand(ALT).join(" | ");
+    expect(zeilen).not.toMatch(/würden gesendet/);
+    expect(zeilen).not.toMatch(/Keine Vorschau/);
+  });
+});
+
 describe("deuteBestand — drei Zustände, nicht zwei", () => {
   it("⚠ eine ALTE Antwort ergibt „kenne ich nicht\", nicht null", () => {
     const zeilen = deuteBestand(ALT).join(" | ");

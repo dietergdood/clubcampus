@@ -66,6 +66,12 @@ import {
    von beiden nicht geprueft; eine Strukturpruefung auf den Quelltext taugt
    fuer „sie schreibt nicht", nicht fuer „sie filtert richtig". */
 import { waehleZeitraum, fassBestandZusammen } from "../../../src/domains/spiele/wpBestand.ts";
+import {
+  baueAbgleich, namensschluessel,
+} from "../../../src/domains/spiele/personenAbgleich.ts";
+import type {
+  DruebenMerkmal, UnserePerson,
+} from "../../../src/domains/spiele/personenAbgleich.ts";
 import type { BestandZeile } from "../../../src/domains/spiele/wpBestand.ts";
 import type { WpSpiel, SpielQuelle, AufstellungQuelle } from "../../../src/domains/spiele/wpNutzlast.ts";
 /* ⚠ Der Zuschnitt des scharfen Laufs — welche Teile hinausgehen, was
@@ -773,6 +779,108 @@ async function sendeTeil(
  *   Kachel meldete einen Export, den es nicht gab. Dieselbe Trennung wie
  *   zwischen `probe` und `export`.
  */
+/**
+ * SHA-256 als Hex — zeichengleich zu `hash('sha256', …)` in PHP.
+ *
+ * ⚠ Ohne die Gleichheit trifft kein einziger Merkmalsvergleich, und die
+ *   Vorschau meldete lauter neue Personen. **Das waere laut**, nicht
+ *   still — deshalb ist es die vertretbare Bauart fuer eine Regel, die an
+ *   zwei Orten stehen muss.
+ */
+async function sha256(text: string): Promise<string> {
+  const roh = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
+  return [...new Uint8Array(roh)].map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+/** Eine Zeile, so weit der Abgleich sie braucht. */
+interface KandidatZeile {
+  id: string;
+  vorname: string | null;
+  nachname: string | null;
+  email: string | null;
+  geburtsdatum: string | null;
+}
+
+/**
+ * Wer wuerde gesendet? — **aktive Teamzugehoerigkeit ODER Vereinsfunktion.**
+ *
+ * ⚠ ⚠  DER ENTSCHEID DAHINTER IST NICHT TECHNISCH (Didi, 11.09.2026):
+ *       die Personenliste drueben ist keine Mitgliederdatenbank. Eltern
+ *       und Passive bleiben draussen — wenn sie spaeter gebraucht werden,
+ *       ist das ein eigener Entscheid.
+ *
+ * ⚠  `funktionen` steht an der PERSON, nicht an der Mitgliedschaft: ein
+ *    Materialwart muss kein Mitglied sein. Die Teamzugehoerigkeit dagegen
+ *    haengt am Kader, und nur ein AKTIVER Eintrag zaehlt — ein
+ *    ausgetretener Trainer soll nicht als aktiv gelten.
+ *
+ * ⚠  Gelesen wird ueber `alleSeiten()`: `personen` stand am 11.09.2026 bei
+ *    912 Zeilen, 88 unter der stillen 1000er-Grenze von PostgREST.
+ */
+async function holeKandidaten(
+  db: DbLeser, vereinId: string,
+): Promise<UnserePerson[]> {
+  const SPALTEN = "id, vorname, nachname, email, geburtsdatum, funktionen,"
+    + " mitglieder!inner(id, aktiv, kader!inner(id, aktiv))";
+  /* ⚠ Zwei Abfragen statt einer ODER-Verknuepfung ueber einen Embed:
+     PostgREST kann `or` nicht ueber eine eingebettete Tabelle hinweg
+     bilden. Zusammengefuehrt wird ueber die Id — eine Person, die beides
+     hat, darf nicht doppelt zaehlen. */
+  /* ⚠ Der erste Parameter ist ein Kurzschluss-Waechter:
+     `if (!wieviele) return []`. Fuer die Kandidaten gibt es keine
+     Vorbedingung — es ist immer zu lesen, also eine Eins statt einer
+     Menge.
+
+     ⚠ ⚠ UND ES GIBT alleSeiten() ZWEIMAL: hier lokal (mit diesem
+     Waechter) und in src/domains/db/alleSeiten.ts (ohne ihn, drei
+     Parameter). Zwei Fassungen derselben Sache — gefunden am
+     12.09.2026 beim Verdrahten, weil der Aufruf mit der falschen
+     Argumentzahl nicht typpruefte. **Der Typfehler war die einzige
+     Meldung; im Browser haette die zweite Fassung still eine andere
+     Grenze gehabt.** Zusammenzulegen. */
+  const mitTeam = await alleSeiten<KandidatZeile>(
+    1,
+    (von, bis) => db.from("personen").select(SPALTEN)
+      .eq("verein_id", vereinId).eq("mitglieder.aktiv", true)
+      .eq("mitglieder.kader.aktiv", true).order("id").range(von, bis),
+    () => db.from("personen").select("id", { count: "exact", head: true })
+      .eq("verein_id", vereinId).eq("mitglieder.aktiv", true)
+      .eq("mitglieder.kader.aktiv", true),
+    "Kandidaten mit Team",
+  );
+  const mitFunktion = await alleSeiten<KandidatZeile>(
+    1,
+    (von, bis) => db.from("personen")
+      .select("id, vorname, nachname, email, geburtsdatum")
+      .eq("verein_id", vereinId).not("funktionen", "eq", "{}")
+      .order("id").range(von, bis),
+    () => db.from("personen").select("id", { count: "exact", head: true })
+      .eq("verein_id", vereinId).not("funktionen", "eq", "{}"),
+    "Kandidaten mit Funktion",
+  );
+
+  const nachId = new Map<string, KandidatZeile>();
+  for (const z of [...mitTeam, ...mitFunktion]) nachId.set(z.id, z);
+
+  const raus: UnserePerson[] = [];
+  for (const z of nachId.values()) {
+    const mail = (z.email ?? "").trim().toLowerCase();
+    const jahr = /(\d{4})/.exec(z.geburtsdatum ?? "")?.[1] ?? "";
+    const name = namensschluessel(`${z.vorname ?? ""} ${z.nachname ?? ""}`);
+    raus.push({
+      id: z.id,
+      /* ⚠ Wir fuehren die Verbandsnummer an `sfv_personen`, nicht an
+         `personen` — und die Bruecke `sfv_zuordnung` stand am 11.09.2026
+         bei NULL Zeilen. Bis sie gefuellt ist, traegt keine unserer
+         Personen eine Nummer, und `treffer_sfv` ist strukturell 0. */
+      sfv_person_id: null,
+      email_hash: mail === "" ? null : await sha256(mail),
+      name_hash: (name === "" || jahr === "") ? null : await sha256(`${name}|${jahr}`),
+    });
+  }
+  return raus;
+}
+
 async function holeBestand(
   db: DbLeser, vereinId: string, vorgabe: { von: string | null; bis: string | null },
 ) {
@@ -826,7 +934,21 @@ async function holeBestand(
   const zeitraum = waehleZeitraum(vorgabe, ersterLauf);
   const erg = fassBestandZusammen(zeilen, zeitraum, ersterLauf);
 
+  /* ⚠ ⚠ DIE VORSCHAU AUF DEN PERSONENLAUF — sie laeuft VOR dem Senden.
+     Doppelte drueben sind von Hand zusammenzufuehren; eine Zahl vorher
+     kostet nichts.
+
+     ⚠ `merkmale` gibt es erst ab Empfaenger 0.9.20. Fehlt der Schluessel,
+     bleibt `abgleich` WEG — nicht auf null gesetzt. Eine nicht gestellte
+     Frage ist keine Null, und die Karte unterscheidet das. */
+  const wpPers = (wp.personen ?? {}) as { merkmale?: DruebenMerkmal[] };
+  let abgleich = null;
+  if (Array.isArray(wpPers.merkmale)) {
+    abgleich = baueAbgleich(await holeKandidaten(db, vereinId), wpPers.merkmale);
+  }
+
   return {
+    ...(abgleich ? { abgleich } : {}),
     ziel: host,
     hinweis:
       "Nachsehen, nicht schreiben. Es wurde nichts geändert und nichts protokolliert."
