@@ -3430,10 +3430,16 @@ zwei Feldern, die beide ankommen.**
 | `wettbewerb` | `matchTypeName` | die **Betriebsart** | `Cup` |
 | `liga` | `leagueName` | der **Wettbewerb** | `Schweizer Cup U-18`, `Cup AJF (4./5. Liga)` |
 
-Die Stammdaten führen `Spieltyp` als eigene, kurze Liste — **1 Meisterschaft ·
-2 Cup · 3 Trainingsspiele · 6 Turnier · 8 Mini-Turniere · 9 Schweizer-Cup ·
-11 Entscheidungsspiele (Cup Modus)**. Dort steht keine Wettbewerbsbezeichnung
-und kann keine stehen. Die Namen liegen in der Liste `Liga` — 46 Einträge
+Die Stammdaten führen `Spieltyp` als eigene Liste mit **fünfzehn**
+Einträgen — die vollständige steht unter „Es gibt FÜNFZEHN Spieltypen".
+Dort steht keine Wettbewerbsbezeichnung und kann keine stehen.
+
+> ⚠ **HIER STANDEN SIEBEN, mit dem Wort „kurze Liste" davor** — und genau
+> das hat am 11.09.2026 dazu geführt, dass ich 3, 5, 7, 10 und 20–24 für
+> unmöglich hielt. **Eine unvollständige Aufzählung wird für vollständig
+> gehalten, GERADE WEIL sie aufzählt** — und ein „kurz" davor macht es
+> schlimmer, weil es die Kürze zur Eigenschaft der Sache erklärt statt zur
+> Eigenschaft des Zitats. Die Namen liegen in der Liste `Liga` — 46 Einträge
 allein mit „Cup" darin.
 
 ⚠ **Der Feldname `wettbewerb` ist damit die eigentliche Falle.** Er
@@ -3842,6 +3848,236 @@ Datenbank genau das tut**. Wer eine KÜRZUNG nachstellen will, setzt
 ⚠ **Die Gegenprobe gehört dazu und war billig:** eine Zeile gelesen bei
 912 vorhanden → `fetchSupporter` gibt `null`, nicht eine Liste mit einem
 Eintrag. **Eine Prüfung, die nie rot war, ist keine Prüfung.**
+
+### ⚠⚠⚠ EINE FREMDE KENNUNG IST DIE KENNUNG IHRES SYSTEMS, NICHT DIE DER SACHE
+
+**Die wichtigste Regel des 10./11.09.2026, und sie ist an drei Feldern
+belegt — alle drei sahen aus wie Schlüssel, keines war einer:**
+
+| Feld | sieht aus wie | ist |
+|---|---|---|
+| `substitutePlayerId` | eine Personennummer | eine andere Nummernreihe; löst in `sfv_personen` **nirgends** auf (5 von 5 geprüft) |
+| **`sfv_event_id`** | die Kennung des Ereignisses | die Kennung des **Eintrags**: wird ein Matchblatt berichtigt, bekommt derselbe Vorgang eine neue |
+| `rueckennr` | ein Schlüssel im Spiel | eine **Beschriftung auf einem Trikot** — bei zwei eigenen Teams zweimal dieselbe |
+
+> **Wer eine fremde Kennung speichert, speichert eine Aussage des fremden
+> Systems über seinen eigenen Datensatz — nicht über die Sache.** Ob sie
+> stabil ist, ist eine MESSUNG und keine Eigenschaft ihres Namens.
+
+⚠ **Und alle drei sind nicht durch Nachdenken aufgefallen, sondern durch
+ein Bild auf der Website:** ein Wechsel ohne Namen, ein Verlauf in
+Dreifachausfertigung, unsere Spieler beim Gegner. **Die Prüfkette war
+jedes Mal grün.**
+
+#### Der Fall `sfv_event_id` — dreifacher Verlauf auf einer öffentlichen Seite
+
+Spiel 4379006 (29.08., 1:6). Das Tor der 37.:
+
+```
+30038739 · 31.08. 08:17     dieselbe Minute
+30064899 · 01.09. 19:17     derselbe Typ
+30083863 · 11.09. 00:44     dieselbe sfv_person_id (1093650)
+```
+
+Auf der Spielseite stand **jede** Verlaufszeile dreifach — drei gelbe
+Karten, dreimal dasselbe Tor, dreimal derselbe Wechsel. Bei 1:6.
+
+⚠ **DER CONSTRAINT HAT NIE VERSAGT.** Gemessen: 1051 Zeilen, 1051
+verschiedene `(verein_id, sfv_event_id)`. Er hält genau, was er
+verspricht — eine Zeile je Eintragsnummer. **Falsch war die Annahme
+darüber, was diese Nummer bezeichnet.**
+
+⚠ **Der zweite Fehler war derselbe Mechanismus in anderer Verkleidung:**
+in der 51. stand *„Drongshar ersetzt durch Gaube"* **und** *„Gaube ersetzt
+durch Drongshar"*. Das sind nicht zwei Wechsel, sondern **zwei Abrufe**.
+
+#### ⚠⚠ Die Reparatur ist ERSETZEN, nicht ENTDOPPELN — und der Grund ist eine Zeile
+
+Der naheliegende Weg wäre ein fachlicher Schlüssel: Spiel, Minute, Typ,
+Person. **Die Kollisionsprobe davor hat ihn umgeworfen — mit genau einem
+Treffer von 1051:**
+
+```
+minute 69 · typ 1 (Tor) · ist_eigener false · nr:9 · zeilen 2 · abrufe 1
+```
+
+**Ein Gegner mit der Nummer 9 hat in der 69. zwei Tore erzielt, in EINEM
+Abruf.** Nichts, was wir führen, unterscheidet die beiden Zeilen — ein
+fachlicher Schlüssel hätte eines **verschluckt**, still und dauerhaft.
+
+> **Was man nicht entdoppelt, kann man nicht fälschlich entdoppeln.**
+
+Also: der jüngste Abruf gilt **ganz**, der vorherige fällt **ganz**. Zwei
+Messungen mussten das vorher tragen, und beide haben es getan:
+
+| | |
+|---|---|
+| **M1** | jeder Abruf liefert den **vollständigen** Verlauf, keine Deltas — 70 Spiele geprüft, bei 4379006 22 / 22 / 25 Zeilen mit je 7 Toren |
+| **M2** | bei **68 von 70** Spielen stimmt die Zahl der Tor-Ereignisse des jüngsten Abrufs **exakt gegen das Resultat** (3:15 → 18, 0:11 → 11, 9:0 → 9) |
+
+⚠ **M2 ist die wertvollere, weil sie gegen etwas EXTERNES prüft.** „Die
+Zeilenzahlen sind gleich" bestätigt den Abruf an sich selbst; „die Tore
+stimmen gegen den Endstand" bestätigt ihn an der Wirklichkeit.
+
+#### ⚠ Warum ausgerechnet EIN Spiel — und was die Zahl nicht sagt
+
+**70 von 71 Spielen haben genau einen Abruf.** Das Fenster hat viele
+mehrfach geholt; nur 4379006 hat dabei neue Kennungen bekommen.
+
+**Wiederholtes Abrufen erzeugt also keine neuen Nummern — eine
+Bearbeitung beim Verband tut es.** Und 4379006 ist das einzige Spiel mit
+nachträglich geänderter Zuordnung (fünf Minuten betroffen).
+
+⚠ ⚠ **Der Schluss ist trotzdem zirkulär, und das gehört dazu:**
+Zuordnungsänderungen sind **nur** in Spielen mit mehreren Generationen
+sichtbar. „Nur 4379006 hat Korrekturen" könnte heissen „nur dort gab es
+zwei Fassungen zum Vergleichen". **Erst `verband_hat_korrigiert` macht es
+künftig messbar** — er vergleicht vor jedem Ersetzen.
+
+#### `verband_hat_korrigiert` — nach der STELLE, nicht nach der Minute
+
+⚠ Die naheliegende Abfrage („mehr als eine Person je Minute") meldet
+**jeden Doppelwechsel** als Korrektur. Bei einem Dreifachwechsel in der
+46. stehen vier Personen aus **einem** Abruf.
+
+Gezählt wird deshalb die **Stelle** — Minute · Zusatzminute · Typ ·
+Subtyp · Seite — und verglichen wird die **Multimenge** der Personen
+darin. Bleibt sie gleich, ist nichts geschehen, egal wie gross sie ist.
+
+⚠ **Multimenge, nicht Menge:** zwei Tore derselben Nummer sind zwei
+Einträge. Würde hier entdoppelt, sähe ihr Verschwinden aus wie
+„unverändert".
+
+⚠ **Und eine neue Stelle ist ein NACHTRAG, keine Korrektur.** Ohne diese
+Unterscheidung hätten die Assists, die seit dem 11.09.2026 mitkommen,
+**fünfzehn Korrekturen vorgetäuscht.**
+
+⚠ **Gezählt wird VOR dem Löschen.** Danach gibt es nichts mehr zu
+vergleichen, und der Beleg wäre mitgelöscht — dieselbe Regel wie bei
+`unplausibel`: *die Korrektur macht den Befund unsichtbar, nicht
+ungeschehen.*
+
+### ⚠⚠ DREI MUSTER FÜR „KEINE WECHSELPFEILE" — und kein Zähler traf eines davon
+
+Die Website zeigte an 35 von 76 Spielen keine Wechselpfeile, auf **beiden**
+Seiten. Es ist nicht der Gegner und nicht die Anzeige — es ist das Spiel:
+
+| Muster | die Aufstellungszeile des Eingewechselten | der Verband sagt |
+|---|---|---|
+| **4378093** | `0/0/0`, alle Ersatzspieler, symmetrisch | „spielte gar nicht" |
+| **4395750** | `1/70/70` | „spielte von Beginn" |
+| 41 Spiele | `40/90/50` | stimmt |
+
+**Beide Male steht der Verlauf dagegen** und nennt einen Wechsel.
+
+⚠ ⚠ **`aufstellung_ohne_minuten` TRIFFT KEINES DAVON:**
+
+```ts
+const ohne_minuten = k.spielzeit === null && k.von === null;
+```
+
+**`0` ist nicht `null`.** Bei 4378093 wird die Zeile korrekt als
+`nicht_eingesetzt` abgeleitet und **nicht gezählt** — der Zähler, den
+alle für den zuständigen hielten, ist für einen dritten Fall gebaut, den
+niemand gemessen hat.
+
+⚠ **Und meine erste Fassung des neuen Zählers war genauso stumpf:** sie
+fragte `von_minute <= 1` und warf beide Muster in **einen** Topf, obwohl
+sie **Gegenteiliges** bedeuten. Jetzt vier Zahlen — eigen/fremd ×
+als_start/als_nicht_eingesetzt — und abgeleitet über `rolleAus()` statt
+über eine eigene Bedingung, damit die Zählung nicht von der Anzeige
+abdriften kann.
+
+#### Das Merkmal dahinter: **Spieltyp 3 = Trainingsspiele**
+
+Von 14 Spielen dieses Typs tragen **12** keine einzige Einwechselminute.
+**Dort füllt niemand ein vollständiges Matchblatt** — und weder Kategorie
+noch Spielformat noch Erfassungsdatum erklären etwas.
+
+⚠ **Die mittlere Gruppe ist die interessantere** (Didi, 11.09.2026):
+Spiele mit 1 bis 6 von 10 Ersatzspielern mit Minute. **Dort hat jemand
+angefangen zu erfassen und nicht zu Ende.** Das ist keine
+Systemeigenschaft, sondern eine Person am Spielfeldrand — **dagegen lässt
+sich nichts bauen, nur benennen.**
+
+### ⚠ Es gibt FÜNFZEHN Spieltypen, nicht sieben
+
+`sfv_stammdaten.json`, gemessen am 11.09.2026:
+
+```
+ 1 Meisterschaft        2 Cup                 3 Trainingsspiele
+ 5 Firmensportspiele    6 Turnier             7 Hallenturnier
+ 8 Mini-Turniere        9 Schweizer-Cup      10 Entscheidungsspiele (M)
+11 Entscheidungsspiele (C)                   20 LS (Einzelspiele)
+21/22 LS Qualifikation          23/24 LS Endrunde
+```
+
+**CLAUDE.md nannte sieben.** Dritter Fall derselben Art an zwei Tagen —
+nach den **zwölf** Spielstatus (das Papier kannte fünf) und der
+Rollenmenge 0–2 (es gibt vier).
+
+> ⚠ **Eine unvollständige Aufzählung wird für vollständig gehalten,
+> GERADE WEIL sie aufzählt.** Wer „1, 2, 6, 8, 9, 11" liest, hält 3, 5, 7,
+> 10, 20–24 für unmöglich.
+>
+> **Deshalb gehört zu jeder Liste ihre SOLLZAHL** — „alle 15", „alle 12",
+> „alle 36". Eine Liste ohne Sollzahl kann man nicht gegenprüfen, und
+> genau das ist mir beim Schreiben eines Gedächtniseintrags gegen diesen
+> Fehler noch einmal passiert: 30 statt 36 Spalten, aus dem Kopf.
+
+### ⚠ Zwei Spiele führen ein Resultat und einen leeren Verlauf
+
+Gemessen am 11.09.2026, und **kein Ausfall unserer Kette:**
+
+| Spiel | Datum | Resultat | Tor-Ereignisse |
+|---|---|---|---|
+| 4395740 | 28.08. | 1:6 | **0** |
+| 4375665 | 29.08. | 1:5 | 1 |
+
+**Der Verband führt dort den Verlauf nicht.** Auf der Website erscheinen
+diese Spiele mit Resultat und leerer Verlaufsliste — festgehalten, damit
+es beim nächsten Mal niemand für einen Defekt hält.
+
+### ⚠ `spiele.date` heisst nicht `datum` — und warum das eine Falle ist
+
+An einem Tag **sechsmal** falsch geschrieben, jedes Mal ein Fehlschlag.
+Gemessen: `spiele.datum` stand **nirgends** im Bestand. **Die Quelle war
+sauber, der Fehler war Gedächtnis.**
+
+⚠ **Es ist trotzdem keine Nachlässigkeit.** Die Codebasis ist durchgehend
+deutsch, `spiele` ist es nicht ganz:
+
+```
+team · date · zeit · gegner · heimspiel · venue · notes · status
+```
+
+**`zeit` ist deutsch, `date` daneben englisch** — und die WordPress-
+Nutzlast übersetzt zurück (`datum: wpDatum(q.date)`). **Dieselbe Sache
+heisst an zwei Enden derselben Kette verschieden.**
+
+**✅ Seit dem 11.09.2026 fängt es `npm run check:spalten`** (in der
+Prüfkette): alle Spaltennamen aus `schema.sql` gegen jede
+`alias.spalte`-Referenz in `.sql`. **Keine Pflegeliste** — die Menge kommt
+aus dem Dump und altert mit ihm.
+
+⚠ ⚠ **Drei Anläufe, und jeder Zwischenstand wäre schlechter gewesen als
+keine Prüfung:**
+
+| Befunde | Ursache |
+|---|---|
+| **242** | Zeichenketten nicht ausgeschnitten — E-Mail-Adressen, Dateinamen, URLs |
+| **70** | `pg_`-Kataloge: `c.conname` **gibt es**, nur nicht in unserem Dump |
+| **6** | ⚠ **CRLF** — `.` trifft `\r` nicht, also scheiterte `$`, also blieb jeder Zeilenkommentar stehen |
+
+**Ein Melder, der grundlos anschlägt, wird nach dem dritten Mal
+abgeschaltet.** Der letzte Fall ist dieselbe Familie wie `\b` gegen
+deutsche Bezeichner und wie das NUL-Byte, das `grep` verstummen liess:
+**ein unsichtbares Zeichen bricht ein Muster, und das Ergebnis sieht aus
+wie ein Befund.**
+
+⚠ **Und die Grenze gehört dazu:** sie prüft `.sql`-Dateien, **nicht** eine
+Abfrage in einer Nachricht — und dort sind fünf der sechs Fälle passiert.
+
 
 ### ⚠⚠ POSTGREST KÜRZT BEI 1000 ZEILEN — still, und ein AUFRÄUMEN hat es ausgelöst
 
