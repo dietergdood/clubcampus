@@ -4,7 +4,7 @@ import {
   bildeAufstellung, bildeEreignis, istEigener, istKorrekturUeberfluessig,
   leseHalbzeit, waehleKandidaten, NACHZUG_TAGE, bildeOffeneNamen,
   bildeSfvPerson, entdoppleSfvPersonen, verschmelzeAufstellung,
-  zaehleVerbandKorrekturen, gegnerUnveraendert,
+  zaehleVerbandKorrekturen, gegnerUnveraendert, verlaufUnveraendert,
 } from "../../../../supabase/functions/sfv-sync/matchdaten.ts";
 import type { KorrekturZeile } from "../../../../supabase/functions/sfv-sync/matchdaten.ts";
 
@@ -827,5 +827,55 @@ describe("gegnerUnveraendert — der Waechter darf nicht taub werden", () => {
        verlaesst, ist eine Zusicherung ueber eine andere Stelle. */
     expect(gegnerUnveraendert([zeile(5)], [zeile(5, { sfv_person_id: 123 })]))
       .toBe(false);
+  });
+});
+describe("verlaufUnveraendert — die zweite von zwei identischen Stellen", () => {
+  /* ⚠ ⚠ Ich hatte am 11.09.2026 nur die Gegneraufstellung repariert. Der
+     Verlauf ging bis heute ueber einen Upsert (Trigger vergleicht bei
+     UPDATE); das Ersetzen, das ich am selben Tag gebaut habe, hat die
+     Kollision hier ERST eingefuehrt. */
+  const e = (min: number, extra = {}) => ({
+    typ_id: 1, typ: "Tor", subtyp_id: null, subtyp: null,
+    minute: min, zusatzminute: null, ist_eigener: true,
+    sfv_team_id: 38309, gegner_club_name: null,
+    sfv_person_id: 500, rueckennr: 9,
+    ein_sfv_person_id: null, ein_rueckennr: null, ...extra,
+  });
+
+  it("gleiche Zeilen sind unveraendert", () => {
+    expect(verlaufUnveraendert([e(37), e(55)], [e(37), e(55)])).toBe(true);
+  });
+
+  it("⚠⚠ eine neue sfv_event_id allein ist KEINE Aenderung", () => {
+    /* Der Kern des Befunds vom 11.09.2026: sie ist die Kennung des
+       EINTRAGS beim Verband, nicht des Ereignisses. Aendert sich nur sie,
+       ist es dieselbe Sache unter neuer Nummer. */
+    const alt = [{ ...e(37), sfv_event_id: 30038739 }];
+    const neu = [{ ...e(37), sfv_event_id: 30083863 }];
+    expect(verlaufUnveraendert(alt, neu)).toBe(true);
+  });
+
+  it("eine geaenderte Person ist eine Aenderung", () => {
+    expect(verlaufUnveraendert([e(51)], [e(51, { sfv_person_id: 999 })]))
+      .toBe(false);
+  });
+
+  it("die Reihenfolge des Verbands ist keine Aenderung", () => {
+    expect(verlaufUnveraendert([e(37), e(55)], [e(55), e(37)])).toBe(true);
+  });
+
+  it("⚠ null und undefined gelten als gleich", () => {
+    const ausDb = e(37, { gegner_club_name: null });
+    const gebaut = { ...e(37) } as Record<string, unknown>;
+    delete gebaut.gegner_club_name;
+    expect(verlaufUnveraendert([ausDb], [gebaut])).toBe(true);
+  });
+
+  it("eine Zeile mehr ist eine Aenderung", () => {
+    expect(verlaufUnveraendert([e(37)], [e(37), e(55)])).toBe(false);
+  });
+
+  it("leer gegen leer ist unveraendert", () => {
+    expect(verlaufUnveraendert([], [])).toBe(true);
   });
 });

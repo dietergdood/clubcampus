@@ -86,6 +86,12 @@ export interface MatchdatenErgebnis {
    * die Frage „wartet etwas?" bedeutungslos.
    */
   fremd_unveraendert: number;
+  /** Verlaufszeilen, die unveraendert waren und deshalb nicht ersetzt
+      wurden. ⚠ Dieselbe Sache wie fremd_unveraendert, an der zweiten
+      von zwei identischen Stellen — ich hatte am 11.09.2026 nur eine
+      repariert, und das Ersetzen selbst hatte die Kollision hier ERST
+      eingefuehrt (vorher lief der Verlauf ueber einen Upsert). */
+  verlauf_unveraendert: number;
   /** Gegnerzeilen, die sich (Team, Nummer) teilten und verschmolzen wurden.
       ⚠ Erwartung 0 — jede andere Zahl ist eine Unstimmigkeit BEIM VERBAND
       und keine Eigenschaft unserer Kette. Sie wird gezaehlt, damit das
@@ -393,6 +399,7 @@ export function fuersProtokoll(erg: LaufErgebnis): Record<string, unknown> {
       fremd_ohne_nummer: md.fremd_ohne_nummer,
       verband_hat_korrigiert: md.verband_hat_korrigiert,
       fremd_unveraendert: md.fremd_unveraendert,
+      verlauf_unveraendert: md.verlauf_unveraendert,
       gegner_doppel: md.gegner_doppel,
       halbzeit: md.halbzeit,
       paesse_geschrieben: md.paesse_geschrieben,

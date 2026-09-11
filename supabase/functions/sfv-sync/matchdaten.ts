@@ -563,6 +563,56 @@ export function gegnerUnveraendert(
   return true;
 }
 
+/* ⚠ ⚠  DIESELBE FRAGE WIE BEI DEN GEGNERZEILEN — und ich habe sie am
+   11.09.2026 nur an EINER der zwei Stellen beantwortet.
+
+   Der Verlauf ging bis heute ueber einen Upsert: unveraenderte Zeilen
+   wurden UPDATEt, der Trigger verglich den Inhalt und liess den Stempel
+   stehen. **Das Ersetzen, das ich heute gebaut habe, hat die Kollision an
+   dieser Stelle NEU eingefuehrt** — bei INSERT kann der Trigger nichts
+   vergleichen.
+
+   Belegt hat Didi den Fall an der anderen Stelle: drei Laeufe
+   hintereinander, jedes Mal dieselben 141 Gegnerzeilen neu geschrieben.
+   Ohne diesen Vergleich haette der Verlauf es weiter getan, und die
+   Messung der Reparatur haette „wirkt nicht" ergeben.
+
+   ⚠ `sfv_event_id` steht NICHT im Vergleich, und das ist der Kern des
+   ganzen Befunds von heute: sie ist die Kennung des EINTRAGS beim
+   Verband, nicht des Ereignisses. Aendert sich nur sie, ist es dieselbe
+   Sache unter neuer Nummer — **dann gibt es nichts zu ersetzen.** Die
+   alte Nummer bleibt stehen; sie ist ohnehin keine verlaessliche Kennung
+   und wird ausser vom (jetzt entfernten) Upsert von niemandem gelesen. */
+const VERLAUF_VERGLEICH = [
+  "typ_id", "typ", "subtyp_id", "subtyp", "minute", "zusatzminute",
+  "ist_eigener", "sfv_team_id", "gegner_club_name",
+  "sfv_person_id", "rueckennr", "ein_sfv_person_id", "ein_rueckennr",
+] as const;
+
+/**
+ * Ist der gelieferte Verlauf derselbe wie der gespeicherte?
+ *
+ * ⚠ Sortiert ueber den INHALT, nicht ueber die Reihenfolge des Verbands
+ * und nicht ueber `sfv_event_id` — beide sind keine Aussage ueber die
+ * Sache.
+ *
+ * ⚠ Wie bei `gegnerUnveraendert()` gelten `null` und `undefined` als
+ * gleich: die Datenbank liefert `null`, ein gebautes Objekt laesst das
+ * Feld womoeglich weg. Ohne diese Gleichsetzung waere JEDER Lauf eine
+ * Aenderung — also genau der Zustand, der behoben werden soll.
+ */
+export function verlaufUnveraendert(
+  alt: FremdVergleich[], neu: FremdVergleich[],
+): boolean {
+  if (alt.length !== neu.length) return false;
+  const form = (z: FremdVergleich) =>
+    VERLAUF_VERGLEICH.map((f) => String(z[f] ?? "")).join("|");
+  const a = alt.map(form).sort();
+  const b = neu.map(form).sort();
+  for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return false;
+  return true;
+}
+
 /* ── Der Verband korrigiert nachtraeglich ──────────────────────────────────
    Gemessen am 11.09.2026 an Spiel 4379006 (29.08., 1:6): in fuenf Minuten
    nennt ein spaeterer Abruf eine ANDERE Person als der fruehere.

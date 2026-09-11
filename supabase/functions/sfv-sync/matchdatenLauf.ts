@@ -25,6 +25,7 @@ import {
   bildeAufstellung, verschmelzeAufstellung, bildeEreignis, leseHalbzeit, istKorrekturUeberfluessig, waehleKandidaten,
   passAenderungen, passKonflikte, leseSchiedsrichter,
   MATCHDATEN_STATUS, zaehleVerbandKorrekturen, gegnerUnveraendert,
+  verlaufUnveraendert,
 } from "./matchdaten.ts";
 import type { KorrekturZeile, SfvRoh, SpielKandidat, VerlaufVergleich, FremdVergleich } from "./matchdaten.ts";
 import { ausBase64, erkenneBild, logoPfad, offeneLogos, LOGO_BUCKET } from "./logos.ts";
@@ -60,7 +61,7 @@ export async function laufeMatchdaten(
        ist „nur neun Spieler" nicht von „wir haben neun uebrig gelassen"
        zu unterscheiden — und genau das war am 11.09.2026 die Frage. */
     aufstellung_geliefert: 0, eigen_ohne_person: 0, fremd_ohne_nummer: 0,
-    verband_hat_korrigiert: 0, fremd_unveraendert: 0,
+    verband_hat_korrigiert: 0, fremd_unveraendert: 0, verlauf_unveraendert: 0,
     eigene_unzugeordnet: 0, zuordnungen_gesamt: 0, namen_geschrieben: 0, aufstellung_fremd: 0, gegner_doppel: 0,
     halbzeit: { da: 0, fehlt: 0, leer: 0, ohne_halbzeit: 0 }, paesse_geschrieben: 0, pass_konflikte: [], nachzug_meldungen: 0, fehler: 0, fehlermeldungen: [],
   };
@@ -325,7 +326,8 @@ export async function laufeMatchdaten(
          fachlichen Schluessel. */
       const altRes = await db.from("spiel_ereignisse")
         .select("id, minute, zusatzminute, typ_id, subtyp_id, ist_eigener,"
-          + " sfv_person_id, rueckennr")
+          + " sfv_person_id, rueckennr, typ, subtyp, sfv_team_id,"
+          + " gegner_club_name, ein_sfv_person_id, ein_rueckennr")
         .eq("verein_id", v.verein_id)
         .eq("spiel_id", spiel.id)
         .eq("herkunft", "sfv");
@@ -345,6 +347,34 @@ export async function laufeMatchdaten(
         );
       }
 
+      /* ⚠ ⚠  NUR ERSETZEN, WENN SICH ETWAS GEAENDERT HAT — nachgezogen
+         am 11.09.2026, Stunden nach dem Ersetzen selbst.
+
+         **Ich hatte eine von zwei identischen Stellen repariert.** Die
+         Gegneraufstellung vergleicht seit heute Mittag; der Verlauf tat
+         es nicht — und das Ersetzen, das ich heute gebaut habe, hat die
+         Kollision hier ERST EINGEFUEHRT. Vorher lief er ueber einen
+         Upsert: unveraenderte Zeilen wurden UPDATEt, der Trigger verglich
+         den Inhalt und liess den Stempel stehen.
+
+         ⚠ Bei INSERT kann er nichts vergleichen — es gibt kein `old`.
+         Also: Stempel, `export_wartet() > 0`, vollstaendiger Export.
+         Didi hat es an der anderen Stelle unabhaengig belegt: drei
+         Laeufe, dreimal dieselben 141 Gegnerzeilen neu geschrieben.
+
+         **Ohne diesen Vergleich haette die Messung der Reparatur „wirkt
+         nicht" ergeben** — und die Suche waere beim Vergleich gelandet
+         statt bei der zweiten Stelle. */
+      const gleich = verlaufUnveraendert(
+        alteZeilen as unknown as FremdVergleich[],
+        ereignisse as unknown as FremdVergleich[],
+      );
+      if (gleich) {
+        /* ⚠ Gezaehlt, nicht still uebersprungen — wie bei den
+           Gegnerzeilen. Ein Schreibvorgang, der ausbleibt, sieht von
+           aussen aus wie einer, der nie vorgesehen war. */
+        erg.verlauf_unveraendert += ereignisse.length;
+      } else {
       if (alteZeilen.length) {
         const { error } = await db.from("spiel_ereignisse")
           .delete()
@@ -363,6 +393,7 @@ export async function laufeMatchdaten(
         const { error } = await db.from("spiel_ereignisse").insert(ereignisse);
         if (error) throw new SfvFehler(`Ereignisse: ${error.message}`);
         erg.ereignisse_zeilen += ereignisse.length;
+      }
       }
 
       /* ── Halbzeitstand ──────────────────────────────────────────────
