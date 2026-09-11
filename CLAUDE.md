@@ -8626,6 +8626,78 @@ erneut einspielt und den zweiten Auftrag wieder anlegt.
 angelegt ist, sagt nichts darüber, was darin steht.
 
 
+### ⚠⚠ EIN MELDER, DER STRUKTURELL NICHTS SEHEN KANN — `export_wartet()` kennt zwei von vier Tabellen
+
+Didis Formulierung vom 11.09.2026, und sie trifft genau:
+
+> **Nicht ein Melder, der schweigt, sondern einer, der strukturell nichts
+> sehen kann. Ein Weg, der nie läuft, wartet nie.**
+
+Der Abholer läuft nur bei `export_wartet() > 0`. Gemessen am 11.09.2026,
+was die Funktion ansieht:
+
+```sql
+select (select count(*) from public.spiele      where zuletzt_geaendert > seit)
+     + (select count(*) from public.ranglisten   where zuletzt_geaendert > seit)
+```
+
+**Zwei Tabellen.** Die Nutzlast der Route `/spiele` trägt aber **vier**:
+`spiele`, `spiel_aufstellung`, `spiel_ereignisse` — und `ranglisten` über
+die zweite Route.
+
+#### ⚠⚠ Die Folge ist keine Vorsichtsfrage, sie ist heute wirksam
+
+`stempel_zuletzt_geaendert` schliesst `matchdaten_geholt_am` ausdrücklich
+vom Vergleich aus — richtig, es ist ein Laufstempel. **Zusammen ergibt das
+eine Lücke:**
+
+| | |
+|---|---|
+| Der Nachlauf holt ein altes Spiel neu | Aufstellung und Verlauf ändern sich |
+| An `spiele` ändert sich nur `matchdaten_geholt_am` | ⚠ **ausgeschlossen** |
+| `zuletzt_geaendert` bleibt stehen | `export_wartet()` = 0 |
+| **Der Abholer läuft nicht** | die verbesserte Aufstellung erreicht die Website nie |
+
+⚠ **Jede Verbesserung, die der rollende Nachlauf an einem ABGESCHLOSSENEN
+Spiel vornimmt, ist für den Abholer unsichtbar.** An einem Spieltag fällt
+es nicht auf — dort ändern sich Resultate, und `spiele` bewegt sich
+ohnehin. **An einem ruhigen Tag bleibt die Arbeit des Nachlaufs liegen.**
+
+**Dieselbe Ununterscheidbarkeit wie überall in diesem Papier:** „es wartet
+nichts" und „ich sehe nicht, was wartet" ergeben dieselbe Null.
+
+#### ⚠ Und derselbe Mechanismus hat einen ganzen Weg sechs Tage verdeckt
+
+Der Personen-Weg des Empfängers (seit 05.09.2026, sechs Felder) hat **nie
+gelaufen** — und niemand hat es gemerkt, weil der Wächter fragt *„wartet
+etwas?"* und `export_wartet()` Personen gar nicht kennt.
+
+> **Ein Weg, der nie läuft, wartet nie.** Ein Wächter, der nach Wartendem
+> fragt, kann einen toten Weg nicht von einem ruhigen unterscheiden.
+
+⚠ **Das ist die schärfste Form des Musters, das dieses Papier an einem
+Dutzend Stellen führt.** Bisher ging es um Prüfungen, die das falsche Glied
+ansehen, oder um solche, die grundlos grün sind. **Hier kann die Prüfung
+den Gegenstand gar nicht erreichen** — sie ist nicht falsch gebaut, sie ist
+für einen kleineren Gegenstand gebaut, und niemand hat den Zuschnitt
+nachgezogen, als er wuchs.
+
+#### Die Regel daraus
+
+> **Wer eine Nutzlast um eine Tabelle erweitert, erweitert den Auslöser
+> mit.** Sonst ist die neue Hälfte stumm, und zwar genau so, wie eine leere
+> aussieht.
+
+**Die Prüfung dazu ist eine Frage und kostet nichts:** *welche Tabellen
+stehen in der Nutzlast, und welche zählt der Auslöser?* Sie hätte hier zwei
+Befunde auf einmal ergeben.
+
+⚠ **Und es gibt keine fünfte Route.** Vier sind gebaut — `/bestand` und
+`/status` lesen nur, `/spiele` und `/ranglisten` schreiben. Der Zuschnitt
+stimmt auf der Ebene der ROUTEN und geht eine Ebene tiefer auseinander:
+zwei Schreibrouten, vier Tabellen, zwei gezählt.
+
+
 ### ✅ VIER SPIELE, DEREN VERLAUF NICHT ZUM RESULTAT PASST — alle vier erklärt, keines ein Fehler bei uns
 
 Gemeldet von der Website-Seite am 11.09.2026, gemessen über alle 68
