@@ -4,7 +4,7 @@
  *
  * Plugin Name: ClubCampus Export
  * Description: Nimmt Spielplan, Verlauf und Ranglisten aus ClubCampus entgegen.
- * Version:     0.9.18
+ * Version:     0.9.19
  *
  * ⚠ ⚠  STAND 10.09.2026: DIESE DATEI **IST** DER EMPFAENGER  ⚠ ⚠
  *
@@ -141,6 +141,14 @@ const CC_ROUTE      = 'clubcampus/v1';
    `/status` fuer zwei verschiedene Fassungen dieselbe Zahl, und die eine
    Auskunft, die „laeuft drueben der neue Empfaenger?" beantworten koennte,
    beantwortet sie nicht mehr.
+
+   0.9.19 (11.09.2026): JEDE Antwort nennt Datei und Fassung, nicht nur
+   /status.
+   ⚠ ⚠  ANLASS: die Karte zeigte lauter Nullen, und niemand konnte sagen,
+         ob drueben eine aeltere Fassung antwortet oder ob wirklich nichts
+         dasteht. Eine Auskunft, die ihre eigene Herkunft verschweigt,
+         laesst genau die Frage offen, die man bei einem ueberraschenden
+         Wert zuerst stellt.
 
    0.9.18 (11.09.2026): `bestand` zaehlt auch PERSONEN und TEAMS.
    ⚠ ⚠  ANLASS: der Knopf „Bestand drueben" wurde gebaut, um die Frage zu
@@ -442,7 +450,7 @@ const CC_ROUTE      = 'clubcampus/v1';
    einander), `autoload` wird nach dem Schreiben geprueft und notfalls
    berichtigt, `/status` nennt Empfaenger, Version, Metaschluessel und die
    Team-Zuordnung. */
-const CC_VERSION    = '0.9.18';
+const CC_VERSION    = '0.9.19';
 const CC_TYP_SPIEL  = 'fch_spiel';
 const CC_TYP_TEAM   = 'fch_team';
 /* ⚠ NUR ZUM ZAEHLEN. Dieses Plugin legt keine Person an und aendert
@@ -2026,6 +2034,15 @@ function cc_route_bestand(): WP_REST_Response {
 			   musste dazuschreiben, was sie NICHT zeigt. Ein Knopf, der
 			   seinen eigenen Zuschnitt entschuldigen muss, ist am falschen
 			   Zuschnitt gebaut. */
+			/* ⚠ ⚠ WER ANTWORTET HIER — seit 0.9.19 in JEDER Antwort, nicht
+			   nur in /status. Am 11.09.2026 zeigte die Karte lauter Nullen,
+			   und es gab keine Moeglichkeit zu unterscheiden, ob drueben eine
+			   aeltere Fassung antwortet oder ob wirklich nichts dasteht.
+			   Eine Auskunft, die ihre eigene Herkunft verschweigt, laesst
+			   genau die Frage offen, die man bei einem ueberraschenden Wert
+			   zuerst stellt. */
+			'empfaenger'                => basename( __FILE__ ),
+			'version'                   => CC_VERSION,
 			'personen'                  => cc_personen_lage(),
 			'teams'                     => cc_teams_lage(),
 			'beitraege'                 => $zeilen,

@@ -345,27 +345,51 @@ export function ApiTab({loading,isMobile,mobileKachel,apiVerbindungen,tab,sb=nul
        ⚠ `vorhanden: false` heisst „den Beitragstyp gibt es dort nicht"
        und ist KEINE Null — sonst liest sich eine fehlende Einrichtung
        wie ein leerer Bestand. */
-    const pers = (d.personen ?? {}) as Record<string, unknown>;
-    if (pers.vorhanden === false) {
-      zeilen.push("⚠ Den Beitragstyp fch_person gibt es drüben nicht — nicht gezählt, nicht leer.");
+    /* ⚠ ⚠ DREI ZUSTAENDE, NICHT ZWEI — und der dritte hat mich am
+       11.09.2026 selbst erwischt, in der Stunde, in der ich ueber genau
+       diesen Fehler geschrieben habe.
+
+         Schluessel FEHLT       die Fassung drueben kennt die Frage nicht
+         vorhanden === false    den Beitragstyp gibt es dort nicht
+         sonst                  die Zahlen
+
+       Die erste Fassung prueste nur `vorhanden === false`. Bei einer
+       aelteren Gegenstelle ist das Feld `undefined` — und fiel damit in
+       den Zahlen-Zweig, der brav `0 · 0 · 0` schrieb.
+
+       **Ich hatte `vorhanden` eingebaut, damit „gibt es nicht" nicht wie
+       „leer" aussieht — und dann einen DRITTEN Zustand in denselben Topf
+       fallen lassen.** Eine Unterscheidung mit zwei Aesten deckt keine
+       drei Faelle, egal wie sorgfaeltig die zwei benannt sind. */
+    if (!("personen" in d)) {
+      zeilen.push("⚠ Diese Antwort kennt Personen und Teams nicht — drüben läuft eine "
+        + "Fassung vor 0.9.18. Es ist KEINE Null, sondern eine nicht gestellte Frage.");
     } else {
-      const g = Number(pers.gesamt ?? 0), mn = Number(pers.mit_nummer ?? 0);
-      const on = Number(pers.ohne_nummer ?? 0);
-      zeilen.push(`${g} Personen stehen drüben · ${mn} mit Verbandsnummer · ${on} ohne`);
-      /* ⚠ DIE ZAHL, DIE ZAEHLT, BEKOMMT IHRE BEDEUTUNG DANEBEN.
-         „232 ohne Nummer" ist eine Zahl; „über die Nummer nie erreichbar"
-         ist eine Auskunft. */
-      if (on > 0) {
-        zeilen.push(`⚠ Die ${on} ohne Nummer sind über die Nummer nie erreichbar — `
-          + "sie bleiben auf dem Stand ihres CSV-Imports.");
+      const pers = (d.personen ?? {}) as Record<string, unknown>;
+      if (pers.vorhanden === false) {
+        zeilen.push("⚠ Den Beitragstyp fch_person gibt es drüben nicht — nicht gezählt, nicht leer.");
+      } else {
+        const g = Number(pers.gesamt ?? 0), mn = Number(pers.mit_nummer ?? 0);
+        const on = Number(pers.ohne_nummer ?? 0);
+        zeilen.push(`${g} Personen stehen drüben · ${mn} mit Verbandsnummer · ${on} ohne`);
+        /* ⚠ Die Zahl, die zählt, bekommt ihre Bedeutung daneben. */
+        if (on > 0) {
+          zeilen.push(`⚠ Die ${on} ohne Nummer sind über die Nummer nie erreichbar — `
+            + "sie bleiben auf dem Stand ihres CSV-Imports.");
+        }
       }
+      const tm = (d.teams ?? {}) as Record<string, unknown>;
+      zeilen.push(`${Number(tm.gesamt ?? 0)} Teams · ${Number(tm.mit_sfv_id ?? 0)} mit SFV-Nummer`
+        + ` · ${Number(tm.ohne_sfv_id ?? 0)} ohne`
+        + (Number(tm.sfv_id_doppelt ?? 0) > 0
+           ? ` · ⚠ ${Number(tm.sfv_id_doppelt)} mit doppelter Nummer` : ""));
     }
-    /* Teams — die dritte Menge, getrennt ausgewiesen. */
-    const tm = (d.teams ?? {}) as Record<string, unknown>;
-    zeilen.push(`${Number(tm.gesamt ?? 0)} Teams · ${Number(tm.mit_sfv_id ?? 0)} mit SFV-Nummer`
-      + ` · ${Number(tm.ohne_sfv_id ?? 0)} ohne`
-      + (Number(tm.sfv_id_doppelt ?? 0) > 0
-         ? ` · ⚠ ${Number(tm.sfv_id_doppelt)} mit doppelter Nummer` : ""));
+    /* ⚠ WER GEANTWORTET HAT — steht seit 0.9.19 in der Antwort selbst.
+       Fehlt es, ist die Gegenstelle aelter als 0.9.19, und auch DAS ist
+       eine Auskunft. */
+    zeilen.push(d.version
+      ? `Geantwortet hat ${String(d.empfaenger ?? "?")} ${String(d.version)}`
+      : "⚠ Die Antwort nennt keine Fassung — drüben läuft etwas vor 0.9.19.");
     return zeilen;
   }
 
