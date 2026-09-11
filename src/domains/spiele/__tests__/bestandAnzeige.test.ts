@@ -31,6 +31,14 @@ const ALT = {
   handbeitraege: 0,
 };
 
+/* ⚠ ⚠ DIE ZAHLEN HIER SIND ERFUNDEN, UND DAS STEHT MIT ABSICHT DA.
+   129 und 24 stammen aus einer Nachricht, nicht aus einer Messung — sie
+   sind in dieser Runde durch drei Haende gegangen, ohne dass eine ihre
+   Herkunft mitgetragen haette. In einer Attrappe ist das folgenlos; in
+   einem Bericht war es das nicht.
+
+   **Eine Zahl in einem Testfall ist eine Vorgabe. Dieselbe Zahl in einem
+   Satz ist eine Behauptung.** */
 const NEU = {
   ...ALT,
   empfaenger: "wp-export-empfaenger.php",

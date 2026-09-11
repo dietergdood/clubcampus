@@ -8849,6 +8849,81 @@ anderen sechs bleiben grün. **Eine Prüfung, die nie rot war, ist keine.**
 > kann, ist nur zu belegen, indem man sie ausführt.**
 
 
+### ⚠⚠ DREI ZAHLEN, DREI HÄNDE, KEINE HERKUNFT
+
+11.09.2026, Didis Befund — und er betrifft mich.
+
+| Zahl | woher sie kam | wie ich sie benutzt habe |
+|---|---|---|
+| **129** | eine Nachricht des Theme-Chats | „drüben stehen 129“ — als Tatsache weitergereicht, in einen Bericht und in einen Testfall |
+| **361** | dieselbe Quelle | „die 361 gesendeten Personen“ |
+| **93** | ihr Filter, in ihrem Code | „unsere 93“ |
+| *36* | **gerechnet** aus 129 − 93 | „die 36“ |
+
+**Keine der drei ist je in dieser Datenbank gemessen worden.** Die vierte
+ist aus zwei ungemessenen abgeleitet.
+
+⚠ ⚠ **UND ICH HABE DIE REGEL DAZU IM SELBEN GESPRÄCH ANGEWENDET — auf die
+Nachbarzahl.** Zu den 361 habe ich geschrieben: *„kommt dort nicht 361
+heraus, stammt eure Zahl aus einer anderen Tabelle — dann ist zuerst zu
+klären, welche“*. Und die 129 daneben habe ich unbesehen übernommen.
+
+> **Eine Zahl, die durch drei Hände geht, verliert bei jeder Übergabe ihre
+> Herkunft — und gewinnt dabei an Glaubwürdigkeit.** Beim dritten Mal
+> klingt sie wie ein Bestand, weil sie schon dreimal dastand.
+
+#### Was tatsächlich davon stimmte
+
+| | |
+|---|---|
+| 129 Personen drüben | ⚠ **ungemessen** — die laufende Fassung zählt Personen gar nicht |
+| 0 Personen, 0 Teams in der Karte | ⚠ **keine Zählung**, sondern eine nicht gestellte Frage |
+| 36 unerreichbare Personen | ⚠ **die Differenz zweier ungemessener Zahlen** |
+
+**Und der Filter-Entscheid hing daran:** der Aufrufer wurde zurückgehalten
+wegen 36 Personen, die es so womöglich nicht gibt. ⚠ **Stehen drüben
+Personen mit Verbandsnummer, greift der Abgleich über die Nummer, und
+„über die Nummer nie erreichbar“ gilt für keine einzige.**
+
+#### Die Regel, und sie ist billiger als jede Gegenmassnahme
+
+> **Eine Zahl, die man nicht selbst gemessen hat, wird mit ihrer Quelle
+> zitiert — oder gar nicht.** *„Der Theme-Chat meldet 129“* ist eine
+> Aussage; *„drüben stehen 129“* ist eine andere, und nur die erste ist
+> wahr.
+
+⚠ Das ist dieselbe Familie wie *„eine Zahl in einem Dokument ist eine
+Messung von damals“* — nur über Personen statt über Zeit. Dort verliert
+eine Zahl ihr Datum, hier ihren Urheber. **Beides macht aus einer Messung
+eine Eigenschaft.**
+
+⚠ **In einem Testfall ist dieselbe Zahl folgenlos** — dort ist sie eine
+Vorgabe, keine Behauptung. Sie steht in `bestandAnzeige.test.ts` deshalb
+weiter, mit einem Satz darüber, dass sie erfunden ist.
+
+
+### ✅ UND DAS ERSTE ERGEBNIS DES TAGES, DAS EIN VEREINSMITGLIED SEHEN WÜRDE
+
+Zwischen zwei Zählfehlern ist etwas fertig geworden, und es gehört
+festgehalten, weil dieses Papier sonst fast nur Defekte führt.
+
+**Die Spielerseiten rechnen vollständig aus unseren Daten** (11.09.2026):
+
+- Statistik nach **Saison und Wettbewerb**
+- **Einsatzliste** je Spieler
+- **Assists**
+
+⚠ **Und zwar unabhängig davon, dass zwei Zählungen danebenlagen.** Die
+Kette Sync → `spiel_aufstellung` / `spiel_ereignisse` → Export → Website
+trägt: 2433 Aufstellungszeilen gesendet, 2433 geschrieben; 1169 davon mit
+Verbandsnummer, 471 Verlaufszeilen ebenso.
+
+> **Eine Kette, die trägt, während zwei Auskünfte über sie falsch sind, ist
+> der Beleg dafür, dass Auskunft und Funktion zwei verschiedene Dinge
+> sind.** Der ganze Tag bestand daraus, die Auskünfte nachzuziehen — nicht
+> die Funktion zu reparieren.
+
+
 ### ✅ VIER SPIELE, DEREN VERLAUF NICHT ZUM RESULTAT PASST — alle vier erklärt, keines ein Fehler bei uns
 
 Gemeldet von der Website-Seite am 11.09.2026, gemessen über alle 68
