@@ -3431,6 +3431,77 @@ zwei Feldern, die beide ankommen.**
 | `liga` | `leagueName` | der **Wettbewerb** | `Schweizer Cup U-18`, `Cup AJF (4./5. Liga)` |
 
 Die Stammdaten führen `Spieltyp` als eigene Liste mit **fünfzehn**
+### ⚠⚠ DIE ELF LISTEN DES VERBANDS — mit Sollzahl, ein für alle Mal
+
+Gemessen am 11.09.2026 aus `docs/sfv/sfv_stammdaten.json`. **Die Zahl in
+Klammern ist Pflicht:** eine Liste ohne Sollzahl kann man nicht
+gegenprüfen, und genau das hat mich an zwei Tagen **viermal** gefangen.
+
+| Liste | Einträge | wo sie im Portal auftaucht |
+|---|---|---|
+| Saison | **1** | `spiele.sfv_saison_id` |
+| **Liga** | **352** | `spiele.liga` · `teams.sfv_liga_name` |
+| Organisation | 17 | der Regionalverband (`oid=11` = FVRZ) |
+| **Spieltyp** | **15** | `spiele.sfv_spiel_typ` — 3 = Trainingsspiele |
+| Resultattyp | 11 | `leseHalbzeit()` filtert auf `resultTypeId = 1` |
+| **Spielstatus** | **12** | `spiele.sfv_status` — `MATCHDATEN_STATUS` holt nur 2 |
+| Spielerposition | 35 | `spiel_aufstellung.position_name` |
+| Rollenkategorie | 28 | `rolle_kategorie` |
+| RollenUkategorie | 2 | — |
+| **Ereignistyp** | **30** | `spiel_ereignisse.typ_id` — `verlaufArt()` kennt 4 |
+| **Ereignissubtyp** | **100** | `subtyp_id` — 2 Eigentor, 4 Penalty |
+
+⚠ **Und die Zahl „elf Listen" stand bereits im Papier und ist richtig** —
+sie ist die einzige Aufzählung dieser Familie, die von Anfang an ihre
+Sollzahl trug.
+
+#### Die vier Fälle, in denen sie fehlte
+
+| | im Papier stand | tatsächlich | Folge |
+|---|---|---|---|
+| Spielstatus | **5** | **12** | ich hielt „3 forfait" für unmöglich |
+| Spieltyp | **7**, mit „kurze Liste" davor | **15** | — |
+| Ereignissubtyp | — | **100** | — |
+| Ereignistyp | **5** (implizit über `verlaufArt`) | **30** | — |
+
+> ⚠ **„Kurze Liste" war die schlimmste Formulierung von allen**: sie
+> erklärt die Kürze zur Eigenschaft der **Sache** statt zur Eigenschaft
+> des **Zitats.**
+
+#### ✅ Und ein Gegenbeispiel, das es richtig macht
+
+`ROLLE_BEKANNT` (`assignmentRoleId` 0–3) trägt **keine** Sollzahl — und
+das ist korrekt: **`sfv_stammdaten.json` führt `assignmentRole` gar
+nicht.** Es gibt keine massgebliche Liste, nur eine Zählung über den
+Bestand. Und genau das steht daneben: *„gezählt und nicht gelesen"*.
+
+> **Eine Liste ohne Sollzahl ist richtig, wenn sie sagt, dass es keine
+> gibt.** Falsch ist sie nur, wenn eine massgebliche Liste existiert und
+> das Zitat sie verschweigt.
+
+### ⚠ `subtyp_id` statt `subtyp` — ein Filter auf den Klartext wäre eine Schreibweise
+
+Entschieden am 11.09.2026 beim Bau von `ereignis_zusatz`.
+
+```ts
+if (subtypId === SUBTYP_EIGENTOR) return "eigentor";   // 2
+if (subtypId === SUBTYP_PENALTY) return "penalty";     // 4
+```
+
+⚠ **`spiel_ereignisse.subtyp` trägt den Klartext des Verbands** — und
+`subtyp === "Eigentor"` wäre genau der Namensfilter, den dieses Papier an
+einem halben Dutzend Stellen als Fehler führt. Er hielte, bis der Verband
+„Eigentor (E)" schreibt oder eine Sprache ergänzt.
+
+⚠ **Und der Klartext ist nachweislich unzuverlässig:** bei Subtyp 0 steht
+dort `-`, ein Strich statt eines leeren Werts — aufgefallen am 05.09.2026,
+als er beinahe so auf die Website gegangen wäre.
+
+**Dieselbe Regel wie `ableitung === null` statt `name !== "Elternteil"`,
+wie `kader_rollen.ist_trainer` statt einer Namensliste, und wie
+`hauptkontakt_pflicht` statt `ilike 'junior%'`.**
+
+
 Einträgen — die vollständige steht unter „Es gibt FÜNFZEHN Spieltypen".
 Dort steht keine Wettbewerbsbezeichnung und kann keine stehen.
 
