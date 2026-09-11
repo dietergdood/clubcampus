@@ -341,7 +341,18 @@ export function ApiTab({loading,isMobile,mobileKachel,apiVerbindungen,tab,sb=nul
     /* ⚠ WAS ER NICHT WEISS, STEHT DANEBEN. Er läuft über fch_spiel;
        Personen kennt er nicht. Ohne diesen Satz wird eine richtige
        Antwort für die Antwort auf eine andere Frage gehalten. */
-    zeilen.push("⚠ Nur Spiele. Personen und Teams stehen nicht in dieser Auskunft.");
+    /* ⚠ ⚠ DIE VERNEINUNG STEHT VORNE, UND DAS IST DER GANZE UNTERSCHIED.
+       Bis zum 11.09.2026 stand hier „Nur Spiele. Personen und Teams stehen
+       nicht in dieser Auskunft." — und wurde als AUFZAEHLUNG gelesen:
+       jemand hat daraus geschlossen, die Auskunft liefere Personen und
+       Teams, und einen Widerspruch zur Anzeige gemeldet, den es nicht gab.
+
+       **Eine Verneinung, die nach der Aufzaehlung kommt, wird ueberlesen.**
+       Der Leser hat die Namen schon aufgenommen, bevor das „nicht"
+       eintrifft. Dieselbe Familie wie ein Zaehler, dessen Name mehr
+       behauptet als er misst — nur in einem Satz statt in einem Feld. */
+    zeilen.push("⚠ Gezählt werden ausschliesslich Spiel-Beiträge. Nach Personen "
+      + "fragt diese Auskunft gar nicht erst — keine Route des Empfängers listet sie.");
     return zeilen;
   }
 

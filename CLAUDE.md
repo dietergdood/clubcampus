@@ -8698,6 +8698,42 @@ stimmt auf der Ebene der ROUTEN und geht eine Ebene tiefer auseinander:
 zwei Schreibrouten, vier Tabellen, zwei gezählt.
 
 
+### ⚠⚠ EINE VERNEINUNG, DIE NACH DER AUFZÄHLUNG KOMMT, WIRD ÜBERLESEN
+
+Am 11.09.2026 stand in der neuen Karte „Bestand drüben“ der Satz:
+
+> *„⚠ Nur Spiele. Personen und Teams stehen nicht in dieser Auskunft.“*
+
+Er ist wahr, er war ausdrücklich als Zuschnittsangabe gedacht — und er hat
+**denselben Tag noch einen Widerspruch erzeugt, den es nicht gab.** Gelesen
+wurde er als Aufzählung: *„liefert Personen und Teams“*. Die Meldung
+zurück lautete sinngemäss *„du hattest gesagt, `bestand` liefere Personen
+und Teams — die Karte zeigt nur Spiele, eine der beiden Aussagen stimmt
+nicht.“*
+
+⚠ **Beide Aussagen stimmten. Der Satz war die Fehlerquelle.**
+
+> **Der Leser hat die Namen schon aufgenommen, bevor das „nicht“ eintrifft.**
+
+| | |
+|---|---|
+| ✗ | *„Nur Spiele. **Personen und Teams** stehen nicht in dieser Auskunft.“* |
+| ✓ | *„Gezählt werden **ausschliesslich Spiel-Beiträge**. Nach Personen fragt diese Auskunft gar nicht erst.“* |
+
+⚠ **Dieselbe Familie wie ein Zähler, dessen Name mehr behauptet als er
+misst** — nur in einem Satz statt in einem Feld. Und dieselbe Familie wie
+die unvollständige Aufzählung, die für vollständig gehalten wird: **wo
+Namen stehen, werden sie gelesen, und der Zusatz davor oder danach
+entscheidet weniger, als man beim Schreiben glaubt.**
+
+**Die Regel: eine Zuschnittsangabe nennt, was DRIN ist. Was fehlt, wird
+höchstens danach erwähnt — und nie als Liste.**
+
+⚠ Das gilt gerade für die Sätze, die dieses Projekt überall verlangt —
+*„diese Meldung sagt NICHT…“*. Sie sind richtig und müssen so gebaut sein,
+dass sie nicht selbst zur Falschauskunft werden.
+
+
 ### ✅ VIER SPIELE, DEREN VERLAUF NICHT ZUM RESULTAT PASST — alle vier erklärt, keines ein Fehler bei uns
 
 Gemeldet von der Website-Seite am 11.09.2026, gemessen über alle 68
