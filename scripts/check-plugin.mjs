@@ -284,16 +284,55 @@ const REGELN = [
       for (const [name, f] of Object.entries(b.funktionen)) {
         const schreibt = (f.rufe ?? []).includes("update_field");
         const prueft = (f.rufe ?? []).includes("cc_pruefe_unterfelder");
-        /* Nur Funktionen, die einen REPEATER schreiben — erkennbar an
-           einer der drei Unterfeldlisten. */
+        /* Nur Funktionen, die einen REPEATER schreiben.
+           ⚠ ⚠ 11.09.2026: DIESE LISTE HAT DEN ERKENNER STILL BLIND
+           GEMACHT. Mit 0.9.16 ruft cc_schreibe_felder() die Aufstellung
+           ueber cc_erlaubt_aufstellung() statt ueber CC_AUFSTELLUNG_FELDER
+           — und fiel damit aus dem Erkenner heraus. Die Regel blieb
+           GRUEN und sah die eine Funktion nicht mehr an, fuer die sie
+           gebaut wurde.
+
+           **Eine Regel, die einen BEZEICHNER sucht, prueft eine
+           Schreibweise** — dieselbe Familie wie `name !== "Elternteil"`,
+           nur im Pruefwerkzeug selbst. Deshalb steht die Regel darunter
+           daneben, die an einer FUNKTION haengt statt an einem Namen. */
         const repeater = (f.bezeichner ?? []).some((x) =>
-          ["CC_VERLAUF_FELDER", "CC_AUFSTELLUNG_FELDER", "CC_MARKEN_FELDER"]
+          ["CC_VERLAUF_FELDER", "CC_AUFSTELLUNG_FELDER", "CC_MARKEN_FELDER",
+           "cc_erlaubt_aufstellung", "cc_saeubere_aufstellung"]
             .includes(x));
         if (schreibt && repeater && !prueft) offen.push(name);
       }
       return offen;
     },
     kontrolle: "<?php function f() { foreach (CC_VERLAUF_FELDER as $x) {} update_field(1,2,3); }",
+    erwarteImKontrollfall: 1,
+  },
+  {
+    /* ⚠ ⚠ DIE ZWEITE HAELFTE DER REGEL DARUEBER, und sie haengt an einer
+       FUNKTION statt an einem Namen: wer die Aufstellung saeubert, muss
+       sie auch melden. cc_saeubere_aufstellung() kann nicht verschwinden,
+       ohne dass das Feature verschwindet — ein Konstantenname schon.
+
+       ⚠ UND SIE PRUEFT SICH SELBST AUF LEERE MENGE. Haette die
+       Saeuberung keinen Aufrufer mehr, ginge die Schleife leer aus und
+       die Regel waere gruen, ohne etwas zu pruefen. Genau das ist in
+       dieser Datei schon viermal passiert. */
+    frage: "wer die Aufstellung saeubert, meldet sie auch",
+    pruefe: (b) => {
+      const offen = [];
+      let rufer = 0;
+      for (const [name, f] of Object.entries(b.funktionen)) {
+        if (!(f.rufe ?? []).includes("cc_saeubere_aufstellung")) continue;
+        rufer++;
+        if (!(f.rufe ?? []).includes("cc_pruefe_unterfelder")) offen.push(name);
+      }
+      if (rufer === 0 && Object.keys(b.funktionen).length > 2) {
+        offen.push("(cc_saeubere_aufstellung hat keinen Aufrufer — die Regel prueft nichts)");
+      }
+      return offen;
+    },
+    kontrolle: "<?php function f() { cc_saeubere_aufstellung($x); update_field(1,2,3); } "
+      + "function g() {} function h() {}",
     erwarteImKontrollfall: 1,
   },
   {
@@ -608,8 +647,125 @@ for (const p of PFLICHTEN) {
   if (p.pruefe(baum).length === 0) befunde.push(`${p.frage} — nicht erfüllt`);
 }
 
+
+/* ═══════════════════════════════════════════════════════════════════
+   DIE POSITIVKONTROLLE, DIE DEN MELDER AUSFUEHRT
+
+   ⚠ ⚠ WARUM SIE NOETIG IST. Am 11.09.2026 meldete cc_pruefe_unterfelder()
+   nichts — Verlauf 10:10, Aufstellung 11:11, Marken 2:2, alles
+   deckungsgleich. **Das ist genau der Zustand, in dem ein arbeitender
+   und ein toter Melder dasselbe ausgeben: drei leere Listen.**
+
+   Alle 25 Regeln darueber sind STATISCH: sie lesen den Quelltext und
+   sagen, dass etwas dasteht. Keine von ihnen kann sagen, dass es das
+   Richtige TUT.
+
+   ⚠ UND SIE ARBEITET AN DER ECHTEN FUNKTION, NICHT AN EINER ABSCHRIFT.
+   Die vier reinen Funktionen werden ueber den Tokenizer aus der Datei
+   herausgeschnitten und ausgefuehrt. Eine nachgebaute Kopie beweist,
+   dass die Kopie funktioniert — das ist der Fehler, den dieses Projekt
+   als „eine Attrappe, die die Form abschreibt, prueft die Abschrift"
+   fuehrt.
+
+   ⚠ Findet der Schnitt nicht alle vier, ist das ROT und nicht gruen.
+   Eine Kontrolle, die ohne ihren Gegenstand „ok" sagt, beruhigt.
+   ═══════════════════════════════════════════════════════════════════ */
+const LAUFPROBE = `
+$src = stream_get_contents(STDIN);
+$t = token_get_all($src);
+$n = count($t);
+$will = ['cc_ist_zeilenliste', 'cc_nutzlast_pfade', 'cc_acf_pfade', 'cc_unterfeld_befund'];
+
+/* Byte-Versatz je Token: aneinandergehaengt ergeben alle Tokentexte
+   wieder genau die Quelle — nur deshalb laesst sich schneiden. */
+$off = 0; $pos = [];
+for ($i = 0; $i < $n; $i++) {
+  $pos[$i] = $off;
+  $off += strlen(is_array($t[$i]) ? $t[$i][1] : $t[$i]);
+}
+
+$code = ''; $gefunden = [];
+for ($i = 0; $i < $n; $i++) {
+  if (!is_array($t[$i]) || $t[$i][0] !== T_FUNCTION) continue;
+  $j = $i + 1;
+  while ($j < $n && is_array($t[$j]) && $t[$j][0] === T_WHITESPACE) $j++;
+  if ($j >= $n || !is_array($t[$j]) || $t[$j][0] !== T_STRING) continue;
+  if (!in_array($t[$j][1], $will, true)) continue;
+  $k = $j; $tiefe = 0; $start = false;
+  for (; $k < $n; $k++) {
+    $c = is_array($t[$k]) ? null : $t[$k];
+    if ($c === '{') { $tiefe++; $start = true; }
+    elseif ($c === '}') { $tiefe--; if ($start && $tiefe === 0) break; }
+  }
+  if ($k >= $n) continue;
+  $code .= substr($src, $pos[$i], $pos[$k] + 1 - $pos[$i]) . "
+";
+  $gefunden[] = $t[$j][1];
+}
+
+if (count($gefunden) !== count($will)) {
+  echo json_encode(['fehler' => ['nicht alle Funktionen geschnitten — gefunden: '
+    . implode(', ', $gefunden)]]);
+  exit;
+}
+try { eval($code); } catch (Throwable $e) {
+  echo json_encode(['fehler' => ['eval: ' . $e->getMessage()]]); exit;
+}
+
+$f = [];
+
+/* A — Die Nutzlast bringt einen Namen, den WIR nicht kopieren.
+       Der Fall rueckennr statt nummer. */
+$b = cc_unterfeld_befund(
+  cc_nutzlast_pfade([['nummer' => '9', 'rueckennr' => '9']]), ['nummer'], ['nummer']);
+if ($b['nutzlast'] !== ['rueckennr']) $f[] = 'A: die Nutzlast-Richtung meldet nicht';
+
+/* B — Wir kopieren einen Namen, den ACF nicht kennt. Der Fall ein_nummer. */
+$b = cc_unterfeld_befund(['nummer'], ['nummer', 'ein_nummer'], ['nummer']);
+if ($b['ohne_acf'] !== ['ein_nummer']) $f[] = 'B: die ACF-Richtung meldet nicht';
+
+/* C — Eine DRITTE Ebene. Bis 0.9.15 lief sie ungeprueft durch. */
+$g = cc_nutzlast_pfade([['marken' => [['art' => 'gelb', 'tief' => [['x' => 1]]]]]]);
+if (!in_array('marken.tief.x', $g, true)) $f[] = 'C: die dritte Ebene laeuft ungeprueft durch';
+if (!in_array('marken.art', $g, true)) $f[] = 'C2: die zweite Ebene fehlt';
+
+/* D — null heisst nicht feststellbar und ist KEINE leere Liste. */
+$b = cc_unterfeld_befund(['a'], ['a', 'b'], null);
+if ($b['ohne_acf'] !== [] || $b['unbekannt'] !== true) {
+  $f[] = 'D: null wird wie eine leere Liste behandelt — der Melder schlaegt grundlos an';
+}
+
+/* E — und die Nutzlast-Richtung arbeitet trotzdem weiter, sie braucht ACF nicht. */
+$b = cc_unterfeld_befund(['a', 'z'], ['a'], null);
+if ($b['nutzlast'] !== ['z']) $f[] = 'E: ohne ACF schweigt auch die Richtung, die ihn nicht braucht';
+
+/* F — Gegenprobe: deckungsgleich heisst still. Ohne sie waere ein Melder,
+       der IMMER anschlaegt, von einem richtigen nicht zu unterscheiden. */
+$b = cc_unterfeld_befund(['a', 'b'], ['a', 'b'], ['a', 'b']);
+if ($b['nutzlast'] !== [] || $b['ohne_acf'] !== [] || $b['unbekannt'] !== false) {
+  $f[] = 'F: meldet, obwohl alles deckungsgleich ist';
+}
+
+/* G — die ACF-Seite ebenfalls rekursiv. */
+$p = cc_acf_pfade([['name' => 'marken', 'sub_fields' => [['name' => 'art']]]]);
+if ($p !== ['marken', 'marken.art']) $f[] = 'G: cc_acf_pfade steigt nicht hinab';
+
+/* H — eine leere Liste ist kein verschachtelter Repeater. */
+if (cc_ist_zeilenliste([]) !== false) $f[] = 'H: leere Liste gilt als Repeater';
+if (cc_ist_zeilenliste(['a' => 1]) !== false) $f[] = 'H2: eine Zeile gilt als Liste von Zeilen';
+
+echo json_encode(['gefunden' => $gefunden, 'fehler' => $f]);
+`;
+
+const probe = JSON.parse(phpLauf(["-r", LAUFPROBE], readFileSync(DATEI)));
+for (const fehler of probe.fehler ?? []) {
+  befunde.push(`Der Unterfeld-Melder tut nicht, was er soll — ${fehler}`);
+}
+
 if (befunde.length === 0) {
-  const anzahl = REGELN.length + PFLICHTEN.length + MIT_BERICHT.length;
+  /* +1: die Laufprobe ist keine Regel ueber den Quelltext, sondern die
+   einzige, die den Melder AUSFUEHRT. */
+  const anzahl = REGELN.length + PFLICHTEN.length + MIT_BERICHT.length + 1;
   console.log(`check-plugin: ${anzahl} Regeln geprueft${wieGelaufen} — alle erfuellt.`);
   console.log("              ⚠ Ueber den PHP-Tokenizer, nicht ueber den Text:");
   console.log("                Kommentare koennen nicht mitgezaehlt werden.");

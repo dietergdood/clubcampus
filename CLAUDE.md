@@ -3888,6 +3888,234 @@ der Code weiss, **was** ungepagt liest, und nicht, wie gross es ist; die
 Datenbank weiss es umgekehrt. **Keiner der beiden genügt allein.**
 
 
+### ⚠⚠ „KEINE EREIGNISSE" IST NICHT „NIE GEHOLT" — ein Widerspruch, den es nicht gab
+
+Am 11.09.2026 wurde ein Widerspruch untersucht, der keiner war: **14
+Spiele** schienen `matchdaten_geholt_am = null` zu tragen, während der
+Lauf `kandidaten_neu = 0` meldete. Beides zugleich ist unmöglich — also
+musste eines falsch sein.
+
+**Gemessen: alle vierzehn tragen die Marke.** Zwei davon frisch vom
+rollenden Nachlauf (13:17 und 14:17), Status, Verein und Match-Id überall
+korrekt. `kandidaten_neu = 0` stimmte.
+
+⚠ **Der Fehler lag in der Abfrage.** Sie las `max(e.zuletzt_synchronisiert)`
+aus der **Ereignistabelle** — und die war leer, weil der Verband zu diesen
+Spielen **keinen Verlauf führt.**
+
+| die Abfrage fragte | gelesen wurde sie als |
+|---|---|
+| gibt es Ereignisse zu diesem Spiel? | wurde dieses Spiel je geholt? |
+
+> **Wer nach dem Zustand einer Zeile fragt, liest die Spalte DIESER
+> Zeile** — nicht ein Aggregat über etwas, das an ihr hängt.
+> `matchdaten_geholt_am` steht in `spiele`; ein `max(…)` über
+> `spiel_ereignisse` beantwortet eine andere Frage.
+
+⚠ **Dieselbe Verwechslung wie bei den 207** (Didis eigene Einordnung):
+dort wurden „fehlende Namen" als „fehlende Zeilen" gelesen, hier „keine
+Ereignisse" als „nie geholt". **Eine Abfrage, die über eine Nebentabelle
+joint, misst die Anwesenheit der Nebentabelle, nicht die der Sache.**
+
+⚠ **Und die teure Hälfte: beide Lesarten sind plausibel.** Die falsche
+hat eine halbe Untersuchung gekostet, samt einer Vermutung über
+gescheiterte Läufe, die es nie gab — an demselben Tag, an dem schon
+zweimal erschlossen statt gemessen wurde. **Eine Zahl, die überrascht,
+gehört zuerst gegen das Werkzeug gehalten, das sie erzeugt hat.**
+
+Die vierzehn selbst sind kein Befund: der Verband führt zu ihnen keinen
+Verlauf, so wie zu Wald und Pfäffikon im Abschnitt darunter.
+
+
+### ✅ Die gelb-Frage ist ohne `isPlayer` beantwortet — und zwar deckungsgleich
+
+Gemessen am 11.09.2026 über `spiel_ereignisse`, `typ_id = 3`
+(Verwarnung), `ist_eigener`:
+
+| | |
+|---|---|
+| eigene Verwarnungen | **42** |
+| mit Rückennummer | **37** |
+| **ohne Nummer UND ohne Aufstellungszeile** | **5** |
+| Rest | **0** |
+
+**Kein Rest.** Die fünf ohne Nummer sind Trainer und Betreuer; sie stehen
+in keiner Aufstellungszeile, seit `/bench` am 10.09.2026 ausgebaut wurde.
+
+⚠ **Die eigentliche Lehre ist nicht die Antwort, sondern warum sie
+tragfähig ist: die Näherung war genau, WEIL ihre Aufteilung aufgeht.**
+
+> **37 + 5 = 42, ohne Rest — eine Aufteilung, die aufgehen muss, prüft
+> sich selbst.** Hätte dort ein Rest gestanden, wäre die Erklärung eine
+> Vermutung geblieben, und die Frage hätte eine Spalte gekostet.
+
+Dieselbe Bauart wie `zaehlung_stimmt` im Export und wie
+506 + 499 + 661 + 616 = 2282 beim Aufstellungs-Join. **Eine einzelne Zahl
+kann nur behauptet werden; eine Aufteilung kann man nachrechnen.**
+
+Damit sind auch die **88,1 %** auf der Gegnerseite erklärt, ohne dass
+`isPlayer` gespeichert werden muss: Karten gegen Personen ohne
+Trikotnummer.
+
+#### ⚠ Der Satz gilt trotzdem — der Anlass ist weg, die Lage nicht
+
+Der Verband liefert `isPlayer`, `roleId`, `roleCategoryId` und
+`roleCategoryName` bei **jedem** Abruf mit, und sie werden in derselben
+Zeile verworfen.
+
+> ⚠ **„Der Verband hat die Nummer vergessen" und „diese Person hat keine
+> Nummer" sehen in unseren Daten gleich aus.**
+
+Für die **eigene** Seite trennt die Aufstellung sie — deshalb ging die
+Messung oben auf. Für die **fremde** gibt es diese Brücke nicht
+(Entscheid B: keine `sfv_person_id`, kein Name), und dort bliebe die
+Frage offen, wenn sie je gestellt würde. **Heute wird sie nicht gestellt,
+und das ist der einzige Grund, warum die Spalte nicht gebraucht wird.**
+
+
+### ⚠⚠ EINE PRÜFUNG HINTER DEM FILTER, DEN SIE PRÜFEN SOLL, KANN NUR „IN ORDNUNG" SAGEN
+
+Befund des Theme-Chats, 11.09.2026. Der Unterfeld-Melder im
+WordPress-Empfänger war **in die falsche Richtung gebaut** — und er war
+grün, seit es ihn gab.
+
+```php
+foreach ( array_diff( $gesendet, $vorhanden ) as $name )   // 0.9.15
+//                   ↑ die KONSTANTE           ↑ ACF
+```
+
+`$gesendet` war an allen drei Aufrufstellen `CC_VERLAUF_FELDER` bzw.
+`CC_AUFSTELLUNG_FELDER`. Er beantwortete also: *„führen wir einen Namen,
+den ACF nicht kennt?"* — ein Wächter gegen das Auseinanderlaufen der
+Konstante. Nützlich. **Nur nicht die Frage.**
+
+⚠ **Käme `rueckennr` statt `nummer` in der Nutzlast, fiele der Name
+weiterhin wortlos weg** — und zwar nicht erst bei ACF, sondern **eine
+Stufe früher an unserer eigenen Allowlist**: `cc_schreibe_verlauf()`
+kopiert ausschliesslich die Namen aus `CC_VERLAUF_FELDER`. ACF sieht ihn
+nie.
+
+| Richtung | fängt | Beispiel |
+|---|---|---|
+| **Nutzlast → Konstante** | der Sender schickt einen Namen, den **wir** nicht kopieren | `rueckennr` statt `nummer` |
+| **Konstante → ACF** | wir kopieren einen Namen, den der **Zielrepeater** verwirft | `ein_nummer`, zwei Wochen |
+
+**Beide sind echt, beide sind verschieden, und gebaut war nur die
+zweite.**
+
+#### ⚠⚠ Und die Falle beim Reparieren: die rohe Nutzlast, nicht die gesäuberte
+
+Der naheliegende Anschluss ist die Variable, die dort ohnehin steht —
+`$wert` bzw. `$zeilen`. **Beide sind bereits durch den Filter gelaufen,
+den die Prüfung prüfen soll.** Die unbekannten Namen sind darin schon
+weg; der Melder wäre strukturell leer gewesen und hätte für immer „in
+Ordnung" gesagt.
+
+> **Eine Prüfung hinter dem Filter, den sie prüfen soll, kann nur „in
+> Ordnung" sagen.**
+
+Dieselbe Familie wie `zaehleVerlaufNamen()`, das den eigenen Ausgabetext
+wieder zerlegte, und wie die zweite Abfrage in `kindService.ts`, die „ist
+lesbar?" statt „wurde geschrieben?" fragte.
+
+#### ⚠ Zwei Listen, und sie mussten verschieden heissen
+
+`unbeachtete_unterfelder` trägt seit 0.9.16 die **erste** Richtung — damit
+es dasselbe bedeutet wie `unbeachtete_felder` eine Ebene darüber. Die
+zweite heisst jetzt `unterfelder_ohne_acf`.
+
+⚠ **Die Umbenennung war der Preis für die Reparatur, nicht Kosmetik.**
+Zwei Felder mit gleichlautendem Namen und **entgegengesetzter Richtung**
+wären genau die Falle, die dieses Papier an einem Dutzend Stellen führt:
+eine Beschriftung, die mehr behauptet als der Inhalt hält, wird irgendwann
+von jemandem geglaubt, der nicht nachsieht.
+
+#### Die Rekursion ersetzt den Parameter — eine dritte Ebene lief ungeprüft durch
+
+`marken` wurde über ein Argument erreicht (`cc_pruefe_unterfelder(…,
+'marken')`). ⚠ **Eine dritte Ebene wäre still durchgelaufen**, und der
+Parameter hätte bei jedem neuen Repeater von Hand nachgezogen werden
+müssen. `cc_nutzlast_pfade()` und `cc_acf_pfade()` steigen jetzt selbst
+hinab, beliebig tief.
+
+#### ⚠⚠ DIE POSITIVKONTROLLE MUSSTE DEN MELDER AUSFÜHREN, NICHT LESEN
+
+Didis Beobachtung, und sie ist der Kern: *„Heute meldet er nichts, weil
+alles deckungsgleich ist (Verlauf 10:10, Aufstellung 11:11, Marken 2:2).
+Das ist der Zustand, in dem ein funktionierender und ein toter Melder
+gleich aussehen."*
+
+**Alle 25 Regeln in `check:plugin` sind statisch** — sie lesen den
+Quelltext und sagen, dass etwas dasteht. **Keine kann sagen, dass es das
+Richtige tut.**
+
+Die 26. schneidet die vier reinen Funktionen mit dem PHP-Tokenizer aus
+der Datei, `eval`t sie und stellt acht Fragen. ⚠ **An der echten Funktion,
+nicht an einer Abschrift** — eine nachgebaute Kopie belegt, dass die Kopie
+funktioniert.
+
+**Gegengeprobt mit drei Sabotagen, jede einzeln zurückgesetzt:**
+
+| | Meldung |
+|---|---|
+| Rekursion herausgenommen | *„die dritte Ebene läuft ungeprüft durch"* |
+| `null` wie eine leere Liste behandelt | *„der Melder schlägt grundlos an"* |
+| **Funktion umbenannt** — der tote Melder | *„nicht alle Funktionen geschnitten"* |
+
+⚠ **Die dritte ist die wichtigste:** findet der Schnitt seinen Gegenstand
+nicht, ist das **rot** und nicht grün. Eine Kontrolle, die ohne ihren
+Gegenstand „ok" sagt, beruhigt — und das ist schlimmer als keine.
+
+Dazu `unterfelder_geprueft` (`gesendet:erlaubt:acf`, je Repeater) in
+**jeder** Antwort. Fehlt der Eintrag, ist der Melder nicht gelaufen; steht
+er da, hat er geprüft. Dieselbe Bauart wie `fremd_unveraendert`.
+
+#### ⚠⚠ UND MEINE EIGENE ÄNDERUNG HAT EINE REGEL BLIND GEMACHT — grün
+
+Die Regel *„jeder Repeater wird auf unbekannte Unterfelder geprüft"*
+erkannte einen Repeater-Schreiber daran, dass er **eine der drei
+Konstanten nennt**. Mit 0.9.16 ruft `cc_schreibe_felder()` die Aufstellung
+über `cc_erlaubt_aufstellung()` — und **fiel damit aus dem Erkenner
+heraus**. Die Regel blieb grün und sah die eine Funktion nicht mehr an,
+für die sie gebaut worden war.
+
+> **Eine Regel, die einen BEZEICHNER sucht, prüft eine Schreibweise** —
+> dieselbe Familie wie `name !== "Elternteil"` und wie `\b` gegen deutsche
+> Bezeichner, nur im Prüfwerkzeug selbst, also an der Stelle, an der
+> niemand mehr nachsieht. **Dritter Fall in zwei Tagen.**
+
+Behoben in beide Richtungen: der Erkenner kennt die neuen Namen, **und**
+daneben steht eine Regel, die an einer **Funktion** hängt statt an einem
+Namen — *„wer die Aufstellung säubert, meldet sie auch"*.
+`cc_saeubere_aufstellung()` kann nicht verschwinden, ohne dass das Feature
+verschwindet; ein Konstantenname schon.
+
+⚠ **Und sie prüft sich selbst auf die leere Menge:** hätte die Säuberung
+keinen Aufrufer mehr, ginge die Schleife leer aus und die Regel wäre grün,
+ohne etwas zu prüfen. **Das ist in dieser Datei schon viermal passiert.**
+
+#### ⚠ Der fehlende Änderungsverlauf hat eine falsche Behauptung ERZEUGT
+
+Ich hatte gemeldet, 0.9.13 und 0.9.14 seien **nie auf dev** gewesen.
+Gemessen (Didi, 11.09.2026): beide liegen dort als Commits, übersprungen
+wurde keine.
+
+**Woher die Annahme kam, und das ist der Eintrag:** der Änderungsverlauf
+im Kopf **unserer** Datei endete bei 0.9.12. Ich habe ihn als Aussage über
+**sein** Repository gelesen.
+
+> **Eine Lücke in der eigenen Buchführung liest sich wie eine Lücke in der
+> Wirklichkeit.**
+
+Dieselbe Familie wie „ein Kommentar, der eine ANDERE Stelle zusichert" —
+nur umgekehrt: hier hat nicht ein falscher Satz getäuscht, sondern ein
+**fehlender**. Und der Satz im Kopf derselben Datei sagt es wörtlich: *„Wer
+diese Datei inhaltlich ändert, erhöht sie."* Die Fassung wurde erhöht, der
+Verlauf nicht — **eine Regel, an die jemand denken muss, ist die
+schwächste Lösung**, und sie hat hier zweimal hintereinander versagt.
+Nachgetragen für 0.9.13 bis 0.9.16.
+
+
 ### ✅ VIER SPIELE, DEREN VERLAUF NICHT ZUM RESULTAT PASST — alle vier erklärt, keines ein Fehler bei uns
 
 Gemeldet von der Website-Seite am 11.09.2026, gemessen über alle 68
@@ -3904,6 +4132,25 @@ Spiele mit Verlauf und Resultat: **64 stimmen.**
 Bestand, `fremd · tor` bei **96,9 %** mit Rückennummer. Die fremden Zeilen
 streuen von 0 bis 20 und liegen meist im Bereich der eigenen. **Es gibt
 keinen Filter, der die Gegnerseite wegnimmt.**
+
+#### ✅ Weg D ist scharf — und der Rest ist erklärt, nicht übriggeblieben
+
+Gemessen am 11.09.2026: **29 von 542** Gegnerzeilen tragen dauerhaft nur
+Minute und Symbol. Es sind Karten gegen Personen ohne Trikotnummer —
+Trainer und Betreuer.
+
+⚠ **Das deckt sich mit den fünf eigenen** (siehe „Die gelb-Frage ist ohne
+`isPlayer` beantwortet"): dieselbe Ursache auf beiden Seiten, über zwei
+getrennte Wege gemessen — die eigene Seite über die Aufstellung, die
+fremde über die blosse Zahl.
+
+> **Zwei unabhängige Messungen, eine Erklärung.** Das ist der Unterschied
+> zwischen einem erklärten Rest und einem übriggebliebenen: ein Rest, der
+> auf beiden Seiten dieselbe Grösse und dieselbe Ursache hat, ist kein
+> Rest mehr.
+
+**Für Weg D heisst das: eine Zeile ohne Nummer ist kein Ausfall der
+Kette.** Wer sie später als Lücke meldet, meldet Trainer.
 
 #### ⚠ Red Star: der Verbandsbericht zeigt dasselbe wie wir
 
@@ -3982,9 +4229,13 @@ neu = alles ohne matchdaten_geholt_am, VORRANG ohne Deckel
 > vorne, belegt einen Platz, scheitert wieder — und wird nie fertig.**
 
 ⚠ **Und es wächst:** vier scheiternde Spiele fressen ein Drittel der
-zwölf Plätze, acht die Hälfte. **Der Nachlauf verhungert zuerst**, weil er
-nach `neu` kommt — also genau die Einrichtung, die den Rückstand
-aufholen soll.
+zwölf Plätze, acht die Hälfte.
+
+> ⚠ **Der Nachlauf verhungert zuerst, weil er nach `neu` kommt** — also
+> genau die Einrichtung, die den Rückstand aufholen soll. Die Reihenfolge
+> `neu → fenster → alt` ist richtig und macht den Fehlerpfad trotzdem
+> teurer, als er aussieht: was ganz vorne klemmt, trifft zuerst das, was
+> ganz hinten steht.
 
 #### ⚠ Sichtbar ist es, aber nur wenn jemand hinsieht
 
@@ -4015,9 +4266,43 @@ nimmt `neu` dann als *„nie geholt UND seit einer Stunde nicht
 versucht"* — ein scheiterndes Spiel rückt nach hinten, statt den Kopf
 der Schlange zu verstopfen, und bleibt trotzdem in der Schlange.
 
-⚠ **Nicht gebaut.** Erst ist zu messen, ob es überhaupt vorkommt — die
-Abfrage oben beantwortet es, und bei null Fehlern über acht Läufe ist es
-eine Vorsichtsmassnahme ohne Anlass.
+#### ⚠ Gemessen am 11.09.2026: null Fehler in acht Läufen — der Anlass fehlt
+
+**Nicht gebaut, und das ist die Entscheidung, nicht der Aufschub.** Der
+Befund bleibt richtig; was fehlt, ist ein einziger Fall im Bestand. Eine
+zweite Spalte plus eine geänderte Kandidatenwahl gegen ein Ereignis zu
+bauen, das nie eingetreten ist, wäre eine Vorsichtsmassnahme ohne Anlass —
+und die kostet dieselbe Pflege wie eine mit.
+
+⚠ **Damit er nicht auf den Sankt-Nimmerleins-Tag vertagt ist, gehört die
+Fälligkeitsbedingung dazu — als Beobachtung, nicht als Vorsatz:**
+
+> **Fällig, sobald in `details->'matchdaten'->>'fehler'` über mehrere
+> Läufe DIESELBE Spielnummer auftaucht.** Eine einzelne Fehlermeldung ist
+> ein Aussetzer beim Verband; dieselbe über drei Läufe ist die Schlinge,
+> die dieser Abschnitt beschreibt.
+
+**Ein offener Punkt ohne Auslöser ist kein offener Punkt, sondern eine
+Notiz.** Die Abfrage oben ist der Auslöser; sie steht dort, damit niemand
+sie sich ausdenken muss.
+
+#### ⚠ Nebenbefund vom 11.09.2026: die Obergrenze stand zweimal im Code
+
+Der 16:17-Lauf hat **12** Spiele geholt — damit greift die Korrektur einer
+doppelten Konstante: `MATCHDATEN_PRO_LAUF = 10` in `sync.ts` hatte
+`HOECHSTENS_SPIELE = 12` aus `matchdaten.ts` überstimmt, ohne dass etwas
+fehlschlug.
+
+⚠ **Gefunden wurde sie nur, weil 0 + 8 + 2 = 10 nicht zu 12 passte.**
+
+> **Eine Zahl, die nicht aufgeht, ist der einzige Melder für eine
+> Konstante, die es zweimal gibt.** Kein Typecheck, kein Test und kein
+> Lint sieht zwei Zahlen, die dasselbe meinen — sie sind beide gültig.
+
+Dieselbe Familie wie die Aufteilung, die aufgehen muss (`zaehlung_stimmt`,
+506+499+661+616 = 2282): **wo drei Zahlen eine vierte ergeben sollen,
+prüft sich die Sache selbst** — und das ist der einzige Schutz, den es
+hier gibt.
 
 **Dieselbe Familie wie `api_sync_log` ohne Anfangszeile:** der Ausfall
 hinterlässt keine Spur, die von „es gab nichts zu tun" zu unterscheiden

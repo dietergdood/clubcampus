@@ -4,7 +4,7 @@
  *
  * Plugin Name: ClubCampus Export
  * Description: Nimmt Spielplan, Verlauf und Ranglisten aus ClubCampus entgegen.
- * Version:     0.9.15
+ * Version:     0.9.16
  *
  * ⚠ ⚠  STAND 10.09.2026: DIESE DATEI **IST** DER EMPFAENGER  ⚠ ⚠
  *
@@ -141,6 +141,56 @@ const CC_ROUTE      = 'clubcampus/v1';
    `/status` fuer zwei verschiedene Fassungen dieselbe Zahl, und die eine
    Auskunft, die „laeuft drueben der neue Empfaenger?" beantworten koennte,
    beantwortet sie nicht mehr.
+
+   0.9.16 (11.09.2026): DER UNTERFELD-MELDER MISST IN BEIDE RICHTUNGEN —
+   und `cc_nutzlast_pfade()` steigt rekursiv hinab statt ueber einen
+   Parameter.
+   ⚠ ⚠  ANLASS, Befund des Theme-Chats: bis 0.9.15 verglich er die
+         KONSTANTE gegen ACF. Das ist ein Waechter gegen Auseinanderlaufen
+         der Konstante, nuetzlich — aber nicht die Frage. Kaeme
+         `rueckennr` statt `nummer` in der Nutzlast, fiele der Name
+         weiterhin wortlos weg, naemlich schon an unserer eigenen
+         Allowlist. Genau der Fall, der `ein_nummer` zwei Wochen gekostet
+         hat, nur eine Stufe frueher.
+   ⚠     Deshalb ZWEI Listen in der Antwort, und sie heissen verschieden:
+           unbeachtete_unterfelder  die Nutzlast bringt einen Namen, den
+                                    WIR nicht kopieren  (rueckennr)
+           unterfelder_ohne_acf     wir kopieren einen Namen, den der
+                                    Zielrepeater nicht kennt (ein_nummer)
+         Der erste Name traegt jetzt dieselbe Bedeutung wie
+         `unbeachtete_felder` eine Ebene darueber. Zwei Felder mit
+         gleichlautendem Namen und entgegengesetzter Richtung waeren die
+         schlechtere Loesung gewesen.
+   ⚠ ⚠  UND GEPRUEFT WIRD DIE ROHE NUTZLAST, nicht die gesaeuberte. Mit
+         den gefilterten Zeilen waere die neue Richtung strukturell leer
+         — eine Pruefung hinter dem Filter, den sie pruefen soll, kann nur
+         „in Ordnung" sagen.
+   ⚠     `unterfelder_geprueft` (gesendet:erlaubt:acf, je Repeater) steht
+         IMMER da. Am 11.09.2026 meldete der Melder nichts, weil alles
+         deckungsgleich war — der Zustand, in dem ein arbeitender und ein
+         toter Melder dieselbe leere Liste ausgeben.
+   ⚠     Die Rekursion ersetzt den Parameter `$verschachtelt`: er
+         erreichte genau eine Ebene, eine DRITTE waere ungeprueft
+         durchgelaufen. Gegengeprobt in der Pruefkette, die die vier
+         reinen Funktionen aus dieser Datei schneidet und AUSFUEHRT.
+
+   0.9.15 (11.09.2026): `nutzlast_fassung` in jeder Antwort, und der
+   Unterfeld-Melder ueberhaupt (`unbeachtete_unterfelder`,
+   `unterfelder_unbekannt`).
+   ⚠     ACF verwirft unbekannte Unterfelder eines Repeaters wortlos —
+         kein Rueckgabewert, keine Warnung. `cc_unbeachtete_felder()` sah
+         das nicht: sie vergleicht nur die oberste Ebene.
+
+   0.9.14 (11.09.2026): `ereignis_zusatz` — `eigentor` · `penalty` · leer.
+   ⚠ ⚠  DAS FELD, AN DEM DER ZWISCHENSTAND HAENGT. Bis es GEFUELLT
+         ankommt, liest die Spielseite das Wort „Eigentor" aus `text`;
+         wer den Zusatz vorher aus dem Text nimmt, verschiebt den Stand
+         um zwei Tore — ohne Fehlermeldung.
+
+   0.9.13 (11.09.2026): `nummer` und `ein_nummer` im Verlauf, auf BEIDEN
+   Seiten — die Rueckennummer des Handelnden und die des Eingewechselten.
+   ⚠     Eine Rueckennummer ist eine Beschriftung auf einem Trikot, kein
+         Personendatum; Entscheid B bleibt unberuehrt.
 
    0.9.12 (11.09.2026): die Zaehlung auch JE SPIEL —
    `aufstellung_je_spiel`, sfv_match_id => Zeilen.
@@ -353,7 +403,7 @@ const CC_ROUTE      = 'clubcampus/v1';
    einander), `autoload` wird nach dem Schreiben geprueft und notfalls
    berichtigt, `/status` nennt Empfaenger, Version, Metaschluessel und die
    Team-Zuordnung. */
-const CC_VERSION    = '0.9.15';
+const CC_VERSION    = '0.9.16';
 const CC_TYP_SPIEL  = 'fch_spiel';
 const CC_TYP_TEAM   = 'fch_team';
 /* ⚠ DER SCHLUESSEL, AN DEM DIE GANZE ZUORDNUNG HAENGT — Meta am
@@ -1339,10 +1389,17 @@ function cc_schreibe_felder( int $post_id, array $spiel ): array {
 		   zu beantworten — und die Website-Seite musste im Backend
 		   nachsehen. */
 		if ( 'aufstellung' === $feld ) {
-			/* ⚠ Auch der VERSCHACHTELTE Repeater: eine Grenze, die eine
-			   Ebene tiefer offen ist, sieht wie eine ganze aus. */
-			cc_pruefe_unterfelder( $post_id, 'aufstellung', CC_AUFSTELLUNG_FELDER );
-			cc_pruefe_unterfelder( $post_id, 'aufstellung', CC_MARKEN_FELDER, 'marken' );
+			/* ⚠ ⚠ DIE ROHE NUTZLAST, nicht $wert. $wert ist bereits durch
+			   cc_saeubere_aufstellung() gelaufen — dort fallen unbekannte
+			   Namen heraus, und eine Pruefung HINTER dem Filter, den sie
+			   pruefen soll, kann nur „in Ordnung" sagen.
+
+			   ⚠ Ein Aufruf statt zwei: cc_nutzlast_pfade() steigt seit
+			   0.9.16 selbst in `marken` hinab. Der Parameter erreichte
+			   genau eine Ebene — eine dritte waere ungeprueft
+			   durchgelaufen. */
+			cc_pruefe_unterfelder(
+				$post_id, 'aufstellung', $spiel[ $feld ], cc_erlaubt_aufstellung() );
 			$GLOBALS['cc_aufstellung_zeilen'] += count( (array) $wert );
 			if ( count( (array) $wert ) > 0 ) {
 				$GLOBALS['cc_aufstellung_spiele']++;
@@ -1423,7 +1480,7 @@ function cc_unbeachtete_felder( array $spiel ): array {
  * @return string[] Unterfeldnamen, oder `null` wenn die Feldgruppe des
  *                  Beitrags den Repeater gar nicht fuehrt.
  */
-function cc_unterfelder( int $post_id, string $repeater, string $verschachtelt = '' ): ?array {
+function cc_unterfelder( int $post_id, string $repeater ): ?array {
 	$key = cc_feld_schluessel( $post_id, $repeater );
 	if ( null === $key ) {
 		return null;
@@ -1432,59 +1489,171 @@ function cc_unterfelder( int $post_id, string $repeater, string $verschachtelt =
 	if ( ! is_array( $feld ) || ! isset( $feld['sub_fields'] ) ) {
 		return null;
 	}
+	return cc_acf_pfade( $feld['sub_fields'] );
+}
 
-	/* ⚠ ⚠ EINE EBENE TIEFER, wenn danach gefragt wird. `marken` steckt
-	   INNERHALB von `aufstellung` — und eine Grenze, die eine Ebene
-	   tiefer offen ist, sieht wie eine ganze aus. Genau dieselbe
-	   Begruendung wie bei cc_saeubere_aufstellung(), die den
-	   verschachtelten Repeater seit 0.9.7 mitschneidet. */
-	if ( '' !== $verschachtelt ) {
-		$treffer = null;
-		foreach ( (array) $feld['sub_fields'] as $u ) {
-			if ( isset( $u['name'] ) && $u['name'] === $verschachtelt ) {
-				$treffer = $u;
-				break;
+/**
+ * Ist das eine Liste von Zeilen — also ein verschachtelter Repeater?
+ *
+ * Eine leere Liste ergibt `false`: sie traegt keine Pfade, und ob sie ein
+ * Repeater ohne Zeilen oder ein leerer Wert ist, laesst sich nicht sagen.
+ */
+function cc_ist_zeilenliste( $wert ): bool {
+	if ( ! is_array( $wert ) || array() === $wert ) {
+		return false;
+	}
+	if ( array_keys( $wert ) !== range( 0, count( $wert ) - 1 ) ) {
+		return false;
+	}
+	foreach ( $wert as $e ) {
+		if ( ! is_array( $e ) ) {
+			return false;
+		}
+	}
+	return true;
+}
+
+/**
+ * Alle Pfade, die die NUTZLAST in diesem Repeater fuehrt.
+ *
+ * `nummer` · `marken` · `marken.art` — **beliebig tief, rekursiv.**
+ *
+ * ⚠ WARUM REKURSIV UND NICHT UEBER EINEN PARAMETER. Bis 0.9.15 wurde die
+ * zweite Ebene ueber ein Argument erreicht (`cc_pruefe_unterfelder(…,
+ * 'marken')`), und eine DRITTE Ebene waere ungeprueft durchgelaufen —
+ * eine Grenze, die eine Ebene tiefer offen ist, sieht wie eine ganze aus.
+ * Der Parameter musste ausserdem von Hand nachgezogen werden, sobald ein
+ * Repeater dazukommt; die Rekursion nicht.
+ */
+function cc_nutzlast_pfade( $zeilen, string $praefix = '' ): array {
+	$raus = array();
+	if ( ! is_array( $zeilen ) ) {
+		return $raus;
+	}
+	foreach ( $zeilen as $z ) {
+		if ( ! is_array( $z ) ) {
+			continue;
+		}
+		foreach ( $z as $name => $wert ) {
+			if ( ! is_string( $name ) || '' === $name ) {
+				continue;
+			}
+			$pfad = '' === $praefix ? $name : $praefix . '.' . $name;
+			$raus[ $pfad ] = true;
+			if ( cc_ist_zeilenliste( $wert ) ) {
+				foreach ( cc_nutzlast_pfade( $wert, $pfad ) as $p ) {
+					$raus[ $p ] = true;
+				}
 			}
 		}
-		if ( ! is_array( $treffer ) || ! isset( $treffer['sub_fields'] ) ) {
-			return null;
-		}
-		$feld = $treffer;
 	}
+	$raus = array_keys( $raus );
+	sort( $raus );
+	return $raus;
+}
 
+/** Dieselbe Pfadform aus den Unterfeldern einer ACF-Feldgruppe. */
+function cc_acf_pfade( $sub_fields, string $praefix = '' ): array {
 	$raus = array();
-	foreach ( (array) $feld['sub_fields'] as $u ) {
-		if ( isset( $u['name'] ) && '' !== $u['name'] ) {
-			$raus[] = (string) $u['name'];
+	foreach ( (array) $sub_fields as $u ) {
+		if ( ! is_array( $u ) || ! isset( $u['name'] ) || '' === $u['name'] ) {
+			continue;
+		}
+		$pfad = '' === $praefix ? (string) $u['name'] : $praefix . '.' . $u['name'];
+		$raus[] = $pfad;
+		if ( isset( $u['sub_fields'] ) && is_array( $u['sub_fields'] ) ) {
+			foreach ( cc_acf_pfade( $u['sub_fields'], $pfad ) as $p ) {
+				$raus[] = $p;
+			}
 		}
 	}
+	sort( $raus );
+	return $raus;
+}
+
+/** Die Pfade, die `cc_saeubere_aufstellung()` durchlaesst — aus den zwei
+ *  Konstanten abgeleitet, damit die Namen nicht ein viertes Mal dastehen. */
+function cc_erlaubt_aufstellung(): array {
+	$raus = CC_AUFSTELLUNG_FELDER;
+	foreach ( CC_MARKEN_FELDER as $f ) {
+		$raus[] = 'marken.' . $f;
+	}
+	sort( $raus );
 	return $raus;
 }
 
 /**
- * Namen, die wir in einen Repeater schreiben und die er nicht kennt.
+ * DIE ENTSCHEIDUNG — ohne WordPress, ohne ACF, ohne Beitrag.
+ *
+ * ⚠ ⚠ ZWEI RICHTUNGEN, UND SIE FANGEN VERSCHIEDENE FEHLER. Bis 0.9.15 gab
+ * es nur die zweite; die erste war die Frage, die der Theme-Chat am
+ * 11.09.2026 gestellt hat.
+ *
+ *   nutzlast   Die Nutzlast bringt einen Namen, den WIR nicht kopieren.
+ *              Er faellt schon in cc_schreibe_verlauf() bzw.
+ *              cc_saeubere_aufstellung() heraus — ACF sieht ihn nie.
+ *              ⚠ Das ist der Fall `rueckennr` statt `nummer`.
+ *
+ *   ohne_acf   Wir kopieren einen Namen, den der Zielrepeater nicht kennt.
+ *              update_field() verwirft ihn wortlos.
+ *              ⚠ Das ist der Fall `ein_nummer`, der zwei Wochen gekostet hat.
+ *
+ * ⚠ Die erste Richtung braucht ACF GAR NICHT und ist deshalb auch dann
+ * beantwortbar, wenn die zweite es nicht ist. Genau deshalb steht sie
+ * oberhalb der null-Pruefung.
+ *
+ * ⚠ `null` fuer `$vorhanden` heisst „nicht feststellbar" und ist KEINE
+ * leere Liste: ein `array_diff` gegen `array()` meldete ALLE Namen als
+ * unbekannt, sobald ACF fehlt. **Ein Melder, der grundlos anschlaegt,
+ * wird nach dem dritten Mal abgeschaltet.**
+ */
+function cc_unterfeld_befund( array $gesendet, array $erlaubt, ?array $vorhanden ): array {
+	return array(
+		'nutzlast'  => array_values( array_diff( $gesendet, $erlaubt ) ),
+		'ohne_acf'  => null === $vorhanden
+			? array()
+			: array_values( array_diff( $erlaubt, $vorhanden ) ),
+		'unbekannt' => null === $vorhanden,
+	);
+}
+
+/**
+ * Der Melder — beide Richtungen, und er sagt, dass er gelaufen ist.
  *
  * ⚠ SIE SCHREIBT NICHTS UND AENDERT NICHTS. Sie nennt Namen, damit ein
  * fehlendes Unterfeld nicht wie eine fehlende Lieferung aussieht.
  *
- * ⚠ `null` von `cc_unterfelder()` heisst „nicht feststellbar" und ist
- * KEINE leere Liste: gaebe es hier `array_diff` gegen `array()`, meldete
- * die Pruefung ALLE Namen als unbekannt, sobald ACF fehlt oder der
- * Repeater nicht in der Feldgruppe steht. **Ein Melder, der grundlos
- * anschlaegt, wird nach dem dritten Mal abgeschaltet.**
+ * ⚠ ⚠ `$roh` IST DIE UNGESAEUBERTE NUTZLAST. Mit den gesaeuberten Zeilen
+ * waere die erste Richtung strukturell leer — die unbekannten Namen sind
+ * dort ja bereits herausgefallen. **Eine Pruefung hinter dem Filter, den
+ * sie pruefen soll, kann nur „in Ordnung" sagen.**
  */
-function cc_pruefe_unterfelder(
-	int $post_id, string $repeater, array $gesendet, string $verschachtelt = ''
-): void {
-	$vorhanden = cc_unterfelder( $post_id, $repeater, $verschachtelt );
-	$pfad = '' === $verschachtelt ? $repeater : $repeater . '.' . $verschachtelt;
-	if ( null === $vorhanden ) {
-		$GLOBALS['cc_unterfelder_unbekannt'][ $pfad ] = true;
-		return;
+function cc_pruefe_unterfelder( int $post_id, string $repeater, $roh, array $erlaubt ): void {
+	$vorhanden = cc_unterfelder( $post_id, $repeater );
+	$gesendet  = cc_nutzlast_pfade( $roh );
+	$befund    = cc_unterfeld_befund( $gesendet, $erlaubt, $vorhanden );
+
+	foreach ( $befund['nutzlast'] as $name ) {
+		$GLOBALS['cc_unbeachtete_unterfelder'][ $repeater . '.' . $name ] = true;
 	}
-	foreach ( array_diff( $gesendet, $vorhanden ) as $name ) {
-		$GLOBALS['cc_unbeachtete_unterfelder'][ $pfad . '.' . $name ] = true;
+	foreach ( $befund['ohne_acf'] as $name ) {
+		$GLOBALS['cc_unterfelder_ohne_acf'][ $repeater . '.' . $name ] = true;
 	}
+	if ( $befund['unbekannt'] ) {
+		$GLOBALS['cc_unterfelder_unbekannt'][ $repeater ] = true;
+	}
+
+	/* ⚠ ⚠ DIE DREI ZAHLEN, DAMIT EIN ARBEITENDER UND EIN TOTER MELDER
+	   NICHT GLEICH AUSSEHEN. Am 11.09.2026 meldete er nichts, weil alles
+	   deckungsgleich war (Verlauf 10:10, Aufstellung 11:11) — und genau
+	   das ist der Zustand, in dem „nichts gefunden" und „nie gelaufen"
+	   dieselbe leere Liste ergeben. Fehlt der Eintrag, ist der Melder
+	   nicht gelaufen; steht er da, hat er geprueft.
+
+	   `?` statt einer Zahl heisst: ACF war nicht zu befragen. */
+	$GLOBALS['cc_unterfelder_geprueft'][ $repeater ] =
+		count( $gesendet ) . ':' . count( $erlaubt ) . ':'
+		. ( null === $vorhanden ? '?' : (string) count( $vorhanden ) );
 }
 
 function cc_schreibe_verlauf( int $post_id, array $verlauf ): int {
@@ -1505,7 +1674,8 @@ function cc_schreibe_verlauf( int $post_id, array $verlauf ): int {
 		$GLOBALS['cc_ohne_feldschluessel']['verlauf'] = true;
 		return 0;
 	}
-	cc_pruefe_unterfelder( $post_id, 'verlauf', CC_VERLAUF_FELDER );
+	/* ⚠ $verlauf, nicht $zeilen — derselbe Grund wie bei der Aufstellung. */
+	cc_pruefe_unterfelder( $post_id, 'verlauf', $verlauf, CC_VERLAUF_FELDER );
 	update_field( $key, $zeilen, $post_id );
 	return count( $zeilen );
 }
@@ -1787,7 +1957,9 @@ function cc_route_spiele( WP_REST_Request $req ) {
 	$GLOBALS['cc_aufstellung_spiele'] = 0;
 	$GLOBALS['cc_aufstellung_je_spiel'] = array();
 	$GLOBALS['cc_unbeachtete_unterfelder'] = array();
+	$GLOBALS['cc_unterfelder_ohne_acf'] = array();
 	$GLOBALS['cc_unterfelder_unbekannt'] = array();
+	$GLOBALS['cc_unterfelder_geprueft'] = array();
 
 	$vorhanden = cc_abgleich_kandidaten();
 	$teamKarte = cc_team_karte();
@@ -1975,14 +2147,24 @@ function cc_route_spiele( WP_REST_Request $req ) {
 	$erg['aufstellung_zeilen'] = (int) ( $GLOBALS['cc_aufstellung_zeilen'] ?? 0 );
 	$erg['aufstellung_spiele'] = (int) ( $GLOBALS['cc_aufstellung_spiele'] ?? 0 );
 	$erg['aufstellung_je_spiel'] = (array) ( $GLOBALS['cc_aufstellung_je_spiel'] ?? array() );
-	/* ⚠ ⚠ Namen, die wir in einen Repeater schreiben und den der Zielrepeater
-	   nicht kennt. So schrieb ein_nummer zwei Wochen ins Leere. */
+	/* ⚠ ⚠ ZWEI RICHTUNGEN, UND SIE HEISSEN VERSCHIEDEN. Bis 0.9.15 trug
+	   `unbeachtete_unterfelder` die zweite; seit 0.9.16 die erste — damit
+	   sie dasselbe bedeutet wie `unbeachtete_felder` eine Ebene darueber.
+	   Zwei Felder mit gleichlautendem Namen und entgegengesetzter Richtung
+	   waeren die schlechtere Loesung gewesen. */
 	$erg['unbeachtete_unterfelder'] = array_keys(
 		(array) ( $GLOBALS['cc_unbeachtete_unterfelder'] ?? array() ) );
 	sort( $erg['unbeachtete_unterfelder'] );
+	$erg['unterfelder_ohne_acf'] = array_keys(
+		(array) ( $GLOBALS['cc_unterfelder_ohne_acf'] ?? array() ) );
+	sort( $erg['unterfelder_ohne_acf'] );
 	/* ⚠ Getrennt: „nicht feststellbar" ist KEINE leere Liste. */
 	$erg['unterfelder_unbekannt'] = array_keys(
 		(array) ( $GLOBALS['cc_unterfelder_unbekannt'] ?? array() ) );
+	/* ⚠ ⚠ „gesendet:erlaubt:acf" je Repeater — steht IMMER da. Ohne sie
+	   sehen „nichts gefunden" und „nie gelaufen" gleich aus, naemlich als
+	   drei leere Listen. */
+	$erg['unterfelder_geprueft'] = (array) ( $GLOBALS['cc_unterfelder_geprueft'] ?? array() );
 
 	return new WP_REST_Response( $erg, 200 );
 }
