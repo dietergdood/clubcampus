@@ -10,7 +10,7 @@ import type { SyncLogZeile } from "./portalUtils.ts";
 import { SfvZuordnung } from "./SfvZuordnung.tsx";
 import { SfvSpielerZuordnung } from "./SfvSpielerZuordnung.tsx";
 import { starteSync, holeVorschau, holeRohschluessel } from "../../domains/sfv/sfvService.ts";
-import { starteWpExport, fasseExportZusammen, holeEmpfaengerStatus } from "../../domains/spiele/wpExportService.ts";
+import { starteWpExport, fasseExportZusammen, holeEmpfaengerStatus, holeBestand } from "../../domains/spiele/wpExportService.ts";
 import type { Mitglied, Sb, Team } from "../../types.ts";
 
 /* Zeile aus api_verbindungen. Fehlt die Tabelle, baut der Tab aus
@@ -323,15 +323,39 @@ export function ApiTab({loading,isMobile,mobileKachel,apiVerbindungen,tab,sb=nul
     return zeilen;
   }
 
-  async function auskunftHolen(was: "vorschau"|"rohschluessel"|"empfaenger"){
+  /* ⚠ ZAHLEN, KEINE ZEILEN. `bestand` liefert je Beitrag Titel und Id;
+     die Anzeige zeigt nur die Zaehlungen. Ein Spieltitel ist kein
+     Personenname, aber die Regel gilt hier trotzdem: eine Auskunft in
+     der Oberflaeche nennt Mengen, keine Bestaende. */
+  function deuteBestand(d: Record<string, unknown>): string[] {
+    const z = (k: string) => Number(d[k] ?? 0);
+    const zeilen = [
+      `${z("gesamt")} Spiel-Beiträge stehen drüben (aus dem Abgleich)`,
+      `${z("handbeitraege")} weitere von Hand angelegt — die fasst der Abgleich nie an`,
+    ];
+    /* ⚠ IMMER, AUCH ALS NULL. Ein fehlender Wert ist keine Auskunft —
+       „keiner ohne Stempel" und „nicht gemessen" sähen sonst gleich aus. */
+    zeilen.push(z("ohne_laufstempel") === 0
+      ? "Alle tragen einen Laufstempel — jeder stammt aus einem Export"
+      : `${z("ohne_laufstempel")} ohne Laufstempel, davon ${z("ohne_laufstempel_sichtbar")} öffentlich sichtbar`);
+    /* ⚠ WAS ER NICHT WEISS, STEHT DANEBEN. Er läuft über fch_spiel;
+       Personen kennt er nicht. Ohne diesen Satz wird eine richtige
+       Antwort für die Antwort auf eine andere Frage gehalten. */
+    zeilen.push("⚠ Nur Spiele. Personen und Teams stehen nicht in dieser Auskunft.");
+    return zeilen;
+  }
+
+  async function auskunftHolen(was: "vorschau"|"rohschluessel"|"empfaenger"|"bestand"){
     if(!sb||auskunftLaeuft) return;
     setAuskunftLaeuft(was); setAuskunft(null);
     const {daten,fehler}= was==="vorschau" ? await holeVorschau(sb)
       : was==="empfaenger" ? await holeEmpfaengerStatus(sb)
+      : was==="bestand" ? await holeBestand(sb)
       : await holeRohschluessel(sb);
     setAuskunftLaeuft(null);
     if(fehler||!daten){
-      const t= was==="vorschau"?"Vorschau":was==="empfaenger"?"Empfänger":"Rohschlüssel";
+      const t= was==="vorschau"?"Vorschau":was==="empfaenger"?"Empfänger"
+        :was==="bestand"?"Bestand drüben":"Rohschlüssel";
       setAuskunft({titel:t, zeilen:[fehler??"Keine Antwort"], fehler:true});
       return;
     }
@@ -342,6 +366,10 @@ export function ApiTab({loading,isMobile,mobileKachel,apiVerbindungen,tab,sb=nul
     }
     if(was==="empfaenger"){
       setAuskunft({titel:"Empfänger", zeilen: deuteEmpfaenger(daten)});
+      return;
+    }
+    if(was==="bestand"){
+      setAuskunft({titel:"Bestand drüben", zeilen: deuteBestand(daten)});
       return;
     }
     /* ⚠ Rohschluessel UNGEDEUTET anzeigen — das Filtern hat den Befund
@@ -677,6 +705,22 @@ export function ApiTab({loading,isMobile,mobileKachel,apiVerbindungen,tab,sb=nul
                         <Btn small variant="outline" color="#888"
                              onClick={()=>auskunftHolen("empfaenger")} disabled={!!auskunftLaeuft}>
                           {auskunftLaeuft==="empfaenger"?"Läuft…":"Empfänger"}
+                        </Btn>
+                        {/* ⚠ FRAGT NUR, SCHREIBT NICHT — dritter Umriss-Knopf,
+                            derselbe Grund wie beim Empfänger.
+
+                            ⚠ ⚠ ER EXISTIERTE ALS AKTION, EHE ES IHN ALS KNOPF
+                            GAB. Am 11.09.2026 war die Frage „was steht drüben?"
+                            dreimal offen, und dreimal war die Antwort nur über
+                            ein Terminal zu bekommen. `bestand` ist die einzige
+                            der sechs Aktionen ohne Knopf, die im BETRIEB
+                            gebraucht wird — die anderen fünf sind einmalige
+                            Diagnosewerkzeuge, und die brauchen keine Bedienung.
+
+                            ⚠ Er kennt nur Spiele; die Anzeige sagt es selbst. */}
+                        <Btn small variant="outline" color="#888"
+                             onClick={()=>auskunftHolen("bestand")} disabled={!!auskunftLaeuft}>
+                          {auskunftLaeuft==="bestand"?"Läuft…":"Bestand drüben"}
                         </Btn>
                         <span style={{fontSize:13,color:"var(--sub)",lineHeight:1.5}}>
                           Alle Mannschaften. Eingerichtet wird der Anschluss über die

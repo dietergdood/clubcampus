@@ -137,11 +137,12 @@ export function fasseExportZusammen(daten: ExportAntwort | null): string {
  * starten" und nicht darin: ein Knopf, der nur fragt, darf nicht wie
  * einer aussehen, der schreibt.
  */
-export async function holeEmpfaengerStatus(
+async function rufeExport(
   sb: Sb,
+  aktion: string,
 ): Promise<{ daten: Record<string, unknown> | null; fehler: string | null }> {
   if (!sb) return { daten: null, fehler: "Keine Verbindung" };
-  const { data, error } = await sb.functions.invoke("wp-export", { body: { aktion: "status" } });
+  const { data, error } = await sb.functions.invoke("wp-export", { body: { aktion } });
   if (error) {
     const ctx = (error as { context?: unknown }).context;
     if (ctx instanceof Response) {
@@ -158,3 +159,36 @@ export async function holeEmpfaengerStatus(
   }
   return { daten: data as Record<string, unknown>, fehler: null };
 }
+
+/** Wer antwortet drueben, mit welcher Fassung? — `aktion: "status"`. */
+export async function holeEmpfaengerStatus(
+  sb: Sb,
+): Promise<{ daten: Record<string, unknown> | null; fehler: string | null }> {
+  return rufeExport(sb, "status");
+}
+
+/**
+ * Was steht drueben? — `aktion: "bestand"`, liest nur.
+ *
+ * ⚠ ⚠  DER KNOPF, DER BIS ZUM 11.09.2026 FEHLTE, OBWOHL DIE AKTION SEIT
+ *       TAGEN GEBAUT WAR. An einem einzigen Tag war die Frage „was steht
+ *       drueben?" dreimal offen — bei den Aufstellungszeilen ohne Nummer,
+ *       bei `faellt_weg` und beim Personenbestand — und dreimal war die
+ *       Antwort nur ueber ein Terminal zu bekommen.
+ *
+ *       **„Aktion ohne Knopf" ist nicht von sich aus ein Defekt** — fuenf
+ *       der sechs sind einmalige Diagnosewerkzeuge, und ein Werkzeug, das
+ *       einmal im Quartal laeuft, braucht keine Bedienung. `bestand` ist
+ *       die Ausnahme: er beantwortet eine Frage, die im Betrieb entsteht.
+ *
+ * ⚠  ER KENNT NUR SPIELE. `cc_route_bestand()` laeuft ueber
+ *    `cc_abgleich_kandidaten()`, also ueber `fch_spiel`-Beitraege —
+ *    Personen stehen nicht darin. Wer ihn fuer eine Personenfrage nimmt,
+ *    bekommt eine richtige Antwort auf eine andere Frage.
+ */
+export async function holeBestand(
+  sb: Sb,
+): Promise<{ daten: Record<string, unknown> | null; fehler: string | null }> {
+  return rufeExport(sb, "bestand");
+}
+
