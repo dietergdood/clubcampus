@@ -1186,6 +1186,14 @@ async function laufeProbe(
     zeilen_mit_zweitem_namen: 0,
     zeilen_ohne_ersatzkennung: 0, zeilen_ohne_ersatzname: 0,
   };
+  /* ⚠ Gezaehlt wird an der GEBAUTEN Zeile, nicht an der Quelle — sonst
+     misst die Zahl, was wir haetten senden koennen, statt was wir
+     gesendet haben. Dieselbe Regel wie bei `zaehleVerlaufNamen`, die aus
+     demselben Grund nicht den Ausgabetext zerlegt. */
+  const verlaufZahlen = {
+    mit_nummer: 0, mit_ein_nummer: 0, mit_zusatz: 0,
+    zusatz_eigentor: 0, zusatz_penalty: 0,
+  };
 
   for (const s of eigene) {
     const roh = proSpiel.get(String(s.id)) ?? [];
@@ -1268,6 +1276,17 @@ async function laufeProbe(
   }
 
   const verlaufZeilen = gebaut.reduce((n, s) => n + s.verlauf.length, 0);
+  for (const s of gebaut) {
+    for (const z of s.verlauf) {
+      if (z.nummer != null) verlaufZahlen.mit_nummer += 1;
+      if (z.ein_nummer != null) verlaufZahlen.mit_ein_nummer += 1;
+      if (z.ereignis_zusatz) {
+        verlaufZahlen.mit_zusatz += 1;
+        if (z.ereignis_zusatz === "eigentor") verlaufZahlen.zusatz_eigentor += 1;
+        else verlaufZahlen.zusatz_penalty += 1;
+      }
+    }
+  }
   /* ⚠ Wie viele Verlaufszeilen eine Personennummer tragen — die Antwort
      auf „reicht das der Website fuer eine Statistik?". Immer da, auch
      als Null; und die Gegenzahl steht daneben, weil eine einzelne Zahl
@@ -1333,6 +1352,26 @@ async function laufeProbe(
          aufloest. Faellt sie gegen null, loest er wieder auf. */
       ueber_nummer_aufgeloest: brueckeZaehler.ueber_nummer_aufgeloest,
       verlauf_mit_person: verlaufMitPerson,
+      /* ⚠ ⚠  WIE VIELE ZEILEN DIE DREI NEUEN FELDER TRAGEN — damit die
+         Website-Seite GEZIELT nachsehen kann statt zu suchen.
+
+         Sie sagen, was GESENDET wurde. Ob es drueben ankommt, sagt keine
+         dieser Zahlen: `update_field()` verwirft unbekannte Unterfelder
+         still, und `unbeachtete_felder` sieht nur die oberste Ebene —
+         genau der Fall, an dem `ein_nummer` seit 0.9.7 vier Tage lang
+         gescheitert ist.
+
+         ⚠ Leere Zeilen sind bei den Nummern KEIN Fehler: bei
+         Gegnerereignissen trug am 10.09.2026 nur rund jede sechste eine
+         Nummer (Tore 40 von 244, Wechsel 24 von 214). Das ist
+         Altbestand — bis zum 10.09. filterte ein `eigen ?` die Nummer
+         bei Gegnern weg —, und er fuellt sich mit dem rollenden
+         Nachlauf. */
+      verlauf_mit_nummer: verlaufZahlen.mit_nummer,
+      verlauf_mit_ein_nummer: verlaufZahlen.mit_ein_nummer,
+      verlauf_mit_zusatz: verlaufZahlen.mit_zusatz,
+      verlauf_zusatz_eigentor: verlaufZahlen.zusatz_eigentor,
+      verlauf_zusatz_penalty: verlaufZahlen.zusatz_penalty,
       verlauf_zeilen_gesamt: verlaufZeilen,
       nicht_zu_veroeffentlichen: zurueckgehalten,
       verlauf_zeilen: verlaufZeilen,

@@ -4,7 +4,7 @@
  *
  * Plugin Name: ClubCampus Export
  * Description: Nimmt Spielplan, Verlauf und Ranglisten aus ClubCampus entgegen.
- * Version:     0.9.13
+ * Version:     0.9.14
  *
  * ⚠ ⚠  STAND 10.09.2026: DIESE DATEI **IST** DER EMPFAENGER  ⚠ ⚠
  *
@@ -353,7 +353,7 @@ const CC_ROUTE      = 'clubcampus/v1';
    einander), `autoload` wird nach dem Schreiben geprueft und notfalls
    berichtigt, `/status` nennt Empfaenger, Version, Metaschluessel und die
    Team-Zuordnung. */
-const CC_VERSION    = '0.9.13';
+const CC_VERSION    = '0.9.14';
 const CC_TYP_SPIEL  = 'fch_spiel';
 const CC_TYP_TEAM   = 'fch_team';
 /* ⚠ DER SCHLUESSEL, AN DEM DIE GANZE ZUORDNUNG HAENGT — Meta am
@@ -564,6 +564,16 @@ const CC_VERLAUF_FELDER = array(
 	   „FC Wagen RJ" statt „Nr. 10". Entscheid B verbietet Name und
 	   Personennummer, nicht die Nummer. */
 	'nummer',
+	/* ⚠ ⚠ Seit 0.9.13: `eigentor` · `penalty` · leer. DAS FELD, AN DEM
+	   DER ZWISCHENSTAND HAENGT — ein Eigentor zaehlt fuer den Gegner,
+	   und `art` steht dort auf `tor`. Bis dieses Feld GEFUELLT ankommt,
+	   liest die Spielseite das Wort „Eigentor" aus `text`; wer den
+	   Zusatz vorher aus dem Text nimmt, verschiebt den Stand um zwei
+	   Tore — ohne Fehlermeldung.
+
+	   ⚠ Drueben `f_s_v_zusatz`, ein `select` mit `allow_null`. Es kennt
+	   genau zwei Werte; was hier nicht passt, kommt als leerer Text. */
+	'ereignis_zusatz',
 );
 
 /**

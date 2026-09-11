@@ -72,6 +72,18 @@ export interface WpVerlaufZeile {
    * nicht die Nummer: sie ist eine Beschriftung auf einem Trikot.
    */
   nummer: number | null;
+  /**
+   * `eigentor` · `penalty` · `""` — drüben ein `select` mit `allow_null`.
+   *
+   * ⚠ ⚠ DIE EINZIGE ANGABE, DIE BEIM EIGENTOR NICHT DOPPELT IST. `art`
+   * steht dort auf `tor`, und **der Zwischenstand der Spielseite hängt
+   * daran**: ein Eigentor zählt für den Gegner.
+   *
+   * ⚠ Bei „2. Verwarnung" ist es umgekehrt — `art` trägt bereits
+   * `gelbrot` und das Theme zeigt ein eigenes Symbol. Deshalb bekommt sie
+   * **bewusst keinen Zusatz**: er wäre eine Wiederholung.
+   */
+  ereignis_zusatz: "eigentor" | "penalty" | "";
   art: WpVerlaufArt;
   seite: "heim" | "gast";
   text: string;
@@ -303,6 +315,42 @@ export function bildeStatus(sfvStatus: number | null): StatusEntscheid {
  *
  * `null` heisst: diese Zeile gehört nicht in den Verlauf.
  */
+/**
+ * Torzusatz — `eigentor` · `penalty` · `""`.
+ *
+ * ⚠ ⚠  ÜBER DIE KENNZAHL, NIE ÜBER DEN TEXT. `subtyp` trägt den Klartext
+ * des Verbands und wäre eine Schreibweise; `subtyp_id` ist das Merkmal.
+ * Gemessen in `sfv_stammdaten.json` am 11.09.2026:
+ *
+ *   2  Eigentor      4  Penalty
+ *   1  Kopftor       3  Freistosstor      0  „-"
+ *
+ * ⚠ Die Liste hat **100 Einträge**, nicht vier. Was hier nicht steht,
+ * ergibt bewusst `""` — das Theme kennt genau zwei Werte, und ein
+ * dritter fiele dort in ein `select` mit festen Optionen.
+ *
+ * ⚠ ⚠  UND ER IST NICHT DIE WIEDERHOLUNG EINER ANDEREN ANGABE.
+ * `art` steht beim Eigentor auf `tor` — **dass es eines war, steht
+ * nirgends sonst als im Fliesstext.** Genau deshalb liest die Spielseite
+ * heute das Wort „Eigentor" aus `text`, um den Zwischenstand auf die
+ * andere Mannschaft zu drehen.
+ *
+ * ⚠ Bei `2. Verwarnung` ist es umgekehrt: `art` trägt bereits `gelbrot`,
+ * und das Theme stellt es als eigenes Symbol dar. Ein Zusatz wäre dort
+ * eine Doppelung — deshalb bekommt er **bewusst keinen Eintrag**.
+ */
+export const SUBTYP_EIGENTOR = 2;
+export const SUBTYP_PENALTY = 4;
+
+export function torZusatz(
+  typId: number, subtypId: number | null,
+): "eigentor" | "penalty" | "" {
+  if (typId !== TYP_TOR) return "";
+  if (subtypId === SUBTYP_EIGENTOR) return "eigentor";
+  if (subtypId === SUBTYP_PENALTY) return "penalty";
+  return "";
+}
+
 export function verlaufArt(typId: number, subtypId: number | null): WpVerlaufArt | null {
   if (typId === TYP_TOR) return "tor";
   if (typId === TYP_VERWARNUNG) return "gelb";
@@ -433,6 +481,24 @@ export function bildeVerlauf(
          Gegneraufstellung. **Eine Nummer ist eine Beschriftung auf einem
          Trikot, kein Personendatum.** */
       nummer: e.rueckennr ?? null,
+      /* ⚠ ⚠  DAS FELD, DAS DEN ZWISCHENSTAND TRÄGT — seit 0.9.13.
+
+         Die Spielseite dreht den Stand beim Eigentor auf die andere
+         Mannschaft. Bis heute las sie dafür das WORT „Eigentor" aus
+         `text` — eine Kopplung über einen Anzeigetext, und zwar auf der
+         Gegenseite, wo unsere Prüfkette sie nicht sehen kann.
+
+         ⚠ SIE FÄLLT WEITERHIN AUF DEN TEXT ZURÜCK, solange dieses Feld
+         leer ankommt. **`text` bleibt deshalb unverändert, bis der
+         Theme-Chat bestätigt hat, dass `ereignis_zusatz` GEFÜLLT
+         ankommt** — nicht gesendet, angekommen. Wer den Zusatz vorher
+         aus dem Text nimmt, verschiebt den Stand um zwei Tore, ohne
+         Fehlermeldung.
+
+         ⚠ Genau der Unterschied, den `ein_nummer` seit 0.9.7 gezeigt
+         hat: `update_field()` verwirft unbekannte Unterfelder still, und
+         `unbeachtete_felder` sieht nur die oberste Ebene. */
+      ereignis_zusatz: torZusatz(e.typ_id, e.subtyp_id ?? null),
       /* ⚠ ⚠  EBENFALLS BEIDE SEITEN, seit dem 11.09.2026.
 
          Hier stand: „nur bei uns — die Nummer steht beim Gegner an der

@@ -16,7 +16,7 @@ import { describe, it, expect } from "vitest";
 import {
   wpDatum, wpZeit, zerlegeResultat, bildeStatus,
   verlaufArt, verlaufMinute, bildeVerlauf, bildeSpiel, zaehleVerlaufNamen,
-  TYP_WECHSEL, TYP_ASSIST, SUBTYP_ZWEITE_VERWARNUNG,
+  TYP_WECHSEL, TYP_ASSIST, SUBTYP_ZWEITE_VERWARNUNG, torZusatz,
   hatDoppelabstand, sammleMarken, markeSchluessel, zaehleWechselWiderspruch,
   leererWechselWiderspruch,
   spielerAnzeige, rolleAus, ROLLE_ERSATZ_ID, ROLLE_KEIN_EINSATZ_ID,
@@ -1360,5 +1360,83 @@ describe("bildeVerlauf — ein_nummer", () => {
     const [z] = bildeVerlauf([wechsel({ typ_id: 1, ein_rueckennr: 21 })],
       true, new Map(), "FC Herrliberg");
     expect(z.ein_nummer).toBeNull();
+  });
+});
+describe("torZusatz — das Feld, an dem der Zwischenstand haengt", () => {
+  /* ⚠ ⚠ UEBER DIE KENNZAHL, NIE UEBER DEN TEXT. `subtyp` traegt den
+     Klartext des Verbands und waere eine Schreibweise; `subtyp_id` ist
+     das Merkmal. Gemessen in sfv_stammdaten.json: 2 Eigentor, 4 Penalty
+     — aus einer Liste mit 100 Eintraegen. */
+  it("erkennt ein Eigentor an subtyp_id 2", () => {
+    expect(torZusatz(TYP_TOR, 2)).toBe("eigentor");
+  });
+
+  it("erkennt einen Penalty an subtyp_id 4", () => {
+    expect(torZusatz(TYP_TOR, 4)).toBe("penalty");
+  });
+
+  it("⚠ ein Kopftor ist kein Zusatz — das Theme kennt zwei Werte", () => {
+    /* Die Liste hat 100 Eintraege; was hier nicht steht, ergibt bewusst
+       leer. Ein dritter Wert fiele drueben in ein select mit festen
+       Optionen. */
+    expect(torZusatz(TYP_TOR, 1)).toBe("");
+    expect(torZusatz(TYP_TOR, 3)).toBe("");
+    expect(torZusatz(TYP_TOR, 0)).toBe("");
+    expect(torZusatz(TYP_TOR, null)).toBe("");
+  });
+
+  it("⚠⚠ eine VERWARNUNG bekommt nie einen Zusatz", () => {
+    /* Auch nicht bei subtyp_id 2 — dort bedeutet die Zahl etwas anderes.
+       Der Zusatz gilt ausschliesslich fuer Tore. */
+    expect(torZusatz(TYP_VERWARNUNG, 2)).toBe("");
+    expect(torZusatz(TYP_AUSSCHLUSS, 4)).toBe("");
+    expect(torZusatz(TYP_WECHSEL, 2)).toBe("");
+  });
+
+  it("⚠ die 2. Verwarnung bekommt BEWUSST keinen", () => {
+    /* `art` traegt bereits gelbrot und das Theme zeigt ein eigenes
+       Symbol — ein Zusatz waere eine Wiederholung. Beim Eigentor ist es
+       umgekehrt: `art` steht auf tor, und dass es eines war, steht
+       nirgends sonst. */
+    expect(torZusatz(TYP_AUSSCHLUSS, SUBTYP_ZWEITE_VERWARNUNG)).toBe("");
+  });
+});
+
+describe("bildeVerlauf — die drei Felder fuer die Website", () => {
+  /* Der globale e()-Helfer statt eines lokalen: er wird gegen den echten
+     Typ geprueft, und genau das ist sein Zweck. */
+  const ev = (f: Partial<AnzeigeEreignis>) => e({
+    ist_eigener: true, sfv_person_id: 222, ...f,
+  });
+  it("ein Eigentor traegt den Zusatz UND weiterhin den Text", () => {
+    /* ⚠ Der Text bleibt, bis der Theme-Chat bestaetigt hat, dass das
+       Feld GEFUELLT ankommt. Die Spielseite faellt bis dahin darauf
+       zurueck; wer ihn vorher entfernt, verschiebt den Stand um zwei
+       Tore — ohne Fehlermeldung. */
+    const [z] = bildeVerlauf(
+      [ev({ typ_id: TYP_TOR, subtyp_id: 2, subtyp: "Eigentor", rueckennr: 10 })],
+      true, new Map(), "FC Herrliberg",
+    );
+    expect(z.ereignis_zusatz).toBe("eigentor");
+    expect(z.text).toContain("Eigentor");
+    expect(z.nummer).toBe(10);
+  });
+
+  it("ein gewoehnliches Tor traegt einen leeren Zusatz", () => {
+    const [z] = bildeVerlauf(
+      [ev({ typ_id: TYP_TOR, subtyp_id: 0, subtyp: "-", rueckennr: 7 })],
+      true, new Map(), "FC Herrliberg",
+    );
+    expect(z.ereignis_zusatz).toBe("");
+    expect(z.nummer).toBe(7);
+    expect(z.ein_nummer).toBeNull();
+  });
+
+  it("ein Wechsel traegt beide Nummern und keinen Zusatz", () => {
+    const [z] = bildeVerlauf([ev({ typ_id: TYP_WECHSEL, rueckennr: 5, ein_rueckennr: 21 })],
+      true, new Map(), "FC Herrliberg");
+    expect(z.nummer).toBe(5);
+    expect(z.ein_nummer).toBe(21);
+    expect(z.ereignis_zusatz).toBe("");
   });
 });
