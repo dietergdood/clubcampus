@@ -178,6 +178,34 @@ function nichtDurchgereicht(
     .sort();
 }
 
+/**
+ * Eine Fehlermeldung, die NIE leer ist.
+ *
+ * ⚠ ⚠  ANLASS, 12.09.2026: die Karte zeigte
+ *
+ *        Kandidaten mit Team: Zählprobe nicht möglich —
+ *
+ *       und danach nichts. **Der Satz endete mitten drin, weil
+ *       `error.message` eine leere Zeichenkette war** — bei
+ *       `head: true` liefert PostgREST keinen Körper, und dann hat der
+ *       Fehler keine Meldung, nur einen Code.
+ *
+ *       `?? ` fängt das nicht: es prüft auf `null`/`undefined`, nicht auf
+ *       leer. Eine Meldung, die ihren Grund verschweigt, ist schlimmer als
+ *       eine technische — man sucht dann die Stelle, an der der Text
+ *       abgeschnitten wird, statt den Fehler.
+ *
+ * ⚠  Deshalb der Reihe nach: `message`, sonst `code`, sonst `details` oder
+ *    `hint`, sonst das rohe Objekt als JSON. **Lieber unschön als leer.**
+ */
+function meldung(e: unknown): string {
+  const f = e as { message?: string; code?: string; details?: string; hint?: string };
+  const teile = [f?.message, f?.code, f?.details, f?.hint]
+    .map((x) => (x ?? "").toString().trim()).filter((x) => x !== "");
+  if (teile.length) return teile.join(" · ");
+  try { return JSON.stringify(e); } catch { return String(e); }
+}
+
 async function alleSeiten<T>(
   wieviele: number,
   seite: (von: number, bis: number) => PromiseLike<{ data: unknown; error: unknown }>,
@@ -192,7 +220,7 @@ async function alleSeiten<T>(
   for (let s = 0; s < 200; s++) {
     const r = await seite(s * SEITE, s * SEITE + SEITE - 1);
     if (r.error) {
-      throw new Error(`${was} nicht lesbar: ${(r.error as { message?: string }).message}`);
+      throw new Error(`${was} nicht lesbar: ${meldung(r.error)}`);
     }
     const teil = (r.data ?? []) as T[];
     raus.push(...teil);
@@ -200,8 +228,7 @@ async function alleSeiten<T>(
   }
   const z = await zaehle();
   if (z.error) {
-    throw new Error(`${was}: Zählprobe nicht möglich — `
-      + `${(z.error as { message?: string }).message}`);
+    throw new Error(`${was}: Zählprobe nicht möglich — ${meldung(z.error)}`);
   }
   if (z.count !== null && z.count !== raus.length) {
     throw new Error(`${was}: ${raus.length} Zeilen gelesen, ${z.count} vorhanden `
@@ -236,13 +263,16 @@ async function alleSeiten<T>(
  *    Auskunft, die `laeuft drueben mein Deploy?` beantworten koennte,
  *    beantwortet sie nicht mehr.
  *
+ *    48  12.09.2026  Zaehlabfrage der Kandidaten mit !inner-Embed;
+ *                    meldung() nie leer; ein Teilausfall der
+ *                    Personen-Vorschau reisst die Auskunft nicht mehr mit
  *    47  12.09.2026  Weg B: `aufstellung` wird weggelassen statt geleert;
  *                    `spiele_ohne_aufstellung` statt `..._geleert`;
  *                    `merkmale_nutzbar` durchgereicht
  *    46  12.09.2026  Durchreiche von personen/teams/unterfelder/
  *                    geschwister, nichtDurchgereicht(), diese Angabe
  */
-const FUNCTION_FASSUNG = 47;
+const FUNCTION_FASSUNG = 48;
 
 const AKTIONEN = ["probe", "export", "bestand", "status", "ranglisten"];
 
@@ -947,7 +977,23 @@ async function holeKandidaten(
     (von, bis) => db.from("personen").select(SPALTEN)
       .eq("verein_id", vereinId).eq("mitglieder.aktiv", true)
       .eq("mitglieder.kader.aktiv", true).order("id").range(von, bis),
-    () => db.from("personen").select("id", { count: "exact", head: true })
+    /* ⚠ ⚠  DER EMBED GEHOERT IN DIE ZAEHLABFRAGE, NICHT NUR DIE FILTER.
+       Hier stand `select("id")` mit denselben `.eq()` — und
+       `mitglieder.aktiv` ist ohne den Embed fuer PostgREST kein Feld.
+       Die Zaehlabfrage scheiterte, `alleSeiten()` warf, und **die ganze
+       Bestandsauskunft fiel aus**: „Kandidaten mit Team: Zaehlprobe nicht
+       moeglich —", ohne Grund dahinter und ohne Rohantwort.
+
+       ⚠ Der Satz stand als Regel im Kopf von `alleSeiten()`, wortwoertlich
+       mit `!inner`-Embed als Beispiel — und ist in derselben Datei
+       verletzt worden. **Die Filter wurden kopiert, der Embed nicht.**
+
+       ⚠ Die Spalten des Embeds sind hier schmaler als in SPALTEN: gezaehlt
+       werden Personen, nicht Kaderzeilen. Die MENGE muss uebereinstimmen,
+       nicht die Spaltenliste. */
+    () => db.from("personen")
+      .select("id, mitglieder!inner(id, kader!inner(id))",
+              { count: "exact", head: true })
       .eq("verein_id", vereinId).eq("mitglieder.aktiv", true)
       .eq("mitglieder.kader.aktiv", true),
     "Kandidaten mit Team",
@@ -1080,7 +1126,31 @@ async function holeBestand(
     merkmale_nutzbar?: Record<string, number>;
   };
   let abgleich = null;
+  /* ⚠ ⚠  EINE ZAEHLPROBE DARF NICHT DIE AUSKUNFT MITREISSEN, DIE SIE
+     PRUEFEN SOLL. (Didi, 12.09.2026 — und es ist mein eigener Satz vom
+     Mittag, hier als Fall.)
+
+     Am 12.09.2026 scheiterte die Zaehlabfrage der Kandidaten (der Embed
+     fehlte, siehe holeKandidaten). `alleSeiten()` warf, der Wurf lief bis
+     nach oben durch, und die Karte zeigte EINE Zeile:
+
+       Kandidaten mit Team: Zaehlprobe nicht moeglich —
+
+     Nichts davor, nichts danach. Keine fuenf Gruppen, keine Spielzeilen,
+     keine Rohantwort — **weil die Kachel bei einem Fehler nur die Meldung
+     rendert und `roh` nie setzt.** Ein Teilbefund hat die ganze Auskunft
+     gekostet, und mit ihr die Moeglichkeit, ihn einzuordnen.
+
+     ⚠ Das Werfen selbst bleibt richtig: eine unvollstaendige Liste sieht
+     aus wie eine vollstaendige. Falsch war nur die REICHWEITE.
+
+     ⚠ ⚠  UND NICHT VERSCHLUCKT: der Fehler kommt als eigenes Feld zurueck
+     und steht in der Karte. Ein leerer `catch` machte aus dem Ausfall eine
+     Datenlage — „keine Personen-Vorschau" saehe dann aus wie „es gibt
+     nichts zu zeigen". */
+  let abgleichFehler: string | null = null;
   if (Array.isArray(wpPers.merkmale)) {
+   try {
     const lage = await holeKandidaten(db, vereinId);
     abgleich = baueAbgleich(lage.kandidaten, wpPers.merkmale);
     /* ⚠ ⚠  WIE VIELE PERSONEN DRUEBEN JE ACHSE UEBERHAUPT ETWAS TRAGEN —
@@ -1104,6 +1174,12 @@ async function holeBestand(
       lage.kandidaten.map((k) => k.name_hash).filter((x): x is string => !!x),
     );
     abgleich.einordnung = ordneEin(abgleich.ohne_uns_liste, lage.gefiltert, gesendet);
+   } catch (e) {
+    /* ⚠ Gebunden und benannt, nicht gezaehlt. Die Zahl allein saehe aus
+       wie „ein Fehler", und gesucht wuerde ueberall. */
+    abgleich = null;
+    abgleichFehler = e instanceof Error ? e.message : String(e);
+   }
   }
 
   /* ⚠ ⚠ DIE DURCHREICHE, UND SIE HAT EINEN TAG GEFEHLT.
@@ -1131,6 +1207,9 @@ async function holeBestand(
        Deploy?` von `antwortet drueben etwas Altes?` nicht zu trennen. */
     function_fassung: FUNCTION_FASSUNG,
     ...(abgleich ? { abgleich } : {}),
+    /* ⚠ Nur wenn es einen gibt — sonst bliebe ein `null` stehen und waere
+       von „nicht gefragt" nicht zu unterscheiden. */
+    ...(abgleichFehler ? { abgleich_fehler: abgleichFehler } : {}),
     ...(wp.personen !== undefined ? { personen: wp.personen } : {}),
     ...(wp.teams !== undefined ? { teams: wp.teams } : {}),
     ...(wp.geschwister !== undefined ? { geschwister: wp.geschwister } : {}),

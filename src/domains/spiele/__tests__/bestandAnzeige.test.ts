@@ -75,6 +75,45 @@ describe("deuteBestand — die Vorschau auf den Personenlauf", () => {
   });
 });
 
+describe("⚠ die Vorschau scheitert — und reisst die Karte NICHT mit", () => {
+  /* ⚠ ⚠ ANLASS, 12.09.2026: die Zaehlabfrage der Kandidaten scheiterte
+     (der `!inner`-Embed fehlte), `alleSeiten()` warf, und die Karte zeigte
+     genau EINE Zeile: „Kandidaten mit Team: Zählprobe nicht möglich —".
+     Nichts davor, nichts danach, keine Rohantwort.
+
+     Eine Zählprobe, die anschlägt, ist richtig — aber sie darf nicht die
+     Auskunft mitreissen, die sie prüfen soll. */
+  const GESCHEITERT = {
+    ...NEU,
+    abgleich_fehler: "Kandidaten mit Team: Zählprobe nicht möglich — PGRST100",
+  };
+
+  it("nennt den Abschnitt, den Grund, und dass der Rest gilt", () => {
+    const zeilen = deuteBestand(GESCHEITERT).join(" | ");
+    expect(zeilen).toMatch(/Vorschau auf den Personenlauf ist gescheitert/);
+    expect(zeilen).toMatch(/PGRST100/);
+    /* ⚠ Die zweite Zeile ist die wichtigere: ohne sie liest jemand den
+       ganzen Rest der Karte als fragwürdig. */
+    expect(zeilen).toMatch(/Übrige in dieser Karte ist davon unberührt/);
+  });
+
+  it("⚠ und der Rest der Karte steht weiterhin da", () => {
+    const zeilen = deuteBestand(GESCHEITERT).join(" | ");
+    /* Genau das war der Schaden: EINE Zeile statt der ganzen Auskunft. */
+    expect(deuteBestand(GESCHEITERT).length).toBeGreaterThan(3);
+    expect(zeilen).toMatch(/Personen/);
+  });
+
+  it("⚠ gescheitert ist NICHT dasselbe wie eine alte Gegenseite", () => {
+    /* Drei Lagen, und die Karte darf sie nicht zusammenlegen:
+       gescheitert · nicht geliefert (Fassung < 0.9.20) · gerechnet. */
+    const a = deuteBestand(GESCHEITERT).join(" | ");
+    const b = deuteBestand(NEU).join(" | ");
+    expect(a).not.toMatch(/Fassung vor 0\.9\.20/);
+    expect(b).not.toMatch(/ist gescheitert/);
+  });
+});
+
 describe("deuteBestand — drei Zustände, nicht zwei", () => {
   it("⚠ eine ALTE Antwort ergibt „kenne ich nicht\", nicht null", () => {
     const zeilen = deuteBestand(ALT).join(" | ");

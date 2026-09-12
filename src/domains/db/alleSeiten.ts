@@ -39,8 +39,24 @@ const HOECHSTENS_SEITEN = 200;
 type Antwort = { data: unknown; error: unknown };
 type Zaehlung = { count: number | null; error: unknown };
 
+/**
+ * Eine Fehlermeldung, die NIE leer ist.
+ *
+ * ⚠ ⚠ `?? ` prüft auf `null`/`undefined`, **nicht auf leer** — und bei
+ * `head: true` liefert PostgREST keinen Körper, der Fehler hat dann nur
+ * einen Code. Am 12.09.2026 zeigte die Karte deshalb „Zählprobe nicht
+ * möglich —" und danach nichts: der Satz endete mitten drin, und gesucht
+ * wurde die Stelle, an der der Text abgeschnitten wird.
+ *
+ * **Eine Meldung, die ihren Grund verschweigt, schickt den Verdacht in die
+ * falsche Richtung.** Lieber unschön als leer.
+ */
 function meldung(e: unknown): string {
-  return (e as { message?: string })?.message ?? String(e);
+  const f = e as { message?: string; code?: string; details?: string; hint?: string };
+  const teile = [f?.message, f?.code, f?.details, f?.hint]
+    .map((x) => (x ?? "").toString().trim()).filter((x) => x !== "");
+  if (teile.length) return teile.join(" · ");
+  try { return JSON.stringify(e); } catch { return String(e); }
 }
 
 /**

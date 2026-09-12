@@ -79,6 +79,19 @@ export function deuteBestand(d: Record<string, unknown>): string[] {
      an zwei Tagen dieselbe Unterscheidung. */
   if (d.abgleich) {
     for (const zeile of deuteAbgleich(d.abgleich as AbgleichErgebnis)) zeilen.push(zeile);
+  } else if (d.abgleich_fehler) {
+    /* ⚠ ⚠ DRITTER FALL, und bis zum 12.09.2026 gab es ihn nicht: die
+       Vorschau ist GESCHEITERT. Vorher nahm der Wurf die ganze Auskunft
+       mit — die Karte zeigte eine Zeile und sonst nichts, auch keine
+       Rohantwort.
+
+       ⚠ Jetzt fällt nur dieser Abschnitt aus, und er sagt es. Das ist der
+       Unterschied zwischen einer Zählprobe, die anschlägt, und einer, die
+       die Auskunft mitreisst, die sie prüfen soll. */
+    zeilen.push(`⚠ Die Vorschau auf den Personenlauf ist gescheitert: `
+      + `${d.abgleich_fehler}`);
+    zeilen.push("   Alles Übrige in dieser Karte ist davon unberührt — es kommt "
+      + "aus anderen Abfragen.");
   } else if ("personen" in d) {
     zeilen.push("⚠ Keine Vorschau auf den Personenlauf — die Antwort trägt keine "
       + "Vergleichsmerkmale. Drüben läuft eine Fassung vor 0.9.20.");

@@ -12633,3 +12633,86 @@ Zahlen liegen jetzt vor, die Karte zeigt fünf Gruppen mit Bezugsgrösse,
 und **genau jetzt sieht ein Bau am plausibelsten aus.** Eine Rechnung auf
 zwei toten Achsen ist aber nicht dadurch belastbar, dass sie ordentlich
 dargestellt wird.
+
+### ⚠⚠ EINE ZÄHLPROBE, DIE ANSCHLÄGT, DARF NICHT DIE AUSKUNFT MITREISSEN, DIE SIE PRÜFEN SOLL
+
+12.09.2026 abends. Die Karte „Bestand drüben" zeigte **eine Zeile**:
+
+```
+Kandidaten mit Team: Zählprobe nicht möglich —
+```
+
+Nichts davor, nichts danach. Keine fünf Gruppen, keine Personenzahlen,
+keine Spielzeilen, **keine Rohantwort** — und der Satz endete mitten drin.
+
+**Drei Defekte in einer Zeile, und jeder einzeln behebbar:**
+
+#### 1 · Der Embed fehlte in der Zählabfrage — und die Regel dagegen stand daneben
+
+```ts
+.select(SPALTEN)                       // "… mitglieder!inner(id, kader!inner(id, aktiv))"
+  .eq("mitglieder.aktiv", true)        // ✅ auflösbar, der Embed ist da
+
+.select("id", { count: "exact", head: true })
+  .eq("mitglieder.aktiv", true)        // ⚠ kein Embed — für PostgREST kein Feld
+```
+
+⚠ ⚠ **Der Satz stand wörtlich im Kopf von `alleSeiten()`, mit `!inner` als
+Beispiel** — *„`zaehle` MUSS JEDEN FILTER DER SEITENABFRAGE TRAGEN — auch
+einen `!inner`-Embed"* — und ist **in derselben Datei** verletzt worden.
+Die `.eq()` wurden kopiert, der Embed nicht.
+
+> **Ein Kommentar, der beschreibt, was danebensteht, ist keine Prüfung** —
+> und hier war das Danebenstehende der Aufrufer zwanzig Zeilen tiefer.
+
+#### 2 · Die Meldung endete leer, weil `??` nicht auf leer prüft
+
+```ts
+`… Zählprobe nicht möglich — ${(z.error as { message?: string }).message}`
+```
+
+Bei `head: true` liefert PostgREST **keinen Körper**. Der Fehler trägt dann
+einen Code und keine Meldung — `message` ist `""`, und `??` fängt das
+nicht: es prüft `null`/`undefined`.
+
+⚠ **Die Folge ist teurer als der fehlende Text: man sucht die Stelle, an
+der abgeschnitten wird, statt den Fehler.** Genau diese Frage kam zurück —
+*„fehlt der Grund in der Meldung, oder schneidet die Kachel ihn ab?"*
+Gemessen: die Kachel kürzt nicht (`pre-wrap`, `break-word`).
+
+`meldung()` nimmt seither `message`, sonst `code`, sonst `details`/`hint`,
+sonst das rohe Objekt als JSON. **Lieber unschön als leer.** In beiden
+Fassungen — die src-Fassung hatte denselben Mangel.
+
+#### 3 · Und der Wurf nahm die ganze Auskunft mit
+
+`alleSeiten()` warf, der Wurf lief bis nach oben durch, die Kachel rendert
+bei einem Fehler **nur die Meldung** und setzt `roh` nie. **Ein
+Teilbefund hat die ganze Auskunft gekostet — und mit ihr die Möglichkeit,
+ihn einzuordnen.**
+
+⚠ **Das Werfen bleibt richtig.** Eine unvollständige Liste sieht aus wie
+eine vollständige; daran wird nicht gerührt. Falsch war die
+**Reichweite**.
+
+Die Personen-Vorschau läuft seither in ihrem eigenen `try` und meldet
+`abgleich_fehler`. Die Karte kennt damit **drei** Lagen statt zwei:
+
+| | heisst |
+|---|---|
+| `abgleich` da | gerechnet |
+| `abgleich_fehler` | ⚠ **gescheitert** — mit Grund, und dem Satz, dass der Rest der Karte gilt |
+| beides fehlt, `personen` da | die Gegenseite ist älter als 0.9.20 — **nicht gefragt** |
+
+⚠ **Der zweite Satz ist der wichtigere:** *„Alles Übrige in dieser Karte
+ist davon unberührt."* Ohne ihn liest jemand die ganze Auskunft als
+fragwürdig — und das ist derselbe Schaden wie vorher, nur leiser.
+
+⚠ **Und kein leerer `catch`:** der Fehler kommt als eigenes Feld zurück und
+steht in der Karte. Verschluckt sähe „keine Personen-Vorschau" aus wie „es
+gibt nichts zu zeigen".
+
+Gegengeprobt in beide Richtungen: den Teilausfall nicht zeigen → zwei rote
+Fälle; ihn mit „alte Gegenseite" zusammenlegen → dieselben zwei. Und ein
+Fall hält fest, dass die Karte **mehr als drei Zeilen** hat — genau das war
+der Schaden.
