@@ -12716,3 +12716,154 @@ Gegengeprobt in beide Richtungen: den Teilausfall nicht zeigen → zwei rote
 Fälle; ihn mit „alte Gegenseite" zusammenlegen → dieselben zwei. Und ein
 Fall hält fest, dass die Karte **mehr als drei Zeilen** hat — genau das war
 der Schaden.
+
+### ⚠⚠ EINE TREFFERZAHL BRAUCHT BEIDE BEZUGSGRÖSSEN — mit einer zeigt sie immer auf die andere Seite
+
+12.09.2026 abends, aus der ersten vollständigen Karte:
+
+```
+19 Personen würden gesendet
+ 0 über die E-Mail (drüben tragen 88 von 129)
+```
+
+**So gelesen: beide Seiten haben Hashes, keiner trifft** — also läuft die
+Bildungsvorschrift auseinander, Salz, Kodierung, Kleinschreibung. Eine
+plausible Spur, und eine teure.
+
+⚠ **Nur sagte die Zeile nichts darüber, wie viele der 19 einen Hash
+tragen.** Trügen sie null, wäre `treffer_email: 0` wieder „die Achse trägt
+nichts" — diesmal auf **unserer** Seite, und jede Suche nach dem Rezept
+wäre vergeblich, bevor sie beginnt.
+
+> **Eine halbe Auskunft über einen Vergleich zeigt immer auf die andere
+> Seite.**
+
+Dieselbe Lehre wie *„wer eine Herkunftsangabe verlangt, schuldet sie
+selbst"* — nur für Zahlen statt für Fassungen. Seit 0.9.24 nannte die Karte
+`drueben_nutzbar`; `unsere_nutzbar` fehlte, und damit war die Auskunft
+gerade an der Stelle einseitig, an der sie einen Vergleich beschreibt.
+
+Die Zeile nennt seither beide und sagt es, wenn **eine** Seite leer ist:
+
+```
+0 über die E-Mail — ⚠ wir 0 von 19, drüben 88 von 129: eine Seite trägt
+                     nichts, die Null sagt hier nichts über Treffer
+```
+
+⚠ **Und die Bildungsvorschrift ist gemessen, nicht vermutet:**
+
+| | |
+|---|---|
+| bei uns | `(z.email ?? "").trim().toLowerCase()` → `sha256` hex |
+| drüben | `strtolower( trim( … ) )` → `hash('sha256', …)` |
+
+**Zeichengleich.** Trim, dann Kleinschreibung, dann SHA-256 als Hex, kein
+Salz auf beiden Seiten. Damit ist das Rezept als Ursache ausgeschlossen —
+und was bleibt, sind zwei Mengen, die sich nicht überschneiden, oder eine
+leere Achse bei uns. **Genau das entscheidet `unsere_nutzbar`, und genau
+das war vorher nicht zu sehen.**
+
+### ⚠⚠ „129 KENNEN WIR NICHT" WAR EINE LEERE MENGE — und der Kommentar daneben wusste es
+
+Aus derselben Karte:
+
+```
+129 stehen drüben und nicht in dieser Sendung
+    davon 0 bewusst gefiltert · 129 kennen wir nicht · 0 übersehen
+```
+
+**Alle 129 trugen `sfv_person_id: null` UND `name_hash: null`.** Wir konnten
+sie also nicht einordnen — nicht, weil wir sie nicht kennen, sondern weil
+das Merkmal fehlt, auf dem verglichen wird.
+
+> **Wer nicht vergleichen kann, hat nicht verglichen — und darf das nicht
+> als Ergebnis des Vergleichs ausgeben.**
+
+⚠ **Und die zwei Nullen daneben sind die eigentliche Falschaussage.** „0
+bewusst gefiltert · 0 übersehen" liest sich wie zwei Befunde und ist die
+Folge davon, dass gar nichts einzuordnen war. Ein Leser schliesst daraus,
+der Filter sei vollständig geprüft.
+
+⚠ ⚠ **DER KOMMENTAR AN DER ZEILE SAGTE ES SEIT DEM ERSTEN TAG:**
+
+> *„⚠ Ohne Hash ist keine Einordnung möglich — das ist `fremd`, aber aus
+> einem anderen Grund: wir wissen es nicht, statt es zu wissen. **Die Zahl
+> wirft beides zusammen.**"*
+
+Die Einschränkung stand **eine Zeile über der Zeile, die sie verletzt** —
+und `ein Kommentar, der beschreibt, was danebensteht, ist keine Prüfung`
+trifft hier im engsten denkbaren Abstand.
+
+⚠ ⚠ ⚠ **UND EIN TESTFALL HIELT ES FEST.** Er hiess *„⚠ ohne Hash ist es
+fremd — aber aus einem anderen Grund"* und prüfte `fremd: 1`. **Die
+Einschränkung stand in seinem eigenen Titel, und er zementierte sie
+trotzdem.** Ein Test, der den Ist-Zustand festhält, obwohl der Ist-Zustand
+falsch ist, findet nichts — er bewacht etwas Falsches und fällt genau dann
+um, wenn jemand es behebt. Genau das ist passiert: beim Trennen wurde er
+rot, und er war der einzige, der rot wurde.
+
+`nicht_einordenbar` ist seither eine eigene Zahl. Und sind **alle** nicht
+einzuordnen, sagt die Karte genau das statt zweier Nullen:
+
+```
+⚠ keine davon ist einzuordnen: alle 129 tragen weder eine Verbandsnummer
+  noch einen Namenshash. Das ist kein Befund über sie, sondern über das
+  Merkmal, auf dem wir vergleichen.
+```
+
+Gegengeprobt: wieder als `fremd` zählen → zwei rote Fälle; nur `drüben` als
+Bezugsgrösse → drei.
+
+### ⚠ Aus 93 wurde 19 — die Kandidatenwahl hat sich NICHT geändert
+
+Gemessen am 12.09.2026, über alle vier Commits, die `holeKandidaten()`
+angefasst haben (`020a535`, `7937d46`, `ac0451c`, `becdff3`):
+
+| | |
+|---|---|
+| die **Seitenabfragen** (`mitTeam`, `mitFunktion`) | ⚠ **Zeichen für Zeichen identisch** in allen vier |
+| geändert hat `becdff3` | **nur die Zählabfrage** — der fehlende `!inner`-Embed |
+
+**Damit kann mein Fix die 93 nicht erklärt haben.** Er hat nichts an der
+Menge geändert, nur daran, dass die Zählprobe überhaupt durchläuft.
+
+⚠ ⚠ **Und die Zählabfrage war von ihrer ersten Zeile an kaputt** —
+`020a535`, der Commit, der die Personen-Vorschau verdrahtet hat, trägt schon
+`.select("id")` mit `.eq("mitglieder.aktiv")`. **`holeKandidaten()` hat also
+nie durchgelaufen, seit es sie gibt.**
+
+**Woher die 93 kommt, ist von hier aus nicht zu rekonstruieren** — und sie
+hat dasselbe Herkunftsproblem wie die 40 und die 11:
+
+```
+93 würden gesendet · 0 über die Nummer · 40 über E-Mail · 11 über Name · 42 neu
+                                         └──────── 40 + 11 + 42 = 93 ────────┘
+```
+
+Die 40 und die 11 sind bereits als unmöglich belegt: `email_hash` und
+`name_hash` waren drüben für jede Person `null`. **Die Aufteilung geht
+auf — also stammt das ganze Quintett aus einer Quelle, und wenn zwei
+Summanden unmöglich sind, ist es die Summe auch.**
+
+⚠ **Damit ist die 93 keine überholte Messung, sondern eine Zahl ohne
+Herkunft.** Der Unterschied ist nicht akademisch: eine überholte Messung
+war einmal richtig und darf zitiert werden („Stand vom …"); eine Zahl ohne
+Herkunft darf es nie. Dieselbe Familie wie die 129 und die 40 —
+*drei Zahlen, drei Hände, keine Herkunft.*
+
+**Was 19 belastbar machen würde, ist eine Abfrage und keine Ableitung:**
+
+```sql
+select count(distinct p.id) as mit_team
+  from public.personen p
+  join public.mitglieder m on m.person_id = p.id and m.aktiv
+  join public.kader      k on k.mitglied_id = m.id and k.aktiv
+ where p.verein_id = '…';
+
+select count(*) as mit_funktion from public.personen
+ where verein_id = '…' and funktionen <> '{}';
+```
+
+⚠ Die Vereinigung der beiden ist die erwartete Kandidatenzahl. Weicht sie
+von 19 ab, ist der Fehler in der Abfrage der Function; stimmt sie, war 19
+immer die richtige Zahl und 93 nie eine.

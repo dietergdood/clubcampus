@@ -97,6 +97,10 @@ describe("baueAbgleich — fünf Gruppen", () => {
       gesendet: 0, treffer_sfv: 0, treffer_email: 0, treffer_name: 0,
       ohne_treffer: 0, personen_ohne_uns: 0,
       ohne_treffer_liste: [], ohne_uns_liste: [], drueben_gesamt: 0,
+      /* ⚠ Auch die Bezugsgrössen sind Nullen und keine Ausnahme — und sie
+         stehen IMMER da, sonst wäre „kein Eintrag" von „nicht gemessen"
+         nicht zu unterscheiden. */
+      unsere_nutzbar: { sfv_person_id: 0, email_hash: 0, name_hash: 0 },
     });
   });
 
@@ -167,11 +171,32 @@ describe('⚠ „40 von 129“ ist eine Auskunft, „40 Treffer“ ein Schluss d
     return deuteAbgleich(e).join(" · ");
   };
 
-  it("nennt die Bezugsgrösse in DERSELBEN Zeile wie die Trefferzahl", () => {
+  it("nennt BEIDE Bezugsgrössen in DERSELBEN Zeile wie die Trefferzahl", () => {
     /* ⚠ Nicht darunter: wer „0 über die E-Mail" liest und drei Zeilen
-       später „0 von 1 tragen einen Hash", hat schon geschlossen. */
-    const t = mitNutzbar({ sfv_person_id: 1, email_hash: 1, name_hash: 0 });
-    expect(t).toContain("über die E-Mail (drüben tragen 1 von 1 dieses Merkmal)");
+       später „0 von 1 tragen einen Hash", hat schon geschlossen.
+
+       ⚠ ⚠ UND BEIDE SEITEN, seit dem 12.09.2026 abends. Die Karte zeigte
+       „0 über die E-Mail (drüben tragen 88 von 129)" — und liess offen, wie
+       viele der 19 gesendeten überhaupt einen Hash tragen. **Eine
+       Trefferzahl mit einer Bezugsgrösse zeigt immer auf die andere
+       Seite**, und die Suche ging zur Hash-Bildung, bevor gemessen war, ob
+       unsere Seite überhaupt etwas trägt. */
+    const e = baueAbgleich([u("a", { email_hash: "m" })], [d({ email_hash: "anders" })]);
+    e.drueben_nutzbar = { sfv_person_id: 0, email_hash: 1, name_hash: 0 };
+    const t = deuteAbgleich(e).join(" · ");
+    expect(t).toContain("über die E-Mail (wir 1 von 1 · drüben 1 von 1)");
+  });
+
+  it("⚠ trägt UNSERE Seite nichts, sagt die Zeile das auch", () => {
+    /* Der Fall, der am 12.09.2026 nicht ausgeschlossen war: drüben 88
+       Hashes, bei uns null — dann ist die Null kein Hinweis auf eine
+       auseinanderlaufende Bildungsvorschrift, sondern auf eine leere
+       Achse bei uns. */
+    const e = baueAbgleich([u("a")], [d({ email_hash: "x" })]);
+    e.drueben_nutzbar = { sfv_person_id: 0, email_hash: 1, name_hash: 0 };
+    const t = deuteAbgleich(e).join(" · ");
+    expect(t).toMatch(/wir 0 von 1, drüben 1 von 1/);
+    expect(t).toMatch(/eine Seite trägt nichts/);
   });
 
   it("⚠ eine leere Achse wird als solche benannt, nicht als Null", () => {
@@ -230,12 +255,35 @@ describe("ordneEin — die Gegenrichtung, und nur eine Gruppe ist ein Befund", (
     expect(e).toMatchObject({ gefiltert: 0, uebersehen: 0, fremd: 1 });
   });
 
-  it("⚠ ohne Hash ist es fremd — aber aus einem anderen Grund", () => {
-    /* Wir WISSEN es nicht, statt es zu wissen. Die Zahl wirft beides
-       zusammen; die Liste der Übersehenen bleibt davon frei. */
+  it("⚠ ⚠ ohne Hash ist es NICHT fremd, sondern nicht einzuordnen", () => {
+    /* ⚠ ⚠ DIESER FALL HIELT BIS ZUM 12.09.2026 DAS GEGENTEIL FEST. Er hiess
+       „ohne Hash ist es fremd — aber aus einem anderen Grund" und prüfte
+       `fremd: 1`. **Die Einschränkung stand in seinem eigenen Titel, und
+       er zementierte sie trotzdem.**
+
+       Ein Test, der den Ist-Zustand festhält, obwohl der Ist-Zustand falsch
+       ist, findet nichts — er bewacht etwas Falsches und fällt genau dann
+       um, wenn jemand es behebt. Genau das ist jetzt passiert.
+
+       Messbar wurde es am selben Abend: 129 von 129 Personen drüben trugen
+       weder Nummer noch Namenshash, und die Karte meldete „129 kennen wir
+       nicht · 0 bewusst gefiltert · 0 übersehen" — eine leere Menge, die
+       sich wie eine Aussage liest. */
     const e = ordneEin([{ name_hash: null }], new Set(), new Set());
-    expect(e).toMatchObject({ fremd: 1, uebersehen: 0 });
+    expect(e).toMatchObject({ nicht_einordenbar: 1, fremd: 0, uebersehen: 0 });
     expect(e.uebersehen_liste).toEqual([]);
+  });
+
+  it("⚠ und wenn ALLE nicht einzuordnen sind, sagt die Karte genau das", () => {
+    /* Nicht „0 gefiltert · 0 übersehen" — das wären zwei Nullen, die wie
+       Befunde aussehen und die Folge davon sind, dass gar nichts
+       einzuordnen war. */
+    const e = baueAbgleich([u("a")], [d({}), d({})]);
+    e.einordnung = ordneEin(e.ohne_uns_liste, new Set(), new Set());
+    const t = deuteAbgleich(e).join(" · ");
+    expect(t).toMatch(/keine davon ist einzuordnen/);
+    expect(t).toMatch(/über das Merkmal, auf dem wir vergleichen/);
+    expect(t).not.toMatch(/bewusst gefiltert/);
   });
 
   it("⚠ ⚠ gesendet UND als „ohne uns\" gezählt ist ein Widerspruch — er fällt auf", () => {
@@ -248,6 +296,6 @@ describe("ordneEin — die Gegenrichtung, und nur eine Gruppe ist ein Befund", (
 
   it("leere Eingabe ergibt drei Nullen, keine Ausnahme", () => {
     expect(ordneEin([], new Set(), new Set()))
-      .toEqual({ gefiltert: 0, uebersehen: 0, fremd: 0, uebersehen_liste: [] });
+      .toEqual({ gefiltert: 0, uebersehen: 0, fremd: 0, nicht_einordenbar: 0, uebersehen_liste: [] });
   });
 });

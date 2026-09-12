@@ -96,6 +96,32 @@ export interface AbgleichErgebnis {
    */
   drueben_nutzbar?: Record<string, number> | null;
   /**
+   * Und dasselbe für **unsere** Seite — wie viele der gesendeten Personen
+   * je Achse überhaupt ein Merkmal tragen.
+   *
+   * ⚠ ⚠ DIE ANDERE HÄLFTE, UND SIE HAT BIS ZUM 12.09.2026 GEFEHLT. Am
+   * Abend stand in der Karte:
+   *
+   * ```
+   * 0 über die E-Mail (drüben tragen 88 von 129)
+   * ```
+   *
+   * **Beide Seiten haben Hashes, keiner trifft** — so gelesen. Nur sagte
+   * die Zeile nichts darüber, wie viele der **19** gesendeten Personen
+   * einen E-Mail-Hash tragen. Trügen sie null, wäre `treffer_email: 0`
+   * wieder „die Achse trägt nichts", diesmal auf unserer Seite — und die
+   * Suche nach einer auseinanderlaufenden Bildungsvorschrift wäre
+   * vergeblich, bevor sie beginnt.
+   *
+   * > **Eine Trefferzahl braucht BEIDE Bezugsgrössen. Mit einer ist sie
+   * > eine halbe Auskunft, und eine halbe Auskunft über einen Vergleich
+   * > zeigt immer auf die andere Seite.**
+   *
+   * Dieselbe Lehre wie „wer eine Herkunftsangabe verlangt, schuldet sie
+   * selbst" — nur für Zahlen statt für Fassungen.
+   */
+  unsere_nutzbar?: Record<string, number>;
+  /**
    * Wie viele Personen drüben insgesamt stehen — die **Bezugsgrösse**.
    *
    * ⚠ Ohne sie ist `drueben_nutzbar` nur eine zweite nackte Zahl. „40" und
@@ -189,6 +215,13 @@ export function baueAbgleich(
     treffer_sfv: 0, treffer_email: 0, treffer_name: 0,
     ohne_treffer: 0, personen_ohne_uns: 0,
     drueben_gesamt: drueben.length,
+    /* ⚠ Aus DEMSELBEN Durchgang, nicht aus einer zweiten Schleife: zwei
+       Rechnungen über dieselbe Menge laufen auseinander. */
+    unsere_nutzbar: {
+      sfv_person_id: unsere.filter((p) => nurZiffern(p.sfv_person_id) !== null).length,
+      email_hash: unsere.filter((p) => !!p.email_hash).length,
+      name_hash: unsere.filter((p) => !!p.name_hash).length,
+    },
     ohne_treffer_liste: [], ohne_uns_liste: [],
   };
 
@@ -264,6 +297,30 @@ export interface Einordnung {
   gefiltert: number;
   uebersehen: number;
   fremd: number;
+  /**
+   * Personen drüben, die **kein Merkmal tragen**, auf dem wir vergleichen
+   * könnten — weder Nummer noch Namenshash.
+   *
+   * ⚠ ⚠ BIS ZUM 12.09.2026 ZÄHLTEN SIE ALS `fremd`, und der Kommentar
+   * daneben sagte, dass das eigentlich etwas anderes ist. Am Abend war die
+   * Folge messbar: **129 von 129** trugen `sfv_person_id: null` UND
+   * `name_hash: null`, und die Karte meldete „129 kennen wir nicht · 0
+   * bewusst gefiltert · 0 übersehen".
+   *
+   * **Das liest sich wie eine Aussage und ist eine leere Menge.** Nicht
+   * „wir kennen sie nicht", sondern „wir können es nicht sagen" — und die
+   * zwei Nullen daneben sind keine Befunde, sondern die Folge davon, dass
+   * gar nichts einzuordnen war.
+   *
+   * > **Wer nicht vergleichen kann, hat nicht verglichen — und darf das
+   * > nicht als Ergebnis des Vergleichs ausgeben.**
+   *
+   * Dieselbe Unterscheidung wie `halbzeit_nicht_pruefbar` und wie
+   * `drueben_nutzbar`: nicht feststellbar ist nicht dasselbe wie nichts
+   * gefunden. Zum dritten Mal an zwei Tagen, und diesmal war der Zähler
+   * **vollständig** Artefakt.
+   */
+  nicht_einordenbar: number;
   /** Die Übersehenen einzeln — Hash und Jahrgang, nie ein Name. */
   uebersehen_liste: { name_hash: string | null }[];
 }
@@ -275,13 +332,20 @@ export function ordneEin(
   /** Und die, die wir senden — für den Fall, dass einer doppelt zählt. */
   gesendeteHashes: Set<string>,
 ): Einordnung {
-  const erg: Einordnung = { gefiltert: 0, uebersehen: 0, fremd: 0, uebersehen_liste: [] };
+  const erg: Einordnung = {
+    gefiltert: 0, uebersehen: 0, fremd: 0, nicht_einordenbar: 0, uebersehen_liste: [],
+  };
   for (const d of ohneUns) {
     const h = d.name_hash;
-    /* ⚠ Ohne Hash ist keine Einordnung möglich — das ist `fremd`, aber
-       aus einem anderen Grund: wir wissen es nicht, statt es zu wissen.
-       Die Zahl wirft beides zusammen; die Liste der Übersehenen nicht. */
-    if (!h) { erg.fremd += 1; continue; }
+    /* ⚠ ⚠ EIGENE ZAHL, NICHT MEHR `fremd`. Der Kommentar hier sagte seit
+       dem ersten Tag, dass das etwas anderes ist — und zählte es trotzdem
+       zusammen. Am 12.09.2026 war die Folge messbar: 129 von 129, und die
+       Karte meldete es als „kennen wir nicht".
+
+       **Ein Kommentar, der beschreibt, was danebensteht, ist keine
+       Prüfung** — hier stand die Einschränkung eine Zeile über der Zeile,
+       die sie verletzt. */
+    if (!h) { erg.nicht_einordenbar += 1; continue; }
     if (gefilterteHashes.has(h)) { erg.gefiltert += 1; continue; }
     if (gesendeteHashes.has(h)) {
       /* ⚠ Gesendet UND als `ohne uns` gezählt: das wäre ein Widerspruch
@@ -322,13 +386,23 @@ export function deuteAbgleich(e: AbgleichErgebnis): string[] {
      Gegenseite vor 0.9.24 liefert die Angabe nicht — das ist eine andere
      Aussage als eine leere Achse, und sie wird auch anders gesagt. */
   const nutzbar = e.drueben_nutzbar;
+  const unsNutzbar = e.unsere_nutzbar;
   const auskunft = (schluessel: string): string => {
-    if (!nutzbar) return " (wie viele drüben einen Hash tragen: nicht gemeldet)";
+    /* ⚠ ⚠ BEIDE SEITEN IN EINER ZEILE. Eine Trefferzahl mit nur einer
+       Bezugsgrösse zeigt immer auf die andere Seite — am 12.09.2026 sah
+       „0 über die E-Mail (drüben tragen 88 von 129)" nach einer
+       auseinanderlaufenden Hash-Bildung aus, solange niemand wusste, wie
+       viele der 19 überhaupt einen Hash tragen. */
+    const uns = unsNutzbar
+      ? `wir ${unsNutzbar[schluessel] ?? 0} von ${e.gesendet}`
+      : "wir: nicht gemessen";
+    if (!nutzbar) return ` (${uns} · drüben: nicht gemeldet)`;
     const n = nutzbar[schluessel] ?? 0;
-    return n === 0
-      ? ` — ⚠ drüben trägt KEINE von ${e.drueben_gesamt} Personen dieses Merkmal,`
-        + " die Null sagt hier nichts über Treffer"
-      : ` (drüben tragen ${n} von ${e.drueben_gesamt} dieses Merkmal)`;
+    const keiner = n === 0 || (unsNutzbar && (unsNutzbar[schluessel] ?? 0) === 0);
+    return keiner
+      ? ` — ⚠ ${uns}, drüben ${n} von ${e.drueben_gesamt}:`
+        + " eine Seite trägt nichts, die Null sagt hier nichts über Treffer"
+      : ` (${uns} · drüben ${n} von ${e.drueben_gesamt})`;
   };
 
   const zeilen = [
@@ -348,10 +422,24 @@ export function deuteAbgleich(e: AbgleichErgebnis): string[] {
      neuen Datensätze, weil diese Personen DAUERHAFT auseinanderlaufen. */
   if (e.einordnung) {
     const ein = e.einordnung;
-    zeilen.push(`   davon ${ein.gefiltert} bewusst gefiltert · ${ein.fremd} kennen wir nicht`);
-    zeilen.push(ein.uebersehen === 0
-      ? "   0 übersehen — der Filter ist vollständig"
-      : `   ⚠ ${ein.uebersehen} ÜBERSEHEN — die müssten wir senden und tun es nicht`);
+    /* ⚠ ⚠ DIE NICHT EINORDENBAREN ZUERST, und wenn sie ALLE sind, gibt es
+       nichts weiter zu sagen. Am 12.09.2026 waren es 129 von 129 — und die
+       Karte meldete daneben „0 bewusst gefiltert · 0 übersehen", zwei
+       Nullen, die wie Befunde aussahen und die Folge davon waren, dass gar
+       nichts einzuordnen war. */
+    const summe = ein.gefiltert + ein.fremd + ein.uebersehen + ein.nicht_einordenbar;
+    if (ein.nicht_einordenbar === summe && summe > 0) {
+      zeilen.push(`   ⚠ keine davon ist einzuordnen: alle ${summe} tragen weder eine `
+        + "Verbandsnummer noch einen Namenshash. Das ist kein Befund über sie, "
+        + "sondern über das Merkmal, auf dem wir vergleichen.");
+    } else {
+      zeilen.push(`   davon ${ein.gefiltert} bewusst gefiltert · ${ein.fremd} kennen wir nicht`
+        + (ein.nicht_einordenbar > 0
+           ? ` · ⚠ ${ein.nicht_einordenbar} nicht einzuordnen (kein Merkmal)` : ""));
+      zeilen.push(ein.uebersehen === 0
+        ? "   0 übersehen — der Filter ist vollständig"
+        : `   ⚠ ${ein.uebersehen} ÜBERSEHEN — die müssten wir senden und tun es nicht`);
+    }
   }
   /* ⚠ Die Listen stehen in der Antwort, nicht in der Karte: sie sind für
      die Gegenseite gedacht, nicht für den Blick. Die Karte sagt nur,
