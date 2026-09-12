@@ -12476,3 +12476,69 @@ etwas behauptet, das falsch sein kann — nicht dort, wo sie beschreibt.**
 einmalige Messung, kein Prüfmittel — und ein Skript, das 25 Fehlalarme
 erzeugt, wäre beim nächsten Durchgang genau die Abstumpfung, gegen die es
 gebaut wäre.
+
+### ⚠⚠ EIN ZUGESCHRIEBENER BEFUND LANDET ALS GEPRÜFT IN DEN AKTEN
+
+> **Ein zugeschriebener Befund landet als geprüft in den Akten, und beim
+> nächsten Mal sucht jemand die Messung dazu.** (12.09.2026)
+
+Der Vorgang: eine Beobachtung wird mir zugeschrieben, die ich nicht
+gemeldet habe — meist eine, die plausibel klingt und zu dem passt, was
+gerade gemessen wurde. **Am 12.09.2026 dreimal**, und einmal ist daraus
+eine Antwort an eine Gegenstelle geworden.
+
+| | zugeschrieben | tatsächlich |
+|---|---|---|
+| **129 Personen** | „drüben stehen 129" | eine Zahl des Theme-Chats, durch drei Hände gegangen, nie hier gemessen |
+| **personenprobe** | ein Befund daraus | — |
+| **CC_FELDER** | *„`aufstellung` fehlt in der Liste"* | ⚠ gemessen über den Tokenizer: **es steht drin, als 18. von 18.** `CC_REPEATER` führt beide |
+| *(zusätzlich)* **die Sperre der Gegenseite** | „deine Frage vorneweg" | die Frage stammte nicht von mir; der Gedanke war richtig und ist als *Befund Didi* im Papier |
+
+⚠ **Der Schaden ist nicht die falsche Zuschreibung, sondern was danach
+passiert.** Ein Befund mit einem Absender sieht aus wie einer, der geprüft
+wurde. Er wird zitiert, weitergereicht, und irgendwann sucht jemand die
+Messung dazu — **und findet keine, weil es nie eine gab.** Dieselbe
+Familie wie die drei Zahlen, die durch drei Hände gingen und dabei ihre
+Herkunft verloren: *eine Zahl, die man nicht selbst gemessen hat, wird mit
+ihrer Quelle zitiert — oder gar nicht.*
+
+⚠ ⚠ **Und im CC_FELDER-Fall wäre die Ausführung der Schaden gewesen.**
+`aufstellung` nachzutragen hätte eine Dublette erzeugt und die erste Regel
+in `check:plugin` rot gemacht — die Regel, die es seit dem 11.09.2026
+genau dafür gibt. **Der Auftrag war nicht bloss gegenstandslos, er war
+schädlich** — und der einzige Grund, warum nichts passiert ist, war die
+Messung vor dem Bauen.
+
+**Die Gegenmassnahme kostet einen Satz und gehört dem Ausführenden:**
+widersprechen, bevor gebaut wird. Nicht aus Rechthaberei — sondern weil
+ein stehengelassener Befund seinen Absender behält und die Messung
+verliert, die es nie gab.
+
+### ✅ Der Feldschlüssel-Punkt betrifft uns nicht — gemessen am 12.09.2026
+
+Wortlaut des Theme-Chats: *„Euer Vergleich hängt am Feldnamen. Der Name
+ist bei uns nicht eindeutig — `nummer` gibt es zweimal, am `fch_spiel` und
+am Repeater. Der Feldschlüssel ist eindeutig."*
+
+**Der Punkt ist richtig und trifft unsere Seite nicht.** Drei Stellen im
+Empfänger lösen einen Namen auf:
+
+| Stelle | wie | betroffen? |
+|---|---|---|
+| `cc_feld_schluessel()` | Name → **Schlüssel**, aus den Feldgruppen des Beitrags; bei mehr als einem Kandidaten wird **nicht geschrieben** | ❌ genau dagegen gebaut (0.9.8) |
+| `cc_unterfelder()` | über `cc_feld_schluessel()`, dann `acf_get_field($key)` | ❌ schon am Schlüssel |
+| `cc_feld_lage()` | `get_field_object($name)` — **über den Namen** | ⚠ siehe unten |
+
+⚠ **Und `cc_feld_lage()` ist der Fall, in dem der Name RICHTIG ist.** Sie
+beantwortet *„kennt ACF diesen Namen überhaupt?"* — die Frage, die den
+Wert-ohne-Feld findet (`fch_team.saison`) und den erfundenen Namen
+(`_cc_team_abgleich`). **Sie über den Schlüssel zu stellen wäre zirkulär:
+wer den Schlüssel schon hat, weiss, dass es das Feld gibt.**
+
+Gemessen, dass seine Mehrdeutigkeit sie nicht erreicht: `cc_feld_lage()`
+bekommt ausschliesslich `CC_FELDER` (18 Namen) und `CC_TEAM_FELDER` (2) —
+**`nummer` ist in keiner von beiden.** Der Name existiert bei uns nur als
+Unterfeld zweier Repeater, und Unterfelder gehen nie durch diese Funktion.
+
+**Der Bau gehört damit ihm.** Seine Schreibsperre im Backend ist gemeint,
+nicht unser Vergleich.
