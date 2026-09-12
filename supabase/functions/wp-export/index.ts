@@ -946,6 +946,10 @@ async function holeKandidaten(
          bei NULL Zeilen. Bis sie gefuellt ist, traegt keine unserer
          Personen eine Nummer, und `treffer_sfv` ist strukturell 0. */
       sfv_person_id: null,
+      /* ⚠ Nur das JAHR, kein Datum — es geht in die Liste der
+         Ohne-Treffer und steht dort neben einem Hash. Ein Jahrgang
+         allein benennt niemanden; ein Geburtsdatum schon eher. */
+      jahrgang: jahr === "" ? null : jahr,
       email_hash: mail === "" ? null : await sha256(mail),
       name_hash: (name === "" || jahr === "") ? null : await sha256(`${name}|${jahr}`),
     });

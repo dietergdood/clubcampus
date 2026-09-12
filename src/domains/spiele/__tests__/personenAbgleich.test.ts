@@ -96,6 +96,7 @@ describe("baueAbgleich — fünf Gruppen", () => {
     expect(e).toEqual({
       gesendet: 0, treffer_sfv: 0, treffer_email: 0, treffer_name: 0,
       ohne_treffer: 0, personen_ohne_uns: 0,
+      ohne_treffer_liste: [], ohne_uns_liste: [],
     });
   });
 
@@ -127,6 +128,7 @@ describe("deuteAbgleich — Zahlen mit ihrer Bedeutung", () => {
     const kaputt = {
       gesendet: 10, treffer_sfv: 1, treffer_email: 1, treffer_name: 1,
       ohne_treffer: 1, personen_ohne_uns: 0,
+      ohne_treffer_liste: [], ohne_uns_liste: [],
     };
     expect(deuteAbgleich(kaputt).join(" | "))
       .toMatch(/Die Aufteilung geht nicht auf: 4 statt 10/);

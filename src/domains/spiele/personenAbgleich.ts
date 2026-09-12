@@ -33,6 +33,8 @@ export interface DruebenMerkmal {
 /** Eine Person von uns, so weit der Abgleich sie braucht. */
 export interface UnserePerson {
   id: string;
+  /** Vier Ziffern, für die Liste der Ohne-Treffer. Kein Datum. */
+  jahrgang?: string | null;
   sfv_person_id: number | null;
   email_hash: string | null;
   name_hash: string | null;
@@ -47,6 +49,26 @@ export interface AbgleichErgebnis {
   ohne_treffer: number;
   /** Drüben vorhanden und in unserer Sendung nicht enthalten. */
   personen_ohne_uns: number;
+  /**
+   * Die `ohne_treffer` einzeln — **als Hash und Jahrgang, nie als Name.**
+   *
+   * ⚠ ⚠  DIE GEGENSEITE KANN DAMIT ARBEITEN, OHNE DASS EIN NAME REIST.
+   *       Sie hält ihre eigenen 129 gegen diese Hashes und sieht, wer
+   *       schon dasteht — das ist genau der Zweck, und dafür genügt
+   *       Gleichheit.
+   *
+   * ⚠ ⚠  WAS SIE NICHT KANN: eine SCHREIBWEISE erkennen. `Lea` und `Léa`
+   *       ergeben verschiedene Hashes, und kein Mensch sieht es ihnen an.
+   *       **Wer Beinahe-Treffer von Hand finden will, braucht Klartext —
+   *       und das ist eine Entscheidung über Personendaten, keine
+   *       technische.** Sie steht bewusst offen.
+   */
+  ohne_treffer_liste: { name_hash: string | null; jahrgang: string | null }[];
+  /**
+   * Die `personen_ohne_uns` einzeln, ebenso — damit die Gegenseite sie
+   * einordnen kann, statt sie nur zu zählen.
+   */
+  ohne_uns_liste: { sfv_person_id: string | null; name_hash: string | null }[];
 }
 
 /**
@@ -70,6 +92,32 @@ export interface AbgleichErgebnis {
  * still** — und deshalb die richtige Bauart für eine Regel, die an zwei
  * Orten stehen muss.
  */
+/**
+ * Die Verbandsnummer auf Ziffern reduziert — **auf beiden Seiten**.
+ *
+ * ⚠ ⚠  ANLASS, 12.09.2026, Frage des Theme-Chats: bei einem Textvergleich
+ *       sind `1143801` und `1 143 801` zwei Werte. Unsere Seite liest die
+ *       Nummer aus einer `integer`-Spalte — dort kann nichts Krummes
+ *       stehen. **Seine kommt aus einem Postmeta**, also aus etwas, das
+ *       jemand getippt haben kann.
+ *
+ * ⚠  Der Empfaenger `trim()`t bereits; das faengt Leerraum aussen, nicht
+ *    innen. Und ein Tausendertrennzeichen steht innen.
+ *
+ * ⚠  NUR ZIFFERN, und das ist hier ungefaehrlich: eine Verbandsnummer ist
+ *    eine ganze Zahl. Bei einem Wert, der Buchstaben tragen KANN, waere
+ *    dieselbe Reduktion ein Zusammenwerfen — dort gaelte das Gegenteil.
+ *
+ * ⚠  Leer heisst `null`, nicht `""`: eine Nummer, die nur aus Trennzeichen
+ *    besteht, ist keine Nummer. Zwei leere Zeichenketten wuerden sonst
+ *    aufeinander treffen und als Treffer zaehlen.
+ */
+export function nurZiffern(roh: string | number | null | undefined): string | null {
+  if (roh === null || roh === undefined) return null;
+  const z = String(roh).replace(/[^0-9]/g, "");
+  return z === "" ? null : z;
+}
+
 export function namensschluessel(roh: string): string {
   const ersetzt = roh.toLowerCase()
     .replace(/ä/g, "ae").replace(/ö/g, "oe").replace(/ü/g, "ue").replace(/ß/g, "ss");
@@ -91,8 +139,10 @@ export function baueAbgleich(
   unsere: UnserePerson[],
   drueben: DruebenMerkmal[],
 ): AbgleichErgebnis {
+  /* ⚠ Beide Seiten durch dieselbe Reduktion — sonst trennt eine
+     Schreibweise, was dieselbe Nummer ist. */
   const nummern = new Set(
-    drueben.map((d) => d.sfv_person_id).filter((x): x is string => !!x),
+    drueben.map((d) => nurZiffern(d.sfv_person_id)).filter((x): x is string => !!x),
   );
   const mails = new Set(
     drueben.map((d) => d.email_hash).filter((x): x is string => !!x),
@@ -105,6 +155,7 @@ export function baueAbgleich(
     gesendet: unsere.length,
     treffer_sfv: 0, treffer_email: 0, treffer_name: 0,
     ohne_treffer: 0, personen_ohne_uns: 0,
+    ohne_treffer_liste: [], ohne_uns_liste: [],
   };
 
   /* ⚠ Was hier getroffen wurde, wird von der Gegenrichtung abgezogen —
@@ -114,9 +165,10 @@ export function baueAbgleich(
 
   for (const p of unsere) {
     /* 1 · Nummer. Ein Schlüssel schlägt jede Schreibweise. */
-    if (p.sfv_person_id != null && nummern.has(String(p.sfv_person_id))) {
+    const nr = nurZiffern(p.sfv_person_id);
+    if (nr !== null && nummern.has(nr)) {
       erg.treffer_sfv += 1;
-      merke(String(p.sfv_person_id));
+      merke(nr);
       continue;
     }
     /* 2 · E-Mail. */
@@ -132,16 +184,22 @@ export function baueAbgleich(
       continue;
     }
     erg.ohne_treffer += 1;
+    /* ⚠ Hash und Jahrgang, kein Name — siehe den Typ oben. */
+    erg.ohne_treffer_liste.push({ name_hash: p.name_hash, jahrgang: p.jahrgang ?? null });
   }
 
   /* ⚠ Die Gegenrichtung — der stille Rest, der auseinanderläuft. Eine
      Person drüben, die keines unserer Merkmale trägt, bleibt auf dem Stand
      ihres CSV-Imports stehen, und niemand merkt es. */
   for (const d of drueben) {
-    const bekannt = (d.sfv_person_id && getroffen.has(d.sfv_person_id))
+    const dnr = nurZiffern(d.sfv_person_id);
+    const bekannt = (dnr !== null && getroffen.has(dnr))
       || (d.email_hash && getroffen.has(d.email_hash))
       || (d.name_hash && getroffen.has(d.name_hash));
-    if (!bekannt) erg.personen_ohne_uns += 1;
+    if (!bekannt) {
+      erg.personen_ohne_uns += 1;
+      erg.ohne_uns_liste.push({ sfv_person_id: dnr, name_hash: d.name_hash });
+    }
   }
 
   return erg;
@@ -169,6 +227,21 @@ export function deuteAbgleich(e: AbgleichErgebnis): string[] {
     ? "0 stehen drüben und nicht in dieser Sendung"
     : `⚠ ${e.personen_ohne_uns} stehen drüben und nicht in dieser Sendung — `
       + "sie bleiben auf ihrem Stand und laufen auseinander");
+  /* ⚠ Die Listen stehen in der Antwort, nicht in der Karte: sie sind für
+     die Gegenseite gedacht, nicht für den Blick. Die Karte sagt nur,
+     dass es sie gibt — sonst liest sie niemand und niemand weiss davon. */
+  /* ⚠ ⚠ `?? []` IST HIER KEINE BEQUEMLICHKEIT, SONDERN DER FALL.
+     Die Listen kamen am 12.09.2026 dazu. Eine Antwort einer aelteren
+     Function traegt sie nicht — und `undefined.length` wirft, statt die
+     Karte anzuzeigen. **Ein neues Feld, und der Leser nimmt an, dass es
+     da ist**: derselbe Fehler wie heute schon viermal, nur diesmal laut
+     statt still. Gefangen hat es ein Testfall, dessen Attrappe noch die
+     alte Form hatte. */
+  const ohneTreffer = e.ohne_treffer_liste ?? [];
+  if (ohneTreffer.length > 0) {
+    zeilen.push(`Die ${ohneTreffer.length} stehen als Hash und Jahrgang `
+      + "in der Rohantwort — ohne Namen, zum Gegenhalten drüben.");
+  }
   /* ⚠ DIE GEGENPROBE STEHT IN DER ANTWORT, NICHT NUR IM TEST. Eine
      Aufteilung, die aufgehen muss, prüft sich selbst. */
   if (summe !== e.gesendet) {
