@@ -154,7 +154,8 @@ describe("Aufstellungszeilen — die Zahl, die bis zum 11.09.2026 fehlte", () =>
       { sfv_team_id: "38301", gesendet: 1, wp: { ...okAntwort(1), aufstellung_zeilen: 0 }, fehler: null },
     ]);
     const m = laufMeldung("dev.fcherrliberg.ch", zahlen, undefined, {
-      zeilen: 17, rollen: { start: 11, eingewechselt: 4, nicht_eingesetzt: 2 }, je_spiel: { '4395750': 17 },
+      zeilen: 17, rollen: { start: 11, eingewechselt: 4, nicht_eingesetzt: 2 },
+      je_spiel: { '4395750': 17 }, ohne_aufstellung: 0, verlauf_geleert: [],
     });
     expect(m).toContain("17 gesendet");
     expect(m).toContain("0 geschrieben");
@@ -166,7 +167,7 @@ describe("Aufstellungszeilen — die Zahl, die bis zum 11.09.2026 fehlte", () =>
     const { zahlen } = fasseLauf([
       { sfv_team_id: "38301", gesendet: 1, wp: okAntwort(1), fehler: null },
     ]);
-    expect(laufMeldung("h", zahlen, undefined, { zeilen: 0, rollen: {}, je_spiel: {} }))
+    expect(laufMeldung("h", zahlen, undefined, { zeilen: 0, rollen: {}, je_spiel: {}, ohne_aufstellung: 0, verlauf_geleert: [] }))
       .toContain("Aufstellung 0 gesendet / 0 geschrieben");
   });
 
@@ -176,7 +177,8 @@ describe("Aufstellungszeilen — die Zahl, die bis zum 11.09.2026 fehlte", () =>
     ];
     const { zahlen } = fasseLauf(teile);
     const d = fuersProtokoll("h", zahlen, teile, undefined, {
-      zeilen: 17, rollen: { start: 11, eingewechselt: 4, nicht_eingesetzt: 2 }, je_spiel: { '4395750': 17 },
+      zeilen: 17, rollen: { start: 11, eingewechselt: 4, nicht_eingesetzt: 2 },
+      je_spiel: { '4395750': 17 }, ohne_aufstellung: 1, verlauf_geleert: ['4393096', '4395740'],
     });
     expect(d.aufstellung_zeilen).toBe(17);
     expect(d.gesendete_aufstellung_zeilen).toBe(17);
@@ -187,6 +189,22 @@ describe("Aufstellungszeilen — die Zahl, die bis zum 11.09.2026 fehlte", () =>
     /* ⚠ Je Spiel — die Summe beantwortet die Frage nicht mehr, sobald
        sie an einem EINZELNEN Spiel gestellt wird. */
     expect(d.gesendete_aufstellung_je_spiel).toEqual({ '4395750': 17 });
+    /* ⚠ ⚠ DIE ZWEITE LAGE — und `je_spiel` kann sie nicht ausdrücken: ein
+       Spiel ohne Aufstellung fehlt dort schlicht, und die Deutung einer
+       Abwesenheit ist geraten. Bis zum 12.09.2026 stand die Zahl nur in
+       der Vorschau; der scharfe Lauf hat sie nie protokolliert.
+
+       ⚠ Sie hiess bis zu Weg B `gesendete_aufstellung_geleert` und zählte
+       Spiele, deren Aufstellung drüben GELÖSCHT wurde. Seither wird nichts
+       gelöscht — das Feld fehlt, und drüben bleibt stehen, was steht. Der
+       alte Name wäre der teuerste Rest gewesen: wer „geleert: 190" liest,
+       sucht 190 gelöschte Aufstellungen. */
+    expect(d.gesendete_spiele_ohne_aufstellung).toBe(1);
+    /* ⚠ Der Verlauf ist der ÄLTERE Fall: er wird bei jedem Lauf ersetzt,
+       auch leer, seit dem ersten Tag — ohne Entscheid und bis heute ohne
+       Zähler. Wer nur die Aufstellung bewacht, bewacht die jüngere
+       Hälfte. */
+    expect(d.gesendeter_verlauf_geleert).toBe(2);
     expect((d.je_team as { aufstellung_zeilen: number }[])[0].aufstellung_zeilen).toBe(17);
   });
 });

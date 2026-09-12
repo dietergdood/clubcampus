@@ -71,6 +71,37 @@ export interface AbgleichErgebnis {
   ohne_uns_liste: { sfv_person_id: string | null; name_hash: string | null }[];
   /** Erst gesetzt, wenn die Gegenrichtung eingeordnet wurde. */
   einordnung?: Einordnung;
+  /**
+   * Wie viele Personen **drüben** je Achse überhaupt etwas tragen.
+   *
+   * ⚠ ⚠ OHNE DIESE ZAHLEN IST EINE NULL NICHT ZU DEUTEN. `treffer_email: 0`
+   * heisst entweder „niemand passt" oder „die Achse trägt nichts" — und das
+   * sind zwei völlig verschiedene Auskünfte.
+   *
+   * Gemessen am 12.09.2026: der Empfänger las `email` statt `mail` und ein
+   * `geburtsdatum`, das es an einer Person nicht gibt. **`email_hash` und
+   * `name_hash` waren damit für jede Person `null`, seit 0.9.20** — zwei von
+   * drei Achsen trugen nichts, und niemand konnte es der Antwort ansehen.
+   *
+   * ⚠ Die Folge reichte weiter als die zwei Achsen: weil zwei Nullen aus
+   * einer kaputten Quelle kamen, geriet auch `treffer_sfv = 0` in Zweifel —
+   * obwohl DIESE Achse den richtigen Feldnamen las. **Eine unglaubwürdige
+   * Zahl zieht die richtigen neben sich mit hinein.**
+   *
+   * > **Nicht feststellbar ist nicht dasselbe wie nichts gefunden.**
+   *
+   * ⚠ `null`, wenn die Gegenseite älter als 0.9.24 ist — nicht `{}`. Eine
+   * nicht gestellte Frage ist keine Null. Dieselbe Regel wie bei
+   * `halbzeit_nicht_pruefbar` und bei `acf_kennt`.
+   */
+  drueben_nutzbar?: Record<string, number> | null;
+  /**
+   * Wie viele Personen drüben insgesamt stehen — die **Bezugsgrösse**.
+   *
+   * ⚠ Ohne sie ist `drueben_nutzbar` nur eine zweite nackte Zahl. „40" und
+   * „40 von 129" sind zwei verschiedene Auskünfte, und die erste ist keine.
+   */
+  drueben_gesamt: number;
 }
 
 /**
@@ -157,6 +188,7 @@ export function baueAbgleich(
     gesendet: unsere.length,
     treffer_sfv: 0, treffer_email: 0, treffer_name: 0,
     ohne_treffer: 0, personen_ohne_uns: 0,
+    drueben_gesamt: drueben.length,
     ohne_treffer_liste: [], ohne_uns_liste: [],
   };
 
@@ -274,11 +306,36 @@ export function ordneEin(
  */
 export function deuteAbgleich(e: AbgleichErgebnis): string[] {
   const summe = e.treffer_sfv + e.treffer_email + e.treffer_name + e.ohne_treffer;
+  /* ⚠ ⚠  „40 VON 129 MIT E-MAIL-HASH" IST EINE AUSKUNFT, „40 TREFFER" EIN
+     SCHLUSS DARAUS. (Didi, 12.09.2026.)
+
+     Am 12.09.2026 waren drüben ALLE Hashes `null` — zwei falsche
+     Feldnamen —, und die fünf Zahlen sahen trotzdem wie eine Messung aus.
+     Die Aufteilung ging auf, die Rechnung war richtig, und niemand konnte
+     der Null ansehen, dass die Achse gar nichts trug.
+
+     ⚠ Die Bezugsgrösse steht deshalb NEBEN der Trefferzahl und nicht
+     darunter: wer „0 über die E-Mail" liest und drei Zeilen weiter „0 von
+     129 tragen einen Hash", hat schon geschlossen.
+
+     ⚠ Und `null` heisst „nicht feststellbar", nicht „0 von 0". Eine
+     Gegenseite vor 0.9.24 liefert die Angabe nicht — das ist eine andere
+     Aussage als eine leere Achse, und sie wird auch anders gesagt. */
+  const nutzbar = e.drueben_nutzbar;
+  const auskunft = (schluessel: string): string => {
+    if (!nutzbar) return " (wie viele drüben einen Hash tragen: nicht gemeldet)";
+    const n = nutzbar[schluessel] ?? 0;
+    return n === 0
+      ? ` — ⚠ drüben trägt KEINE von ${e.drueben_gesamt} Personen dieses Merkmal,`
+        + " die Null sagt hier nichts über Treffer"
+      : ` (drüben tragen ${n} von ${e.drueben_gesamt} dieses Merkmal)`;
+  };
+
   const zeilen = [
     `${e.gesendet} Personen würden gesendet`,
-    `${e.treffer_sfv} über die Verbandsnummer gefunden`,
-    `${e.treffer_email} über die E-Mail`,
-    `${e.treffer_name} über Name plus Jahrgang`,
+    `${e.treffer_sfv} über die Verbandsnummer gefunden${auskunft("sfv_person_id")}`,
+    `${e.treffer_email} über die E-Mail${auskunft("email_hash")}`,
+    `${e.treffer_name} über Name plus Jahrgang${auskunft("name_hash")}`,
   ];
   zeilen.push(e.ohne_treffer === 0
     ? "0 fallen durch alle drei — es entstehen keine neuen Datensätze"

@@ -269,6 +269,38 @@ export interface GesendeteAufstellung {
    */
   je_spiel: Record<string, number>;
   /**
+   * Spiele, für die wir **keine** Aufstellung kennen — das Feld fehlt dann
+   * in der Nutzlast.
+   *
+   * ⚠ ⚠ HIER STAND `geleert: string[]`, UND DER NAME IST MIT WEG B GEFALLEN.
+   * Bis zum 12.09.2026 schickte der Export für diese Spiele ein
+   * `aufstellung: []` und löschte damit drüben. Seither fehlt das Feld, und
+   * drüben bleibt unberührt, was steht.
+   *
+   * **Den alten Namen stehen zu lassen wäre der teuerste Rest gewesen.**
+   * Wer `geleert: 190` im Protokoll liest, sucht 190 gelöschte
+   * Aufstellungen — und ein Zähler, dessen Name mehr behauptet als er
+   * misst, ist gefährlicher als keiner.
+   *
+   * ⚠ Eine Zahl, keine Liste. Bei rund 190 Spielen ohne Matchdaten nennt
+   * eine Liste jedes Mal fast alles, und das wird nach dem dritten Mal
+   * überlesen. Was sie sagt, genügt: für so viele Spiele bleibt drüben
+   * stehen, was steht.
+   */
+  ohne_aufstellung: number;
+  /**
+   * Dasselbe für den Verlauf — und er ist der **ältere** Fall.
+   *
+   * ⚠ ⚠ Die Aufstellung wird erst seit dem 10.09.2026 ausdrücklich
+   * geleert, und dafür gab es einen Entscheid. Der Verlauf wird seit dem
+   * **ersten Tag** bei jedem Lauf ersetzt — auch mit einer leeren Liste,
+   * ohne Entscheid, ohne Bedingung und ohne Zähler. `bildeSpiel()` setzt
+   * das Feld immer.
+   *
+   * **Wer nur die Aufstellung bewacht, bewacht die jüngere Hälfte.**
+   */
+  verlauf_geleert: string[];
+  /**
    * Die Verlaufszahlen — wie viele Zeilen die drei neuen Felder tragen.
    *
    * ⚠ ⚠ SIE STANDEN BIS ZUM 11.09.2026 NUR IN DER VORSCHAU. Der scharfe
@@ -354,6 +386,18 @@ export function fuersProtokoll(
     gesendete_rollen: gesendet?.rollen ?? null,
     /* Nur Spiele mit Aufstellung. Siehe GesendeteAufstellung.je_spiel. */
     gesendete_aufstellung_je_spiel: gesendet?.je_spiel ?? null,
+    /* ⚠ ⚠ IMMER, AUCH ALS NULL. Bis zum 12.09.2026 stand diese Zahl NUR in
+       der Vorschau — der scharfe Lauf hat nie protokolliert, für wie viele
+       Spiele er keine Aufstellung mitschickt. Damit war im Protokoll ein
+       Spiel ohne Aufstellung von einem mit leerer nicht zu unterscheiden:
+       beide fehlen schlicht in `je_spiel`.
+
+       ⚠ Seit Weg B gibt es die leere Fassung nicht mehr, und die Zahl
+       heisst entsprechend. Sie bleibt trotzdem nötig: sie sagt, für wie
+       viele Spiele drüben stehenbleibt, was steht. */
+    gesendete_spiele_ohne_aufstellung: gesendet?.ohne_aufstellung ?? null,
+    gesendeter_verlauf_geleert: gesendet?.verlauf_geleert.length ?? null,
+    gesendeter_verlauf_geleert_ids: gesendet?.verlauf_geleert ?? null,
     ...(gesendet?.verlauf ?? {}),
     ohne_team: zahlen.ohne_team,
     doppelte_teams: zahlen.doppelte_teams,

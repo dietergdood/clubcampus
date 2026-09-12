@@ -4,7 +4,7 @@
  *
  * Plugin Name: ClubCampus Export
  * Description: Nimmt Spielplan, Verlauf und Ranglisten aus ClubCampus entgegen.
- * Version:     0.9.22
+ * Version:     0.9.24
  *
  * ⚠ ⚠  STAND 10.09.2026: DIESE DATEI **IST** DER EMPFAENGER  ⚠ ⚠
  *
@@ -141,6 +141,40 @@ const CC_ROUTE      = 'clubcampus/v1';
    `/status` fuer zwei verschiedene Fassungen dieselbe Zahl, und die eine
    Auskunft, die „laeuft drueben der neue Empfaenger?" beantworten koennte,
    beantwortet sie nicht mehr.
+
+   0.9.24 (12.09.2026): zwei falsche Feldnamen im Personen-Bestand — 'email'
+   heisst 'mail' (Fields/person.php:302), und 'geburtsdatum' gibt es an der
+   Person nicht. `email_hash` und `name_hash` waren damit seit 0.9.20 fuer
+   JEDE Person `null`.
+   ⚠  Nur der erste ist eine Umbenennung. Der Jahrgang steht nirgends — kein
+      ACF-Feld, und der Personen-Import ueberspringt die Spalte ausdruecklich.
+      `name_hash` bleibt `null`, und das ist richtig.
+   ⚠ ⚠  `merkmale_nutzbar` sagt jetzt je Achse, wie viele Personen ueberhaupt
+         etwas tragen. Eine Null auf einer Achse, die gar nichts traegt, ist
+         von einem Messergebnis nicht zu unterscheiden — und hat dazu
+         gefuehrt, dass auch `treffer_sfv = 0` in Zweifel geriet, obwohl
+         DIESE Achse den richtigen Feldnamen las.
+
+   0.9.23 (12.09.2026): cc_pruefe_verlust() — der Vorher-Nachher-Vergleich
+   fuer BEIDE Repeater. `verlust` steht in der Antwort UND im Bericht, je
+   Repeater vier Zahlen und die Liste der betroffenen Spiele.
+   ⚠ ⚠  ANLASS: ein fremder Waechter meldete 100 verlorene Aufstellungen
+         („38 → 0"). Es war sein Zaehlfehler — `is_array()` auf einen Wert,
+         den ACF als Zeilenzahl liefert. **Diese Datei konnte es nicht
+         widerlegen:** `aufstellung_zeilen` und `verlauf_zeilen` zaehlen nur,
+         was NACHHER dasteht. Gekostet hat es einen Export-Stopp.
+   ⚠  `verlust` und `rueckgang` getrennt: ein Rueckgang kann richtig sein
+      (der Verband korrigiert), ein Sturz auf null ist der Alarm.
+   ⚠  NACH WEG B (12.09.2026): ClubCampus schickt `aufstellung` nur noch mit
+      Zeilen. Ein Verlust an DIESEM Repeater heisst seither, dass Zeilen
+      ankamen und nicht geschrieben wurden — er kann nicht mehr vom Sender
+      kommen. Fuer `verlauf` bleibt er zweideutig: der wird weiterhin immer
+      gesendet, auch leer.
+
+   0.9.22 (12.09.2026): `geschwister` unterscheidet drei Arten statt einer —
+   `kopie`, `verweis` (Symlink, gezaehlt und nicht verfolgt), `unlesbar`.
+   ⚠  `unlesbar` war ein `continue`, also „gibt es nicht" — damit waere
+      ausgerechnet die absichtlich weggesperrte Datei unsichtbar geblieben.
 
    0.9.21 (12.09.2026): `geschwister` — liegt eine ZWEITE Kopie dieses
    Plugins im selben Ordner?
@@ -477,7 +511,7 @@ const CC_ROUTE      = 'clubcampus/v1';
    einander), `autoload` wird nach dem Schreiben geprueft und notfalls
    berichtigt, `/status` nennt Empfaenger, Version, Metaschluessel und die
    Team-Zuordnung. */
-const CC_VERSION    = '0.9.22';
+const CC_VERSION    = '0.9.24';
 const CC_TYP_SPIEL  = 'fch_spiel';
 const CC_TYP_TEAM   = 'fch_team';
 /* ⚠ NUR ZUM ZAEHLEN. Dieses Plugin legt keine Person an und aendert
@@ -636,6 +670,20 @@ const CC_FELDER = array(
 	   Repeaters ebenso. */
 	'aufstellung',
 );
+
+/**
+ * Welche dieser Felder REPEATER sind — also eine Zeilenzahl haben.
+ *
+ * ⚠  Gebraucht fuer cc_pruefe_verlust(): nur ein Repeater kann Zeilen
+ *    verlieren. Ein Textfeld hat keinen Vorher-Stand, den man zaehlen
+ *    koennte, und `(int) 'FC Meilen 3'` waere 0 — also ein gemeldeter
+ *    Verlust bei jedem einzelnen Spielfeld.
+ *
+ * ⚠  `verlauf` steht hier, obwohl er nicht in CC_FELDER steht: er wird
+ *    von cc_schreibe_verlauf() geschrieben und ruft die Pruefung selbst.
+ *    Die Liste nennt, WAS ein Repeater ist — nicht, wer ihn schreibt.
+ */
+const CC_REPEATER = array( 'aufstellung', 'verlauf' );
 
 /**
  * Felder der Nutzlast, die ABSICHTLICH nicht ans Spiel geschrieben werden.
@@ -1498,6 +1546,139 @@ function cc_feld_schluessel( int $post_id, string $name ) {
 	return null;
 }
 
+/**
+ * Wie viele Zeilen ein Repeater VORHER trug — und was daraus wird.
+ *
+ * ⚠ ⚠  ANLASS, 12.09.2026: ein Waechter meldete 100 verlorene
+ *       Aufstellungen („38 → 0"). Es war ein Zaehlfehler, und der Bestand
+ *       war unberuehrt — aber **von dieser Datei aus war das nicht zu
+ *       widerlegen.** `aufstellung_zeilen` und `verlauf_zeilen` zaehlen,
+ *       was NACHHER dasteht.
+ *
+ *       > **Ein Zaehler, der nur den Endstand kennt, kann einen Verlust
+ *       > nicht von einem Erfolg unterscheiden.** „2433 geschrieben" sagt
+ *       > nichts darueber, ob vorher 2533 dastanden.
+ *
+ *       Dieselbe Familie wie eine Pruefung hinter dem Filter, den sie
+ *       pruefen soll: beide koennen nur „in Ordnung" sagen.
+ *
+ * ⚠  EIN AUFRUF, NICHT ZWEI, und er steht VOR `update_field()` — mit der
+ *    Zahl, die geschrieben werden soll. Ein Paar aus `merke_vorher()` und
+ *    `melde_nachher()` waere an jeder neuen Schreibstelle einzeln zu
+ *    vergessen; hier kann nur die ganze Messung fehlen, nicht ihre
+ *    Haelfte.
+ *
+ * ⚠  UEBER DENSELBEN $key WIE DER SCHREIBVORGANG. Wer hier ueber den
+ *    NAMEN liest, misst womoeglich ein anderes Feld als das, das gleich
+ *    beschrieben wird — `sfv_person_id` gibt es an diesem Beitrag
+ *    dreimal. Dann meldet der Waechter einen Verlust, den es nicht gibt,
+ *    oder verschweigt einen, den es gibt. Siehe cc_feld_schluessel().
+ *
+ * ⚠ ⚠  ROH GELESEN (`false`), UND DAS IST DER FEHLER, DEN DER WAECHTER
+ *       DES THEMES GEMACHT HAT: bei einem Repeater steht im Meta-Wert die
+ *       ZEILENZAHL, kein Array. `is_array()` darauf ist immer falsch, und
+ *       wer daraus 0 ableitet, meldet jede gefuellte Aufstellung als
+ *       geleert. Deshalb hier beide Formen, und die Zahl gewinnt.
+ *
+ *       Formatiert zu lesen waere die andere Falle: es zoege alle
+ *       Unterfelder aller Zeilen nach — je Spiel, je Repeater, bei 270
+ *       Spielen.
+ *
+ * ⚠ ⚠  DREI ZAHLEN, NICHT EINE. `verlust` (von mehr als null auf null)
+ *       steht getrennt von `rueckgang` (weniger, aber nicht nichts). Ein
+ *       Rueckgang kann RICHTIG sein — der Verband korrigiert ein
+ *       Matchblatt, und dann sind es zwei Zeilen weniger. Ein Sturz auf
+ *       null nach einem gefuellten Stand ist der Alarm. Wer beides
+ *       zusammenzaehlt, meldet Korrekturen als Datenverlust, und ein
+ *       Melder mit Fehlalarmen wird nach dem dritten Mal abgeschaltet.
+ */
+/**
+ * Der Ausgangsstand beider Repeater — mit BEIDEN Eintraegen, immer.
+ *
+ * ⚠ ⚠  NICHT `array()`, und das ist der ganze Zweck. Waechse die Struktur
+ *       erst beim ersten Treffer, fehlte der Schluessel `aufstellung`
+ *       genau dann, wenn kein Spiel eine Aufstellung hatte — also in dem
+ *       Fall, den man wissen will. **„Kein Eintrag" saehe aus wie „nicht
+ *       gemessen", und nicht gemessen saehe aus wie in Ordnung.**
+ *
+ *       Dieselbe Regel wie bei den Zahlen der Antwort: immer da, auch als
+ *       Null. Ein Wert, der nur im schlechten Fall erscheint, verlangt vom
+ *       Leser eine Deutung, und die Deutung einer Abwesenheit ist geraten.
+ */
+function cc_verlust_leer(): array {
+	$leer = array();
+	foreach ( CC_REPEATER as $feld ) {
+		$leer[ $feld ] = array(
+			'vorher' => 0, 'nachher' => 0,
+			'verlust' => 0, 'rueckgang' => 0, 'je_spiel' => array(),
+		);
+	}
+	return $leer;
+}
+
+/**
+ * Aus der Map eine Liste — fuer die Antwort.
+ *
+ * ⚠  Gesammelt als Map (entdoppelt sich selbst, ein Spiel kommt nur
+ *    einmal vor), ausgeliefert als LISTE: ein leeres JSON-Objekt und eine
+ *    leere JSON-Liste sehen in jedem Leser verschieden aus, und ein
+ *    Schluessel, dessen Typ sich mit dem Inhalt aendert, ist beim
+ *    Auswerten teurer als ein paar Zeichen mehr.
+ */
+function cc_verlust_bericht(): array {
+	$raus = array();
+	foreach ( (array) ( $GLOBALS['cc_verlust'] ?? cc_verlust_leer() ) as $feld => $w ) {
+		$liste = array();
+		foreach ( (array) $w['je_spiel'] as $mid => $z ) {
+			$liste[] = array(
+				'sfv_match_id' => (string) $mid,
+				'vorher'       => (int) $z['vorher'],
+				'nachher'      => (int) $z['nachher'],
+			);
+		}
+		$raus[ $feld ] = array(
+			'zeilen_vorher'  => (int) $w['vorher'],
+			'zeilen_nachher' => (int) $w['nachher'],
+			'verlust'        => (int) $w['verlust'],
+			'rueckgang'      => (int) $w['rueckgang'],
+			'je_spiel'       => $liste,
+		);
+	}
+	return $raus;
+}
+
+function cc_pruefe_verlust(
+	int $post_id, string $feld, string $key, string $mid, int $nachher
+): void {
+	$roh = get_field( $key, $post_id, false );
+	$vorher = is_array( $roh ) ? count( $roh ) : (int) $roh;
+
+	if ( ! isset( $GLOBALS['cc_verlust'][ $feld ] ) ) {
+		$GLOBALS['cc_verlust'][ $feld ] = array(
+			'vorher' => 0, 'nachher' => 0,
+			'verlust' => 0, 'rueckgang' => 0, 'je_spiel' => array(),
+		);
+	}
+	$w = &$GLOBALS['cc_verlust'][ $feld ];
+	$w['vorher']  += $vorher;
+	$w['nachher'] += $nachher;
+
+	if ( $vorher > 0 && 0 === $nachher ) {
+		$w['verlust']++;
+	} elseif ( $nachher > 0 && $nachher < $vorher ) {
+		$w['rueckgang']++;
+	} else {
+		return;
+	}
+	/* ⚠ Die Liste nennt das Spiel, nicht nur die Anzahl. Eine Zahl allein
+	   sagt „irgendwo sind Zeilen weg" — und dann sucht jemand 270 Spiele
+	   durch. Der Schluessel ist die sfv_match_id aus der Nutzlast: nur sie
+	   laesst sich auf der anderen Seite gegen die eigene Zahl halten. */
+	if ( '' !== $mid ) {
+		$w['je_spiel'][ $mid ] = array( 'vorher' => $vorher, 'nachher' => $nachher );
+	}
+}
+
 function cc_schreibe_felder( int $post_id, array $spiel ): array {
 	$geschrieben = array();
 	foreach ( CC_FELDER as $feld ) {
@@ -1518,6 +1699,30 @@ function cc_schreibe_felder( int $post_id, array $spiel ): array {
 		if ( null === $key ) {
 			$GLOBALS['cc_ohne_feldschluessel'][ $feld ] = true;
 			continue;
+		}
+		/* ⚠ ⚠  VOR DEM SCHREIBEN, mit derselben $key. Nach
+		   `update_field()` ist der alte Stand weg — dann waere „38 → 0"
+		   von „0 → 0" nicht mehr zu unterscheiden, und genau diese
+		   Unterscheidung war am 12.09.2026 eine halbe Stunde wert.
+		   Nur Repeater: ein Textfeld hat keine Zeilenzahl.
+
+		   ⚠ ⚠  WAS EIN VERLUST SEIT WEG B HEISST — und die Aussage ist
+		   SCHAERFER als vorher. ClubCampus schickt das Feld `aufstellung`
+		   seit dem 12.09.2026 nur noch, wenn es Zeilen HAT; fehlt es, wird
+		   hier uebersprungen und gar nichts gemessen.
+
+		     vorher   ein Verlust konnte von dort kommen (`aufstellung: []`)
+		     seither  ein Verlust heisst: Zeilen kamen an und wurden nicht
+		              geschrieben — also hier oder in ACF
+
+		   ⚠ Fuer `verlauf` gilt das NICHT: er wird weiterhin immer gesendet,
+		   auch leer. Dort bleibt ein Verlust zweideutig. */
+		if ( in_array( $feld, CC_REPEATER, true ) ) {
+			cc_pruefe_verlust(
+				$post_id, $feld, $key,
+				(string) ( $spiel['sfv_match_id'] ?? '' ),
+				count( (array) $wert )
+			);
 		}
 		update_field( $key, $wert, $post_id );
 		$geschrieben[] = $feld;
@@ -1800,7 +2005,10 @@ function cc_pruefe_unterfelder( int $post_id, string $repeater, $roh, array $erl
 		. ( null === $vorhanden ? '?' : (string) count( $vorhanden ) );
 }
 
-function cc_schreibe_verlauf( int $post_id, array $verlauf ): int {
+/* ⚠ `$mid` ist kein Zierrat: cc_pruefe_verlust() nennt das Spiel, und
+   eine Beitrags-Id kennt ClubCampus nicht — nur die sfv_match_id laesst
+   sich auf der anderen Seite gegen die eigene Zahl halten. */
+function cc_schreibe_verlauf( int $post_id, array $verlauf, string $mid = '' ): int {
 	$zeilen = array();
 	foreach ( $verlauf as $z ) {
 		if ( ! is_array( $z ) ) {
@@ -1820,6 +2028,12 @@ function cc_schreibe_verlauf( int $post_id, array $verlauf ): int {
 	}
 	/* ⚠ $verlauf, nicht $zeilen — derselbe Grund wie bei der Aufstellung. */
 	cc_pruefe_unterfelder( $post_id, 'verlauf', $verlauf, CC_VERLAUF_FELDER );
+	/* ⚠ ⚠  DER VERLAUF IST DER AELTERE FALL, nicht der neuere. Die
+	   Aufstellung wird erst seit dem 10.09.2026 ausdruecklich geleert; der
+	   Verlauf wird seit dem ERSTEN TAG bei jedem Lauf ersetzt — auch mit
+	   einer leeren Liste, ohne Entscheid und ohne Zaehler. Wer nur die
+	   Aufstellung bewacht, bewacht die juengere Haelfte. */
+	cc_pruefe_verlust( $post_id, 'verlauf', $key, $mid, count( $zeilen ) );
 	update_field( $key, $zeilen, $post_id );
 	return count( $zeilen );
 }
@@ -2055,10 +2269,40 @@ function cc_personen_lage(): array {
 	foreach ( $ids as $id ) {
 		$nr = trim( (string) get_post_meta( (int) $id, 'sfv_person_id', true ) );
 
-		/* E-Mail und Jahrgang als Hash — nie im Klartext. */
-		$mail = strtolower( trim( (string) get_post_meta( (int) $id, 'email', true ) ) );
-		$geb  = trim( (string) get_post_meta( (int) $id, 'geburtsdatum', true ) );
-		$jahr = preg_match( '/(\\d{4})/', $geb, $m ) ? $m[1] : '';
+		/* E-Mail und Jahrgang als Hash — nie im Klartext.
+
+		   ⚠ ⚠  ZWEI FALSCHE FELDNAMEN, GEMESSEN AM 12.09.2026 — und sie waren
+		   es seit 0.9.20, also in JEDER Fassung, die je gelaufen ist:
+
+		     hier stand 'email'         → Fields/person.php:302 heisst 'mail'
+		     hier stand 'geburtsdatum'  → gibt es an der Person NICHT
+
+		   Damit waren `email_hash` und `name_hash` fuer JEDE Person `null`.
+		   Zwei von drei Achsen des Abgleichs trugen nichts — und eine Null auf
+		   einer Achse, die gar nichts traegt, sieht aus wie ein Messergebnis.
+
+		   ⚠ ⚠  DIE ZWEI FEHLER SIND VERSCHIEDENER ART, und nur der erste ist
+		   eine Umbenennung:
+
+		     'email' → 'mail'   ein NAME. Behoben, die Achse traegt wieder.
+		     'geburtsdatum'     eine FEHLENDE ANGABE. Es gibt kein ACF-Feld,
+		                        weder `geburtsdatum` noch `jahrgang`, und
+		                        Werkzeuge/personen-import.php:1053 ueberspringt
+		                        die Spalte ausdruecklich (`continue`).
+
+		   **Der Jahrgang steht an einer Person nirgends.** `name_hash` bleibt
+		   deshalb `null`, und das ist richtig — einen Wert zu erfinden waere
+		   schlimmer als keiner. Was fehlte, war die ANSAGE: siehe
+		   `merkmale_nutzbar` weiter unten.
+
+		   ⚠ Gelesen wird ueber `get_post_meta` und nicht ueber
+		   `cc_feld_schluessel()`: hier wird nichts geschrieben. Wer das
+		   aendert, aendert die Begruendung mit. */
+		$mail = strtolower( trim( (string) get_post_meta( (int) $id, 'mail', true ) ) );
+		/* ⚠ Bleibt leer, solange es kein Jahrgangsfeld gibt. Die Zerlegung
+		   steht hier, damit sie am Tag X nicht neu erfunden wird. */
+		$geb  = '';
+		$jahr = ( '' !== $geb && preg_match( '/(\d{4})/', $geb, $m ) ) ? $m[1] : '';
 		$post = get_post( (int) $id );
 		$name = $post ? cc_namensschluessel( (string) $post->post_title ) : '';
 
@@ -2084,6 +2328,30 @@ function cc_personen_lage(): array {
 		/* ⚠ Je Person drei Merkmale, keines davon ein Klartext. Die
 		   Schnittmenge rechnet die andere Seite — sie hat die 93. */
 		'merkmale'    => $merkmale,
+		/* ⚠ ⚠  WIE VIELE PERSONEN JE ACHSE UEBERHAUPT ETWAS TRAGEN — und das
+		   ist der eigentliche Befund vom 12.09.2026, nicht die zwei
+		   Feldnamen.
+
+		   Zwei Achsen waren seit 0.9.20 fuer JEDE Person `null`, und die
+		   Gegenseite bekam daraus eine Null geliefert. **Eine Null auf einer
+		   Achse, die gar nichts traegt, ist von einem Messergebnis nicht zu
+		   unterscheiden** — und genau das hat dazu gefuehrt, dass auch
+		   `treffer_sfv = 0` in Zweifel geriet, obwohl DIESE Achse den
+		   richtigen Feldnamen las.
+
+		   > **Nicht feststellbar ist nicht dasselbe wie nichts gefunden.**
+
+		   Steht hier `name_hash: 0`, ist jede Aussage ueber Namenstreffer
+		   gegenstandslos, und man sucht nicht nach Treffern, sondern nach dem
+		   Jahrgang. Dieselbe Bauart wie `halbzeit_nicht_pruefbar`. */
+		'merkmale_nutzbar' => array(
+			'sfv_person_id' => count( array_filter(
+				$merkmale, static fn( $m ) => null !== $m['sfv_person_id'] ) ),
+			'email_hash'    => count( array_filter(
+				$merkmale, static fn( $m ) => null !== $m['email_hash'] ) ),
+			'name_hash'     => count( array_filter(
+				$merkmale, static fn( $m ) => null !== $m['name_hash'] ) ),
+		),
 	);
 }
 
@@ -2340,6 +2608,11 @@ function cc_route_spiele( WP_REST_Request $req ) {
 	$GLOBALS['cc_aufstellung_zeilen'] = 0;
 	$GLOBALS['cc_aufstellung_spiele'] = 0;
 	$GLOBALS['cc_aufstellung_je_spiel'] = array();
+	/* ⚠ LEER INITIALISIERT, nicht erst beim ersten Treffer angelegt. Sonst
+	   waere „kein Eintrag" von „nicht gemessen" nicht zu unterscheiden —
+	   dieselbe Verwechslung, die die zwei Zaehler daneben ueberhaupt
+	   veranlasst hat. */
+	$GLOBALS['cc_verlust'] = cc_verlust_leer();
 	$GLOBALS['cc_unbeachtete_unterfelder'] = array();
 	$GLOBALS['cc_unterfelder_ohne_acf'] = array();
 	$GLOBALS['cc_unterfelder_unbekannt'] = array();
@@ -2462,7 +2735,10 @@ function cc_route_spiele( WP_REST_Request $req ) {
 		cc_stempel( (int) $postId, $lauf );
 
 		if ( is_array( $spiel['verlauf'] ?? null ) ) {
-			$erg['verlauf_zeilen'] += cc_schreibe_verlauf( (int) $postId, $spiel['verlauf'] );
+			$erg['verlauf_zeilen'] += cc_schreibe_verlauf(
+				(int) $postId, $spiel['verlauf'],
+				(string) ( $spiel['sfv_match_id'] ?? '' )
+			);
 		}
 
 		cc_titel_nachziehen( (int) $postId );
@@ -2508,6 +2784,10 @@ function cc_route_spiele( WP_REST_Request $req ) {
 			   ob die Aufstellung angekommen ist. */
 			'aufstellung_zeilen' => (int) ( $GLOBALS['cc_aufstellung_zeilen'] ?? 0 ),
 			'aufstellung_spiele' => (int) ( $GLOBALS['cc_aufstellung_spiele'] ?? 0 ),
+			/* ⚠ In den Bericht, nicht nur in die Antwort — aus demselben Grund
+			   wie die zwei Zeilen darueber: die Antwort sieht nur, wer den Lauf
+			   ausloest. Ein Verlust wird SPAETER gesucht. */
+			'verlust'            => cc_verlust_bericht(),
 			'uebersprungen'  => cc_bericht_deckel( $uebersprungen ),
 			'mehrfach'       => cc_bericht_deckel( $mehrfach ),
 			'hinweis'        => $erg['fehler'],
@@ -2531,6 +2811,11 @@ function cc_route_spiele( WP_REST_Request $req ) {
 	$erg['aufstellung_zeilen'] = (int) ( $GLOBALS['cc_aufstellung_zeilen'] ?? 0 );
 	$erg['aufstellung_spiele'] = (int) ( $GLOBALS['cc_aufstellung_spiele'] ?? 0 );
 	$erg['aufstellung_je_spiel'] = (array) ( $GLOBALS['cc_aufstellung_je_spiel'] ?? array() );
+	/* ⚠ ⚠  DER VORHER-NACHHER-VERGLEICH — bestellt am 12.09.2026, nachdem
+	   ein Waechter 100 Verluste gemeldet hatte, die es nicht gab, und diese
+	   Datei sie nicht widerlegen konnte. Siehe cc_pruefe_verlust().
+	   Beide Repeater, beide Richtungen, immer da. */
+	$erg['verlust'] = cc_verlust_bericht();
 	/* ⚠ ⚠ ZWEI RICHTUNGEN, UND SIE HEISSEN VERSCHIEDEN. Bis 0.9.15 trug
 	   `unbeachtete_unterfelder` die zweite; seit 0.9.16 die erste — damit
 	   sie dasselbe bedeutet wie `unbeachtete_felder` eine Ebene darueber.

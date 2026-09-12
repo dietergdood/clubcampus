@@ -236,10 +236,13 @@ async function alleSeiten<T>(
  *    Auskunft, die `laeuft drueben mein Deploy?` beantworten koennte,
  *    beantwortet sie nicht mehr.
  *
+ *    47  12.09.2026  Weg B: `aufstellung` wird weggelassen statt geleert;
+ *                    `spiele_ohne_aufstellung` statt `..._geleert`;
+ *                    `merkmale_nutzbar` durchgereicht
  *    46  12.09.2026  Durchreiche von personen/teams/unterfelder/
  *                    geschwister, nichtDurchgereicht(), diese Angabe
  */
-const FUNCTION_FASSUNG = 46;
+const FUNCTION_FASSUNG = 47;
 
 const AKTIONEN = ["probe", "export", "bestand", "status", "ranglisten"];
 
@@ -632,17 +635,46 @@ async function sendeAnWordpress(
      Bau) von „9 gesendet / 2 geschrieben" (Empfaenger oder ACF).
 
      ⚠ Nur Spiele MIT Aufstellung. Ein Spiel ohne ist keine Null, sondern
-     eine andere Aussage — die steht in `spiele_aufstellung_geleert`. */
+     eine andere Aussage — die steht in `ohne_aufstellung`. */
+  /* ⚠ ⚠  DREI LAGEN, NICHT ZWEI — und sie stehen alle in derselben
+     Nutzlast, aus der auch `jeSpiel` kommt. Ein Spiel ohne Aufstellung
+     war bis zum 12.09.2026 in beiden Faellen dasselbe: ein fehlender
+     Eintrag. Siehe GesendeteAufstellung.geleert.
+
+       Feld fehlt        nicht geholt — drueben bleibt stehen, was steht
+       aufstellung: []   geleert — drueben verschwindet die Aufstellung
+       aufstellung: […]  gesendet
+
+     ⚠  `undefined` und `[]` mit `Array.isArray(…) ? … : 0` in eine Null
+        zu falten war genau der Schritt, der die Frage unbeantwortbar
+        gemacht hat. */
   const jeSpiel: Record<string, number> = {};
+  let ohneAufstellung = 0;
+  const verlaufGeleert: string[] = [];
   for (const s of erg.alle) {
-    const n = Array.isArray(s.aufstellung) ? s.aufstellung.length : 0;
-    if (n > 0) jeSpiel[String(s.sfv_match_id)] = n;
+    const mid = String(s.sfv_match_id);
+    /* ⚠ SEIT WEG B ZWEI LAGEN, NICHT DREI: entweder wir haben Zeilen und
+       senden sie, oder das Feld fehlt. Eine leere Liste entsteht nicht mehr
+       — gehalten wird das von `keineLeereAufstellung.test.ts`, nicht von
+       einer Bedingung hier: eine Zusage ueber das Produkt gehoert in einen
+       Test, nicht in einen Zaehler, den niemand liest. */
+    if (Array.isArray(s.aufstellung) && s.aufstellung.length > 0) {
+      jeSpiel[mid] = s.aufstellung.length;
+    } else {
+      ohneAufstellung += 1;
+    }
+    /* ⚠ Der Verlauf hat keinen dritten Fall: `bildeSpiel()` setzt das Feld
+       immer. Eine leere Liste leert drueben — seit dem ersten Tag, ohne
+       Entscheid und bis heute ohne Zaehler. */
+    if (Array.isArray(s.verlauf) && s.verlauf.length === 0) verlaufGeleert.push(mid);
   }
   const gesendet = {
     zeilen: alsZahl("aufstellung_zeilen_eigen") + alsZahl("aufstellung_zeilen_fremd"),
     rollen: (zf.aufstellung_rollen as Record<string, number>)
       ?? { start: 0, eingewechselt: 0, nicht_eingesetzt: 0 },
     je_spiel: jeSpiel,
+    ohne_aufstellung: ohneAufstellung,
+    verlauf_geleert: verlaufGeleert,
     /* Die fuenf Verlaufszahlen — dieselben, die die Vorschau zeigt.
        Aus derselben Quelle, nicht neu gerechnet. */
     verlauf: {
@@ -1043,11 +1075,28 @@ async function holeBestand(
      ⚠ `merkmale` gibt es erst ab Empfaenger 0.9.20. Fehlt der Schluessel,
      bleibt `abgleich` WEG — nicht auf null gesetzt. Eine nicht gestellte
      Frage ist keine Null, und die Karte unterscheidet das. */
-  const wpPers = (wp.personen ?? {}) as { merkmale?: DruebenMerkmal[] };
+  const wpPers = (wp.personen ?? {}) as {
+    merkmale?: DruebenMerkmal[];
+    merkmale_nutzbar?: Record<string, number>;
+  };
   let abgleich = null;
   if (Array.isArray(wpPers.merkmale)) {
     const lage = await holeKandidaten(db, vereinId);
     abgleich = baueAbgleich(lage.kandidaten, wpPers.merkmale);
+    /* ⚠ ⚠  WIE VIELE PERSONEN DRUEBEN JE ACHSE UEBERHAUPT ETWAS TRAGEN —
+       durchgereicht, nicht weggelassen. Ohne diese drei Zahlen ist
+       `treffer_email: 0` von „niemand passt" nicht zu unterscheiden von
+       „die Achse traegt nichts".
+
+       Gemessen am 12.09.2026: `email_hash` und `name_hash` waren drueben
+       fuer JEDE Person `null`, weil der Empfaenger zwei falsche Feldnamen
+       las (`email` statt `mail`, und ein `geburtsdatum`, das es nicht
+       gibt). Die gemeldeten 40 E-Mail- und 11 Namenstreffer konnten aus
+       dieser Quelle nicht stammen.
+
+       ⚠ Ab Empfaenger 0.9.24. Fehlt der Schluessel, bleibt das Feld WEG
+       statt auf null — eine nicht gestellte Frage ist keine Null. */
+    abgleich.drueben_nutzbar = wpPers.merkmale_nutzbar ?? null;
     /* ⚠ Ueber Namensschluessel und Jahrgang, NICHT ueber die Nummer.
        Bei null Treffern ueber die Nummer taugt sie dafuer nicht — ein
        Schluessel, der nirgends passt, ordnet nichts ein. */
@@ -1480,9 +1529,20 @@ async function laufeProbe(
      zusammenzaehlt, meldet fehlende Halbzeitstaende als geprueft. */
   const halbzeit = { widerspruch: 0, stimmt: 0, nicht_pruefbar: 0 };
   let spieleMitAufstellung = 0;
-  /* Geholt, aber der Verband fuehrt keine Aufstellung — die Zeilen, die
-     drueben ausdruecklich geleert werden. */
+  /* ⚠ Spiele, fuer die wir KEINE Aufstellung kennen — das Feld fehlt dann
+     in der Nutzlast, und drueben bleibt unberuehrt, was steht.
+
+     ⚠ ⚠  DER NAME IST DER BEFUND. Bis zum 12.09.2026 stand hier
+     `spiele_aufstellung_geleert`, und die Zahl zaehlte Spiele, deren
+     Aufstellung drueben GELOESCHT wurde. Seit Weg B loescht nichts mehr.
+     Wer `geleert: 190` liest, sucht 190 geloeschte Aufstellungen — und ein
+     Zaehler, dessen Name mehr behauptet als er misst, ist gefaehrlicher
+     als keiner. */
   let spieleOhneAufstellung = 0;
+  /* Der Verlauf, zum Vergleich: er wird IMMER gesendet, auch leer — seit
+     dem ersten Tag, ohne Entscheid und ohne Bedingung. Weg B hat die
+     Aufstellung geschlossen und ihn NICHT. */
+  let verlaufGeleert = 0;
   const namensZaehlung = {
     mit_eigenem_namen: 0, mit_sfv_namen: 0, mit_rueckennummer: 0, mit_gegnername: 0,
     zeilen_mit_zweitem_namen: 0,
@@ -1545,29 +1605,45 @@ async function laufeProbe(
       for (const k of Object.keys(wechselWiderspruch) as (keyof typeof wechselWiderspruch)[]) {
         wechselWiderspruch[k] += ww[k];
       }
-    } else if (s.matchdaten_geholt_am) {
-      /* ⚠ ⚠  DIE AUSDRUECKLICH LEERE LISTE — Entscheid Didi, 10.09.2026.
+    } else {
+      /* ⚠ ⚠  WEG B — DAS FELD WIRD WEGGELASSEN, nicht geleert.
+         Entscheid Didi, 12.09.2026; er nimmt seinen eigenen vom 10.09.
+         zurueck, und die Begruendung ist die staerkere von beiden.
 
-         Drei Faelle, nicht zwei, und der Unterschied steht in unseren
-         eigenen Daten:
+         Hier stand `else if (s.matchdaten_geholt_am) spiel.aufstellung =
+         []`. Der Gedanke war, ein ZURUECKGEZOGENES Matchblatt drueben
+         verschwinden zu lassen. Was die Bedingung tatsaechlich traf, war
+         etwas anderes:
 
-           nicht geholt              → Feld WEGLASSEN („wir wissen es nicht")
-           geholt, Zeilen da         → senden
-           geholt, KEINE Zeilen      → `[]` senden („der Verband fuehrt keine")
+         > **Die leere Liste sagte zweierlei — und der haeufige Fall war
+         > nicht der, fuer den sie gebaut war.** Bei 14 von 82 Spielen
+         > fuehrt der Verband ueberhaupt keine Matchdaten. Deren Aufstellung
+         > wurde nie zurueckgezogen; es gab sie nie.
 
-         Ohne den dritten Fall bleibt drueben stehen, was einmal
-         geschrieben wurde: `cc_schreibe_felder()` ueberspringt jedes Feld,
-         das nicht in der Nutzlast steht. Am 10.09.2026 hat eine eigene
-         Migration 20 Zeilen geloescht — waeren sie exportiert gewesen,
-         stuenden die Trainer heute noch in der Startformation.
+         ⚠ `matchdaten_geholt_am` konnte die zwei nicht trennen. Es sagt
+         „ein Lauf hat dieses Spiel angefasst" — nicht „der letzte Abruf
+         hat bestaetigt, dass es keine Aufstellung gibt". Damit wurde eine
+         leere TABELLE zu einer Aussage ueber den VERBAND, und unsere
+         Tabelle kann aus eigenen Gruenden leer sein: `matchdatenLauf.ts`
+         ersetzt Verlauf und Gegneraufstellung ueber delete+insert ohne
+         Transaktion.
 
-         ⚠ Der Preis ist benannt und angenommen: ab jetzt kann ein
-         fehlerhafter Lauf eine richtige Aufstellung LOESCHEN, wo vorher
-         nur eine veraltete stehenblieb. **Eine falsche Aufstellung auf
-         der Vereinsseite ist schlimmer als eine kurz fehlende.** */
-      spiel.aufstellung = [];
+         > **Ein Feld weglassen ist die ehrliche Fassung von „wir wissen
+         > nichts".** (Didi, 12.09.2026)
+
+         ⚠ ⚠  UND DAS ZURUECKZIEHEN WIRD ERST GEBAUT, WENN WIR ES MESSEN
+         KOENNEN. Ein Weg fuer einen Fall, den wir nicht erkennen, ist kein
+         Weg, sondern eine Wette darauf, dass die haeufige Lage die
+         seltene ist. Was es braeuchte, steht im Papier: eine Spalte, die
+         der Matchdaten-Lauf selbst setzt.
+
+         ⚠ Der Preis bleibt benannt: eine veraltete Aufstellung bleibt
+         drueben stehen, bis wieder Zeilen kommen. Das ist die Lage von vor
+         dem 10.09.2026 — und sie ist die harmlosere Haelfte des Tauschs,
+         weil sie NICHTS loescht. */
       spieleOhneAufstellung++;
     }
+    if (spiel.verlauf.length === 0) verlaufGeleert++;
     gebaut.push(spiel);
 
     /* ⚠ Gezaehlt wird die ENTSCHEIDUNG, nicht der fertige Text. Die erste
@@ -1629,7 +1705,15 @@ async function laufeProbe(
       spiele_mit_aufstellung: spieleMitAufstellung,
       /* ⚠ Immer, auch als Null: diese Spiele senden `aufstellung: []` und
          leeren drueben einen etwaigen Repeater. */
-      spiele_aufstellung_geleert: spieleOhneAufstellung,
+      /* ⚠ KEINE Liste dazu: bei ~190 Spielen ohne Matchdaten waere sie das
+         Gegenteil einer Auskunft — eine Liste, die jedes Mal fast alles
+         nennt, wird nach dem dritten Mal ueberlesen. */
+      spiele_ohne_aufstellung: spieleOhneAufstellung,
+      /* ⚠ ⚠  DIE EINZIGE, DIE SEIT WEG B NOCH ETWAS LEERT. Steht hier eine
+         Zahl ueber null, ist das die verbleibende Haelfte desselben
+         Befunds — und die aeltere: der Verlauf wird bei JEDEM Lauf
+         ersetzt, auch leer. */
+      spiele_verlauf_geleert: verlaufGeleert,
       aufstellung_zeilen_eigen: aufZahlen.zeilen_eigen,
       aufstellung_zeilen_fremd: aufZahlen.zeilen_fremd,
       /* Eigene Zeilen, die als „Nr. 18" erscheinen. Gegnerzeilen zaehlen

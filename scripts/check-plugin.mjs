@@ -195,6 +195,41 @@ const REGELN = [
     erwarteImKontrollfall: 1,
   },
 
+  /* ── Die zwei Feldnamen des Personen-Bestands (12.09.2026) ──────────
+     ⚠ ⚠ ANLASS, UND ER HAT ZWEI TAGE GETRAGEN: `cc_personen_lage()` las
+     `email` und `geburtsdatum`. Das Feld heisst `mail`
+     (Fields/person.php:302), und ein `geburtsdatum` gibt es an einer
+     Person nicht — es gibt auch kein `jahrgang`, und der Personen-Import
+     ueberspringt die Spalte ausdruecklich.
+
+     **`email_hash` und `name_hash` waren damit fuer JEDE Person `null`,
+     seit 0.9.20.** Zwei von drei Achsen des Abgleichs trugen nichts, und
+     die Gegenseite bekam daraus Nullen geliefert, die wie Messergebnisse
+     aussahen.
+
+     ⚠ Hier ist der NAME ausnahmsweise die Sache selbst und kein Merkmal
+     dafuer — deshalb darf eine Regel ihn suchen. Sie prueft die
+     Zeichenketten der Funktion ueber den Tokenizer, nicht den Text: der
+     Kommentar darueber nennt `email` und `geburtsdatum` mehrfach, und ein
+     Textmuster wuerde daran haengenbleiben. */
+  {
+    frage: "der Personen-Bestand liest 'mail', nicht 'email' oder 'geburtsdatum'",
+    pruefe: (b) => {
+      const f = b.funktionen.cc_personen_lage;
+      if (!f) return ["cc_personen_lage fehlt — die Regel hat keinen Gegenstand"];
+      const verboten = f.texte.filter((t) => t === "email" || t === "geburtsdatum");
+      /* ⚠ Und die Gegenrichtung: `mail` MUSS vorkommen. Ohne sie waere die
+         Regel auch dann gruen, wenn jemand das Lesen ganz entfernt — eine
+         Regel, die nur Verbotenes zaehlt, ist bei der leeren Menge
+         zufrieden. */
+      const hatMail = f.texte.includes("mail");
+      return hatMail ? verboten : [...verboten, "liest gar kein 'mail' mehr"];
+    },
+    kontrolle: "<?php function cc_personen_lage() { "
+      + "$a = get_post_meta( 1, 'email', true ); return $a; }",
+    erwarteImKontrollfall: 2,
+  },
+
   /* ⚠⚠ DIE ZUSAGE, DIE AM HAEUFIGSTEN BEZWEIFELT WURDE — und die bis zum
      10.09.2026 nur als Kommentar dastand.
 
@@ -762,10 +797,147 @@ for (const fehler of probe.fehler ?? []) {
   befunde.push(`Der Unterfeld-Melder tut nicht, was er soll — ${fehler}`);
 }
 
+/* ═══════════════════════════════════════════════════════════════════
+   27 — DIE ZWEITE LAUFPROBE: der Vorher-Nachher-Vergleich
+
+   ⚠ ⚠  ANLASS, 12.09.2026: ein fremder Waechter meldete 100 verlorene
+         Aufstellungen, die es nicht gab — `is_array()` auf einen Wert,
+         den ACF als ZEILENZAHL liefert. Der Melder, den wir daraufhin
+         gebaut haben, macht dieselbe Messung. **Er darf denselben Fehler
+         nicht machen, und das ist nicht durch Hinsehen zu belegen.**
+
+   ⚠  Gegenstand ist die ECHTE Funktion, aus der Datei geschnitten. Eine
+      nachgebaute Kopie belegt, dass die Kopie funktioniert.
+
+   ⚠  Geschnitten wird auch `CC_REPEATER` — sonst stuende die Liste hier
+      als Abschrift und koennte still auseinanderlaufen.
+   ═══════════════════════════════════════════════════════════════════ */
+const VERLUSTPROBE = `
+$src = stream_get_contents(STDIN);
+$t = token_get_all($src);
+$n = count($t);
+$will = ['cc_verlust_leer', 'cc_verlust_bericht', 'cc_pruefe_verlust'];
+
+$off = 0; $pos = [];
+for ($i = 0; $i < $n; $i++) {
+  $pos[$i] = $off;
+  $off += strlen(is_array($t[$i]) ? $t[$i][1] : $t[$i]);
+}
+
+/* Die Konstante mitnehmen — cc_verlust_leer() liest sie. */
+$code = ''; $konst = false;
+for ($i = 0; $i < $n; $i++) {
+  if (!is_array($t[$i]) || $t[$i][0] !== T_CONST) continue;
+  $j = $i + 1;
+  while ($j < $n && is_array($t[$j]) && $t[$j][0] === T_WHITESPACE) $j++;
+  if ($j >= $n || !is_array($t[$j]) || $t[$j][1] !== 'CC_REPEATER') continue;
+  for ($k = $j; $k < $n; $k++) { if (!is_array($t[$k]) && $t[$k] === ';') break; }
+  if ($k >= $n) continue;
+  $code .= substr($src, $pos[$i], $pos[$k] + 1 - $pos[$i]) . "\n";
+  $konst = true;
+}
+
+$gefunden = [];
+for ($i = 0; $i < $n; $i++) {
+  if (!is_array($t[$i]) || $t[$i][0] !== T_FUNCTION) continue;
+  $j = $i + 1;
+  while ($j < $n && is_array($t[$j]) && $t[$j][0] === T_WHITESPACE) $j++;
+  if ($j >= $n || !is_array($t[$j]) || $t[$j][0] !== T_STRING) continue;
+  if (!in_array($t[$j][1], $will, true)) continue;
+  $k = $j; $tiefe = 0; $start = false;
+  for (; $k < $n; $k++) {
+    $c = is_array($t[$k]) ? null : $t[$k];
+    if ($c === '{') { $tiefe++; $start = true; }
+    elseif ($c === '}') { $tiefe--; if ($start && $tiefe === 0) break; }
+  }
+  if ($k >= $n) continue;
+  $code .= substr($src, $pos[$i], $pos[$k] + 1 - $pos[$i]) . "\n";
+  $gefunden[] = $t[$j][1];
+}
+
+if (!$konst) {
+  echo json_encode(['fehler' => ['CC_REPEATER nicht geschnitten']]); exit;
+}
+if (count($gefunden) !== count($will)) {
+  echo json_encode(['fehler' => ['nicht alle Funktionen geschnitten — gefunden: '
+    . implode(', ', $gefunden)]]);
+  exit;
+}
+
+/* Attrappe fuer ACF: gibt der Reihe nach zurueck, was hineingelegt wurde.
+   ⚠ Die FORMEN sind das Wesentliche — ein Repeater liefert roh die
+      Zeilenzahl, und postmeta gibt sie als Zeichenkette heraus. */
+$GLOBALS['stapel'] = [];
+function get_field($key, $post_id, $format = true) {
+  return array_shift($GLOBALS['stapel']);
+}
+
+try { eval($code); } catch (Throwable $e) {
+  echo json_encode(['fehler' => ['eval: ' . $e->getMessage()]]); exit;
+}
+
+$f = [];
+function lauf($roh, $nachher, $feld = 'aufstellung', $mid = '4393096') {
+  $GLOBALS['cc_verlust'] = cc_verlust_leer();
+  $GLOBALS['stapel'] = [$roh];
+  cc_pruefe_verlust(1, $feld, 'field_x', $mid, $nachher);
+  return $GLOBALS['cc_verlust'][$feld];
+}
+
+/* A — ⚠ DER FEHLER DES FREMDEN WAECHTERS, gegengeprobt. ACF liefert die
+       Zeilenzahl als ZEICHENKETTE. Wer darauf is_array() prueft und aus
+       dem Fehlschlag 0 ableitet, meldet jede gefuellte Aufstellung als
+       geleert — genau die 100 Meldungen vom 12.09.2026. */
+$w = lauf('38', 38);
+if ($w['vorher'] !== 38) $f[] = 'A: die Zeilenzahl als Zeichenkette wird nicht gelesen';
+if ($w['verlust'] !== 0) $f[] = 'A2: ein unveraenderter Stand gilt als Verlust';
+
+/* B — der echte Verlust, und er nennt das Spiel. */
+$w = lauf('38', 0);
+if ($w['verlust'] !== 1) $f[] = 'B: ein Sturz auf null wird nicht gemeldet';
+if (($w['je_spiel']['4393096']['vorher'] ?? null) !== 38) $f[] = 'B2: das Spiel wird nicht genannt';
+
+/* C — Rueckgang getrennt vom Verlust. Ein korrigiertes Matchblatt ist
+       kein Datenverlust; wer beides zusammenzaehlt, erzeugt Fehlalarme. */
+$w = lauf(38, 35);
+if ($w['rueckgang'] !== 1 || $w['verlust'] !== 0) $f[] = 'C: Rueckgang und Verlust nicht getrennt';
+
+/* D — ⚠ NULL AUF NULL IST KEIN VERLUST. Ein Spiel, das nie Zeilen hatte
+       und keine bekommt, darf nicht melden — sonst stehen 190 Spiele in
+       der Liste und niemand liest sie mehr. */
+$w = lauf('', 0);
+if ($w['verlust'] !== 0 || $w['je_spiel'] !== []) $f[] = 'D: null auf null gilt als Verlust';
+
+/* E — die andere Form: ACF gibt die Zeilen als Array heraus. */
+$w = lauf([['a' => 1], ['a' => 2], ['a' => 3]], 3);
+if ($w['vorher'] !== 3) $f[] = 'E: die Array-Form wird nicht gezaehlt';
+
+/* F — beide Repeater stehen im Ausgangsstand. Fehlte einer, waere
+       „kein Eintrag" von „nicht gemessen" nicht zu unterscheiden. */
+$leer = cc_verlust_leer();
+foreach (['aufstellung', 'verlauf'] as $r) {
+  if (!isset($leer[$r])) $f[] = "F: {$r} fehlt im Ausgangsstand";
+}
+
+/* G — je_spiel geht als LISTE hinaus, auch leer. Ein Schluessel, dessen
+       Typ sich mit dem Inhalt aendert, ist beim Auswerten teurer. */
+$GLOBALS['cc_verlust'] = cc_verlust_leer();
+$b = cc_verlust_bericht();
+if (($b['aufstellung']['je_spiel'] ?? null) !== []) $f[] = 'G: je_spiel ist leer keine Liste';
+if (!array_key_exists('zeilen_vorher', $b['aufstellung'] ?? [])) $f[] = 'G2: zeilen_vorher fehlt';
+
+echo json_encode(['gefunden' => $gefunden, 'fehler' => $f]);
+`;
+
+const verlust = JSON.parse(phpLauf(["-r", VERLUSTPROBE], readFileSync(DATEI)));
+for (const fehler of verlust.fehler ?? []) {
+  befunde.push(`Der Vorher-Nachher-Vergleich tut nicht, was er soll — ${fehler}`);
+}
+
 if (befunde.length === 0) {
-  /* +1: die Laufprobe ist keine Regel ueber den Quelltext, sondern die
-   einzige, die den Melder AUSFUEHRT. */
-  const anzahl = REGELN.length + PFLICHTEN.length + MIT_BERICHT.length + 1;
+  /* +2: zwei Laufproben — die einzigen, die Code AUSFUEHREN statt ihn zu
+     lesen. Alle anderen Regeln sagen, dass etwas dasteht. */
+  const anzahl = REGELN.length + PFLICHTEN.length + MIT_BERICHT.length + 2;
   console.log(`check-plugin: ${anzahl} Regeln geprueft${wieGelaufen} — alle erfuellt.`);
   console.log("              ⚠ Ueber den PHP-Tokenizer, nicht ueber den Text:");
   console.log("                Kommentare koennen nicht mitgezaehlt werden.");

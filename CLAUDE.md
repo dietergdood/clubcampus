@@ -9216,6 +9216,56 @@ Papier an einem Dutzend Stellen als Fehler führt. **Zuerst messen, wie
 lange die 14 jsdom-Dateien unbelastet brauchen** — dann steht fest, ob
 5000 ms knapp oder falsch sind.
 
+#### ✅ GEMESSEN AM 12.09.2026: 520 ms allein, 5918 ms im vollen Lauf
+
+Die Messung, die dieser Abschnitt gestern verlangt hat, liegt vor —
+`teamSpielplanTab.test.jsx`, dieselbe Datei, derselbe Fall:
+
+| | |
+|---|---|
+| allein, `--reporter=verbose` | **520 ms** (der zweite Fall 151 ms) |
+| im vollen `npm test` | **5918 ms** — Timeout bei 5000 |
+| dreimal allein hintereinander | **3 von 3 grün** |
+
+**Faktor 11. Damit ist 5000 ms nicht knapp, sondern die falsche Grösse:**
+unbelastet liegt der Fall zehnfach darunter, unter Last hoffnungslos
+darüber. Eine Grenze, die je nach Nebenlast das Zehnfache bedeutet, misst
+die Maschine und nicht den Code.
+
+⚠ ⚠ **UND „DER TEST IST ZU REPARIEREN" IST DAMIT WIDERLEGT.** Der Satz
+stand gestern hier als Richtung. Drei volle Ketten am 12.09.2026 ergaben
+**drei verschiedene Ausfälle**:
+
+| Lauf | Ausfall |
+|---|---|
+| 1 | `vitest list` kam **leer** zurück — die Zählprobe wies den Lauf als wertlos ab, Exit 1 |
+| 2 | `teamSpielplanTab` → „rendert die Bilanz…" · 5918 ms |
+| 3 | `datenpruefungMitglied` → „sperrt bei einem leeren Pflichtfeld…" · 5686 ms |
+
+**Zwei verschiedene Dateien und einmal das Auflisten selbst.** An einem
+einzelnen Test ist nichts zu reparieren, der in 520 ms durchläuft; der
+Gegenstand ist die Umgebung, nicht der Fall.
+
+⚠ **Und die Folge ist die teure:** `deploy = pruefkette && deploy.mjs`.
+Gestern hat der flackernde Test zwei Deploys verschluckt, heute einen
+dritten — und jedes Mal sieht es von aussen aus wie ein Fehler auf der
+anderen Seite. **Ein zufällig roter Zwischenschritt lässt den Deploy aus,
+der Commit steht, und der Ausfall zeigt auf ein fremdes System.**
+
+⚠ **Die Zählprobe hat dabei richtig gehandelt und gehört nicht
+angefasst.** Lauf 1 war kein Fehlalarm: eine leere Dateiliste macht jeden
+folgenden grünen Lauf wertlos, und sie hat genau das gesagt.
+
+**Zu entscheiden (Didi), zwei Wege, und die Zahlen liegen jetzt vor:**
+
+| | |
+|---|---|
+| `testTimeout` auf 15000 | 520 ms × 11 = 5.7 s, also knapp dreifache Reserve. ⚠ Es verdeckt keine Regression: ein sachlich kaputter Test scheitert an einer Erwartung, nicht an der Uhr |
+| die jsdom-Dateien seriell (`fileParallelism: false` o.ä.) | beseitigt die Ursache statt die Grenze zu verschieben, kostet Wanduhr |
+
+⚠ **Keine dritte Möglichkeit heisst `skip`** — das ist eine gelöschte
+Meldung, nur langsamer.
+
 #### Was gemessen ist — und was NICHT
 
 | | |
@@ -11785,3 +11835,577 @@ Personennummer, keine Nummer. Sie entsteht deshalb gar nicht erst.
 ⚠ **Zwei Schlüssel heissen zwei Upserts.** Ein einziger mit dem alten
 Konfliktziel hätte die Gegnerzeilen stündlich vervielfacht — die Sorte
 Fehler, die nur an einer wachsenden Tabelle auffällt.
+
+### ⚠⚠ EIN WÄCHTER, DER FALSCH MISST, MELDET EINEN AUSFALL, DEN ES NICHT GIBT — und das ist teurer als Schweigen
+
+Didis Satz vom 12.09.2026, und er ist die Zuspitzung von allem, was in
+diesem Papier über Prüfmittel steht.
+
+**Der Vorgang:** ein Wächter im Theme meldete **100 Wiederholer-Verluste**
+— „#460: 38 → 0", „#326: 37 → 0", zwölf Spiele im Auszug. Dazu die
+Beobachtung eines Menschen: auf der Spielseite fehlten Verlauf und
+Aufstellung. **Zwei scheinbar unabhängige Signale**, also gehandelt: der
+Export wurde gestoppt.
+
+**Es war ein Zählfehler.** `is_array()` auf einen Wert, den ACF bei einem
+Repeater als **Zeilenzahl** liefert — nie ein Array. Aus dem Fehlschlag
+wurde 0 abgeleitet, also meldete jede gefüllte Aufstellung einen
+Totalverlust. „38 → 0" hiess **„38 → 38"**. Gegenprobe an den Daten: 67
+der 91 vergangenen Spiele tragen Aufstellung und Verlauf, Stichproben mit
+34, 33 und 37 Zeilen.
+
+> **Ein Prüfmittel, das schweigt, kostet die Zeit bis zum nächsten
+> Hinsehen. Eines, das falsch Alarm schlägt, kostet sofort — weil alle
+> danach handeln.**
+
+**Gekostet hat es einen Export-Stopp und eine halbe Stunde.**
+
+⚠ **Die Reihenfolge der Familie, und dieser Fall ist die dritte Stufe:**
+
+| | |
+|---|---|
+| eine Prüfung, die **fehlt** | man weiss, dass man nichts weiss |
+| eine Prüfung, die **grundlos grün** ist | man hört auf zu suchen |
+| ⚠ eine Prüfung, die **grundlos rot** ist | man handelt — gegen einen Zustand, den es nicht gibt |
+
+Die zweite Stufe steht schon zweimal im Papier. **Die dritte fehlte, und
+sie ist die teuerste**, weil Handeln teurer ist als Nichthandeln: ein
+Stopp, eine Untersuchung, ein Auftrag, und am Ende ein Bestand, der die
+ganze Zeit in Ordnung war.
+
+#### ⚠ Warum die zweite Beobachtung nicht half — sie war KEINE zweite Quelle
+
+„Auf der Spielseite fehlen Verlauf und Aufstellung" sah wie eine
+unabhängige Bestätigung aus. **Sie war keine:** dieselbe Seite, dieselbe
+Sitzung, und wer gerade eine Verlustmeldung gelesen hat, sieht eine leere
+Karte als Beleg dafür — statt zu fragen, ob sie nicht aus einem anderen
+Grund leer ist.
+
+> **Zwei Signale sind nur dann zwei Quellen, wenn sie sich nicht kennen.**
+
+Dieselbe Regel wie bei den drei Zahlen, die durch drei Hände gingen: eine
+Bestätigung, die dieselbe Herkunft hat, zählt einmal.
+
+#### ✅ Und was RICHTIG war: keine der drei Deutungen wurde behauptet
+
+Der Befund liess drei Lesarten zu — wir senden `[]`, die Zeilen werden
+drüben verworfen, oder der Wächter zählt falsch. **Die dritte war die
+zutreffende, und sie stand nicht in der Frage.**
+
+Von hier aus war es nicht entscheidbar: die Datenbank ist ohne Passwort
+nicht erreichbar (`supabase/.temp/pooler-url` trägt keines). Gemessen
+wurde deshalb nur, was messbar war — und das hat drei eigene Vermutungen
+**widerlegt**, bevor sie jemand weitertrug:
+
+| Vermutung | gemessen |
+|---|---|
+| `alleSeiten()` wird mit vier Argumenten auf eine Drei-Parameter-Fassung gerufen | ❌ die Function hat eine **eigene** lokale Fassung mit vier |
+| die Map trifft nicht, weil `spiel_id` als Zahl käme | ❌ beide Spalten sind `uuid` |
+| `baueAufstellung()` filtert Zeilen weg | ❌ jede Quellzeile wird eine Ausgabezeile |
+
+> **„Von hier aus nicht entscheidbar" ist ein Ergebnis.** Es ist das
+> einzige, das nicht falsch werden kann — und an einem Tag, an dem drei
+> Schlüsse zu früh gezogen worden waren, war es das richtige.
+
+#### Die Gegenmassnahme: der Vorher-Nachher-Vergleich, und zwar bei UNS
+
+⚠ **Der eigentliche Mangel lag nicht im fremden Wächter, sondern darin,
+dass unser Empfänger ihn nicht widerlegen konnte.** `aufstellung_zeilen`
+und `verlauf_zeilen` zählen, was **nachher** dasteht.
+
+> **„2433 geschrieben" sagt nichts darüber, ob vorher 2533 dastanden.**
+
+Seit 0.9.23 zählt `cc_pruefe_verlust()` beide Stände, für **beide**
+Repeater, und liefert `verlust` je Repeater in Antwort **und** Bericht.
+Drei Entscheidungen daneben, jede mit ihrem Grund:
+
+| | |
+|---|---|
+| **ein Aufruf, vor `update_field()`** | ein Paar aus Vorher- und Nachher-Aufruf wäre an jeder neuen Schreibstelle einzeln zu vergessen. So kann nur die ganze Messung fehlen, nicht ihre Hälfte |
+| **über denselben `$key`** | wer über den NAMEN liest, misst womöglich ein anderes Feld als das, das gleich beschrieben wird — `sfv_person_id` gibt es an diesem Beitrag dreimal |
+| ⚠ **`verlust` getrennt von `rueckgang`** | ein Rückgang kann RICHTIG sein: der Verband korrigiert ein Matchblatt. Wer beides zusammenzählt, meldet Korrekturen als Datenverlust — **und baut damit genau den Fehlalarm-Wächter, der diesen Tag gekostet hat** |
+
+⚠ **Die Positivkontrolle führt den Fremdfehler selbst aus.** Die 27. Regel
+in `check:plugin` schneidet die echten Funktionen mit dem PHP-Tokenizer
+aus der Datei und ruft sie — mit `'38'` als Zeichenkette, der Form, in der
+`postmeta` die Zeilenzahl herausgibt. Vier Sabotagen, jede einzeln
+zurückgesetzt:
+
+| | Meldung |
+|---|---|
+| `is_array(…)`, sonst 0 — **der Fremdfehler** | vier Befunde, darunter „die Zeilenzahl als Zeichenkette wird nicht gelesen" |
+| Rückgang als Verlust gezählt | „Rueckgang und Verlust nicht getrennt" |
+| null auf null als Verlust gezählt | „null auf null gilt als Verlust" |
+| **Funktion umbenannt** — die tote Probe | „nicht alle Funktionen geschnitten" |
+
+Die letzte ist die wichtigste: **findet der Schnitt seinen Gegenstand
+nicht, ist das rot und nicht grün.** Eine Kontrolle, die ohne ihren
+Gegenstand „ok" sagt, beruhigt — und das ist schlimmer als keine.
+
+### ⚠⚠ `aufstellung: []` — die Bedingung sagt etwas über UNSERE Tabelle und wird als Aussage über den VERBAND gelesen
+
+✅ **ENTSCHIEDEN AM 12.09.2026: WEG B — das Feld wird weggelassen, nicht
+geleert.** Didi nimmt seinen eigenen Entscheid vom 10.09.2026 zurück, und
+die Begründung ist die stärkere von beiden:
+
+> **Ein weggelassenes Feld sagt: wir wissen nichts. Ein leeres Feld sagt:
+> wir wissen, dass nichts ist.** (Didi, 12.09.2026)
+
+> **Das war der Fehler meines Entscheids von gestern — ich habe zwei
+> Aussagen in eine Nachricht gelegt.** Ich wollte „zurückgezogen"
+> abbilden und habe „nichts da" mit derselben Nachricht ausgedrückt.
+> (Didi, 12.09.2026)
+
+⚠ **Die zwei Sätze sind die ganze Regel, und sie gilt über diesen Fall
+hinaus.** Wo eine Nutzlast, eine Antwort oder eine Spalte einen Wert
+weglassen KANN, sind Weglassen und Leeren **zwei verschiedene Aussagen** —
+und wer sie zusammenlegt, verliert genau die, die seltener vorkommt.
+Dieselbe Familie wie `acf_kennt = null` gegen die leere Liste und wie
+„nicht gefragt ist nicht dasselbe wie nichts gefunden".
+
+⚠ **Und das Zurückziehen wird erst gebaut, wenn wir es messen können** —
+vorher wäre es ein Weg für einen Fall, den wir nicht erkennen. Der Preis
+ist die Lage von vor dem 10.09.2026: eine veraltete Aufstellung bleibt
+drüben stehen, bis wieder Zeilen kommen. **Sie ist die harmlosere Hälfte
+des Tauschs, weil sie nichts löscht.**
+
+Der Befund, der dazu geführt hat, steht unverändert darunter.
+
+```ts
+// wp-export/index.ts, laufeProbe
+if (aufZeilen.length) { … senden … }
+else if (s.matchdaten_geholt_am) { spiel.aufstellung = []; }
+```
+
+Drei Lagen, und der Kommentar nennt sie richtig:
+
+| | Nutzlast | heisst |
+|---|---|---|
+| nicht geholt | Feld **fehlt** | „wir wissen es nicht" |
+| geholt, Zeilen da | gefüllt | senden |
+| geholt, keine Zeilen | leere Liste | „der Verband führt keine" |
+
+⚠ **Die dritte Zeile ist der Punkt: `matchdaten_geholt_am` sagt das
+nicht.** Es sagt *„ein Lauf hat dieses Spiel einmal angefasst"* — nicht
+*„der letzte Abruf hat bestätigt, dass es keine Aufstellung gibt"*. Eine
+leere Tabelle wird damit zu einer Aussage über den Verband gemacht, und
+**das ist die Verwandlung, die dieses Papier an einem Dutzend Stellen als
+teuersten Fehler führt**: aus einem Ausfall wird eine Datenlage.
+
+#### ⚠⚠ Und der Grund, warum unsere Tabelle leer sein KANN, steht im Sync
+
+`matchdatenLauf.ts` ersetzt sowohl den Verlauf als auch die
+Gegneraufstellung über **delete und insert, ohne Transaktion**. Der
+Kommentar daneben benennt die Abwägung und nimmt sie ausdrücklich hin:
+
+> *„Nicht atomar: bricht das Schreiben nach dem Loeschen ab, fehlt der
+> Verlauf dieses Spiels bis zum naechsten Lauf. … die Tabelle ist eine
+> reine Spiegelung, der naechste Lauf stellt sie wieder her."*
+
+**Der Satz war richtig und ist es seit dem 10.09.2026 nicht mehr.** Er
+setzt voraus, dass zwischen zwei Sync-Läufen niemand liest. Genau das tut
+der Export seither — stündlich, und er veröffentlicht die Lücke.
+
+> **„Der nächste Lauf stellt es wieder her" gilt nur, solange niemand
+> dazwischen liest.**
+
+Die Kette: ein fehlgeschlagener Insert leert unsere Tabelle → der Export
+liest die Leere → und macht daraus, über die Regel oben, eine Löschung
+auf einer öffentlichen Seite. **Kein Glied davon schlägt fehl.**
+
+⚠ **Belegt ist die Kette nicht, nur möglich.** Es ist eine Lesart, die zu
+messen ist — nicht die Erklärung eines Vorfalls, den es am 12.09.2026
+nicht gab.
+
+#### ⚠ Der Verlauf ist der ältere und ungeschütztere Fall
+
+`bildeSpiel()` setzt `verlauf` **immer**. Eine leere Liste leert drüben —
+seit dem ersten Tag, ohne Entscheid, ohne Bedingung und bis zum
+12.09.2026 ohne Zähler. **Wer nur die Aufstellung bewacht, bewacht die
+jüngere Hälfte.**
+
+#### Die Messung, die entscheidet — und sie ist jetzt wiederholbar
+
+Bis zum 12.09.2026 stand `spiele_aufstellung_geleert` **nur in der
+Vorschau**, als Zahl ohne Namen; der scharfe Lauf hat nie protokolliert,
+wie viele Aufstellungen er geleert hat. Im Protokoll waren ein geleertes
+und ein nie geholtes Spiel dasselbe: **beide fehlen in
+`gesendete_aufstellung_je_spiel`.**
+
+Seither nennen beide Wege die Spiele:
+
+```
+aktion: "probe"   spiele_aufstellung_geleert_ids   welche Spiele, namentlich
+                  spiele_verlauf_geleert           die Gegenzahl des älteren Falls
+Protokoll         gesendete_aufstellung_geleert und _ids
+                  gesendeter_verlauf_geleert und _ids
+```
+
+⚠ **Die Probe schreibt nichts und sendet nichts** — die Messung kostet
+keinen Lauf. Und sie beantwortet beide Hälften der Frage: *wie viele* und
+*welche*. Eine Zahl allein beantwortet „greift die Bedingung zu weit?"
+nicht; dafür braucht es drei Spiele, die man von Hand nachsieht.
+
+**Steht `spiele_verlauf_geleert` höher als `spiele_aufstellung_geleert`,
+ist die Aufstellung nicht der Sonderfall, für den sie gehalten wird** —
+dann ist die Frage grösser als der Entscheid, um den es ging.
+
+#### ✅ Was gebaut ist — und wo die Zusage jetzt hängt
+
+| | |
+|---|---|
+| die `else if`-Verzweigung | **entfernt**. Zwei Lagen statt drei: Zeilen da → senden, sonst Feld weglassen |
+| `spiele_aufstellung_geleert` | heisst **`spiele_ohne_aufstellung`** |
+| `gesendete_aufstellung_geleert[_ids]` | heisst **`gesendete_spiele_ohne_aufstellung`**, ohne Liste |
+| `spiele_verlauf_geleert` | **bleibt** — die einzige, die noch etwas leert |
+
+⚠ **Die Umbenennung war nicht Kosmetik.** Wer `geleert: 190` im Protokoll
+liest, sucht 190 gelöschte Aufstellungen. **Ein Zähler, dessen Name mehr
+behauptet als er misst, ist gefährlicher als keiner** — und mit Weg B
+behauptete der alte Name etwas, das strukturell nicht mehr vorkommt.
+
+⚠ **Und keine Liste mehr dazu.** Bei rund 190 Spielen ohne Matchdaten
+nennt sie jedes Mal fast alles, und das wird nach dem dritten Mal
+überlesen. Für die Frage „greift die Bedingung zu weit?" war sie richtig;
+die Frage ist beantwortet.
+
+**Die Zusage hängt seither an einem Fall, nicht an einem Kommentar:**
+`keineLeereAufstellung.test.ts` liest den Syntaxbaum von
+`wp-export/index.ts` und `wpNutzlast.ts` und findet **weder** eine
+Zuweisung `x.aufstellung = []` **noch** ein Objektfeld `aufstellung: []`.
+Gegengeprobt in beiden Formen, mit Datei und Zeile im Fehlertext.
+
+⚠ **Über den Syntaxbaum, nicht über Text** — ein Muster auf
+`aufstellung = []` träfe die Kommentare, die genau davon handeln. Und
+`suche()` wirft, wenn die Abfrage in ihrer eigenen Positivkontrolle nichts
+findet: **eine Regel, die ihren Gegenstand nicht mehr erkennt, ist rot und
+nicht grün.**
+
+#### Was das Zurückziehen bräuchte — nicht gebaut, mit Absicht
+
+Die Regel wird erst dann eine Aussage über den Verband, wenn der **Abruf
+selbst** sie hinterlässt: eine Spalte, die der Matchdaten-Lauf setzt („der
+letzte Abruf lieferte null Aufstellungszeilen"), statt einer leeren
+Tabelle, die alles bedeuten kann. Das ist eine Migration und gehört in
+einen eigenen Auftrag.
+
+⚠ **Bis dahin gibt es den Fall nicht — und das ist richtig.** Ein Weg für
+einen Zustand, den wir nicht erkennen, ist keine Vorsorge, sondern eine
+Wette darauf, dass die häufige Lage die seltene ist. Am 10.09.2026 ist
+genau diese Wette verloren gegangen: 14 von 82 Spielen.
+
+### ⚠⚠ EINE SPERRE GEGEN „GEFÜLLT AUF LEER" KANN NICHT UNTERSCHEIDEN, WARUM GELEERT WIRD
+
+Befund Didi, 12.09.2026. **Er ist seiner, nicht meiner** — ich hatte die
+Sperre der Gegenseite nirgends erwähnt, und der Gedanke gehört dem, der
+ihn hatte.
+
+Die naheliegende Antwort auf einen Löschvorfall ist ein Riegel auf der
+Empfängerseite: *„schreibe keinen leeren Repeater über einen gefüllten."*
+Er wäre in diesem Fall richtig gewesen und ist trotzdem die falsche
+Stelle.
+
+| das Leeren heisst | soll es durchgehen? |
+|---|---|
+| der Verband hat das Matchblatt **zurückgezogen** | **ja** — sonst steht drüben etwas, das es nicht mehr gibt |
+| der Verband führt **nie** Matchdaten zu diesem Spiel | nein |
+| **unsere** Tabelle ist aus eigenen Gründen leer | nein |
+
+> **Die Sperre sieht nur das Ergebnis — gefüllt auf leer. Den Grund sieht
+> sie nie, und deshalb hätte sie den echten Fall genauso geblockt.**
+
+⚠ **Sie wäre also gerade dann im Weg, wenn sie recht bekommt.** Ein
+Riegel, der den einen Fall verhindert, für den das Feature gebaut wurde,
+ist kein Schutz, sondern eine Rücknahme — nur an einer Stelle, an der
+niemand sie als solche liest.
+
+**Die Unterscheidung kann nur dort entstehen, wo sie bekannt ist: beim
+Bauen der Nutzlast.** Deshalb ist Weg B kein Kompromiss, sondern der
+einzige Ort, an dem das Problem überhaupt lösbar ist — und deshalb steht
+`keineLeereAufstellung.test.ts` bei uns und nicht drüben.
+
+⚠ **Dieselbe Familie wie „eine Meldung nennt das letzte Glied der Kette,
+nicht das gerissene"** — hier greift die Gegenmassnahme am letzten Glied,
+wo die Ursachen schon zusammengelaufen sind und nicht mehr zu trennen
+sind. Wer dort ansetzt, kann nur noch alles oder nichts.
+
+### ⚠⚠ EIN FEHLALARM HAT EINEN ECHTEN BEFUND FREIGELEGT — und die Ursache war eine andere als die gemeldete
+
+> **Ein falsch messender Wächter hat einen Export-Stopp ausgelöst, und die
+> Ursache, die wir dabei fanden, war eine andere als die gemeldete — aber
+> echt. Das ist kein Argument für falsche Wächter, aber es gehört zur
+> Geschichte.** (Didi, 12.09.2026)
+
+Der Bogen des 12.09.2026, und er gehört als ganzer festgehalten, weil
+jede Hälfte allein in die Irre führt.
+
+| | |
+|---|---|
+| **gemeldet** | 100 verlorene Aufstellungen, „38 → 0" |
+| **gehandelt** | Export gestoppt, `active` und `auto_sync` auf `false` |
+| **war** | ein Zählfehler des fremden Wächters — `is_array()` auf eine Zeilenzahl. Der Bestand war unberührt |
+| ⚠ **dabei gefunden** | `aufstellung: []` sagte zweierlei, und der häufige Fall war nicht der, für den es gebaut war |
+| **Folge** | Entscheid vom 10.09. zurückgenommen, Weg B |
+
+> **Die Meldung war falsch, der Befund war echt — und er wäre ohne die
+> falsche Meldung nicht gefunden worden.**
+
+⚠ **Daraus folgt NICHT, dass Fehlalarme nützlich sind.** Der Eintrag
+darüber bleibt gültig: ein Prüfmittel, das grundlos rot ist, kostet
+sofort, weil alle danach handeln. Gekostet hat es einen Export-Stopp und
+eine halbe Stunde.
+
+**Was folgt, ist die Reihenfolge beim Abarbeiten:**
+
+| | |
+|---|---|
+| 1 | die Meldung **widerlegen oder bestätigen**, nicht erklären |
+| 2 | ⚠ **die dabei berührten Stellen trotzdem zu Ende lesen** |
+| 3 | beide Ergebnisse getrennt halten |
+
+⚠ **Schritt 2 fällt normalerweise aus.** Ist die Meldung widerlegt, gilt
+die Sache als erledigt, und was man unterwegs gesehen hat, geht mit der
+Entwarnung unter. Hier war genau das der Ertrag: die `[]`-Bedingung ist
+nicht aufgefallen, weil jemand nach ihr gesucht hätte, sondern weil sie
+auf dem Weg zu einer anderen Frage lag.
+
+⚠ **Und Schritt 3 ist der, an dem es kippen kann.** „Wir haben die
+Ursache gefunden" wäre am Vormittag falsch gewesen — die `[]`-Bedingung
+hat die 100 Meldungen NICHT verursacht. Sie als Erklärung für den Vorfall
+auszugeben hätte den Zählfehler zugedeckt und die Entwarnung verhindert.
+**Ein echter Befund neben einer falschen Meldung ist nicht ihre
+Erklärung.**
+
+Dieselbe Trennung wie bei den drei Fehlschlüssen vom 10./11.09.2026: ein
+richtig verstandener Mechanismus, auf einen Fall angewendet, den niemand
+gemessen hat. Hier war es umgekehrt richtig herum — der Mechanismus
+stimmte, und er wurde ausdrücklich **nicht** auf den Vorfall angewendet.
+
+### ⚠⚠ ZWEI FALSCHE FELDNAMEN — und nur einer davon ist eine Umbenennung
+
+Gemessen am 12.09.2026, unabhängig auf beiden Seiten: der Theme-Chat im
+Quelltext des Empfängers, ich in `Fields/person.php` und im
+Personen-Import. **Beide Messungen stimmen überein.**
+
+```
+wp-export-empfaenger.php   get_post_meta( $id, 'email', … )
+                           get_post_meta( $id, 'geburtsdatum', … )
+
+Fields/person.php:302      das Feld heisst 'mail'  (f_p_mail)
+                           ein 'geburtsdatum' gibt es nicht
+                           ein 'jahrgang' ebenso wenig
+personen-import.php:1053   überspringt die Spalte ausdrücklich (continue)
+```
+
+**`email_hash` und `name_hash` waren damit für JEDE Person `null` — seit
+0.9.20, also in jeder Fassung, die je gelaufen ist.** Zwei von drei Achsen
+des Abgleichs trugen nichts.
+
+⚠ **Die zwei Fehler sind verschiedener Art, und das entscheidet die
+Reparatur:**
+
+| | | |
+|---|---|---|
+| `email` → `mail` | ein **Name** | behoben, die Achse trägt wieder |
+| `geburtsdatum` | eine **fehlende Angabe** | es gibt kein Feld, keinen Schreibpfad, keinen Wert. `name_hash` bleibt `null` |
+
+**Den zweiten als Umbenennung zu behandeln wäre der teurere Fehler
+gewesen.** Man hätte einen Feldnamen gesucht, der irgendwie passt, und
+dabei etwas gefunden — und dann stünde ein Hash über einem Wert, den
+niemand für diesen Zweck pflegt. **Einen Wert zu erfinden ist schlimmer
+als keiner zu haben.**
+
+#### ⚠⚠ Der eigentliche Befund ist nicht der Tippfehler, sondern die stumme Null
+
+> **Nicht feststellbar ist nicht dasselbe wie nichts gefunden.**
+
+Die Rechnung war die ganze Zeit richtig: `baueAbgleich()` filtert `null`
+korrekt heraus und zählt sauber null Treffer. **Falsch war, dass man der
+Null nicht ansehen konnte, warum sie eine ist** — und die Aufteilung ging
+dabei auf (`sfv + email + name + ohne === gesendet`), also sah alles
+plausibel aus.
+
+⚠ **Und die Folge reichte weiter als die zwei Achsen.** Weil zwei Nullen
+aus einer kaputten Quelle kamen, geriet auch `treffer_sfv = 0` in
+Zweifel — obwohl **diese** Achse den richtigen Feldnamen las:
+
+> **Eine unglaubwürdige Zahl zieht die richtigen neben sich mit hinein.**
+
+Das ist der Preis, den eine stumme Null kostet, und er ist grösser als
+ihr eigener Anteil. Seit 0.9.24 nennt `/bestand` deshalb
+`merkmale_nutzbar` — je Achse, wie viele Personen überhaupt etwas tragen.
+Steht dort `name_hash: 0`, ist jede Aussage über Namenstreffer
+gegenstandslos, und man sucht nicht nach Treffern, sondern nach dem
+Jahrgang. Dieselbe Bauart wie `halbzeit_nicht_pruefbar`.
+
+⚠ **Und sie wird durchgereicht, nicht nur berechnet** — `drueben_nutzbar`
+in `AbgleichErgebnis`, `null` bei einer Gegenseite vor 0.9.24 und nicht
+`{}`. Ein leeres Objekt behauptete, es sei gemessen worden.
+
+#### Was daran gehalten wird
+
+`check:plugin` prüft seit dem 12.09.2026 als 28. Regel, dass
+`cc_personen_lage()` die Zeichenkette `mail` führt und weder `email` noch
+`geburtsdatum`. ⚠ **Beide Richtungen**: eine Regel, die nur Verbotenes
+zählt, ist bei der leeren Menge zufrieden — entfernte jemand das Lesen
+ganz, bliebe sie grün. Gegengeprobt an der echten Datei: `mail` zurück auf
+`email` → *„verletzt durch: email, liest gar kein 'mail' mehr"*.
+
+⚠ **Hier darf eine Regel ausnahmsweise einen NAMEN suchen**, weil der Name
+die Sache selbst ist und kein Merkmal dafür. Sie liest die Zeichenketten
+über den Tokenizer — der Kommentar darüber nennt `email` und
+`geburtsdatum` mehrfach, und ein Textmuster bliebe daran hängen.
+
+### ⚠⚠ EINE AUSKUNFT NENNT IHRE BEZUGSGRÖSSE — sonst ist sie ein Schluss
+
+> **„40 von 129 mit E-Mail-Hash" ist eine Auskunft, „40 Treffer" ein
+> Schluss daraus.** (Didi, 12.09.2026)
+
+Der Anlass ist der Tag selbst: drüben waren **alle** Hashes `null`, weil
+der Empfänger zwei falsche Feldnamen las — und die fünf Zahlen des
+Abgleichs sahen trotzdem wie eine Messung aus. Die Aufteilung ging auf,
+die Rechnung war richtig, und **keine der Zahlen log.** Sie sagten nur
+nicht, worüber sie sprachen.
+
+⚠ **Die Bezugsgrösse gehört in DIESELBE Zeile wie die Trefferzahl.** Wer
+„0 über die E-Mail" liest und drei Zeilen später „0 von 129 tragen einen
+Hash", hat schon geschlossen. Eine Auskunft, die erst durch eine zweite
+Zeile richtig wird, kommt zu spät.
+
+```
+0 über die E-Mail — ⚠ drüben trägt KEINE von 129 Personen dieses Merkmal,
+                      die Null sagt hier nichts über Treffer
+40 über die E-Mail (drüben tragen 112 von 129 dieses Merkmal)
+```
+
+⚠ **Und drei Fälle, nicht zwei** — `null` heisst „nicht gemeldet" und ist
+weder „0 von 0" noch eine leere Achse:
+
+| `drueben_nutzbar` | heisst |
+|---|---|
+| fehlt (`null`) | die Gegenseite ist älter als 0.9.24 — **nicht gefragt** |
+| `{ email_hash: 0 }` | gefragt, und die Achse trägt nichts — die Trefferzahl ist gegenstandslos |
+| `{ email_hash: 112 }` | gefragt, und die Achse trägt — die Trefferzahl ist eine Messung |
+
+Beide Abgrenzungen sind gegengeprobt: die leere Achse wie jede andere zu
+behandeln, und `null` als „0 von 0" auszugeben — je ein roter Fall, je
+genau der, der es meint.
+
+⚠ ⚠ **Und der Zähler war zuerst wieder nur berechnet.** `drueben_nutzbar`
+stand eine Stunde lang im Ergebnis und wurde von **niemandem gezeigt** —
+derselbe Fehler, der in diesem Papier achtmal an einem Tag steht, begangen
+von demjenigen, der ihn aufgeschrieben hat. Die Frage dagegen kostet
+nichts und wird trotzdem übersprungen: **wer liest diesen Wert?**
+
+### ⚠ Keine Ebene auf einem Feld, das es nicht gibt — Vorgabe für den Umbau
+
+> **Zwei Ebenen, die messbar sind, sind besser als drei, von denen eine
+> immer leer bleibt.** (Didi, 12.09.2026)
+
+Gilt für den Personen-Abgleich, sobald er umgebaut wird: die dritte Ebene
+(Name plus Jahrgang) ruht auf einem Jahrgang, den es an einer Person
+drüben **nicht gibt** — kein ACF-Feld, kein `jahrgang`, und der
+Personen-Import überspringt die Spalte ausdrücklich.
+
+⚠ **Sie ist heute nicht mehr gefährlich, sondern nur nutzlos** — seit
+`merkmale_nutzbar` sagt die Karte von selbst, dass die Achse nichts
+trägt. Das ist der Unterschied zwischen einer Ebene, die lügt, und einer,
+die leer ist; nur die erste musste sofort weg.
+
+⚠ ⚠ **Die Bedingung kann sich umdrehen, und deshalb ist sie NICHT
+ausgeführt.** Kommt drüben ein Jahrgangsfeld, wird die Ebene messbar und
+gehört behalten. Eine Ebene zu entfernen ist eine Einbahnstrasse — Code,
+Test und die Begründung gehen mit —, und sie wieder aufzubauen kostet
+mehr als das Warten. **Entfernt wird sie, wenn feststeht, dass das Feld
+nicht kommt.**
+
+### ⚠⚠ EINE FRAGE VON AUSSEN HAT DEN FEHLER GEFUNDEN, KEINE PRÜFUNG — und das ist kein Zufall
+
+12.09.2026. `merkmale_nutzbar` war gebaut, durchgereicht, getestet — und
+**wurde von niemandem gezeigt.** Der Zähler stand eine Stunde im Ergebnis
+und erreichte keine Oberfläche.
+
+⚠ **Das ist der Fehler, der in diesem Papier achtmal an einem Tag steht,
+begangen von demjenigen, der ihn am selben Tag aufgeschrieben hat.**
+„Berechnet, geliefert, nicht gezeigt" — und die Frage dagegen kostet
+nichts: *wer liest diesen Wert?*
+
+**Aufgedeckt hat ihn eine Vorgabe von Didi**, die etwas ganz anderes
+wollte: *„Bau in `merkmale` die Zahl mit, wie viele Personen überhaupt
+einen Hash tragen."* Die Zahl gab es schon. Beim Nachsehen, ob sie seiner
+Vorgabe genügt, fiel auf, dass sie nirgends ankommt.
+
+#### ⚠ Warum das keine Prüfung finden KANN
+
+| | findet |
+|---|---|
+| `typecheck` | ein Feld, das es nicht gibt |
+| Tests | eine Rechnung, die falsch ist |
+| `check:*` | eine Form, die nicht stimmt |
+| **„niemand liest diesen Wert"** | ⚠ **nichts davon** |
+
+Ein Wert, der berechnet und nicht gezeigt wird, ist **in keiner Hinsicht
+defekt.** Er hat den richtigen Typ, die richtige Zahl, einen grünen Test
+und einen Kommentar, der seinen Zweck erklärt. Es fehlt nur der Leser —
+und ein fehlender Leser ist keine Eigenschaft des Codes.
+
+> **Deshalb ist dieser Fehler der einzige in diesem Papier, gegen den es
+> kein Werkzeug gibt. Er wird von einem Menschen gefunden, der nach der
+> Zahl fragt — oder nie.**
+
+⚠ **Und das erklärt die Häufung.** Achtmal an einem Tag ist keine
+Unachtsamkeit, sondern die Folge davon, dass der letzte Meter von keiner
+Prüfkette bewacht wird: man baut den Wert, prüft ihn, sieht grün — und der
+Auftrag fühlt sich erledigt an, weil jedes Werkzeug zustimmt.
+
+**Was bleibt, ist eine Gewohnheit statt einer Prüfung:** wer eine Zahl
+ergänzt, nennt im selben Auftrag die Zeile, in der sie erscheint. Nicht
+„die Karte zeigt sie später" — die Zeile.
+
+### ⚠⚠ „WESSEN E-MAIL?" SCHNEIDET IN BEIDE RICHTUNGEN
+
+Frage 3 an den Theme-Chat, 12.09.2026 (Didi): *stehen in `mail` drüben
+Elternadressen? Dann treffen sich die Hashes nie, und die zweite Ebene
+wäre so wertlos wie die dritte.*
+
+⚠ **Die Frage gilt für unsere Seite genauso, und dort ist sie noch nicht
+gestellt.** `holeKandidaten()` hasht `personen.email` — die Adresse **der
+Person**, aus der Zeile der Person. Bei einem Junioren ist das aber
+vermutlich die Adresse eines Elternteils: ein Zehnjähriger hat keine, und
+912 von 914 Personen tragen eine (Stand 23.08.2026).
+
+**Damit gibt es nicht zwei, sondern drei Möglichkeiten** — und nur die
+erste ist die, die die Frage vermutet:
+
+| drüben | bei uns | Folge |
+|---|---|---|
+| Elternadresse | eigene Adresse | die Hashes treffen sich nie — die Ebene ist wertlos |
+| Elternadresse | **auch Elternadresse** | ⚠ sie treffen sich **schon** — auf einer Adresse, die eine ANDERE Person bezeichnet |
+| eigene Adresse | eigene Adresse | die Ebene trägt |
+
+⚠ ⚠ **Die mittlere ist die unangenehmste, weil sie funktioniert.** Der
+Abgleich fände Treffer, die Zahlen gingen auf, und zusammengeführt würden
+zwei Datensätze über die Adresse eines Dritten. **Ein Merkmal, das nicht
+die Person bezeichnet, die es tragen soll, ist ein falscher Schlüssel —
+und einer, der trifft, ist schlimmer als einer, der nicht trifft.**
+
+**Zu messen, bevor die Antwort aus dem Theme-Chat gedeutet wird:**
+
+```sql
+select count(*) filter (where coalesce(p.email,'') <> '') as mit_mail,
+       count(*)                                          as junioren
+  from public.mitglieder m
+  join public.personen  p on p.id = m.person_id
+ where m.aktiv and m.mitgliedtyp = 'Juniorenmitglied';
+```
+
+⚠ Und die Anschlussfrage, die die Zahl allein nicht beantwortet: steht
+dieselbe Adresse bei mehreren Personen? Ein Elternteil mit zwei Kindern
+ergäbe drei Zeilen mit demselben Wert — **das ist der direkte Beleg**, und
+er braucht keine Antwort von drüben:
+
+```sql
+select p.email, count(*) from public.personen p
+ where coalesce(p.email,'') <> '' and p.verein_id = '…'
+ group by 1 having count(*) > 1 order by 2 desc limit 10;
+```
