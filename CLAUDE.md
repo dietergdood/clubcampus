@@ -9050,6 +9050,81 @@ gegen drei Attrappen ausgeführt — eine Kopie mit Route, eine fremde Datei,
 sie selbst. Gefunden wird genau die erste.
 
 
+### ⚠⚠ WER EINE HERKUNFTSANGABE VERLANGT, SCHULDET SIE SELBST
+
+Am 09.09.2026 bekam der WordPress-Empfänger `empfaenger` und `version` in
+jede Antwort — weil dreimal unklar war, welche Datei geantwortet hat. Die
+Begründung steht dort ausgeschrieben: *„wer eine Gegenstelle nach ihrem
+Zustand fragt, fragt sie zuerst nach SICH SELBST“.*
+
+⚠ ⚠ **Unsere eigene Edge Function hat dieselbe Auskunft nie gegeben.** Drei
+Tage lang, während dieselbe Frage dreimal gestellt wurde.
+
+**Die Folge war derselbe Fehler in die andere Richtung:** die Kachel meldete
+*„eine Fassung vor 0.9.18“*, und zweimal wurde daraus auf die Gegenstelle
+geschlossen — während die eigene Änderung nicht deployt war.
+
+| | |
+|---|---|
+| die Frage, die man stellt | *läuft drüben etwas Altes?* |
+| die Frage, die zuerst dran ist | ⚠ **läuft hier etwas Altes?** |
+
+> **Eine Kette aus zwei Systemen braucht die Herkunftsangabe an BEIDEN
+> Enden. Nur an einem ist sie eine halbe Auskunft — und eine halbe Auskunft
+> über eine Kette zeigt immer auf das andere Ende.**
+
+Seit dem 12.09.2026 trägt jede Antwort von `wp-export` ein
+`function_fassung`, von Hand erhöht wie beim Empfänger. ⚠ **Fehlt es, sagt
+die Karte es als ERSTE Zeile** — und dazu, dass dann alles Weitere nichts
+über drüben aussagt, weil die Felder unterwegs verworfen werden.
+
+⚠ **Und die Rohantwort steht seither aufklappbar darunter.** Zweimal an zwei
+Tagen musste sie vorgelesen werden. **Ein Wert, der durch eine
+Nacherzählung geht, verliert seine Herkunft** — dieselbe Familie wie die
+drei Zahlen, die durch drei Hände gingen.
+
+
+### ⚠⚠ EINE LÜCKE, DIE MAN BEIM SUCHEN FINDET, SIEHT WIE DIE URSACHE AUS
+
+Didis Satz vom 12.09.2026, und er beschreibt einen Vorgang, der an diesem
+Tag mehrfach abgelaufen ist.
+
+> **Die Reparatur ist richtig und behebt nicht den Fall, der sie ausgelöst
+> hat.**
+
+**Das belegbare Beispiel ist `empfaenger` selbst.** Es entstand am
+09.09.2026 als Antwort auf *„antwortet meine Datei oder eine fremde?“* —
+und hat den Fall vom 12.09.2026 **nicht** gefangen, weil die antwortende
+Datei den erwarteten Namen trug.
+
+| | die Reparatur | der nächste Fall |
+|---|---|---|
+| 09.09. | `empfaenger` nennt den Dateinamen | ✅ gelöst |
+| 12.09. | derselbe Name, anderer Inhalt | ❌ **nicht gefangen** |
+
+⚠ **Beide Male war die Reparatur richtig.** Sie deckte den Fall ab, den sie
+gesehen hatte — und die Klasse ist grösser als der Fall.
+
+#### Woran man es merkt, bevor man es glaubt
+
+Der Reflex beim Suchen ist, **die erste gefundene Lücke für die Ursache zu
+halten** — man sucht ja eine. ⚠ **Und sie ist fast immer eine echte Lücke;
+das macht es schwer.** Der Prüfstein ist eine einzige Frage:
+
+> **Hätte diese Reparatur den Fall verhindert, der mich hergeführt hat?**
+
+Steht die Antwort nicht sofort fest, ist es ein Nebenbefund — wertvoll, und
+nicht die Erklärung. **Beides aufzuschreiben kostet eine Zeile; sie zu
+verwechseln kostet den nächsten Abend.**
+
+⚠ **Am 12.09.2026 ist beim Nachbessern von `cc_geschwister()` genau so ein
+Nebenbefund angefallen:** ein unlesbares Geschwister wurde mit `continue`
+übersprungen, also wie *„gibt es nicht“* behandelt. **Damit wäre
+ausgerechnet die absichtlich weggesperrte Datei unsichtbar geblieben.** Er
+hat mit dem Fall, der zu `cc_geschwister` führte, nichts zu tun — und er
+war es trotzdem wert.
+
+
 ### ✅ VIER SPIELE, DEREN VERLAUF NICHT ZUM RESULTAT PASST — alle vier erklärt, keines ein Fehler bei uns
 
 Gemeldet von der Website-Seite am 11.09.2026, gemessen über alle 68

@@ -4,7 +4,7 @@
  *
  * Plugin Name: ClubCampus Export
  * Description: Nimmt Spielplan, Verlauf und Ranglisten aus ClubCampus entgegen.
- * Version:     0.9.21
+ * Version:     0.9.22
  *
  * ⚠ ⚠  STAND 10.09.2026: DIESE DATEI **IST** DER EMPFAENGER  ⚠ ⚠
  *
@@ -477,7 +477,7 @@ const CC_ROUTE      = 'clubcampus/v1';
    einander), `autoload` wird nach dem Schreiben geprueft und notfalls
    berichtigt, `/status` nennt Empfaenger, Version, Metaschluessel und die
    Team-Zuordnung. */
-const CC_VERSION    = '0.9.21';
+const CC_VERSION    = '0.9.22';
 const CC_TYP_SPIEL  = 'fch_spiel';
 const CC_TYP_TEAM   = 'fch_team';
 /* ⚠ NUR ZUM ZAEHLEN. Dieses Plugin legt keine Person an und aendert
@@ -1980,14 +1980,38 @@ function cc_geschwister(): array {
 		}
 		/* ⚠ Nur der Anfang: die Datei kann gross sein, und die Kennzeichen
 		   stehen im Kopf. 8 KB reichen fuer Kopf, Version und Routen. */
-		$kopf = (string) @file_get_contents( (string) $datei, false, null, 0, 8192 );
-		if ( '' === $kopf || false === strpos( $kopf, 'clubcampus/v1' ) ) {
+		/* ⚠ ⚠ EIN SYMLINK WIRD GEZAEHLT, NICHT VERFOLGT. Verfolgen hiesse,
+		   eine Datei ausserhalb dieses Ordners zu lesen und ihren Pfad zu
+		   melden — eine Preisgabe ohne Gegenwert. Dass hier ein Verweis
+		   liegt, ist die Auskunft; wohin er zeigt, ist Sache des Servers. */
+		if ( is_link( (string) $datei ) ) {
+			$raus[] = array( 'datei' => basename( (string) $datei ),
+								 'version' => null, 'art' => 'verweis' );
+			continue;
+		}
+
+		$kopf = @file_get_contents( (string) $datei, false, null, 0, 8192 );
+
+		/* ⚠ ⚠ UNLESBAR IST NICHT `KEIN GESCHWISTER`. file_get_contents gibt
+		   bei fehlenden Rechten `false` zurueck — und die erste Fassung hat
+		   das uebersprungen, also wie `gibt es nicht` behandelt. **Damit
+		   waere ausgerechnet die Datei unsichtbar geblieben, die jemand
+		   absichtlich weggesperrt hat.** Dieselbe Verwechslung, die an
+		   diesem Tag viermal Zeit gekostet hat. */
+		if ( false === $kopf ) {
+			$raus[] = array( 'datei' => basename( (string) $datei ),
+								 'version' => null, 'art' => 'unlesbar' );
+			continue;
+		}
+
+		if ( false === strpos( $kopf, 'clubcampus/v1' ) ) {
 			continue;
 		}
 		$v = preg_match( '/Version:\\s*([0-9.]+)/', $kopf, $m ) ? $m[1] : '?';
 		$raus[] = array(
 			'datei'   => basename( (string) $datei ),
 			'version' => $v,
+			'art'     => 'kopie',
 		);
 	}
 	return $raus;
