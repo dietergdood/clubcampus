@@ -38,6 +38,11 @@ import type { Account, Sb } from "../../types.ts";
    das jemand fuellen koennte. Wenn ein Supporter ein "dabei seit" bekommen
    soll, braucht das eine eigene Angabe; siehe den offenen Punkt
    „Supporter-Liste ueberarbeiten". */
+/* Welche Spalten beim Oeffnen SICHTBAR sind — sechs von zwanzig
+   angebotenen. Bis zum 22.08.2026 waren es fuenf; „Art" kam dazu, weil es
+   bei einem Supporter die einzige Einteilung ist, die es gibt. */
+const STANDARD_KEYS = ["name", "art", "email", "telefon", "ort", "portal"];
+
 /* ⚠ ALLE ZWANZIG PERSONENSPALTEN, nicht mehr fuenf. Was einer Person
    gehoert, gilt auch fuer einen Supporter — bis zum 22.08.2026 bot diese
    Liste nur Name, E-Mail, Telefon, Ort und Portal an, und wer die Adresse
@@ -45,9 +50,15 @@ import type { Account, Sb } from "../../types.ts";
 
    Die acht Mitgliedschafts-Spalten fehlen weiterhin, und zwar strukturell:
    ein Supporter hat keinen Mitgliedtyp, kein Eintrittsdatum, keinen Kader.
-   Sie waeren nicht leer, sondern gegenstandslos. */
-const STANDARD_KEYS = ["name", "art", "email", "telefon", "ort", "portal"];
+   Sie waeren nicht leer, sondern gegenstandslos.
 
+   ⚠ ⚠  DIESER KOMMENTAR STAND BIS ZUM 12.09.2026 UEBER `STANDARD_KEYS`,
+   also ueber der Liste mit SECHS Eintraegen — und seine Zwanzig meinte
+   diese hier. Beide Zahlen waren richtig, nur nicht dort, wo sie standen.
+   Gefunden hat es eine Bestandsaufnahme nach genau diesem Muster: ein
+   Kommentar, der eine Menge beschreibt, und eine Liste daneben, die eine
+   andere fuehrt. Von 26 Kandidaten im ganzen Repository war dies der
+   einzige echte. */
 const COL_GROUPS: ColGroup[] = [
   { group: "Person", cols: [
     spalte("name", { default: true, alwaysOn: true }),

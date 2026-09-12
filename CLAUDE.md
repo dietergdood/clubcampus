@@ -12409,3 +12409,70 @@ select p.email, count(*) from public.personen p
  where coalesce(p.email,'') <> '' and p.verein_id = '…'
  group by 1 having count(*) > 1 order by 2 desc limit 10;
 ```
+
+### ⚠⚠ EIN KOMMENTAR, DER BESCHREIBT, WAS DANEBENSTEHT, IST KEINE PRÜFUNG
+
+> **Ein Kommentar, der beschreibt, was danebensteht, ist keine Prüfung.**
+> (Didi, 12.09.2026)
+
+Der Satz ist die Verallgemeinerung von „ein Kommentar, der eine ANDERE
+Stelle zusichert" — und er ist schärfer, weil er **auch dann gilt, wenn
+die beschriebene Stelle unmittelbar darunter steht.** Nähe ist keine
+Bindung: der Kommentar sagt, was jemand beim Schreiben im Kopf hatte, die
+Liste sagt, was gilt, und nichts hält sie zusammen.
+
+⚠ **Und der gefährliche Fall ist der folgenlose.** Beschreibt der
+Kommentar zwei Dinge und die Liste führt eines, fällt das erst auf, wenn
+der zweite Fall eintritt. Tritt er nie ein, ist die Lücke **folgenlos und
+darum unsichtbar** — sie wartet, statt zu scheitern.
+
+#### Wie viele solche Stellen es gibt — gemessen am 12.09.2026
+
+Die Frage war: *wie oft steht ein Kommentar über einer Liste und
+beschreibt eine andere Menge?* Gemessen über das ganze Repository, den
+Syntaxbaum für TypeScript und den Tokenizer für PHP: ein Zahlwort oder
+eine Zahl im Kommentar gegen die **gezählte** Länge der Liste darunter.
+
+| | |
+|---|---|
+| durchgesehen | 241 TS-Dateien · alle PHP-Dateien in `wordpress/` |
+| Kandidaten | **26** (23 TS, 3 PHP) |
+| davon nach dem Lesen **echt** | **1** |
+
+**Der eine:** `SupporterListView.tsx` — *„⚠ ALLE ZWANZIG PERSONENSPALTEN,
+nicht mehr fünf"* stand über `STANDARD_KEYS` mit **sechs** Einträgen. Die
+Zwanzig meinte `COL_GROUPS` zwei Zeilen tiefer (nachgezählt: 11+2+2+3+2 =
+20). **Beide Zahlen waren richtig, nur nicht dort, wo sie standen.**
+Behoben durch Verschieben, nicht durch Umschreiben.
+
+Die anderen 25 sind Zahlen, die etwas anderes meinen: ein Rang (`Rang 9`),
+ein Typcode (`Assist ist dort 9`), eine Datenlage (`elf zugeordnete
+Teams`) — und einmal `'FC Meilen 3'` in meinem eigenen Kommentar von
+heute.
+
+#### ⚠⚠ Und damit die Antwort auf „eine Prüfung, falls das geht": SIE GEHT NICHT
+
+**1 echter Fund auf 25 Fehlalarme.** Eine Regel mit dieser Quote ist genau
+das, was dieses Papier an drei Stellen als schlimmer-als-nichts führt —
+sie wird nach dem dritten Mal abgeschaltet, und danach fehlt auch die
+Prüfung, die sie hätte sein können.
+
+⚠ **Der Grund ist nicht schlechtes Handwerk, sondern die Sache selbst:**
+eine Zahl in einem Kommentar ist fast nie eine Aussage über die Länge der
+Liste darunter. Sie ist ein Rang, ein Code, ein Datum, ein Bestand, ein
+Teamname. **Ein Werkzeug kann „zwanzig Spalten" nicht von „Rang 9"
+unterscheiden, weil der Unterschied in der Bedeutung liegt und nicht in
+der Form** — dieselbe Grenze wie bei `\b` gegen deutsche Bezeichner und
+bei der Regel, die einen Bezeichner statt eines Vorgangs sucht.
+
+**Was stattdessen geht, und nur das:** wo der Kommentar eine Zusage über
+das PRODUKT macht, wird sie ein Testfall — nicht der Kommentar geprüft,
+sondern das Verhalten. Genau das ist mit `keineLeereAufstellung.test.ts`,
+der 28. Regel zu den Feldnamen und der Laufprobe zu `cc_pruefe_verlust`
+an drei Stellen passiert. **Die Lücke schliesst man dort, wo die Aussage
+etwas behauptet, das falsch sein kann — nicht dort, wo sie beschreibt.**
+
+⚠ Die Bestandsaufnahme selbst liegt **nicht** im Repository. Sie ist eine
+einmalige Messung, kein Prüfmittel — und ein Skript, das 25 Fehlalarme
+erzeugt, wäre beim nächsten Durchgang genau die Abstumpfung, gegen die es
+gebaut wäre.
