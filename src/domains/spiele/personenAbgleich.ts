@@ -44,7 +44,26 @@ export interface AbgleichErgebnis {
   gesendet: number;
   treffer_sfv: number;
   treffer_email: number;
-  treffer_name: number;
+  /**
+   * ⚠ ⚠ AUSGEBAUT AM 12.09.2026 — hier stand `treffer_name`.
+   *
+   * Die dritte Ebene ruhte auf einem Jahrgang, den es an einer Person
+   * drüben nicht gibt: kein ACF-Feld, keine Schreibstelle, und der
+   * Personen-Import überspringt die Spalte ausdrücklich (`continue`).
+   * Gemessen vom Theme-Chat: **keine der 129 trägt einen Namenshash.**
+   *
+   * Bis dahin stand sie mit der Begründung „die Bedingung kann sich
+   * umdrehen" da — richtig, solange es eine Vermutung war. Seit der Messung
+   * ist sie nicht nutzlos, sondern **tot**, und das ist der Unterschied:
+   *
+   * > Zwei Ebenen, die messbar sind, sind besser als drei, von denen eine
+   * > immer leer bleibt. (Didi, 12.09.2026)
+   *
+   * ⚠ Mit ihr fällt `ordneEin()`: sein einziger Anker war derselbe
+   * Namenshash. Die Frage, die es beantwortete — sind die 129 bewusst
+   * gefiltert oder übersehen? — **bleibt offen**, und sie braucht ein
+   * gemeinsames Merkmal. Das einzige, das tragen könnte, ist die E-Mail.
+   */
   /** ⚠ Die Zahl, die zählt: so viele Datensätze entstehen neu. */
   ohne_treffer: number;
   /** Drüben vorhanden und in unserer Sendung nicht enthalten. */
@@ -206,13 +225,10 @@ export function baueAbgleich(
   const mails = new Set(
     drueben.map((d) => d.email_hash).filter((x): x is string => !!x),
   );
-  const namen = new Set(
-    drueben.map((d) => d.name_hash).filter((x): x is string => !!x),
-  );
 
   const erg: AbgleichErgebnis = {
     gesendet: unsere.length,
-    treffer_sfv: 0, treffer_email: 0, treffer_name: 0,
+    treffer_sfv: 0, treffer_email: 0,
     ohne_treffer: 0, personen_ohne_uns: 0,
     drueben_gesamt: drueben.length,
     /* ⚠ Aus DEMSELBEN Durchgang, nicht aus einer zweiten Schleife: zwei
@@ -220,7 +236,6 @@ export function baueAbgleich(
     unsere_nutzbar: {
       sfv_person_id: unsere.filter((p) => nurZiffern(p.sfv_person_id) !== null).length,
       email_hash: unsere.filter((p) => !!p.email_hash).length,
-      name_hash: unsere.filter((p) => !!p.name_hash).length,
     },
     ohne_treffer_liste: [], ohne_uns_liste: [],
   };
@@ -245,11 +260,18 @@ export function baueAbgleich(
       continue;
     }
     /* 3 · Name plus Jahrgang. */
-    if (p.name_hash && namen.has(p.name_hash)) {
-      erg.treffer_name += 1;
-      merke(p.name_hash);
-      continue;
-    }
+    /* ⚠ ⚠ HIER STAND DIE DRITTE EBENE — Name plus Jahrgang. Ausgebaut am
+       12.09.2026, nachdem der Theme-Chat gemessen hat: kein Jahrgangsfeld
+       an der Person, keine Schreibstelle, der Import überspringt die
+       Spalte — und **keine der 129 Personen drüben trägt einen
+       Namenshash.**
+
+       Bis dahin stand sie mit der Begründung „die Bedingung kann sich
+       umdrehen" da. Sie hat sich nicht umgedreht, sie ist gemessen: die
+       Ebene war nicht nutzlos, sie war tot.
+
+       > Zwei Ebenen, die messbar sind, sind besser als drei, von denen
+       > eine immer leer bleibt. (Didi, 12.09.2026) */
     erg.ohne_treffer += 1;
     /* ⚠ Hash und Jahrgang, kein Name — siehe den Typ oben. */
     erg.ohne_treffer_liste.push({ name_hash: p.name_hash, jahrgang: p.jahrgang ?? null });
@@ -369,7 +391,7 @@ export function ordneEin(
  * verstanden.
  */
 export function deuteAbgleich(e: AbgleichErgebnis): string[] {
-  const summe = e.treffer_sfv + e.treffer_email + e.treffer_name + e.ohne_treffer;
+  const summe = e.treffer_sfv + e.treffer_email + e.ohne_treffer;
   /* ⚠ ⚠  „40 VON 129 MIT E-MAIL-HASH" IST EINE AUSKUNFT, „40 TREFFER" EIN
      SCHLUSS DARAUS. (Didi, 12.09.2026.)
 
@@ -409,11 +431,14 @@ export function deuteAbgleich(e: AbgleichErgebnis): string[] {
     `${e.gesendet} Personen würden gesendet`,
     `${e.treffer_sfv} über die Verbandsnummer gefunden${auskunft("sfv_person_id")}`,
     `${e.treffer_email} über die E-Mail${auskunft("email_hash")}`,
-    `${e.treffer_name} über Name plus Jahrgang${auskunft("name_hash")}`,
   ];
   zeilen.push(e.ohne_treffer === 0
-    ? "0 fallen durch alle drei — es entstehen keine neuen Datensätze"
-    : `⚠ ${e.ohne_treffer} fallen durch alle drei — so viele Datensätze entstehen NEU`);
+    /* ⚠ „beide" statt „alle drei" — die Jahrgangs-Ebene ist am 12.09.2026
+       ausgebaut. Ein Text, der eine Zahl nennt, die es nicht mehr gibt,
+       ist dieselbe Falle wie ein Kommentar über vier Zeilen, der „drei
+       Aufrufe" sagt. */
+    ? "0 fallen durch beide — es entstehen keine neuen Datensätze"
+    : `⚠ ${e.ohne_treffer} fallen durch beide — so viele Datensätze entstehen NEU`);
   zeilen.push(e.personen_ohne_uns === 0
     ? "0 stehen drüben und nicht in dieser Sendung"
     : `⚠ ${e.personen_ohne_uns} stehen drüben und nicht in dieser Sendung — `

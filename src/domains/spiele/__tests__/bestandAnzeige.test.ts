@@ -56,16 +56,28 @@ describe("deuteBestand — die Vorschau auf den Personenlauf", () => {
     expect(zeilen).not.toMatch(/0 Personen würden gesendet/);
   });
 
-  it("mit `abgleich` erscheinen die fünf Gruppen", () => {
+  it("mit `abgleich` erscheinen die vier Gruppen", () => {
+    /* ⚠ ⚠ HIER STANDEN FÜNF, UND DIE ZAHLEN WAREN 93/22/40/11/20/56 — die
+       Reihe, die am 12.09.2026 als Zahl ohne Herkunft entlarvt wurde
+       (40 + 11 + 42 = 93, und 40 und 11 waren unmöglich).
+
+       ⚠ Eine Attrappe darf erfundene Zahlen tragen — sie ist eine Vorgabe,
+       keine Behauptung. Aber sie soll nicht die Reihe abschreiben, die als
+       falsch im Papier steht: der nächste Leser hält sie für einen echten
+       Stand. Deshalb runde, offensichtlich gesetzte Werte.
+
+       Und vier statt fünf Gruppen: die Jahrgangs-Ebene ist ausgebaut. */
     const mit = { ...NEU, abgleich: {
-      gesendet: 93, treffer_sfv: 22, treffer_email: 40,
-      treffer_name: 11, ohne_treffer: 20, personen_ohne_uns: 56,
+      gesendet: 10, treffer_sfv: 3, treffer_email: 2,
+      ohne_treffer: 5, personen_ohne_uns: 7,
     } };
     const zeilen = deuteBestand(mit).join(" | ");
-    expect(zeilen).toMatch(/93 Personen würden gesendet/);
-    expect(zeilen).toMatch(/22 über die Verbandsnummer gefunden/);
-    expect(zeilen).toMatch(/20 fallen durch alle drei/);
-    expect(zeilen).toMatch(/56 stehen drüben und nicht in dieser Sendung/);
+    expect(zeilen).toMatch(/10 Personen würden gesendet/);
+    expect(zeilen).toMatch(/3 über die Verbandsnummer gefunden/);
+    expect(zeilen).toMatch(/5 fallen durch beide/);
+    expect(zeilen).toMatch(/7 stehen drüben und nicht in dieser Sendung/);
+    /* ⚠ Die ausgebaute Ebene darf nicht zurückkommen. */
+    expect(zeilen).not.toMatch(/Name plus Jahrgang/);
   });
 
   it("⚠ eine ALTE Antwort zeigt gar keine Vorschau — auch keine leere", () => {

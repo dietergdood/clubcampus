@@ -12867,3 +12867,188 @@ select count(*) as mit_funktion from public.personen
 ⚠ Die Vereinigung der beiden ist die erwartete Kandidatenzahl. Weicht sie
 von 19 ab, ist der Fehler in der Abfrage der Function; stimmt sie, war 19
 immer die richtige Zahl und 93 nie eine.
+
+### ⚠⚠ EINE ÜBERHOLTE MESSUNG DARF MAN MIT DATUM ZITIEREN — EINE ZAHL OHNE HERKUNFT NIE
+
+Der Unterschied, gemessen am 12.09.2026 an der 93.
+
+| | darf zitiert werden |
+|---|---|
+| **überholte Messung** | ✅ mit Datum: „Stand 25.08.2026: 269 Spiele" |
+| **Zahl ohne Herkunft** | ❌ **nie** — es gibt kein Datum, das sie rettet |
+
+Die 93 sah wie das Erste aus und war das Zweite. Der Beleg ist nicht
+„inzwischen anders", sondern **dass sie nie entstehen konnte**:
+
+```
+93 würden gesendet · 0 über die Nummer · 40 über E-Mail · 11 über Name · 42 neu
+                                         └──────── 40 + 11 + 42 = 93 ────────┘
+```
+
+40 und 11 sind als unmöglich belegt (`email_hash` und `name_hash` waren
+drüben für jede Person `null`). **Die Aufteilung geht auf — wenn zwei
+Summanden unmöglich sind, ist es die Summe auch.**
+
+⚠ Dazu die zweite Hälfte, unabhängig gemessen: `holeKandidaten()` trägt
+seit `020a535`, dem Commit, der die Personen-Vorschau verdrahtet hat, eine
+Zählabfrage ohne den `!inner`-Embed. **Sie ist nie durchgelaufen, seit es
+sie gibt.** Es kann also gar keinen Lauf gegeben haben, der 93 produziert
+hat.
+
+⚠ ⚠ **UND SIE IST DREIMAL WEITERGEGEBEN WORDEN, auch an den Theme-Chat.**
+Das ist der Schaden, nicht die falsche Zahl: eine Zahl ohne Herkunft
+behält ihren Absender und verliert die Messung, die es nie gab — und beim
+nächsten Mal sucht jemand die Abfrage dazu. Dieselbe Familie wie die 129
+und die 40: *drei Zahlen, drei Hände, keine Herkunft.*
+
+⚠ **Die Attrappen im Test tragen sie deshalb nicht mehr.** Eine Attrappe
+darf erfundene Zahlen führen — sie ist eine Vorgabe, keine Behauptung. Aber
+sie soll nicht die Reihe abschreiben, die als falsch im Papier steht: der
+nächste Leser hält sie für einen echten Stand. Seither runde, offensichtlich
+gesetzte Werte.
+
+### ⚠⚠ AUSGEBAUT: die Jahrgangs-Ebene — und `ordneEin` bleibt ohne Grundlage
+
+Entscheid Didi, 12.09.2026: **die Ebene ist tot, nicht nutzlos — nimm sie
+raus.** Der Unterschied ist die Messung: gestern war „die Bedingung kann
+sich umdrehen" eine Vermutung, heute ist sie gemessen.
+
+| gemessen vom Theme-Chat | |
+|---|---|
+| ACF-Feld `geburtsdatum` an der Person | **gibt es nicht** |
+| ACF-Feld `jahrgang` | **gibt es nicht** |
+| `personen-import.php:1053` | überspringt die Spalte ausdrücklich (`continue`) |
+| Personen mit Namenshash | **0 von 129** |
+
+**Was die entfernten Tests festhielten, ist jetzt eine Zusage über das
+Verhalten:** ein *gleicher* Namenshash auf beiden Seiten darf **keinen**
+Treffer ergeben. Sie hängt an keinem Aufrufer und überlebt jeden Umbau —
+gegengeprobt: die Ebene wieder einbauen → rot.
+
+⚠ Dazu zwei Fälle, die den Rückweg zumauern: die Bezugsgrössen nennen nur
+noch zwei Achsen, und die Karte sagt „fallen durch **beide**" statt „alle
+drei". **Ein Text, der eine Zahl nennt, die es nicht mehr gibt, ist
+dieselbe Falle wie der Kommentar „drei Aufrufe" über vier Zeilen.**
+
+#### ⚠ Und was dabei auffiel: `ordneEin()` ist nicht tot, es hängt am falschen Merkmal
+
+`ordneEin()` beantwortet *„sind die 129 bewusst gefiltert oder
+übersehen?"* — und sein **einziger** Anker ist derselbe Namenshash. Es
+kann deshalb heute nichts klassifizieren; alle 129 landen in
+`nicht_einordenbar`.
+
+⚠ **Es ist trotzdem NICHT mit der Ebene gefallen, und das ist der
+Unterschied:**
+
+| | |
+|---|---|
+| die Jahrgangs-Ebene | **gemessen tot** — das Merkmal existiert drüben nicht und wird nicht gepflegt |
+| `ordneEin()` | am **falschen** Merkmal — die E-Mail gibt es auf beiden Seiten |
+
+**Eine Ebene, die auf einem nicht existierenden Feld ruht, ist zu
+entfernen. Eine, die auf dem falschen Feld ruht, ist umzuhängen** — und
+das ist ein Bau, kein Schnitt. Er hängt an derselben Frage wie alles
+andere: ob die E-Mail-Hashes sich treffen.
+
+⚠ Bis dahin steht die Frage offen und nicht beantwortet. Das ist der
+ehrliche Zustand — und `nicht_einordenbar` sagt es in der Karte, statt
+zwei Nullen zu zeigen, die wie Befunde aussehen.
+
+### ⚠ Die Reihenfolge der Verlaufszeilen liegt NICHT bei uns — gemessen und zugesagt
+
+Meldung vom 12.09.2026: auf der Spielseite stehen die Wechsel am Ende
+statt chronologisch. An der Sortierung war nie etwas beauftragt.
+
+**Gemessen, drei Stellen:**
+
+| | |
+|---|---|
+| `mischeEreignisse()` | sortiert `(minute, zusatzminute)` aufsteigend |
+| `bildeVerlauf()` | **sortiert nicht** — es schiebt in der Reihenfolge, die es bekommt |
+| `cc_schreibe_verlauf()` | baut die Zeilen in Reihenfolge, `update_field` erhält sie |
+
+⚠ **Und keine der drei heutigen Änderungen kommt in Frage:** der
+`!inner`-Fix betraf nur eine Zählabfrage, die drei neuen Felder sind Werte
+in der Zeile, und das Ersetzen statt Upserten (11.09.) ändert nur die
+`id`-Reihenfolge in der Tabelle — die Sortierung nach Minute steht
+darüber.
+
+**„Einmal gemessen" ist aber keine Zusage.** Zwei Fälle halten sie
+seither: die Zeilen kommen in der Reihenfolge heraus, in der sie ankommen,
+und die Arten stehen **verschränkt**, nicht geblockt. Gegengeprobt mit
+einer Sortierung nach Art → rot. Damit ist unsere Seite dauerhaft
+ausgeschlossen, statt bei jeder Meldung neu nachgesehen zu werden.
+
+⚠ **Nebenbefund beim Schreiben dieses Falls, und er ist der lehrreichere:**
+meine erste Erwartung war `.not.toMatch(/^(wechsel,)+tor/)` — und
+`"wechsel,tor,wechsel,tor"` **trifft** dieses Muster. Die Erwartung prüfte
+genau den erlaubten Fall.
+
+> **Eine negativ definierte Erwartung prüft, was sie ausschliessen
+> wollte.**
+
+Dieselbe Familie wie der Zähler, der 431 statt 0 meldete. Ersetzt durch die
+Reihenfolge im Klartext: `toEqual(["wechsel","tor","wechsel","tor"])`.
+
+### ⚠⚠ DREI ACHSEN, DREI TOTE — aber aus drei verschiedenen Gründen, und nur einer rechtfertigt einen Schnitt
+
+Gemessen am 12.09.2026, und es ist die Antwort auf „welche Ebene könnte
+überhaupt tragen":
+
+| Achse | tot bei | Grund | Folge |
+|---|---|---|---|
+| `sfv_person_id` | **uns** | `sfv_person_id: null` ist **hart verdrahtet** — `sfv_zuordnung` stand bei 0 Zeilen | **warten**, die Tabelle existiert |
+| `name_hash` | **drüben** | kein ACF-Feld, keine Schreibstelle, der Import überspringt die Spalte | ✅ **ausgebaut** |
+| `email_hash` | — | beide Seiten tragen, Rezept zeichengleich | **die einzige, die tragen kann** |
+
+⚠ ⚠ **DER UNTERSCHIED ZWISCHEN ZEILE 1 UND 2 IST DER GANZE PUNKT.** Beide
+Achsen liefern heute null Treffer; beide sehen in der Karte gleich aus. Und
+nur eine gehört entfernt:
+
+| | |
+|---|---|
+| ein Feld, **das es nicht gibt** | keine Daten möglich — entfernen |
+| eine Tabelle, **die leer ist** | Daten möglich, nur nicht da — warten |
+
+**Wer hier nach Analogie schneidet, entfernt die Achse, die als einzige
+nachweislich einen Ort hat.** `sfv_zuordnung` ist gebaut, die Oberfläche
+dafür steht (`SfvSpielerZuordnung`), und 308 Spieler warten auf den
+Durchgang von Hand.
+
+⚠ **Und damit ist Punkt 4 ohne Abfrage beantwortet:** von den 19
+Kandidaten tragen **0** eine Verbandsnummer — nicht nach Datenlage, sondern
+nach Konstruktion. Der Kommentar an der Zeile sagt es seit dem ersten Tag:
+*„Bis sie gefüllt ist, trägt keine unserer Personen eine Nummer, und
+`treffer_sfv` ist strukturell 0."*
+
+Die Karte sagt es seit `FUNCTION_FASSUNG` 49 selbst:
+`wir 0 von 19, drüben 22 von 129: eine Seite trägt nichts`. **Die Frage,
+für die eine Abfrage geschrieben werden sollte, beantwortet die Auskunft
+inzwischen von sich aus** — und das ist der Zweck von `unsere_nutzbar`.
+
+### ⚠⚠ `check:spalten` LÄUFT NUR ÜBER `supabase/` — und meldete grün für eine Datei, die es nie gesehen hat
+
+12.09.2026. Eine neue Abfragendatei lag unter `docs/`. `npm run check:spalten`
+meldete *„79 SQL-Datei(en) … keine erfundenen Namen"* — **dieselbe Zahl wie
+vorher.** Die Datei war nicht dabei.
+
+⚠ **Fast hätte ich das als Deckung gemeldet** („die Spaltennamen sind
+geprüft"), und zwar zwei Stunden nachdem ich denselben Fehler bei
+`check:encoding` ins Papier geschrieben habe: *der einzige sichtbare
+Hinweis war eine Zahl, die sich nicht bewegte.*
+
+> **Eine Prüfung, die ihren Gegenstand nicht sieht, sagt grün — und grün
+> ist hier nicht „in Ordnung", sondern „nicht angesehen".**
+
+**Die Zahl ist der Melder, und nur sie.** Nach dem Verschieben nach
+`supabase/`: **80**. Erst damit gilt die Aussage.
+
+⚠ **Und das ist der Grund, warum jede dieser Prüfungen ihre Dateizahl
+nennt.** Sie steht nicht zur Zierde da: sie ist die einzige Stelle, an der
+ein zu enger Suchraum auffällt. Wer sie nicht gegen die Erwartung hält,
+liest ein grünes Ergebnis über eine leere Menge — dieselbe Familie wie
+*„105 durchsucht, 1 mit Route"* gegen *„keine Dubletten"*.
+
+⚠ Der Zuschnitt auf `supabase/` ist trotzdem richtig: dort liegen die
+Migrationen und die Abfragedateien (`testkonto_trainer.sql` als Muster).
+**Was zu ändern war, ist nicht die Prüfung, sondern der Ort der Datei.**

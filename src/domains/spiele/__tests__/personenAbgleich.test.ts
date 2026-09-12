@@ -51,17 +51,16 @@ describe("baueAbgleich — fünf Gruppen", () => {
       [d({ sfv_person_id: "1097318", name_hash: "voellig-anders" })],
     );
     expect(e.treffer_sfv).toBe(1);
-    expect(e.treffer_name).toBe(0);
     /* ⚠ Und sie zählt NICHT zusätzlich als „drüben unbekannt". */
     expect(e.personen_ohne_uns).toBe(0);
   });
 
   it("die Ebenen greifen in der Reihenfolge, jede nur einmal", () => {
     const e = baueAbgleich(
-      [u("a", { sfv_person_id: 1 }), u("b", { email_hash: "m" }), u("c", { name_hash: "n" })],
-      [d({ sfv_person_id: "1" }), d({ email_hash: "m" }), d({ name_hash: "n" })],
+      [u("a", { sfv_person_id: 1 }), u("b", { email_hash: "m" })],
+      [d({ sfv_person_id: "1" }), d({ email_hash: "m" })],
     );
-    expect([e.treffer_sfv, e.treffer_email, e.treffer_name]).toEqual([1, 1, 1]);
+    expect([e.treffer_sfv, e.treffer_email]).toEqual([1, 1]);
     expect(e.ohne_treffer).toBe(0);
   });
 
@@ -87,20 +86,20 @@ describe("baueAbgleich — fünf Gruppen", () => {
       u("c", { name_hash: "n" }), u("d"), u("e"),
     ];
     const e = baueAbgleich(unsere, [d({ sfv_person_id: "1" }), d({ email_hash: "m" })]);
-    expect(e.treffer_sfv + e.treffer_email + e.treffer_name + e.ohne_treffer)
+    expect(e.treffer_sfv + e.treffer_email + e.ohne_treffer)
       .toBe(e.gesendet);
   });
 
   it("leere Mengen ergeben Nullen, keine Ausnahme", () => {
     const e = baueAbgleich([], []);
     expect(e).toEqual({
-      gesendet: 0, treffer_sfv: 0, treffer_email: 0, treffer_name: 0,
+      gesendet: 0, treffer_sfv: 0, treffer_email: 0,
       ohne_treffer: 0, personen_ohne_uns: 0,
       ohne_treffer_liste: [], ohne_uns_liste: [], drueben_gesamt: 0,
       /* ⚠ Auch die Bezugsgrössen sind Nullen und keine Ausnahme — und sie
          stehen IMMER da, sonst wäre „kein Eintrag" von „nicht gemessen"
          nicht zu unterscheiden. */
-      unsere_nutzbar: { sfv_person_id: 0, email_hash: 0, name_hash: 0 },
+      unsere_nutzbar: { sfv_person_id: 0, email_hash: 0 },
     });
   });
 
@@ -128,10 +127,10 @@ describe("⚠ eine Achse, die nichts trägt — der Befund vom 12.09.2026", () =
       /* Drüben trägt niemand etwas auf diesen zwei Achsen. */
       [d({ sfv_person_id: "9" }), d({ sfv_person_id: "8" })],
     );
-    expect([e.treffer_email, e.treffer_name]).toEqual([0, 0]);
+    expect(e.treffer_email).toBe(0);
     /* ⚠ Und die Aufteilung geht trotzdem auf — das ist der Grund, warum
        der Fehler so lange plausibel aussah. */
-    expect(e.treffer_sfv + e.treffer_email + e.treffer_name + e.ohne_treffer)
+    expect(e.treffer_sfv + e.treffer_email + e.ohne_treffer)
       .toBe(e.gesendet);
   });
 
@@ -204,7 +203,8 @@ describe('⚠ „40 von 129“ ist eine Auskunft, „40 Treffer“ ein Schluss d
     expect(t).toContain("die Null sagt hier nichts über Treffer");
     /* ⚠ Und die Zahl daneben bleibt trotzdem stehen — die Rechnung war
        nie falsch, nur nicht deutbar. */
-    expect(t).toContain("0 über Name plus Jahrgang");
+    /* ⚠ Die dritte Ebene ist ausgebaut — die Zeile darf nicht zurückkommen. */
+    expect(t).not.toContain("Name plus Jahrgang");
   });
 
   it("⚠ nicht gemeldet ist nicht dasselbe wie null von null", () => {
@@ -213,6 +213,40 @@ describe('⚠ „40 von 129“ ist eine Auskunft, „40 Treffer“ ein Schluss d
     const t = mitNutzbar(null);
     expect(t).toContain("nicht gemeldet");
     expect(t).not.toContain("von 0 dieses Merkmal");
+  });
+});
+
+describe("⚠ ⚠ die dritte Ebene ist AUSGEBAUT — und kommt nicht zurueck", () => {
+  /* ⚠ ⚠ WAS DIE ENTFERNTE EBENE FESTHIELT, IST JETZT EINE ZUSAGE.
+
+     Sie ruhte auf einem Jahrgang, den es an einer Person drueben nicht
+     gibt — gemessen vom Theme-Chat am 12.09.2026: kein ACF-Feld, keine
+     Schreibstelle, der Import ueberspringt die Spalte, und keine der 129
+     Personen traegt einen Namenshash.
+
+     Ihre Testfaelle einfach zu loeschen haette den GRUND mitgeloescht.
+     Was bleibt, ist die Aussage ueber das VERHALTEN — sie ueberlebt jeden
+     Umbau und haengt an keinem Aufrufer.
+
+     > Zwei Ebenen, die messbar sind, sind besser als drei, von denen eine
+     > immer leer bleibt. (Didi, 12.09.2026) */
+  it("ein GLEICHER Namenshash auf beiden Seiten ergibt keinen Treffer", () => {
+    const e = baueAbgleich([u("a", { name_hash: "gleich" })], [d({ name_hash: "gleich" })]);
+    expect(e.ohne_treffer).toBe(1);
+    expect(e.treffer_sfv + e.treffer_email).toBe(0);
+    expect(e.treffer_sfv + e.treffer_email + e.ohne_treffer).toBe(e.gesendet);
+  });
+
+  it("die Bezugsgroessen nennen nur noch die zwei Achsen", () => {
+    const e = baueAbgleich([u("a", { name_hash: "x" })], [d({ name_hash: "x" })]);
+    expect(Object.keys(e.unsere_nutzbar ?? {})).toEqual(["sfv_person_id", "email_hash"]);
+  });
+
+  it("⚠ und die Karte spricht nicht mehr von drei", () => {
+    const t = deuteAbgleich(baueAbgleich([u("a")], [d({})])).join(" · ");
+    expect(t).not.toMatch(/Name plus Jahrgang/);
+    expect(t).not.toMatch(/alle drei/);
+    expect(t).toMatch(/fallen durch beide/);
   });
 });
 
@@ -226,19 +260,19 @@ describe("deuteAbgleich — Zahlen mit ihrer Bedeutung", () => {
 
   it("⚠ ohne_treffer bekommt seinen Satz, nicht nur seine Zahl", () => {
     const e = baueAbgleich([u("a"), u("b")], []);
-    expect(deuteAbgleich(e).join(" | ")).toMatch(/2 fallen durch alle drei — so viele Datensätze entstehen NEU/);
+    expect(deuteAbgleich(e).join(" | ")).toMatch(/2 fallen durch beide — so viele Datensätze entstehen NEU/);
   });
 
   it("⚠ ⚠ eine Aufteilung, die nicht aufgeht, sagt es in der ANTWORT", () => {
     /* Von Hand verdreht — so kann keine echte Rechnung aussehen, und
        genau deshalb muss die Anzeige es melden statt es zu zeigen. */
     const kaputt = {
-      gesendet: 10, treffer_sfv: 1, treffer_email: 1, treffer_name: 1,
+      gesendet: 10, treffer_sfv: 1, treffer_email: 1,
       ohne_treffer: 1, personen_ohne_uns: 0,
       ohne_treffer_liste: [], ohne_uns_liste: [], drueben_gesamt: 0,
     };
     expect(deuteAbgleich(kaputt).join(" | "))
-      .toMatch(/Die Aufteilung geht nicht auf: 4 statt 10/);
+      .toMatch(/Die Aufteilung geht nicht auf: 3 statt 10/);
   });
 });
 

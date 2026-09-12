@@ -263,6 +263,8 @@ async function alleSeiten<T>(
  *    Auskunft, die `laeuft drueben mein Deploy?` beantworten koennte,
  *    beantwortet sie nicht mehr.
  *
+ *    50  12.09.2026  die Jahrgangs-Ebene ausgebaut (gemessen tot);
+ *                    ordneEin bleibt, ist aber ohne Grundlage
  *    49  12.09.2026  unsere_nutzbar neben drueben_nutzbar;
  *                    nicht_einordenbar getrennt von fremd
  *    48  12.09.2026  Zaehlabfrage der Kandidaten mit !inner-Embed;
@@ -274,7 +276,7 @@ async function alleSeiten<T>(
  *    46  12.09.2026  Durchreiche von personen/teams/unterfelder/
  *                    geschwister, nichtDurchgereicht(), diese Angabe
  */
-const FUNCTION_FASSUNG = 49;
+const FUNCTION_FASSUNG = 50;
 
 const AKTIONEN = ["probe", "export", "bestand", "status", "ranglisten"];
 

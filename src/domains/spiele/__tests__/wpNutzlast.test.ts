@@ -159,6 +159,52 @@ describe("Verlauf — Art und Minute", () => {
   });
 });
 
+describe("⚠ die Reihenfolge der Verlaufszeilen — chronologisch, und das ist eine Zusage", () => {
+  /* ⚠ ⚠ ANLASS, 12.09.2026: auf der Spielseite standen die Wechsel am ENDE
+     statt chronologisch, und an der Sortierung war nie etwas beauftragt.
+
+     Gemessen: `bildeVerlauf()` sortiert NICHT — es schiebt in der
+     Reihenfolge, die es bekommt. Die kommt aus `mischeEreignisse()`, und
+     das sortiert nach Minute, dann Zusatzminute.
+
+     ⚠ Damit lag die Ursache nicht bei uns. **Aber „einmal gemessen" ist
+     keine Zusage** — dieser Fall macht daraus eine: er wird rot, sobald
+     unsere Seite die Reihenfolge je verliert, und schliesst uns damit
+     dauerhaft aus, statt bei jeder Meldung neu nachzusehen. */
+  const namen = new Map<number, string>();
+
+  it("gibt die Zeilen in der Reihenfolge heraus, in der sie ankommen", () => {
+    const z = bildeVerlauf([
+      e({ minute: 12, typ_id: TYP_WECHSEL, ist_eigener: true }),
+      e({ minute: 46, typ_id: TYP_WECHSEL, ist_eigener: true }),
+      e({ minute: 80, typ_id: TYP_WECHSEL, ist_eigener: true }),
+    ], true, namen, "FC Herrliberg");
+    expect(z.map((x) => x.minute)).toEqual(["12", "46", "80"]);
+  });
+
+  it("⚠ und ordnet NICHT um — ein Wechsel bleibt, wo die Minute ihn hinstellt", () => {
+    /* Genau der gemeldete Eindruck: Wechsel am Ende. Käme er von uns,
+       müsste bildeVerlauf() nach Art sortieren. Es tut es nicht — und
+       dieser Fall hält fest, dass es dabei bleibt. */
+    const z = bildeVerlauf([
+      e({ minute: 20, typ_id: TYP_WECHSEL, ist_eigener: true }),
+      e({ minute: 35, typ_id: 1, ist_eigener: true }),
+      e({ minute: 55, typ_id: TYP_WECHSEL, ist_eigener: true }),
+      e({ minute: 70, typ_id: 1, ist_eigener: true }),
+    ], true, namen, "FC Herrliberg");
+    expect(z.map((x) => x.minute)).toEqual(["20", "35", "55", "70"]);
+    /* ⚠ ⚠ DIE ARTEN STEHEN VERSCHRÄNKT, nicht geblockt — und die Erwartung
+       nennt die Reihenfolge, statt ein Muster auszuschliessen.
+
+       Hier stand zuerst `.not.toMatch(/^(wechsel,)+tor/)`, und das traf
+       genau den erlaubten Fall: „wechsel,tor,wechsel,tor" beginnt mit
+       `wechsel,` und dann `tor`. **Eine negativ definierte Erwartung
+       prüft, was sie ausschliessen wollte** — dieselbe Familie wie der
+       Zähler, der 431 statt 0 meldete. */
+    expect(z.map((x) => x.art)).toEqual(["wechsel", "tor", "wechsel", "tor"]);
+  });
+});
+
 describe("Verlauf — Seite und Text", () => {
   const namen = new Map<number, string>();
 
