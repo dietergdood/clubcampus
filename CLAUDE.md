@@ -12542,3 +12542,94 @@ Unterfeld zweier Repeater, und Unterfelder gehen nie durch diese Funktion.
 
 **Der Bau gehört damit ihm.** Seine Schreibsperre im Backend ist gemeint,
 nicht unser Vergleich.
+
+### ✅ 0.9.24 liegt drüben — und die Herkunftsfrage ist erledigt
+
+Auskunft des Theme-Chats, 12.09.2026. ⚠ **Seine Messung, nicht meine** —
+zitiert mit Quelle, weil eine Zahl ohne Absender beim nächsten Mal wie
+eine eigene aussieht:
+
+```
+version            0.9.24
+geladen aus        …/mu-plugins/wp-export-empfaenger.php
+geschwister        keine — der Empfänger liegt allein
+mu-plugins (tief)  105 Dateien durchsucht, 1 mit der Route
+plugins (tief)     1571 Dateien durchsucht, 0 mit der Route
+```
+
+**Damit ist die Frage geschlossen, die am 09.09.2026 drei Anläufe und am
+12.09.2026 einen vierten gekostet hat:** welche Datei antwortet hier
+eigentlich. 1676 Dateien durchsucht, eine Kopie.
+
+⚠ ⚠ **UND DER SUCHRAUM STEHT DANEBEN — das ist der Unterschied.** *„105
+durchsucht, 1 mit Route"* ist ein Befund; *„keine Dubletten"* wäre keiner.
+Eine Auskunft, die nur ihr Ergebnis nennt, lässt offen, ob überhaupt
+gesucht wurde — und genau diese Ununterscheidbarkeit hat den vierten
+Anlauf erzeugt, als `geschwister` eine unlesbare Datei mit `continue`
+überging.
+
+> **Wer meldet, dass er nichts gefunden hat, meldet auch, wo er gesucht
+> hat.** Sonst ist „nichts gefunden" von „nicht gesucht" nicht zu
+> unterscheiden.
+
+#### ✅ Und der Nutzlast-Vertrag hält, in beide Richtungen
+
+```
+verlauf       faellt_weg —  ·  bleibt_leer —
+aufstellung   faellt_weg —  ·  bleibt_leer —
+```
+
+Beide Listen leer, für beide Repeater. **Kein Unterfeld reist mit, das
+niemand kopiert, und keines wird kopiert, das ACF verwirft** — der Fall,
+an dem `ein_nummer` vier Tage lang gescheitert ist, und die Richtung, die
+bis 0.9.16 gar nicht geprüft wurde.
+
+⚠ **Dass beide leer sind, ist hier belastbar und nicht bloss still:**
+`unterfelder_geprueft` steht in derselben Antwort und nennt je Repeater
+`gesendet:erlaubt:acf`. Ohne diese Zahl wäre ein leerer Melder von einem
+nicht gelaufenen nicht zu unterscheiden.
+
+#### ⚠ Wo der Vorher-Nachher-Vergleich erscheint — NICHT in /status
+
+`verlust` liegt in `cc_route_spiele()`: in der Antwort und im Bericht. Es
+erscheint also erst beim **nächsten Export-Lauf**, nicht in der
+Statusauskunft.
+
+⚠ **Und seine Aussage ist seit Weg B einseitig geworden:** ClubCampus
+schickt `aufstellung` nur noch mit Zeilen. Ein Verlust an diesem Repeater
+kann deshalb **nicht mehr vom Sender kommen** — steht dort eine Zahl, ist
+es drüben oder in ACF. Für `verlauf` bleibt er zweideutig; der wird
+weiterhin immer gesendet, auch leer.
+
+### ⚠ 22 von 129 — die Zahl, die den Umfang der Feldnamen-Frage zeigt
+
+Aus derselben Auskunft (Theme-Chat, 12.09.2026):
+
+```
+Personen   gesamt 129 · mit_nummer 22 · ohne_nummer 107
+```
+
+**Daraus folgt ohne weitere Messung:** für **107 von 129** Personen ist die
+Verbandsnummer kein Weg. Sie sind ausschliesslich über E-Mail oder Name
+plus Jahrgang erreichbar — also über genau die zwei Achsen, die seit
+0.9.20 für jede Person `null` lieferten.
+
+⚠ **Damit ist der Feldnamen-Fehler nicht ein Randfall, sondern der
+Hauptweg.** Bis zum 12.09.2026 war der Abgleich für 83 % der Personen
+drüben strukturell blind.
+
+⚠ ⚠ **UND EINE FRAGE WIRD DADURCH SCHÄRFER, OHNE DASS SIE ZU BEANTWORTEN
+IST:** wenn drüben 22 Nummern stehen und `treffer_sfv` trotzdem 0 war,
+dann tragen diese 22 andere Nummern als unsere Kandidaten. Das ist eine
+Beobachtung, keine Erklärung — und sie wird **nicht** verfolgt, bevor die
+drei Feldnamen-Antworten da sind.
+
+> **Entscheid Didi, 12.09.2026: an der Schnittmenge wird nichts gebaut,
+> bis `mail`, der Jahrgang und die Frage «wessen Adresse» gemessen sind.**
+> Sonst rechnen wir ein zweites Mal auf falschen Feldern.
+
+⚠ Das ist die Anwendung der eigenen Regel auf den verlockenden Fall: die
+Zahlen liegen jetzt vor, die Karte zeigt fünf Gruppen mit Bezugsgrösse,
+und **genau jetzt sieht ein Bau am plausibelsten aus.** Eine Rechnung auf
+zwei toten Achsen ist aber nicht dadurch belastbar, dass sie ordentlich
+dargestellt wird.
