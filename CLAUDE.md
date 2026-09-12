@@ -9125,6 +9125,72 @@ hat mit dem Fall, der zu `cc_geschwister` führte, nichts zu tun — und er
 war es trotzdem wert.
 
 
+### ⚠⚠ EIN FLACKERNDER TEST HAT ZWEI DEPLOYS VERSCHLUCKT — und die Spur verschwindet beim Suchen
+
+Vier Vorfälle am 11./12.09.2026: `npm run pruefkette` endet mit **Exit 1**,
+der nächste Lauf ist grün.
+
+| | |
+|---|---|
+| ① 11.09., ~23:0x | nach 0.9.17 — Meldung nicht gefasst |
+| ② 12.09., ~00:2x | nach `cc_geschwister` — nicht gefasst |
+| **③** | ⚠ **`teamSpielplanTab.test.jsx` → „rendert die Bilanz zwischen Spielplan und Tabelle“** |
+| ④ | Exit 1, danach **zweimal Exit 0** mit 1289 Fällen |
+
+**Einzeln gemessen: 2 passed. Voller Lauf unmittelbar danach: 80 Dateien,
+alles grün.** Die Zählprobe schweigt — **kein Testverlust**, ein einzelner
+Fall entscheidet sich anders.
+
+#### ⚠⚠ Die Folge ist teurer als die Röte: zwei verschluckte Deploys
+
+```
+deploy = pruefkette && deploy.mjs
+```
+
+Ein zufällig roter Test lässt `deploy.mjs` aus. **Der Commit steht, und
+von aussen sieht es aus wie ein fremder Fehler** — am 12.09.2026 wurde
+deshalb zweimal beim Theme-Chat gesucht, während unsere eigene Änderung
+nicht draussen war.
+
+> **Ein abgebrochener Zwischenschritt lässt den Deploy aus, der Commit
+> steht, und der Ausfall zeigt auf das andere System.**
+
+⚠ **Die Kopplung bleibt trotzdem** (Entscheidung Didi, 12.09.2026): nicht
+deployen, wenn etwas rot ist. **Und kein `skip`** — ein übersprungener Test
+ist eine gelöschte Meldung, nur langsamer. **Zu reparieren ist der Test.**
+
+#### Was gemessen ist — und was NICHT
+
+| | |
+|---|---|
+| gemessen | `TeamModul.tsx:429` liest `new Date()`; der Test rendert `TeamView`; die Attrappe hat ein festes `iso` |
+| ⚠ **nicht gemessen** | **dass die Röte am Wochentag hängt.** Vier Vorfälle, zwei davon nicht gefasst — das ist eine Vermutung |
+
+⚠ **Genau dieser Schritt — von „es gibt ein `new Date()`“ zu „also liegt es
+am Wochentag“ — ist der, der an diesem Tag dreimal zu früh gemacht wurde.**
+
+#### Der Beleg, und warum er dreimal entwischt ist
+
+```bash
+npm run pruefkette > pk.log 2>&1; echo "Exit: $?"
+```
+
+⚠ **Erst danach ansehen, nicht neu starten.** Der zweite Lauf räumt die
+Meldung weg — **die Spur verschwindet, sobald man sie sucht.**
+
+**Und der eigentliche Beweis braucht `vi.setSystemTime()`:** denselben Test
+an mehreren Wochentagen. Wird er dienstags grün und samstags rot, ist es
+belegt; sonst ist die Ursache eine andere.
+
+⚠ **Vier weitere Dateien lesen `new Date()` in gerenderten Komponenten**
+(`DashboardModul`, `MitgliederModul`, `KaderModul`, `NachrichtenModul`) —
+eigener Punkt, ungemessen.
+
+> **Ein Testfall, der einen Zeitpunkt liest und ihn nicht festlegt, prüft
+> den Tag mit.** Der Ausfall sieht aus wie Zufall und wäre vorhersagbar —
+> und genau deshalb sucht niemand danach.
+
+
 ### ✅ VIER SPIELE, DEREN VERLAUF NICHT ZUM RESULTAT PASST — alle vier erklärt, keines ein Fehler bei uns
 
 Gemeldet von der Website-Seite am 11.09.2026, gemessen über alle 68
