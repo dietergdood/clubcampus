@@ -3577,6 +3577,7 @@ export type Database = {
           tore: number | null
           unentschieden: number | null
           verein_id: string
+          zuletzt_geaendert: string
         }
         Insert: {
           anzahl_spiele?: number | null
@@ -3603,6 +3604,7 @@ export type Database = {
           tore?: number | null
           unentschieden?: number | null
           verein_id: string
+          zuletzt_geaendert?: string
         }
         Update: {
           anzahl_spiele?: number | null
@@ -3629,6 +3631,7 @@ export type Database = {
           tore?: number | null
           unentschieden?: number | null
           verein_id?: string
+          zuletzt_geaendert?: string
         }
         Relationships: [
           {
@@ -3837,69 +3840,60 @@ export type Database = {
           bis_minute: number | null
           erstmals_gesehen: string
           id: string
-          ist_bank: boolean
           ist_eigener: boolean
           name: string | null
           position_id: number | null
           position_name: string | null
-          rolle_id: number | null
-          rolle_kategorie: string | null
-          rolle_kategorie_id: number | null
           rolle_zuweisung: string | null
           rolle_zuweisung_id: number | null
           rueckennr: number | null
-          sfv_person_id: number
+          sfv_person_id: number | null
           sfv_team_id: number | null
           spiel_id: string
           spielzeit: number | null
           verein_id: string
           von_minute: number | null
+          zuletzt_geaendert: string
           zuletzt_synchronisiert: string
         }
         Insert: {
           bis_minute?: number | null
           erstmals_gesehen?: string
           id?: string
-          ist_bank?: boolean
           ist_eigener?: boolean
           name?: string | null
           position_id?: number | null
           position_name?: string | null
-          rolle_id?: number | null
-          rolle_kategorie?: string | null
-          rolle_kategorie_id?: number | null
           rolle_zuweisung?: string | null
           rolle_zuweisung_id?: number | null
           rueckennr?: number | null
-          sfv_person_id: number
+          sfv_person_id?: number | null
           sfv_team_id?: number | null
           spiel_id: string
           spielzeit?: number | null
           verein_id: string
           von_minute?: number | null
+          zuletzt_geaendert?: string
           zuletzt_synchronisiert?: string
         }
         Update: {
           bis_minute?: number | null
           erstmals_gesehen?: string
           id?: string
-          ist_bank?: boolean
           ist_eigener?: boolean
           name?: string | null
           position_id?: number | null
           position_name?: string | null
-          rolle_id?: number | null
-          rolle_kategorie?: string | null
-          rolle_kategorie_id?: number | null
           rolle_zuweisung?: string | null
           rolle_zuweisung_id?: number | null
           rueckennr?: number | null
-          sfv_person_id?: number
+          sfv_person_id?: number | null
           sfv_team_id?: number | null
           spiel_id?: string
           spielzeit?: number | null
           verein_id?: string
           von_minute?: number | null
+          zuletzt_geaendert?: string
           zuletzt_synchronisiert?: string
         }
         Relationships: [
@@ -3943,6 +3937,7 @@ export type Database = {
           typ_id: number
           verein_id: string
           verworfen_am: string | null
+          zuletzt_geaendert: string
           zuletzt_synchronisiert: string
           zusatzminute: number | null
         }
@@ -3969,6 +3964,7 @@ export type Database = {
           typ_id: number
           verein_id: string
           verworfen_am?: string | null
+          zuletzt_geaendert?: string
           zuletzt_synchronisiert?: string
           zusatzminute?: number | null
         }
@@ -3995,6 +3991,7 @@ export type Database = {
           typ_id?: number
           verein_id?: string
           verworfen_am?: string | null
+          zuletzt_geaendert?: string
           zuletzt_synchronisiert?: string
           zusatzminute?: number | null
         }
@@ -4064,6 +4061,7 @@ export type Database = {
           verein_id: string
           wettbewerb: string | null
           zeit: string | null
+          zuletzt_geaendert: string
           zuletzt_synchronisiert: string | null
           zuschauer: number | null
         }
@@ -4101,6 +4099,7 @@ export type Database = {
           verein_id: string
           wettbewerb?: string | null
           zeit?: string | null
+          zuletzt_geaendert?: string
           zuletzt_synchronisiert?: string | null
           zuschauer?: number | null
         }
@@ -4138,6 +4137,7 @@ export type Database = {
           verein_id?: string
           wettbewerb?: string | null
           zeit?: string | null
+          zuletzt_geaendert?: string
           zuletzt_synchronisiert?: string | null
           zuschauer?: number | null
         }
@@ -4999,6 +4999,7 @@ export type Database = {
         Args: { p_email: string; p_verein_id: string }
         Returns: Json
       }
+      export_wartet: { Args: { p_verein_id: string }; Returns: number }
       get_my_mitglied_id: { Args: never; Returns: number }
       get_my_person_id: { Args: never; Returns: string }
       get_my_role: { Args: never; Returns: string }

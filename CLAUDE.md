@@ -9159,12 +9159,69 @@ nicht draussen war.
 deployen, wenn etwas rot ist. **Und kein `skip`** — ein übersprungener Test
 ist eine gelöschte Meldung, nur langsamer. **Zu reparieren ist der Test.**
 
+#### ⚠⚠ GEFANGEN AM 12.09.2026 — UND ES IST NICHT DER WOCHENTAG
+
+Fünfter Vorfall, und diesmal stand die Meldung im Log:
+
+```
+× rendert die Bilanz zwischen Spielplan und Tabelle   6565ms
+× zeigt beide Anschlüsse                              5920ms
+```
+
+⚠ ⚠ **Das sind TIMEOUTS, keine fehlgeschlagenen Erwartungen.** Die Vorgabe
+von vitest ist **5000 ms**; beide liegen knapp darüber. Und es sind **zwei
+verschiedene Testdateien**, beide mit `@vitest-environment jsdom`.
+
+**Damit ist es die Familie vom 22.08.2026** („Zwei Tests entschieden sich
+nach Rechnerlast“) — und nicht der `new Date()`-Pfad.
+
+| Vermutung | |
+|---|---|
+| Wochentag, über `TeamModul.tsx:429` | ❌ **widerlegt** — ein Timeout kennt keinen Kalender |
+| jsdom unter Last | ✅ **belegt**: 6565 und 5920 gegen eine Grenze von 5000 |
+
+⚠ **Beide Vermutungen waren plausibel und beide falsch** — meine und die
+aus der Rückmeldung. Entschieden hat eine Zahl, die dreimal entwischt ist,
+weil der zweite Lauf sie wegräumt.
+
+> **Die Umleitung in eine Datei war der ganze Unterschied.** `npm run
+> pruefkette > pk.log 2>&1` — und dann hinsehen statt neu starten.
+
+#### ⚠ Warum die Reparatur vom 22.08.2026 es nicht behoben hat
+
+Damals wurde `environment: 'node'` zur Vorgabe, und nur wer einen DOM
+braucht, sagt es oben in seiner Datei. **Das hat die Zahl der
+jsdom-Instanzen gesenkt — und die verbleibenden laufen weiter gegen
+dieselbe 5-Sekunden-Grenze.**
+
+⚠ ⚠ **UND ES SIND NICHT MEHR 14.** Gemessen am 12.09.2026:
+`grep -rl "@vitest-environment jsdom"` ergibt **21 Dateien**. Die Zahl im
+Papier stammte vom 22.08.2026 und ist seither um die Haelfte gewachsen,
+ohne dass jemand sie nachgezaehlt hat — **eine Zahl in einem Dokument ist
+eine Messung von damals.**
+
+⚠ **Und die Zahl, die den Umfang zeigt:** die 21 Dateien allein, ohne
+Last, brauchen **612 Sekunden fuer `environment`** bei 52 Sekunden
+Wanduhr — rund 29 Sekunden je Datei nur fuer den DOM-Aufbau. **Das ist
+der Topf, aus dem die 5000 ms je Testfall bezahlt werden**, und unter
+Last reicht er nicht.
+
+**Es wurde also seltener, nicht behoben.** Vier Monate lang fiel es nicht
+auf; am 11./12.09.2026 fünfmal an zwei Tagen, **weil parallel gebaut,
+geprüft und über Docker PHP und Deno ausgeführt wurde.**
+
+⚠ **Die Antwort ist NICHT `testTimeout` hochzudrehen, ohne zu wissen,
+wohin.** Eine Grenze, die niemand gemessen hat, ist genau das, was dieses
+Papier an einem Dutzend Stellen als Fehler führt. **Zuerst messen, wie
+lange die 14 jsdom-Dateien unbelastet brauchen** — dann steht fest, ob
+5000 ms knapp oder falsch sind.
+
 #### Was gemessen ist — und was NICHT
 
 | | |
 |---|---|
 | gemessen | `TeamModul.tsx:429` liest `new Date()`; der Test rendert `TeamView`; die Attrappe hat ein festes `iso` |
-| ⚠ **nicht gemessen** | **dass die Röte am Wochentag hängt.** Vier Vorfälle, zwei davon nicht gefasst — das ist eine Vermutung |
+| ⚠ **widerlegt am 12.09.2026** | **der Wochentag.** Es sind Timeouts — siehe den Abschnitt darüber |
 
 ⚠ **Genau dieser Schritt — von „es gibt ein `new Date()`“ zu „also liegt es
 am Wochentag“ — ist der, der an diesem Tag dreimal zu früh gemacht wurde.**
@@ -9189,6 +9246,65 @@ eigener Punkt, ungemessen.
 > **Ein Testfall, der einen Zeitpunkt liest und ihn nicht festlegt, prüft
 > den Tag mit.** Der Ausfall sieht aus wie Zufall und wäre vorhersagbar —
 > und genau deshalb sucht niemand danach.
+
+
+### ⚠⚠ DER DUMP WAR AKTUELL UND DIE TYPEN WAREN ES NICHT — vier Tage lang, grün
+
+Beim Sessionabschluss am 12.09.2026 gemessen, nicht gesucht:
+
+| | |
+|---|---|
+| `supabase/schema.sql` gegen einen frischen Dump | ⚠ **byteweise identisch** |
+| `src/database.types.ts` gegen `npm run gen:types` | ⚠ **vier Änderungen** |
+
+```
++ spiele.zuletzt_geaendert          (11.09., Trigger-Migration)
+- spiel_aufstellung.ist_bank        (10.09., /bench-Ausbau)
+- rolle_id · rolle_kategorie · rolle_kategorie_id
+```
+
+**Der Satz dazu steht seit dem 05.08.2026 im Papier** — *„Nach jeder
+Strukturänderung gehören Dump UND Typen nachgezogen … Der Dump allein
+reicht nicht“*. **Es ist trotzdem wieder passiert, und zwar in die
+andere Richtung als damals.**
+
+#### ⚠⚠ Warum nichts rot wurde — und das ist der eigentliche Befund
+
+Veraltete Typen sind **in beide Richtungen harmlos aussehend**:
+
+| | |
+|---|---|
+| eine **neue** Spalte fehlt | `tsc` kennt sie nicht — wer sie benutzt, bekommt einen Fehler. **Laut** |
+| eine **entfernte** Spalte steht noch drin | ⚠ `tsc` erlaubt sie weiter. **Still** |
+
+⚠ ⚠ **Und `check:selects` hält jede `select()`-Zeichenkette gegen genau
+diese Datei.** Mit veralteten Typen hätte ein `select("rolle_kategorie")`
+anstandslos bestanden — auf eine Spalte, die es seit dem 10.09.2026 nicht
+mehr gibt.
+
+> **Eine Prüfung, die gegen eine erzeugte Datei misst, ist nur so aktuell
+> wie diese Datei. Veraltet sie, prüft die Prüfung ein Phantom — und
+> bleibt grün.**
+
+Dieselbe Familie wie die Attrappe, die eine Spalte annimmt, die es nicht
+mehr gibt (`vorname` in `mitglieder`, ein halbes Jahr unbemerkt) — nur
+nicht in einem Testfall, sondern **im Prüfmittel selbst.**
+
+#### Die Probe kostet zwei Minuten und gehört an den Sessionabschluss
+
+```bash
+npx supabase db dump --linked -f /tmp/probe.sql   # in den Scratchpad, nicht ueber die Datei
+diff -q supabase/schema.sql /tmp/probe.sql
+cp src/database.types.ts /tmp/alt.ts && npm run gen:types && diff /tmp/alt.ts src/database.types.ts
+```
+
+⚠ **Zuerst in eine Nebendatei dumpen, dann vergleichen.** Direkt über
+`schema.sql` zu schreiben nimmt die Antwort auf die Frage weg, die man
+gerade stellt — und ein abgebrochener Dump hätte sie ersetzt.
+
+⚠ **Und beide Proben, nicht eine.** Hier war die eine sauber und die
+andere nicht; wer nur die erste macht, geht mit einem grünen Ergebnis
+nach Hause.
 
 
 ### ✅ VIER SPIELE, DEREN VERLAUF NICHT ZUM RESULTAT PASST — alle vier erklärt, keines ein Fehler bei uns
