@@ -12,7 +12,7 @@
    ═══════════════════════════════════════════════════════════════════ */
 import { describe, it, expect } from "vitest";
 import {
-  baueAbgleich, deuteAbgleich, namensschluessel,
+  baueAbgleich, deuteAbgleich, namensschluessel, ordneEin,
   type UnserePerson, type DruebenMerkmal,
 } from "../personenAbgleich.ts";
 
@@ -132,5 +132,40 @@ describe("deuteAbgleich — Zahlen mit ihrer Bedeutung", () => {
     };
     expect(deuteAbgleich(kaputt).join(" | "))
       .toMatch(/Die Aufteilung geht nicht auf: 4 statt 10/);
+  });
+});
+
+describe("ordneEin — die Gegenrichtung, und nur eine Gruppe ist ein Befund", () => {
+  const h = (x: string) => x;
+
+  it("wen wir kennen und bewusst nicht senden, ist gefiltert", () => {
+    const e = ordneEin([{ name_hash: h("eltern") }], new Set(["eltern"]), new Set());
+    expect(e).toMatchObject({ gefiltert: 1, uebersehen: 0, fremd: 0 });
+  });
+
+  it("wen wir gar nicht kennen, ist fremd — von Hand drüben angelegt", () => {
+    const e = ordneEin([{ name_hash: h("unbekannt") }], new Set(["eltern"]), new Set());
+    expect(e).toMatchObject({ gefiltert: 0, uebersehen: 0, fremd: 1 });
+  });
+
+  it("⚠ ohne Hash ist es fremd — aber aus einem anderen Grund", () => {
+    /* Wir WISSEN es nicht, statt es zu wissen. Die Zahl wirft beides
+       zusammen; die Liste der Übersehenen bleibt davon frei. */
+    const e = ordneEin([{ name_hash: null }], new Set(), new Set());
+    expect(e).toMatchObject({ fremd: 1, uebersehen: 0 });
+    expect(e.uebersehen_liste).toEqual([]);
+  });
+
+  it("⚠ ⚠ gesendet UND als „ohne uns\" gezählt ist ein Widerspruch — er fällt auf", () => {
+    /* Eine Zahl, die nicht stimmen kann, soll sichtbar sein statt
+       weggerundet: sie zählt als übersehen und steht in der Liste. */
+    const e = ordneEin([{ name_hash: h("x") }], new Set(), new Set(["x"]));
+    expect(e.uebersehen).toBe(1);
+    expect(e.uebersehen_liste).toEqual([{ name_hash: "x" }]);
+  });
+
+  it("leere Eingabe ergibt drei Nullen, keine Ausnahme", () => {
+    expect(ordneEin([], new Set(), new Set()))
+      .toEqual({ gefiltert: 0, uebersehen: 0, fremd: 0, uebersehen_liste: [] });
   });
 });

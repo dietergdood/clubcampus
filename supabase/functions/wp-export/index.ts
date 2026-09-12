@@ -67,7 +67,7 @@ import {
    fuer „sie schreibt nicht", nicht fuer „sie filtert richtig". */
 import { waehleZeitraum, fassBestandZusammen } from "../../../src/domains/spiele/wpBestand.ts";
 import {
-  baueAbgleich, namensschluessel,
+  baueAbgleich, namensschluessel, ordneEin,
 } from "../../../src/domains/spiele/personenAbgleich.ts";
 import type {
   DruebenMerkmal, UnserePerson,
@@ -891,7 +891,7 @@ interface KandidatZeile {
  */
 async function holeKandidaten(
   db: DbLeser, vereinId: string,
-): Promise<UnserePerson[]> {
+): Promise<{ kandidaten: UnserePerson[]; gefiltert: Set<string> }> {
   const SPALTEN = "id, vorname, nachname, email, geburtsdatum, funktionen,"
     + " mitglieder!inner(id, aktiv, kader!inner(id, aktiv))";
   /* ⚠ Zwei Abfragen statt einer ODER-Verknuepfung ueber einen Embed:
@@ -934,7 +934,33 @@ async function holeKandidaten(
   const nachId = new Map<string, KandidatZeile>();
   for (const z of [...mitTeam, ...mitFunktion]) nachId.set(z.id, z);
 
+  /* ⚠ ⚠ AUCH DIE, DIE WIR NICHT SENDEN — sonst ist die Gegenrichtung
+     nicht einzuordnen. Eine Person, die drueben steht und bei uns unter
+     den Gefilterten, ist kein Befund; eine, die wir gar nicht kennen,
+     schon; und eine, die wir kennen und trotzdem nicht senden, obwohl
+     sie in den Filter gehoert, ist der Befund, auf den es ankommt.
+
+     ⚠ Gelesen wird die GANZE Tabelle, gepagt. 912 Zeilen am 11.09.2026;
+     ohne alleSeiten() waere bei 1000 still Schluss. */
+  const alle = await alleSeiten<KandidatZeile>(
+    1,
+    (von, bis) => db.from("personen")
+      .select("id, vorname, nachname, email, geburtsdatum")
+      .eq("verein_id", vereinId).order("id").range(von, bis),
+    () => db.from("personen").select("id", { count: "exact", head: true })
+      .eq("verein_id", vereinId),
+    "alle Personen",
+  );
+
   const raus: UnserePerson[] = [];
+  const gefiltert = new Set<string>();
+  for (const z of alle) {
+    if (nachId.has(z.id)) continue;
+    const j = /(\d{4})/.exec(z.geburtsdatum ?? "")?.[1] ?? "";
+    const n = namensschluessel(`${z.vorname ?? ""} ${z.nachname ?? ""}`);
+    if (n !== "" && j !== "") gefiltert.add(await sha256(`${n}|${j}`));
+  }
+
   for (const z of nachId.values()) {
     const mail = (z.email ?? "").trim().toLowerCase();
     const jahr = /(\d{4})/.exec(z.geburtsdatum ?? "")?.[1] ?? "";
@@ -954,7 +980,7 @@ async function holeKandidaten(
       name_hash: (name === "" || jahr === "") ? null : await sha256(`${name}|${jahr}`),
     });
   }
-  return raus;
+  return { kandidaten: raus, gefiltert };
 }
 
 async function holeBestand(
@@ -1020,7 +1046,15 @@ async function holeBestand(
   const wpPers = (wp.personen ?? {}) as { merkmale?: DruebenMerkmal[] };
   let abgleich = null;
   if (Array.isArray(wpPers.merkmale)) {
-    abgleich = baueAbgleich(await holeKandidaten(db, vereinId), wpPers.merkmale);
+    const lage = await holeKandidaten(db, vereinId);
+    abgleich = baueAbgleich(lage.kandidaten, wpPers.merkmale);
+    /* ⚠ Ueber Namensschluessel und Jahrgang, NICHT ueber die Nummer.
+       Bei null Treffern ueber die Nummer taugt sie dafuer nicht — ein
+       Schluessel, der nirgends passt, ordnet nichts ein. */
+    const gesendet = new Set(
+      lage.kandidaten.map((k) => k.name_hash).filter((x): x is string => !!x),
+    );
+    abgleich.einordnung = ordneEin(abgleich.ohne_uns_liste, lage.gefiltert, gesendet);
   }
 
   /* ⚠ ⚠ DIE DURCHREICHE, UND SIE HAT EINEN TAG GEFEHLT.

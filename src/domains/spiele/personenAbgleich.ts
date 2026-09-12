@@ -69,6 +69,8 @@ export interface AbgleichErgebnis {
    * einordnen kann, statt sie nur zu zählen.
    */
   ohne_uns_liste: { sfv_person_id: string | null; name_hash: string | null }[];
+  /** Erst gesetzt, wenn die Gegenrichtung eingeordnet wurde. */
+  einordnung?: Einordnung;
 }
 
 /**
@@ -206,6 +208,64 @@ export function baueAbgleich(
 }
 
 /**
+ * Die `personen_ohne_uns` einordnen: gefiltert oder übersehen?
+ *
+ * ⚠ ⚠  DIESE ZAHL BESCHÄFTIGT MEHR ALS DIE NEUEN DATENSÄTZE, und zu
+ *       Recht: **sie laufen dauerhaft auseinander.** Ein neuer Datensatz
+ *       ist einmal falsch; eine Person, die drüben steht und von keinem
+ *       Lauf mehr erreicht wird, altert für immer.
+ *
+ * ⚠  VERGLICHEN WIRD ÜBER NAMENSSCHLÜSSEL UND JAHRGANG, nicht über die
+ *    Nummer. Bei null Treffern über die Nummer taugt sie dafür nicht —
+ *    ein Schlüssel, der nirgends passt, ordnet nichts ein.
+ *
+ * Drei Gruppen, und nur die dritte ist ein Befund:
+ *
+ *   gefiltert    kennen wir, bewusst nicht gesendet (Eltern, Passive)
+ *   uebersehen   ⚠ kennen wir, und der Filter hat sie nicht erfasst
+ *   fremd        kennen wir gar nicht — von Hand drüben angelegt
+ *
+ * ⚠  `uebersehen` ist die Gruppe, für die der Aufrufer zurückgehalten
+ *    wird. Steht sie auf 0, ist der Filter vollständig.
+ */
+export interface Einordnung {
+  gefiltert: number;
+  uebersehen: number;
+  fremd: number;
+  /** Die Übersehenen einzeln — Hash und Jahrgang, nie ein Name. */
+  uebersehen_liste: { name_hash: string | null }[];
+}
+
+export function ordneEin(
+  ohneUns: { name_hash: string | null }[],
+  /** Alle Personen, die wir kennen und NICHT senden — mit ihrem Hash. */
+  gefilterteHashes: Set<string>,
+  /** Und die, die wir senden — für den Fall, dass einer doppelt zählt. */
+  gesendeteHashes: Set<string>,
+): Einordnung {
+  const erg: Einordnung = { gefiltert: 0, uebersehen: 0, fremd: 0, uebersehen_liste: [] };
+  for (const d of ohneUns) {
+    const h = d.name_hash;
+    /* ⚠ Ohne Hash ist keine Einordnung möglich — das ist `fremd`, aber
+       aus einem anderen Grund: wir wissen es nicht, statt es zu wissen.
+       Die Zahl wirft beides zusammen; die Liste der Übersehenen nicht. */
+    if (!h) { erg.fremd += 1; continue; }
+    if (gefilterteHashes.has(h)) { erg.gefiltert += 1; continue; }
+    if (gesendeteHashes.has(h)) {
+      /* ⚠ Gesendet UND als `ohne uns` gezählt: das wäre ein Widerspruch
+         in unserer eigenen Rechnung. Er zählt als übersehen und fällt
+         damit auf — eine Zahl, die nicht stimmen kann, soll sichtbar
+         sein statt weggerundet. */
+      erg.uebersehen += 1;
+      erg.uebersehen_liste.push({ name_hash: h });
+      continue;
+    }
+    erg.fremd += 1;
+  }
+  return erg;
+}
+
+/**
  * Die Zeilen für die Karte — Zahlen mit ihrer Bedeutung daneben.
  *
  * ⚠ „232 ohne Treffer" ist eine Zahl; „so viele Datensätze entstehen neu"
@@ -227,6 +287,15 @@ export function deuteAbgleich(e: AbgleichErgebnis): string[] {
     ? "0 stehen drüben und nicht in dieser Sendung"
     : `⚠ ${e.personen_ohne_uns} stehen drüben und nicht in dieser Sendung — `
       + "sie bleiben auf ihrem Stand und laufen auseinander");
+  /* ⚠ ⚠ DIE EINORDNUNG DER GEGENRICHTUNG — sie beschäftigt mehr als die
+     neuen Datensätze, weil diese Personen DAUERHAFT auseinanderlaufen. */
+  if (e.einordnung) {
+    const ein = e.einordnung;
+    zeilen.push(`   davon ${ein.gefiltert} bewusst gefiltert · ${ein.fremd} kennen wir nicht`);
+    zeilen.push(ein.uebersehen === 0
+      ? "   0 übersehen — der Filter ist vollständig"
+      : `   ⚠ ${ein.uebersehen} ÜBERSEHEN — die müssten wir senden und tun es nicht`);
+  }
   /* ⚠ Die Listen stehen in der Antwort, nicht in der Karte: sie sind für
      die Gegenseite gedacht, nicht für den Blick. Die Karte sagt nur,
      dass es sie gibt — sonst liest sie niemand und niemand weiss davon. */
