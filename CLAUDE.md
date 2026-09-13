@@ -13520,3 +13520,75 @@ anderem *„nicht feststellbar ist nicht dasselbe wie nichts gefunden"*,
 Seite"* und die drei erfundenen Spaltennamen. **Ein eingestellter Strang
 ist keine verlorene Zeit, wenn das Gelernte an den Regeln hängt und nicht
 am Gegenstand.**
+
+### ⚠⚠ 232 / 8 IST KEINE TABELLE — eine Gruppenzahl, die nicht zur Zeilenzahl passt, ist ein Befund über den SCHLÜSSEL
+
+13.09.2026. `rangprobe` meldete `zeilen 232 · gruppen 8`. Didis Verdacht:
+die Gruppenkennung sei mehrdeutig oder leer, und dann überschrieben sich
+Gruppen gegenseitig.
+
+**Gemessen: der Schlüssel in der Datenbank trägt sechs Spalten** —
+`(verein_id, sfv_saison_id, sfv_liga_id, sfv_division_id, sfv_gruppe_id,
+sfv_team_id)`, und der Upsert zielt genau darauf. Eine wiederkehrende
+`groupId` kollidiert also nicht: die Nummer 1 in zwei Ligen sind zwei
+Zeilen.
+
+⚠ ⚠ **FALSCH WAR MEINE PROBE.** Ihr Gruppenschlüssel war **dreiteilig**
+(Liga, Division, Gruppe) — ohne Saison, und damit enger als der der
+Datenbank. Sie hat 21 Gruppen auf 8 kollabiert.
+
+**Und der Empfänger ist am 09.09.2026 für genau diesen Fehler berichtigt
+worden.** Dort steht seither: *„Eine Gruppe ist beim Verband vierteilig …
+die Nummer allein ist NICHT eindeutig … die zweite überschriebe die erste,
+ohne Fehler und ohne Meldung."* **Ich habe ihn drei Tage später in der
+Leseprobe wiederholt** — in derselben Woche, in derselben Sache.
+
+> **Eine Zahl, die nicht zur Nachbarzahl passt, ist der einzige Melder für
+> einen kollabierten Schlüssel.** 232 / 8 sind 29 Mannschaften je Tabelle,
+> und die hat keine Liga. Die Gruppenzahl war ein Befund über meinen
+> Schlüssel, nicht über die Daten des Verbands.
+
+Die Probe nennt seither `zeilen_je_gruppe` als Gegenprobe und sagt es
+ausdrücklich, wenn der Wert über zwanzig liegt. Dazu
+`zeilen_ohne_gruppennummer` — denn `sfv_gruppe_id` hat `DEFAULT 0` und
+`?? 0` macht aus einer fehlenden Angabe eine Null: **ein fehlender Wert und
+die Zahl Null sehen danach gleich aus.**
+
+⚠ **Was die Messung trotzdem trägt:** `zeilen_ohne_spiele = 0` und
+`zeilen_gesamt = 232` hängen **nicht** am Gruppenschlüssel. Didis Schluss
+„ClubCampus ist sauber, die Lücke liegt drüben" bleibt damit gültig — nur
+die Gruppenzahl daneben war es nicht. **Eine kaputte Zahl entwertet nicht
+die Zahlen, die anders entstehen** — das ist die Gegenrichtung zu „eine
+unglaubwürdige Zahl zieht die richtigen mit hinein", und sie gilt nur,
+wenn man sagen kann, welche wovon abhängt.
+
+### ⚠⚠ DER EMPFÄNGER ENTFERNT KEINE RANGLISTE, DIE NICHT MEHR GELIEFERT WIRD
+
+Gemessen am 13.09.2026, und es erklärt die 319 gegen 232:
+
+```php
+$alle = get_option( CC_OPT_RANG, array() );   // liest den Bestand
+$alle[ $id ] = $g;                            // ergaenzt oder ersetzt
+update_option( CC_OPT_RANG, $alle, false );   // schreibt alles zurueck
+```
+
+**Er führt zusammen, er ersetzt nicht.** Eine Gruppe, die der Verband nicht
+mehr liefert, bleibt für immer stehen — 232 geliefert, 319 in der Ablage,
+87 Reste. Auf der Website steht dann die Tabelle einer Gruppe, die es nicht
+mehr gibt.
+
+⚠ **Das ist die Gegenrichtung zum Spielplan und zeigt, dass die Frage dort
+schon entschieden ist:** `/spiele` zieht Spiele zurück, die nicht mehr
+geliefert werden (auf Entwurf), und zwar begrenzt auf den Abgleichbereich
+der mitgeschickten Mannschaften. Für Ranglisten gibt es nichts davon.
+
+⚠ **Und ein blindes „weg, was nicht geliefert wurde" wäre hier gefährlich
+— nur nicht aus dem Grund, den man vermutet.** Es ist sicher, WEIL wir alle
+Gruppen in einem einzigen Abruf holen und immer vollständig senden. Käme
+die Rangliste je stückweise, löschte der erste Teil die übrigen. **Die
+Sicherheit liegt in der Vollständigkeit der Nutzlast, nicht im Löschcode**
+— und wer das eine ändert, muss das andere mit ändern.
+
+**Nicht gebaut:** es löscht, und Löschen auf einer öffentlichen Seite ist
+ein Entscheid. Was es bräuchte, ist eine Zeile im Empfänger und ein
+Zähler `zurueckgezogen`, wie ihn der Spielplan hat.

@@ -632,7 +632,20 @@ Deno.serve(async (req) => {
       }>();
 
       for (const r of roh) {
-        const k = `${r.leagueId ?? 0}|${r.divisionId ?? 0}|${r.groupId ?? 0}`;
+        /* ⚠ ⚠  VIERTEILIG, WIE DER SCHLUESSEL IN DER DATENBANK — und die
+           erste Fassung war dreiteilig, ohne Saison. Sie meldete **8
+           Gruppen bei 232 Zeilen**, also 29 Mannschaften je Tabelle, was
+           keine Liga hat.
+
+           Der Empfaenger ist am 09.09.2026 fuer genau diesen Fehler
+           berichtigt worden: eine Gruppe ist beim Verband vierteilig, und
+           die Gruppennummer allein ist NICHT eindeutig. Ich habe ihn drei
+           Tage spaeter in der Leseprobe wiederholt.
+
+           ⚠ Die Zahl war der einzige Hinweis: 232 / 8 ist keine Tabelle.
+           **Eine Gruppenzahl, die nicht zur Zeilenzahl passt, ist ein
+           Befund ueber den Schluessel, nicht ueber die Daten.** */
+        const k = `${saison.id}|${r.leagueId ?? 0}|${r.divisionId ?? 0}|${r.groupId ?? 0}`;
         const m = Number(r.matches);
         const g = gruppen.get(k) ?? {
           liga: String(r.leagueName ?? ""),
@@ -656,11 +669,30 @@ Deno.serve(async (req) => {
         .sort((a, b) => (b.spiele_null - a.spiele_null)
           || a.liga.localeCompare(b.liga));
 
+      /* ⚠ ⚠  WIE VIELE ZEILEN GAR KEINE GRUPPENNUMMER TRAGEN. `sfv_gruppe_id`
+         hat `DEFAULT 0`, und `(r.groupId as number) ?? 0` macht aus einer
+         fehlenden Angabe eine Null — **ein fehlender Wert und die Zahl Null
+         sehen danach gleich aus.** Steht hier eine hohe Zahl, ruht unsere
+         Gruppenidentitaet auf Liga und Division allein, und „Gruppe" ist
+         als Begriff verloren. */
+      const ohneGruppennummer = roh.filter((r) => {
+        const g = Number(r.groupId);
+        return !Number.isFinite(g) || g === 0;
+      }).length;
+
       return json({
         hinweis: "Leseprobe. Fragt den Verband, schreibt nichts.",
         saison: saison.id,
         gruppen_gesamt: gruppen.size,
         zeilen_gesamt: roh.length,
+        /* ⚠ Immer da, auch als Null. Und die Bezugsgroesse steht daneben:
+           „87" allein sagt nicht, ob das viel ist. */
+        zeilen_ohne_gruppennummer: ohneGruppennummer,
+        /* ⚠ Die Gegenprobe zur Gruppenzahl: Zeilen je Gruppe. Liegt der
+           Wert weit ueber einer Tabellengroesse, kollabiert der Schluessel
+           — genau so ist die dreiteilige erste Fassung aufgefallen. */
+        zeilen_je_gruppe: gruppen.size > 0
+          ? Math.round((roh.length / gruppen.size) * 10) / 10 : 0,
         /* ⚠ ⚠  DIE ZAHL, DIE DIE FRAGE ENTSCHEIDET. Liefert der Verband
            hier 0, fuehrt er den Stand nicht — dann bilden wir ihn korrekt
            ab, und die Luecke liegt bei ihm. Liefert er eine Zahl und bei

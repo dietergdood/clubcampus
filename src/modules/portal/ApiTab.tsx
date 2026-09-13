@@ -363,13 +363,29 @@ export function ApiTab({loading,isMobile,mobileKachel,apiVerbindungen,tab,sb=nul
       const ohne=Number(daten.gruppen_ohne_spiele??0);
       const ges=Number(daten.gruppen_gesamt??0);
       const gr=(daten.gruppen??[]) as Record<string,unknown>[];
+      const jeGruppe=Number(daten.zeilen_je_gruppe??0);
+      const ohneNr=Number(daten.zeilen_ohne_gruppennummer??0);
       const zeilen=[
-        `${ges} Gruppen beim Verband · ${Number(daten.zeilen_gesamt??0)} Zeilen`,
-        ohne===0
+        `${ges} Gruppen beim Verband · ${Number(daten.zeilen_gesamt??0)} Zeilen`
+          +` · ${jeGruppe} je Gruppe`,
+        /* ⚠ ⚠ DIE GEGENPROBE ZUM SCHLUESSEL. Eine Tabelle hat zehn bis
+           vierzehn Mannschaften. Liegt der Wert weit darueber, kollabiert
+           die Gruppenkennung — und die Gruppenzahl ist dann ein Befund
+           ueber den Schluessel, nicht ueber die Daten. Genau so ist meine
+           dreiteilige erste Fassung aufgefallen: 232 / 8. */
+        jeGruppe>20
+          ? `⚠ ${jeGruppe} Mannschaften je Gruppe — das ist keine Tabelle. `
+            +"Die Gruppenkennung kollabiert; die Gruppenzahl sagt nichts."
+          : `${jeGruppe} je Gruppe — in der Grösse einer Tabelle, der Schlüssel trägt`,
+        ohneNr===0
+          ? "0 Zeilen ohne Gruppennummer"
+          : `⚠ ${ohneNr} von ${Number(daten.zeilen_gesamt??0)} Zeilen ohne Gruppennummer — `
+            +"dort ruht die Gruppenidentität auf Liga und Division allein",
+      ];
+      zeilen.push(ohne===0
           ? `0 von ${ges} Gruppen ohne Spiele — der Verband führt überall einen Stand`
           : `⚠ ${ohne} von ${ges} Gruppen ohne Spiele — dort führt der VERBAND keinen `
-            + "Stand. Wir bilden ihn korrekt ab; dieselbe Lage wie bei den Spielen ohne Verlauf.",
-      ];
+            + "Stand. Wir bilden ihn korrekt ab; dieselbe Lage wie bei den Spielen ohne Verlauf.");
       /* ⚠ Die betroffenen namentlich, nicht nur gezaehlt — sonst sucht
          jemand 29 Gruppen durch. */
       for(const g of gr.filter(x=>Number(x.zeilen)===Number(x.spiele_null))){
