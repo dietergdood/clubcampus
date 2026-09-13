@@ -13404,3 +13404,60 @@ widerlegt wäre. Das ist der ehrliche Zustand, und er ist unbequemer als
 beide Enden.
 
 Die Abfragen 6 und 7 in `supabase/abfragen_2026-09-13.sql` beantworten es.
+
+### ⚠⚠ ICH HABE `rangprobe` GEBAUT UND KEINEN WEG, SIE ZU RUFEN — am selben Tag, an dem das dreimal im Papier stand
+
+13.09.2026. Die Aktion war in der Function gebaut, typgeprüft, gegen die
+Protokollprüfung gehalten und **deployt**. Dann kam die Bitte, sie
+auszulösen — und es gab keinen Aufrufer: kein Knopf, kein Dienst in `src/`,
+keine Konsolenhilfe.
+
+> **Gebaut, nicht angeschlossen.** Dieselbe Familie wie `leseHalbzeit()`,
+> das drei Wochen fertig dalag, und wie `merkmale_nutzbar`, das eine Stunde
+> im Ergebnis stand und von niemandem gezeigt wurde.
+
+⚠ **Und es ist der Fall, der die Erklärung von heute Mittag bestätigt:**
+kein Werkzeug kann ihn finden. `typecheck` ist grün, die Tests sind grün,
+`check:deno` ist grün — **eine Aktion ohne Aufrufer ist in keiner Hinsicht
+defekt.** Sie hat den richtigen Typ, die richtige Prüfung und einen
+Kommentar, der ihren Zweck erklärt. Es fehlt nur der Leser.
+
+⚠ ⚠ **Die Häufung an einem Tag ist deshalb kein Zufall, sondern die Folge
+davon, dass der letzte Meter von keiner Prüfkette bewacht wird.** Man baut,
+prüft, sieht grün — und der Auftrag fühlt sich erledigt an, weil jedes
+Werkzeug zustimmt. Angeschlossen: Dienst, Knopf und Deutung in einem Zug.
+
+#### ⚠ Und ich kann sie nicht selbst auslösen — gemessen, nicht vermutet
+
+`sfv-sync` verlangt ohne den Zeitplan-Schlüssel einen `Authorization`-Header,
+dessen Token über `is_admin()` einen Administrator ergibt. Den habe ich
+nicht, und `SFV_SYNC_KEY` auch nicht: `supabase secrets list` zeigt
+**SHA-256-Abdrücke**, keine Werte — 64 Hex-Zeichen, genau dafür gibt es
+sie.
+
+⚠ **Nebenbei ein eigener Fehlgriff:** der Aufruf gibt alle siebzehn
+Geheimnisse aus, und ich habe ihn ungefiltert laufen lassen, obwohl ich
+genau einen Namen wissen wollte. Die Abdrücke sind unbrauchbar, also ist
+nichts passiert — **aber die richtige Form wäre `| grep SFV_SYNC_KEY`
+gewesen.** Wer nach einem Namen fragt, holt nicht die Liste.
+
+### ⚠ Die Prüfung der Leseproben trug ihre Liste von Hand — und zwei fehlten
+
+`protokollSpur.test.ts` hält fest, dass Leseproben **nicht** in
+`api_sync_log` schreiben. Die Liste dafür stand als vier Namen im Test —
+und `vertragsprobe` und `rangprobe` fehlten **beide**.
+
+**Eine Leseprobe, die protokolliert, wäre durchgekommen**, weil die Prüfung
+sie nicht kannte. Der Zuschnitt war schmaler als die Wirklichkeit, und die
+Differenz war von aussen nicht zu sehen — dieselbe Familie wie
+`check:spalten`, das nur `supabase/` liest, und wie der Erkenner, der einen
+Bezeichner suchte.
+
+Sie leitet die Liste seither aus dem Quelltext ab — `aktion === "…"` minus
+die schreibenden — und **wirft, wenn sie weniger als vier findet.** Die
+zweite Hälfte ist die wichtigere: eine Prüfung über eine leere Menge ist in
+diesem Papier viermal vorgekommen, und sie sagt immer grün.
+
+⚠ Gegengeprobt mit einem `insert` in `rangprobe`: *„rangprobe
+protokolliert, obwohl es nur liest"* — mit dem Namen im Fehlertext, damit
+niemand suchen muss, welche der Proben es war.

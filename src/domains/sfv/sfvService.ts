@@ -262,6 +262,32 @@ export async function holeVorschau(
 }
 
 /** Die Feldnamen einer echten SFV-Rohantwort — nur Namen, keine Werte. */
+/**
+ * Was der Verband je Gruppe liefert — Leseprobe, schreibt nichts.
+ *
+ * ⚠ ⚠ ANLASS, 13.09.2026: bei fünf Gruppen fehlen Spiele vom 9. bis 12.09.
+ * im gelieferten Tabellenstand. Die Frage ist nicht, welche Zahl bei uns
+ * steht, sondern welche ankommt — und die beantwortet keine Abfrage auf
+ * unsere Tabelle, sondern nur ein Abruf.
+ *
+ * ⚠ ⚠ UND SIE HAT EINEN TAG LANG KEINEN AUFRUFER GEHABT. Die Aktion war in
+ * der Function gebaut, geprüft und deployt — und von der Oberfläche nicht
+ * erreichbar. **Gebaut, nicht angeschlossen**, an demselben Tag, an dem
+ * dieser Fehler dreimal ins Papier geschrieben wurde. Die Frage dagegen
+ * kostet nichts: *wer ruft das?*
+ */
+export async function holeRangprobe(
+  sb: Sb,
+): Promise<{ daten: Record<string, unknown> | null; fehler: string | null }> {
+  if (!sb) return { daten: null, fehler: "Keine Verbindung" };
+  const { data, error } = await sb.functions.invoke("sfv-sync", { body: { aktion: "rangprobe" } });
+  if (error) return { daten: null, fehler: await fehlerText(error, data) };
+  if ((data as { fehler?: unknown })?.fehler) {
+    return { daten: null, fehler: String((data as { fehler: unknown }).fehler) };
+  }
+  return { daten: data as Record<string, unknown>, fehler: null };
+}
+
 export async function holeRohschluessel(
   sb: Sb,
 ): Promise<{ daten: Record<string, unknown> | null; fehler: string | null }> {

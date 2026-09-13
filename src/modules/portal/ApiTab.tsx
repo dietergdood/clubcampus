@@ -9,7 +9,7 @@ import { API_INFOS, hostVon, zielAusLauf, hatLaufProtokolliert } from "./portalU
 import type { SyncLogZeile } from "./portalUtils.ts";
 import { SfvZuordnung } from "./SfvZuordnung.tsx";
 import { SfvSpielerZuordnung } from "./SfvSpielerZuordnung.tsx";
-import { starteSync, holeVorschau, holeRohschluessel } from "../../domains/sfv/sfvService.ts";
+import { starteSync, holeVorschau, holeRohschluessel, holeRangprobe } from "../../domains/sfv/sfvService.ts";
 import { starteWpExport, fasseExportZusammen, holeEmpfaengerStatus, holeBestand } from "../../domains/spiele/wpExportService.ts";
 import { deuteBestand } from "../../domains/spiele/bestandAnzeige.ts";
 import type { Mitglied, Sb, Team } from "../../types.ts";
@@ -329,17 +329,19 @@ export function ApiTab({loading,isMobile,mobileKachel,apiVerbindungen,tab,sb=nul
      Personenname, aber die Regel gilt hier trotzdem: eine Auskunft in
      der Oberflaeche nennt Mengen, keine Bestaende. */
 
-  async function auskunftHolen(was: "vorschau"|"rohschluessel"|"empfaenger"|"bestand"){
+  async function auskunftHolen(was: "vorschau"|"rohschluessel"|"empfaenger"|"bestand"|"rangprobe"){
     if(!sb||auskunftLaeuft) return;
     setAuskunftLaeuft(was); setAuskunft(null);
     const {daten,fehler}= was==="vorschau" ? await holeVorschau(sb)
       : was==="empfaenger" ? await holeEmpfaengerStatus(sb)
       : was==="bestand" ? await holeBestand(sb)
+      : was==="rangprobe" ? await holeRangprobe(sb)
       : await holeRohschluessel(sb);
     setAuskunftLaeuft(null);
     if(fehler||!daten){
       const t= was==="vorschau"?"Vorschau":was==="empfaenger"?"Empfänger"
-        :was==="bestand"?"Bestand drüben":"Rohschlüssel";
+        :was==="bestand"?"Bestand drüben":was==="rangprobe"?"Ranglisten beim Verband"
+        :"Rohschlüssel";
       setAuskunft({titel:t, zeilen:[fehler??"Keine Antwort"], fehler:true});
       return;
     }
@@ -350,6 +352,31 @@ export function ApiTab({loading,isMobile,mobileKachel,apiVerbindungen,tab,sb=nul
     }
     if(was==="empfaenger"){
       setAuskunft({titel:"Empfänger", zeilen: deuteEmpfaenger(daten)});
+      return;
+    }
+    if(was==="rangprobe"){
+      /* ⚠ ⚠ DIE EINE ZAHL ZUERST, und die Bezugsgroesse daneben. Liefert
+         der Verband bei einer Gruppe null Spiele, fuehrt er den Stand nicht
+         — dann bilden wir ihn korrekt ab, und es ist dieselbe Familie wie
+         die vierzehn Spiele ohne Verlauf. Ohne die Gesamtzahl waere „3" von
+         „3 von 3" nicht zu unterscheiden. */
+      const ohne=Number(daten.gruppen_ohne_spiele??0);
+      const ges=Number(daten.gruppen_gesamt??0);
+      const gr=(daten.gruppen??[]) as Record<string,unknown>[];
+      const zeilen=[
+        `${ges} Gruppen beim Verband · ${Number(daten.zeilen_gesamt??0)} Zeilen`,
+        ohne===0
+          ? `0 von ${ges} Gruppen ohne Spiele — der Verband führt überall einen Stand`
+          : `⚠ ${ohne} von ${ges} Gruppen ohne Spiele — dort führt der VERBAND keinen `
+            + "Stand. Wir bilden ihn korrekt ab; dieselbe Lage wie bei den Spielen ohne Verlauf.",
+      ];
+      /* ⚠ Die betroffenen namentlich, nicht nur gezaehlt — sonst sucht
+         jemand 29 Gruppen durch. */
+      for(const g of gr.filter(x=>Number(x.zeilen)===Number(x.spiele_null))){
+        zeilen.push(`   ⚠ ${String(g.liga||"")} · ${String(g.gruppe||"")} — `
+          +`${Number(g.zeilen)} Mannschaften, alle auf 0 Spielen`);
+      }
+      setAuskunft({titel:"Ranglisten beim Verband", zeilen, roh: daten});
       return;
     }
     if(was==="bestand"){
@@ -696,6 +723,15 @@ export function ApiTab({loading,isMobile,mobileKachel,apiVerbindungen,tab,sb=nul
                         <Btn small variant="outline" color="#888"
                              onClick={()=>auskunftHolen("rohschluessel")} disabled={!!auskunftLaeuft}>
                           {auskunftLaeuft==="rohschluessel"?"Läuft…":"Rohschlüssel"}
+                        </Btn>
+                        {/* ⚠ ⚠ DER KNOPF, DER EINEN TAG GEFEHLT HAT. `rangprobe`
+                            war in der Function gebaut, geprüft und deployt — und
+                            von hier nicht erreichbar. Gebaut, nicht
+                            angeschlossen: derselbe Fehler, der an diesem Tag
+                            dreimal ins Papier ging. */}
+                        <Btn small variant="outline" color="#888"
+                             onClick={()=>auskunftHolen("rangprobe")} disabled={!!auskunftLaeuft}>
+                          {auskunftLaeuft==="rangprobe"?"Läuft…":"Ranglisten beim Verband"}
                         </Btn>
                       </>
                       :api.key==="wordpress"
