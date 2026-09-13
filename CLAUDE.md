@@ -13247,3 +13247,71 @@ und kein Defekt.**
 
 ⚠ Das ist eine Vermutung mit einer Abfrage daneben, keine Erklärung. Sie
 gehört gemessen, bevor jemand am Sync sucht.
+
+### ⚠⚠ EIN ZEITSTEMPEL JE GRUPPE WÄRE EINE KOPIE — und würde die Lücke verdecken
+
+Bitte des Theme-Chats, 13.09.2026: das Feld `lauf` auch am Ranglisten-Weg,
+damit jede Gruppe ihren eigenen Zeitpunkt trägt.
+
+**Gemessen, und die Antwort ist nein.** `/api/club/ranking` ist **ein
+einziger Abruf** für alle Gruppen; `stand_vom` wird aus einem `jetzt`
+geschrieben, das einmal pro Lauf entsteht. Es gibt keinen Zeitpunkt je
+Gruppe, den wir wegwerfen — es gibt nur einen.
+
+⚠ Seine Annahme „wenn die Gruppen nacheinander geholt werden" trifft also
+nicht zu. Der gemeinsame Stempel ist **nicht ungenauer als die
+Wirklichkeit**, er ist genau so genau wie der Abruf.
+
+⚠ ⚠ **UND DAS FELD WÄRE SCHLIMMER ALS ÜBERFLÜSSIG — es würde seine erste
+Frage verdecken.** Er will wissen, auf welchem Stand eine Gruppe ist. Ein
+`lauf` sagte „21:30 geholt" auch für eine Tabelle, in der Spiele vom 9. bis
+12.09. fehlen.
+
+> **Ein frischer Zeitstempel auf altem Inhalt macht die Veraltung
+> unsichtbar.** Er beantwortet „wann haben wir gefragt", nicht „was war da
+> zu holen" — und wer das erste liest, hält das zweite für beantwortet.
+
+Dieselbe Familie wie `job_run_details.status = 'succeeded'`, das nur
+„abgesetzt" heisst, und wie der Zähler, dessen Name mehr behauptet als er
+misst. **Was seine Frage wirklich beantwortet, liegt schon in der Nutzlast:
+`anzahl_spiele` je Gruppe** — die Zahl des Verbands selbst, und genau die,
+an der er die fünf Gruppen gefunden hat.
+
+### ⚠ `rangprobe` — was der Verband HEUTE je Gruppe liefert
+
+Gebaut am 13.09.2026 für die erste Frage: fehlen die Spiele beim Verband
+oder bei uns?
+
+Unsere Seite kann sie kaum verlieren: der Sync upsertet alle gelieferten
+Zeilen bei jedem Lauf und **löscht die Gruppen, die nicht mehr geliefert
+werden**. Eine veraltete Zeile kann also nicht liegenbleiben. Bleibt die
+Frage, was ankommt — und die beantwortet keine Abfrage auf unsere Tabelle,
+sondern nur ein Abruf.
+
+`aktion: "rangprobe"` fragt `/api/club/ranking`, fasst je Gruppe zusammen
+und nennt `spiele_min`, `spiele_max` und wie viele Mannschaften der Gruppe
+auf **null** Spielen stehen. Sie schreibt nichts, protokolliert nichts.
+
+⚠ **Und `gruppen_ohne_spiele` ist die Zahl, die entscheidet.** Liefert der
+Verband dort null, führt er den Stand nicht — dann bilden wir ihn korrekt
+ab, und es ist dieselbe Familie wie die vierzehn Spiele ohne Verlauf: *er
+führt es nicht, wir zeigen es.* Liefert er eine Zahl und bei uns steht
+null, liegt es an uns.
+
+⚠ Ausgegeben werden **alle** Gruppen, nicht nur die auffälligen. Eine
+Liste, die nur Befunde zeigt, lässt offen, ob überhaupt gemessen wurde.
+
+#### ⚠⚠ Und dabei war die Prüfung schmaler als die Wirklichkeit
+
+`protokollSpur.test.ts` hält fest, dass Leseproben **nicht** protokollieren.
+Die Liste dafür stand von Hand im Test — mit vier Namen, und
+`vertragsprobe` und `rangprobe` fehlten beide.
+
+**Eine Leseprobe, die protokolliert, wäre durchgekommen**, weil die Prüfung
+sie nicht kannte. Sie leitet die Liste seither aus dem Quelltext ab
+(`aktion === "…"` minus die schreibenden) und wirft, wenn sie weniger als
+vier findet — eine Prüfung über eine leere Menge ist in diesem Papier
+viermal vorgekommen.
+
+Gegengeprobt: ein `insert` in `rangprobe` → *„rangprobe protokolliert,
+obwohl es nur liest"*, mit dem Namen im Fehlertext.

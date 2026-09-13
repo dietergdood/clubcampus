@@ -46,7 +46,7 @@ import {
 import { bildeEreignis } from "./matchdaten.ts";
 import {
   holeToken, holeSaison, holeTeams, holeTeamsRoh, holeSpielplan, holeEreignisse,
-  holeBank,
+  holeBank, holeRangliste,
 } from "./sfvApi.ts";
 import type { SfvZugang } from "./sfvApi.ts";
 import { laufeSync, bildeSpiel } from "./sync.ts";
@@ -88,7 +88,7 @@ Deno.serve(async (req) => {
      kann — dieselbe Regel wie in wp-export. */
   const AKTIONEN = [
   "teams", "sync", "namen", "teamprobe", "wechselprobe", "wechselnachtrag", "cupprobe",
-  "rohschluessel", "vertragsprobe",
+  "rohschluessel", "vertragsprobe", "rangprobe",
 ];
   if (!AKTIONEN.includes(aktion)) {
     return json({ fehler: `Unbekannte Aktion: ${aktion}`, gueltig: AKTIONEN }, 400);
@@ -588,6 +588,92 @@ Deno.serve(async (req) => {
         deutung: deuteWechselProbe(befund),
       });
     } catch (e) {
+      return json({ fehler: e instanceof Error ? e.message : String(e) }, 502);
+    }
+  }
+
+  /* ═══════════════════════════════════════════════════════════════════
+     rangprobe — was der Verband HEUTE je Gruppe liefert. Liest nur.
+
+     ⚠ ⚠  ANLASS, 13.09.2026: bei fuenf Gruppen fehlen Spiele vom 9. bis
+     12.09. im gelieferten Tabellenstand, am deutlichsten Senioren 40+
+     Meister Gruppe 1 — dort stehen 0 Spiele, obwohl am 9.9. und 11.9.
+     gespielt wurde.
+
+     Die Frage ist nicht „welche Zahl steht bei uns", sondern „welche
+     liefert der Verband". Ohne diese Probe ist ein Stand, den er selbst
+     nicht fuehrt, von einem nicht unterscheidbar, den wir verlieren —
+     dieselbe Familie wie die Spiele ohne Verlauf.
+
+     ⚠ Sie ist eine LESEPROBE: kein Upsert, kein Protokolleintrag. Aus
+     demselben Grund wie teamprobe und cupprobe — eine Zeile je Auskunft
+     waere Rauschen in einer Tabelle, die von Aenderungen handelt.
+
+     ⚠ Keine Personendaten: eine Ligatabelle nennt Mannschaften, keine
+     Menschen. Ausgegeben wird trotzdem nur, was die Frage braucht —
+     Allowlist, nicht Spread. Ein neues Feld der Gegenseite reiste sonst
+     beim naechsten Mal still mit.
+     ═══════════════════════════════════════════════════════════════════ */
+  if (aktion === "rangprobe") {
+    const v = eigene[0];
+    if (!v.api_url) return json({ fehler: "api_verbindungen.api_url fehlt" }, 400);
+    try {
+      const zugang = zugangFuer(v.api_url);
+      const token = await holeToken(zugang);
+      const saison = await holeSaison(zugang, token, new Date());
+      const roh = await holeRangliste(zugang, token, saison.id);
+
+      /* Je Gruppe zusammenfassen. Der Schluessel ist derselbe wie im Sync
+         (`gruppenSchluessel`) — eine zweite Bildung liefe auseinander. */
+      const gruppen = new Map<string, {
+        liga: string; division: string; gruppe: string;
+        zeilen: number; spiele_min: number | null; spiele_max: number | null;
+        spiele_null: number;
+      }>();
+
+      for (const r of roh) {
+        const k = `${r.leagueId ?? 0}|${r.divisionId ?? 0}|${r.groupId ?? 0}`;
+        const m = Number(r.matches);
+        const g = gruppen.get(k) ?? {
+          liga: String(r.leagueName ?? ""),
+          division: String(r.divisionName ?? ""),
+          gruppe: String(r.groupName ?? ""),
+          zeilen: 0, spiele_min: null, spiele_max: null, spiele_null: 0,
+        };
+        g.zeilen += 1;
+        if (Number.isFinite(m)) {
+          g.spiele_min = g.spiele_min === null ? m : Math.min(g.spiele_min, m);
+          g.spiele_max = g.spiele_max === null ? m : Math.max(g.spiele_max, m);
+          if (m === 0) g.spiele_null += 1;
+        }
+        gruppen.set(k, g);
+      }
+
+      const liste = [...gruppen.entries()]
+        .map(([schluessel, g]) => ({ schluessel, ...g }))
+        /* ⚠ Die auffaelligen zuerst: eine Gruppe, in der JEDE Mannschaft
+           null Spiele hat, ist der gemeldete Fall. */
+        .sort((a, b) => (b.spiele_null - a.spiele_null)
+          || a.liga.localeCompare(b.liga));
+
+      return json({
+        hinweis: "Leseprobe. Fragt den Verband, schreibt nichts.",
+        saison: saison.id,
+        gruppen_gesamt: gruppen.size,
+        zeilen_gesamt: roh.length,
+        /* ⚠ ⚠  DIE ZAHL, DIE DIE FRAGE ENTSCHEIDET. Liefert der Verband
+           hier 0, fuehrt er den Stand nicht — dann bilden wir ihn korrekt
+           ab, und die Luecke liegt bei ihm. Liefert er eine Zahl und bei
+           uns steht 0, liegt es an uns. */
+        gruppen_ohne_spiele: liste.filter((g) => g.zeilen === g.spiele_null).length,
+        /* ⚠ Alle Gruppen, nicht nur die auffaelligen: eine Liste, die nur
+           Befunde zeigt, laesst offen, ob ueberhaupt gemessen wurde. */
+        gruppen: liste,
+      });
+    } catch (e) {
+      /* ⚠ Gebunden und benannt. Ein leerer catch machte aus dem Ausfall
+         eine Datenlage — „der Verband fuehrt keine Tabelle" saehe dann
+         aus wie „der Abruf ist gescheitert". */
       return json({ fehler: e instanceof Error ? e.message : String(e) }, 502);
     }
   }

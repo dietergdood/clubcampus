@@ -66,12 +66,30 @@ describe("Schreibende Aktionen protokollieren — und zwar vorher", () => {
   it("⚠ die LESEPROBEN protokollieren NICHT — das ist kein Versehen", () => {
     /* Sie ändern nichts. Eine Zeile je Auskunft wäre Rauschen in einer
        Tabelle, die von Änderungen handelt — und ein Protokoll, das
-       Rauschen enthält, wird nicht mehr gelesen. */
+       Rauschen enthält, wird nicht mehr gelesen.
+
+       ⚠ ⚠ DIE LISTE WIRD AUS DER QUELLE ABGELEITET, nicht getippt. Bis zum
+       13.09.2026 standen hier vier Namen von Hand — und `vertragsprobe`
+       und `rangprobe` fehlten beide. **Eine Leseprobe, die protokolliert,
+       wäre durchgekommen**, weil die Prüfung sie nicht kannte.
+
+       Dieselbe Familie wie eine Regel, die einen Bezeichner sucht: der
+       Zuschnitt der Prüfung war schmaler als die Wirklichkeit, und die
+       Differenz war von aussen nicht zu sehen. Seither kann die Liste
+       nicht mehr hinter dem Code zurückbleiben. */
     const roh = quelle();
-    for (const a of ["teamprobe", "cupprobe", "wechselprobe", "rohschluessel"]) {
+    const gefunden = [...roh.matchAll(/aktion === "([a-z]+)"/g)].map((m) => m[1]);
+    const lesend = [...new Set(gefunden)].filter((a) => !SCHREIBEND.includes(a) && a !== "sync");
+
+    /* ⚠ Findet die Ableitung nichts, ist das ROT und nicht grün — eine
+       Prüfung über eine leere Menge ist in diesem Papier viermal
+       vorgekommen. */
+    expect(lesend.length).toBeGreaterThanOrEqual(4);
+
+    for (const a of lesend) {
       const t = abschnitt(roh, a);
       expect(t).not.toBe("");
-      expect(t).not.toContain("api_sync_log");
+      expect(t, `${a} protokolliert, obwohl es nur liest`).not.toContain("api_sync_log");
     }
   });
 
