@@ -3980,6 +3980,180 @@ Frage offen, wenn sie je gestellt würde. **Heute wird sie nicht gestellt,
 und das ist der einzige Grund, warum die Spalte nicht gebraucht wird.**
 
 
+### ⚠⚠ GESCHÜTZT WAR DER AUSGANG, DEN DER AUTOR IM BLICK HATTE — zum zweiten Mal, an derselben Sache
+
+Befund vom 13.09.2026, beim Erweitern der Aktion `namen` um den Jahrgang.
+
+`fuersProtokoll()` — die Allowlist des Sync-Laufs — hat seit dem 22.08.2026
+eine **durable Probe**: sie zählt die erlaubten Schlüssel auf, und ein neues
+Feld im Ergebnisobjekt macht sie rot. Sie existiert ausschliesslich wegen des
+Vorfalls vom 21.08.2026, als 903 Klarnamen in `api_sync_log` landeten.
+
+⚠ ⚠ **`namenFuersProtokoll()` hatte KEINE.** Und das ist ausgerechnet das
+Objekt, das die Klarnamen trägt — der Sync führt sie seit dem 22.08.2026 gar
+nicht mehr.
+
+| | Allowlist | stehender Fall |
+|---|---|---|
+| `fuersProtokoll` (Sync) | ✅ | ✅ seit 22.08.2026 |
+| **`namenFuersProtokoll`** | ✅ | ⚠ **keiner** |
+
+**Es ist dieselbe Form wie der Vorfall selbst, nur eine Ebene höher:** dort
+war die Allowlist am falschen Ausgang gebaut, hier die Probe an der falschen
+Datei.
+
+⚠ **Und der Grund war technisch, nicht Nachlässigkeit.** `namenLauf.ts`
+importiert `SupabaseClient` von esm.sh und ist aus einem Test **nicht
+lesbar**. Die Lösung war die im Projekt längst etablierte: die Form in eine
+esm.sh-freie Datei (`ergebnisTypen.ts`), die beide Welten lesen.
+
+> **Wo im Kopf einer Datei steht „das prüft hier niemand", ist das kein
+> Hinweis, sondern ein offener Punkt.** Derselbe Satz stand am 10.09.2026
+> über den Edge Functions, bevor `check:deno` entstand.
+
+**Die Probe hat ihren ersten Fund gemacht, als sie eine Stunde alt war:**
+`jahrgang_unlesbar` kam dazu, und der Fall wurde rot. Gegengeprobt in beide
+Richtungen — `namen` durchgereicht: rot; Jahrgang einzeln durchgereicht: rot.
+
+⚠ **Und eine meiner beiden Erwartungen war zu weit gefasst.**
+`not.toContain("jahrgang")` verbot den eigenen Zähler `jahrgang_unlesbar` —
+eine **Zahl** darf ins Protokoll, ein Jahrgang nicht. Jetzt greift der
+Ausdruck genau auf `"jahrgang":` mit Doppelpunkt. Dieselbe Familie wie die
+negativ formulierte Erwartung vom Vortag: **sie trifft, was gleich
+AUSSIEHT.**
+
+### ⚠ EIN FELD, DESSEN FORM UNGEMESSEN IST, WIRD GEZÄHLT — nicht geraten
+
+`birthDate` liefert der Verband bei jedem Aufstellungs-Abruf mit, und
+`bildeAufstellung()` verwirft es ausdrücklich. Für den Vorschlag der
+Spielerzuordnung wird daraus der Jahrgang — er trennt die Namensgleichen, und
+dieser Verein hat zwei Adrian Schmid (gemessen 23.08.2026).
+
+⚠ **Die Form ist nicht bekannt.** `docs/sfv/matchdaten_beispiel.json` hat das
+Feld **geschwärzt** — zu Recht, die Allowlist der Probe hat gegriffen. Damit
+weiss niemand, ob dort ein ISO-Datum, ein deutsches Datum oder ein
+Zeitstempel steht.
+
+**Also nicht raten, sondern zählen.** `jahrgangAus()` nimmt die erste
+vierstellige Zahl in einem plausiblen Bereich; misslingt es, steht das als
+`jahrgang_unlesbar` in der Antwort und im Protokoll.
+
+| die Zahl nach dem ersten Lauf | heisst |
+|---|---|
+| **0** | die Form ist belegt |
+| wie `namen_gefunden` | eine andere Form als jede erwartete — ein Befund, keine Überraschung |
+
+⚠ **Die Grenze (1930 bis heute) ist eine Zahl, die niemand gemessen hat**,
+und steht deshalb weit: sie soll Unsinn abweisen — einen Zeitstempel, eine
+Postleitzahl —, nicht Menschen. Eng zu ziehen wäre hier der Fehler.
+
+⚠ **Der Jahrgang selbst wird nirgends gespeichert**, wie der Name: er lebt im
+Zustand der Maske, beim Neuladen ist er weg. Dieselbe Entscheidung wie am
+21.08.2026, und aus einem schärferen Grund — **ein Geburtsjahr veraltet
+nicht.** Die ZAHL darf ins Protokoll, der Wert nicht.
+
+### ⚠ DER VORSCHLAG SCHWEIGT LIEBER — und nennt, warum
+
+Gebaut am 13.09.2026 (`domains/sfv/spielerVorschlag.ts`). `sfv_zuordnung`
+stand bei 0 Zeilen und 381 offenen Spielern; die Maske gab es, sie schrieb,
+sie konnte lösen — sie **schlug nur nichts vor** und bot je Spieler alle 512
+aktiven Mitglieder alphabetisch an.
+
+Drei Merkmale, und **keines entscheidet allein**: die Mannschaft schneidet
+512 auf ein bis zwei Dutzend, der Namensschlüssel muss zeichengleich treffen,
+der Jahrgang trennt die Gleichnamigen.
+
+**Die zwei Schutzregeln sind der Kern, nicht die Trefferquote:**
+
+| | |
+|---|---|
+| **bei zwei Kandidaten wird KEINER vorgeschlagen** | nicht der wahrscheinlichere, nicht der erste |
+| **nichts wird automatisch gespeichert** | die Vorauswahl steht im Feld, geschrieben wird auf Klick |
+
+> **Ein „alle bestätigen"-Knopf ist der Punkt, an dem aus einem Vorschlag
+> eine Behauptung wird.** (Didi, 13.09.2026)
+
+Die Zusage hängt an einem Fall, nicht an einem Kommentar
+(`keinSammelknopf.test.ts`): kein Schreibaufruf steht innerhalb einer
+Schleife. ⚠ **Und die Regel hängt an einem VORGANG, nicht an einem
+Bezeichner** — eine Prüfung auf das Wort „alle bestätigen" prüfte eine
+Schreibweise.
+
+⚠ **Meine erste Fassung dieser Regel war zu weit und meldete vier
+Fehlalarme:** `onChange` und der Übernehmen-Knopf stehen syntaktisch
+INNERHALB des Render-`map` und sind trotzdem kein Sammelspeichern — sie
+laufen erst, wenn jemand klickt. **Ein Melder, der grundlos anschlägt, wird
+nach dem dritten Mal abgeschaltet** und wäre schlimmer als keiner. Das
+Merkmal ist: löst ein Mensch aus?
+
+⚠ **Und ein Defekt in meiner eigenen Fassung, gefunden vor dem Abliefern:**
+`onChange` feuert bei einem `defaultValue` **nicht**. Ohne den
+Übernehmen-Knopf wäre ein zutreffender Vorschlag vorgewählt und **nicht
+speicherbar** — man müsste jemand anderen wählen und zurück. Berechnet,
+geliefert, nicht übernehmbar; die Familie vom 10.09.2026 in einer neuen
+Ausprägung.
+
+**Ein Fall prüft den EINBAU, nicht die Funktion**
+(`spielerVorschlagEinbau.test.jsx`): dass der Wert im Auswahlfeld steht, dass
+ohne Klick nichts geschrieben wird, und dass bei zwei Gleichnamigen weder
+Vorauswahl noch Knopf erscheinen. Gegengeprobt mit zwei Sabotagen.
+
+⚠ **„Ohne Mannschaft" stand als Zeichenkette an drei Orten** und ist jetzt
+`OHNE_MANNSCHAFT`. Der Vorschlag muss diesen Fall von einem echten
+Mannschaftsnamen unterscheiden; ein Umbenennen wäre sonst ein **stiller**
+Ausfall — jeder Spieler ohne Team-Zuordnung bekäme keinen Kandidaten und
+damit keinen Vorschlag, ohne dass etwas fehlschlägt.
+
+**Und der ehrliche Satz dazu, weil er eine Erwartung betrifft:**
+
+> **Wer zuordnet, bekommt Namen im Verlauf, keine Statistik.**
+> `fetchSfvNamen` wird in `TermineModul.tsx:584` gerufen — die Zuordnung
+> wirkt also, im Portal und auf der Website. **`baueStatistik()` hat keinen
+> Aufrufer**, und das ist ausgerechnet der Ertrag, den jeder erwartet. Ein
+> eigener Auftrag; es gehört gesagt, bevor jemand Stunden investiert.
+
+### ✅ Der Prüfvektor des Theme-Chats stimmt zeichengleich
+
+Gerechnet am 13.09.2026: aus der rohen Adresse mit Grossbuchstaben und
+angehängtem Leerzeichen wird nach `trim` und `toLowerCase` genau die
+normalisierte Form, und ihr SHA-256 ist zeichengleich der erwartete Hash
+`091c9a06…b405800`.
+
+Beide Seiten: Wert lesen, `trim`, `toLowerCase`, leer ergibt `null`, SHA-256
+als Kleinbuchstaben-Hex. Kein Salz, kein HMAC, keine Punktentfernung, keine
+Kürzung von Plus-Adressen. **Das Verfahren ist als Fehlerursache damit
+ausgeschlossen, ohne dass eine Adresse die Seite wechselt.**
+
+⚠ **Gerechnet habe ich es zuerst mit einer NACHBILDUNG** (`node:crypto` statt
+unserem Code) — das prüft die Abschrift. Bei uns steht die Normalisierung als
+zwei Methodenaufrufe inline; es gibt keine Funktion, die ein Test aufrufen
+könnte. **Der Vektor ist eine Rechnung von damals, keine stehende Zusage** —
+wer ihn dauerhaft halten will, braucht die Normalisierung als benannte
+Funktion.
+
+### ⚠ EINE ADRESSE, DIE ZWEI MENSCHEN BENENNT, IST KEIN SCHLÜSSEL
+
+`geteilte_adressen` zählt seit dem 13.09.2026, wie viele E-Mail-Hashes drüben
+von **mehreren** Personen getragen werden — und wie viele Personen betroffen
+sind.
+
+⚠ **Zwei Zahlen, nicht eine.** Drei Geschwister an einer Adresse sind EINE
+Adresse und DREI Personen; eine Zahl allein liesse offen, ob es viele kleine
+Gruppen sind oder eine grosse.
+
+**Warum es zählt:** ist die Zahl hoch, ist die E-Mail als Merkmal untauglich
+— bei Geschwistern steht dieselbe Elternadresse an zwei Kindern, und ein
+Treffer darauf ordnet die **falsche** Person zu. Dieselbe Familie wie die
+Rückennummer, die kein Schlüssel ist.
+
+⚠ **Und die Zahl steht IMMER da, auch als Null.** „0 geteilt" ist die
+Auskunft, dass das Merkmal trägt — sie fehlt, wenn nur der schlechte Fall
+angezeigt wird. Genau das war der Fehler an acht Stellen am 10.09.2026.
+
+⚠ **Personen ohne Adresse werden übergangen, nicht zusammengeworfen.** Zwei
+leere Werte sind nicht dieselbe Adresse; ohne diese Zeile zählten alle
+Adresslosen als eine geteilte Gruppe — der grösstmögliche Fehlalarm.
+
 ### ⚠⚠ EINE PRÜFUNG HINTER DEM FILTER, DEN SIE PRÜFEN SOLL, KANN NUR „IN ORDNUNG" SAGEN
 
 Befund des Theme-Chats, 11.09.2026. Der Unterfeld-Melder im

@@ -112,11 +112,20 @@ export interface SyncAntwort {
 
 /** Antwort der Aktion `namen`. */
 export interface NamenAntwort {
-  namen: { sfv_person_id: number; name: string }[];
+  namen: { sfv_person_id: number; name: string; jahrgang?: number | null }[];
   spiele_abgefragt: number;
   namen_gefunden: number;
   offen_gesamt: number;
   fehler: number;
+  /**
+   * Wie viele der gefundenen Spieler **keinen lesbaren Jahrgang** haben.
+   *
+   * ⚠ Optional, weil eine Fassung vor dem 13.09.2026 sie nicht schickt —
+   * und `undefined` heisst dann **nicht gefragt**, nicht „alle lesbar".
+   * Genau diese Verwechslung hat am 11.09.2026 eine Karte drei Nullen
+   * zeigen lassen, wo 129 Personen standen.
+   */
+  jahrgang_unlesbar?: number;
 }
 
 /**
@@ -298,4 +307,32 @@ export async function holeRohschluessel(
     return { daten: null, fehler: String((data as { fehler: unknown }).fehler) };
   }
   return { daten: data as Record<string, unknown>, fehler: null };
+}
+
+/**
+ * Die Jahrgänge aus einer `namen`-Antwort — **dieselbe Allowlist wie
+ * `leseNamenAntwort`, nur das andere Feld.**
+ *
+ * ⚠ WARUM EIN ZWEITER LESER UND NICHT EIN REICHERES `namen`: die Namensmap
+ * hat einen zweiten Verwender (`TermineModul`, der Spielverlauf), und der
+ * braucht ausschliesslich Namen. Beide entstehen aus **einem** Aufruf an
+ * **einer** Stelle — sie können also nicht auseinanderlaufen, und das ist
+ * der Unterschied zu zwei Rechnungen für dieselbe Frage.
+ *
+ * ⚠ NICHTS DAVON WIRD GESPEICHERT. Der Jahrgang lebt im Zustand der Maske,
+ * wie der Name; beim Neuladen ist er weg. Dieselbe Entscheidung wie am
+ * 21.08.2026, und aus einem schärferen Grund — **ein Geburtsjahr veraltet
+ * nicht.**
+ */
+export function leseNamenJahrgaenge(daten: NamenAntwort | null): Record<number, number> {
+  const raus: Record<number, number> = {};
+  for (const e of daten?.namen ?? []) {
+    const id = Number(e?.sfv_person_id);
+    const j = Number(e?.jahrgang);
+    /* ⚠ `Number(null)` ist 0, `Number(undefined)` ist NaN — beides muss
+       hier fallen. Ein Jahrgang 0 wäre kein Jahrgang, sondern ein
+       fehlender, der wie einer aussieht. */
+    if (Number.isFinite(id) && Number.isInteger(j) && j >= 1930) raus[id] = j;
+  }
+  return raus;
 }

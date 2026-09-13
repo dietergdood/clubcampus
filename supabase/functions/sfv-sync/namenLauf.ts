@@ -54,42 +54,9 @@ import type { SfvZugang } from "./sfvApi.ts";
 import { bildeOffeneNamen } from "./matchdaten.ts";
 import { schreibeSfvPersonen } from "./sfvPersonenSchreiben.ts";
 import type { OffenerName, SfvRoh } from "./matchdaten.ts";
+import { namenFuersProtokoll } from "./ergebnisTypen.ts";
+import type { NamenErgebnis } from "./ergebnisTypen.ts";
 
-export interface NamenErgebnis {
-  spiele_abgefragt: number;
-  namen_gefunden: number;
-  /** Zeilen nach `sfv_personen` — seit 10.09.2026, siehe Kopf. */
-  namen_geschrieben: number;
-  fehler: number;
-  /** Wie viele Spieler ueberhaupt offen sind — fuer den ehrlichen Satz in
-      der Maske („171 von 177"). */
-  offen_gesamt: number;
-  /**
-   * ⚠ NUR IN DER ANTWORT. Steht in keiner Allowlist fuers Protokoll und
-   * wird nirgends gespeichert.
-   */
-  namen: OffenerName[];
-}
-
-/**
- * Was von dieser Aktion nach `api_sync_log.details` darf.
- *
- * ⚠ Aufgezaehlt, nicht ausgeschlossen — und getrennt von `fuersProtokoll()`,
- * weil es ein anderes Objekt ist. Am 21.08.2026 hat genau diese Verwechslung
- * 903 Klarnamen ins Protokoll geschrieben: die Allowlist war gedacht, aber
- * am Ausgang der Anzeige gebaut statt am Ausgang, der in die Datenbank ging.
- */
-export function namenFuersProtokoll(erg: NamenErgebnis): Record<string, unknown> {
-  return {
-    spiele_abgefragt: erg.spiele_abgefragt,
-    namen_gefunden: erg.namen_gefunden,
-    /* ⚠ Die ZAHL darf ins Protokoll, die Namen nicht. `erg.namen` steht
-       bewusst nicht hier — siehe den Fund vom 21.08.2026, als 903 Klarnamen
-       ueber `details: erg` in api_sync_log landeten. */
-    namen_geschrieben: erg.namen_geschrieben,
-    fehler: erg.fehler,
-  };
-}
 
 interface Verbindung { verein_id: string }
 
@@ -102,7 +69,7 @@ export async function laufeNamen(
 ): Promise<NamenErgebnis> {
   const erg: NamenErgebnis = {
     spiele_abgefragt: 0, namen_gefunden: 0, namen_geschrieben: 0,
-    fehler: 0, offen_gesamt: 0, namen: [],
+    fehler: 0, offen_gesamt: 0, jahrgang_unlesbar: 0, namen: [],
   };
 
   /* Ohne clubNumber gilt niemand als eigen (istEigener) — der Lauf gaebe
@@ -154,6 +121,9 @@ export async function laufeNamen(
 
   erg.namen = bildeOffeneNamen(alleRoh, unsereClubNummer, zugeordnet);
   erg.namen_gefunden = erg.namen.length;
+  /* ⚠ Die Form von `birthDate` ist ungemessen — deshalb gezaehlt statt
+     angenommen. Siehe `jahrgangAus()` und `NamenErgebnis.jahrgang_unlesbar`. */
+  erg.jahrgang_unlesbar = erg.namen.filter((n) => n.jahrgang === null).length;
 
   /* ⚠ GESCHRIEBEN WIRD AUS `alleRoh`, NICHT AUS `erg.namen`.
      Die beiden Mengen sind verschieden, und der Unterschied ist genau der

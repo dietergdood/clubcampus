@@ -400,6 +400,45 @@ export interface OffenerName {
   name: string;
   rueckennr: number | null;
   sfv_team_id: number | null;
+  /**
+   * Der Jahrgang — **nur in der Antwort**, wie der Name.
+   *
+   * ⚠ Er steht in keiner Allowlist fuers Protokoll und wird nirgends
+   * gespeichert; beim Neuladen der Maske ist er weg. Dieselbe Entscheidung
+   * wie am 21.08.2026 beim Namen, und aus einem schaerferen Grund: **ein
+   * Geburtsjahr veraltet nicht.**
+   *
+   * Er ist da, damit zwei Namensgleiche unterscheidbar sind — der Vorschlag
+   * schweigt sonst bei beiden, und genau die braeuchten ihn am meisten.
+   */
+  jahrgang: number | null;
+}
+
+/**
+ * Der Jahrgang aus `birthDate` — **nur das Jahr, und nur wenn es lesbar ist.**
+ *
+ * ⚠ DIE FORM IST UNGEMESSEN. `docs/sfv/matchdaten_beispiel.json` hat das
+ * Feld geschwaerzt — zu Recht, die Allowlist der Probe hat gegriffen. Damit
+ * weiss niemand, ob dort `2011-03-14`, `14.03.2011` oder ein Zeitstempel
+ * steht.
+ *
+ * **Deshalb wird nicht geraten, sondern gezaehlt.** Die erste vierstellige
+ * Zahl in einem plausiblen Bereich gilt; alles andere ergibt `null` und
+ * erhoeht `jahrgang_unlesbar` in der Antwort. Steht die Zahl nach dem ersten
+ * Lauf bei 0, ist die Form belegt — steht sie hoch, ist sie eine andere als
+ * jede der drei, und das ist dann ein Befund und keine Ueberraschung.
+ *
+ * ⚠ Der Bereich ist eine GRENZE, die niemand gemessen hat, und steht
+ * deshalb weit: 1930 deckt jeden Senioren, das laufende Jahr jeden
+ * Neugeborenen. Eng zu ziehen waere hier der Fehler — sie soll Unsinn
+ * abweisen (einen Zeitstempel, eine Postleitzahl), nicht Menschen.
+ */
+export function jahrgangAus(roh: unknown, heute = new Date()): number | null {
+  const t = (roh ?? "").toString();
+  const m = /(\d{4})/.exec(t);
+  if (!m) return null;
+  const j = Number(m[1]);
+  return j >= 1930 && j <= heute.getFullYear() ? j : null;
 }
 
 export function bildeOffeneNamen(
@@ -422,6 +461,7 @@ export function bildeOffeneNamen(
       name,
       rueckennr: zahl(p.jerseyNumber),
       sfv_team_id: zahl(p.teamId),
+      jahrgang: jahrgangAus(p.birthDate),
     });
   }
   return [...nach.values()].sort((a, b) => a.name.localeCompare(b.name, "de"));

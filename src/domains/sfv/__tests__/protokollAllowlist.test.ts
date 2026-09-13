@@ -18,9 +18,10 @@
 import { describe, it, expect } from "vitest";
 import {
   fuersProtokoll, fuerZeitplanAntwort, zaehleOhneZuordnung, zaehleOhneZuordnungGetrennt,
-  findeTeamsOhneSpiele, saisonWechsel,
+  findeTeamsOhneSpiele, saisonWechsel, namenFuersProtokoll,
 } from "../../../../supabase/functions/sfv-sync/ergebnisTypen.ts";
-import type { LaufErgebnis } from "../../../../supabase/functions/sfv-sync/ergebnisTypen.ts";
+import type { LaufErgebnis, NamenErgebnis }
+  from "../../../../supabase/functions/sfv-sync/ergebnisTypen.ts";
 
 const LAUF: LaufErgebnis = {
   status: "ok",
@@ -264,5 +265,76 @@ describe("Die Namen im Protokoll — die Zahl, nie die Namen", () => {
     const roh = JSON.stringify(fuersProtokoll(LAUF));
     expect(roh).not.toMatch(/name["']?\s*:\s*["'][A-Z]/);
     expect(roh).not.toContain("offene_namen");
+  });
+});
+
+/* ═══════════════════════════════════════════════════════════════
+   Die Aktion `namen` — dieselbe Frage, ein anderes Objekt.
+
+   ⚠ ANLASS, 13.09.2026. `fuersProtokoll` hatte seit dem 22.08.2026
+   eine durable Probe, `namenFuersProtokoll` **keine** — und genau
+   dieses Objekt trägt die Klarnamen, wegen derer es die erste
+   überhaupt gibt.
+
+   Aufgefallen ist es beim Erweitern, nicht beim Prüfen: das Feld
+   `jahrgang` sollte dazukommen, und die Frage „welcher Ausgang ist
+   gedeckt?" hatte hier keine Antwort.
+
+   **Geschützt war der Ausgang, den der Autor im Blick hatte** —
+   dieselbe Form wie der Vorfall selbst, nur eine Ebene höher.
+   ═══════════════════════════════════════════════════════════════ */
+describe("namenFuersProtokoll", () => {
+  /* ⚠ TYPISIERT, wie LAUF darüber. Ein neues Feld in NamenErgebnis
+     ist damit hier sichtbar, und eine erfundene Spalte wäre ein
+     Compilerfehler statt einer grünen Abschrift. */
+  const NAMEN: NamenErgebnis = {
+    spiele_abgefragt: 3,
+    namen_gefunden: 2,
+    namen_geschrieben: 2,
+    fehler: 0,
+    offen_gesamt: 177,
+    jahrgang_unlesbar: 1,
+    namen: [
+      { sfv_person_id: 500, name: "Anna Beispiel", rueckennr: 9,
+        sfv_team_id: 38309, jahrgang: 2011 },
+      { sfv_person_id: 501, name: "Bruno Muster", rueckennr: null,
+        sfv_team_id: 38309, jahrgang: null },
+    ],
+  };
+
+  it("nennt genau fuenf Zahlen und nichts sonst", () => {
+    /* ⚠ DIE DURABLE PROBE, und sie hat am 13.09.2026 ihren ersten
+       Fund gemacht: `jahrgang_unlesbar` kam dazu, und dieser Fall
+       wurde rot. Er war eine Stunde alt.
+
+       ⚠ Die ZAHL darf ins Protokoll, der Jahrgang nicht — der Fall
+       darunter haelt die andere Haelfte. */
+    expect(Object.keys(namenFuersProtokoll(NAMEN)).sort()).toEqual([
+      "fehler", "jahrgang_unlesbar",
+      "namen_gefunden", "namen_geschrieben", "spiele_abgefragt",
+    ]);
+  });
+
+  it("schreibt weder Namen noch Jahrgang ins Protokoll", () => {
+    /* Positiv formuliert: die Attrappe TRÄGT beides, also kann der
+       Fall nur grün sein, weil die Allowlist sie weglässt — nicht,
+       weil nichts da war. Eine Prüfung an einem leeren Objekt hätte
+       nichts geprüft. */
+    const roh = JSON.stringify(namenFuersProtokoll(NAMEN));
+    expect(roh).not.toContain("Anna Beispiel");
+    expect(roh).not.toContain("Bruno Muster");
+    expect(roh).not.toContain("2011");
+    /* ⚠ Genau `"jahrgang":`, nicht bloss „jahrgang" — `jahrgang_unlesbar`
+       DARF hier stehen und enthaelt das Wort. Meine erste Fassung dieser
+       Zeile war zu weit gefasst und hat den eigenen Zaehler verboten;
+       eine negativ formulierte Erwartung trifft, was gleich AUSSIEHT. */
+    expect(roh).not.toMatch(/"jahrgang"\s*:/);
+    expect(roh).not.toMatch(/"namen"\s*:/);
+  });
+
+  it("nennt die Zahl der gefundenen Namen — die darf ins Protokoll", () => {
+    /* Die Gegenrichtung: eine Allowlist, die alles wegliesse, wäre
+       genauso falsch. Der Lauf muss im Protokoll auffindbar bleiben. */
+    expect(namenFuersProtokoll(NAMEN).namen_gefunden).toBe(2);
   });
 });

@@ -147,6 +147,31 @@ export interface AbgleichErgebnis {
    * „40 von 129" sind zwei verschiedene Auskünfte, und die erste ist keine.
    */
   drueben_gesamt: number;
+  /**
+   * Wie viele E-Mail-Adressen drüben von **mehreren Personen** getragen
+   * werden — und wie viele Personen sich eine teilen.
+   *
+   * ⚠ WARUM DAS ZÄHLT. Ist die Zahl hoch, ist die E-Mail als Merkmal
+   * untauglich: bei Geschwistern steht dieselbe Elternadresse an zwei
+   * Kindern, und ein Treffer darauf ordnet dann die falsche Person zu.
+   * Ein Merkmal, das mehrere Menschen benennt, ist kein Schlüssel.
+   *
+   * ⚠ Und es ist die BESSERE Messung von beiden: unsere Personen stehen
+   * unter Testdaten-Verdacht, seine sind echt.
+   *
+   * Gezählt wird aus DEMSELBEN Durchgang wie `drueben_gesamt` — zwei
+   * Rechnungen über dieselbe Menge laufen auseinander.
+   */
+  /* ⚠ ⚠ OPTIONAL, UND DAS IST KEIN NACHLASSEN. `deuteAbgleich()` bekommt
+     dieses Objekt von der GEGENSTELLE, nicht aus `baueAbgleich()` — eine
+     Fassung der Edge Function vor dem 13.09.2026 schickt das Feld nicht.
+     Als Pflichtfeld stuerzte die Anzeige dann ab und nahm die **ganze
+     Karte** mit; genau dieser Ausfall hat am 12.09.2026 einen halben Tag
+     gekostet („Zählprobe nicht möglich —" und danach nichts).
+
+     ⚠ `undefined` heisst NICHT GEMESSEN, nicht „0 geteilt". Die zwei
+     bekommen verschiedene Sätze. */
+  geteilte_adressen?: { adressen: number; personen: number };
 }
 
 /**
@@ -226,11 +251,28 @@ export function baueAbgleich(
     drueben.map((d) => d.email_hash).filter((x): x is string => !!x),
   );
 
+  /* ⚠ Aus DEMSELBEN `drueben`, nicht aus einer zweiten Abfrage. Eine
+     Adresse gilt als geteilt, sobald sie zweimal vorkommt; `personen` zählt,
+     wie viele Menschen davon betroffen sind (bei drei Geschwistern also 3,
+     nicht 1). Die zwei Zahlen sagen Verschiedenes, und beide werden
+     gebraucht: eine allein liesse offen, ob es viele kleine Gruppen sind
+     oder eine grosse. */
+  const proAdresse = new Map<string, number>();
+  for (const d of drueben) {
+    const h = d.email_hash;
+    if (h) proAdresse.set(h, (proAdresse.get(h) ?? 0) + 1);
+  }
+  const mehrfach = [...proAdresse.values()].filter((n) => n > 1);
+
   const erg: AbgleichErgebnis = {
     gesendet: unsere.length,
     treffer_sfv: 0, treffer_email: 0,
     ohne_treffer: 0, personen_ohne_uns: 0,
     drueben_gesamt: drueben.length,
+    geteilte_adressen: {
+      adressen: mehrfach.length,
+      personen: mehrfach.reduce((n, x) => n + x, 0),
+    },
     /* ⚠ Aus DEMSELBEN Durchgang, nicht aus einer zweiten Schleife: zwei
        Rechnungen über dieselbe Menge laufen auseinander. */
     unsere_nutzbar: {
@@ -432,6 +474,23 @@ export function deuteAbgleich(e: AbgleichErgebnis): string[] {
     `${e.treffer_sfv} über die Verbandsnummer gefunden${auskunft("sfv_person_id")}`,
     `${e.treffer_email} über die E-Mail${auskunft("email_hash")}`,
   ];
+  /* ⚠ ⚠ WIE TAUGLICH DAS MERKMAL ÜBERHAUPT IST — und das ist eine andere
+     Frage als „wie viele tragen einen Hash". Eine Adresse, die zwei
+     Menschen benennt, ist kein Schlüssel: bei Geschwistern steht dieselbe
+     Elternadresse an zwei Kindern, und ein Treffer darauf ordnet die
+     falsche Person zu.
+
+     ⚠ Die Zahl steht IMMER da, auch als Null. „0 geteilt" ist die Auskunft,
+     dass die E-Mail als Merkmal trägt — und die fehlt, wenn nur der
+     schlechte Fall angezeigt wird. Genau das war der Fehler an acht
+     Stellen am 10.09.2026: berechnet, geliefert, nicht gezeigt. */
+  const g = e.geteilte_adressen;
+  zeilen.push(!g
+    ? "Geteilte Adressen: nicht gemessen — die Edge Function ist älter als der 13.09.2026"
+    : g.adressen === 0
+    ? "0 Adressen drüben werden von mehreren Personen getragen — als Merkmal trägt die E-Mail"
+    : `⚠ ${g.adressen} Adressen drüben gehören ${g.personen} Personen — `
+      + "auf einer geteilten Adresse trifft der Abgleich die falsche Person");
   zeilen.push(e.ohne_treffer === 0
     /* ⚠ „beide" statt „alle drei" — die Jahrgangs-Ebene ist am 12.09.2026
        ausgebaut. Ein Text, der eine Zahl nennt, die es nicht mehr gibt,

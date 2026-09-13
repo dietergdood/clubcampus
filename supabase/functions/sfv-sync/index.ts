@@ -51,8 +51,8 @@ import {
 import type { SfvZugang } from "./sfvApi.ts";
 import { laufeSync, bildeSpiel } from "./sync.ts";
 import { schneideAufFeldhoheit } from "../../../src/domains/sfv/feldhoheit.ts";
-import { fuersProtokoll, fuerZeitplanAntwort } from "./ergebnisTypen.ts";
-import { laufeNamen, namenFuersProtokoll } from "./namenLauf.ts";
+import { fuersProtokoll, fuerZeitplanAntwort, namenFuersProtokoll } from "./ergebnisTypen.ts";
+import { laufeNamen } from "./namenLauf.ts";
 import { protokoll, protokollFehler } from "./protokoll.ts";
 
 const corsHeaders = {
@@ -872,6 +872,10 @@ Deno.serve(async (req) => {
         namen_gefunden: erg.namen_gefunden,
         offen_gesamt: erg.offen_gesamt,
         fehler: erg.fehler,
+        /* ⚠ Die Zahl gehoert in die ANTWORT, nicht nur ins Protokoll: sie
+           beantwortet die ungemessene Form von `birthDate`, und wer den Lauf
+           ausloest, ist der, der sie sehen muss. */
+        jahrgang_unlesbar: erg.jahrgang_unlesbar,
       });
     } catch (e) {
       const meldung = protokollFehler(`namen/${v.verein_id}`, e);

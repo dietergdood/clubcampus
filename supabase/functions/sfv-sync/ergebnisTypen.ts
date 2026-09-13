@@ -13,6 +13,12 @@
 // ABSCHREIBT, prueft die Abschrift. Hier steht die Form einmal, und der Test
 // annotiert sein Fixture damit — ein neues Feld faellt dort auf.
 
+/* ⚠ EIN Typ, nicht zwei. `OffenerName` steht in `matchdaten.ts`, wo
+   `bildeOffeneNamen()` ihn erzeugt — ein zweiter mit denselben Feldern
+   liefe still auseinander, sobald einer sich aendert. Das ist derselbe
+   Fehler wie die vier fast gleichen Kaderrollen-Typen, viermal. */
+import type { OffenerName } from "./matchdaten.ts";
+
 export interface MatchdatenErgebnis {
   spiele_geholt: number;
   aufstellung_zeilen: number;
@@ -462,3 +468,67 @@ export function fuerZeitplanAntwort(erg: LaufErgebnis): Record<string, unknown> 
   return fuersProtokoll(erg);
 }
 
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Die Aktion `namen` — ein EIGENES Ergebnis mit einer EIGENEN Allowlist.
+
+   ⚠ WARUM SIE HIER STEHT UND NICHT IN `namenLauf.ts`, wo sie gebraucht
+   wird: jene Datei importiert `SupabaseClient` von esm.sh und ist damit aus
+   einem Test nicht lesbar. Bis zum 13.09.2026 hatte diese Allowlist deshalb
+   **keinen stehenden Fall** — waehrend `fuersProtokoll()` daneben eine
+   durable Probe trug.
+
+   **Geschuetzt war der Ausgang, den der Autor im Blick hatte.** Genau die
+   Form des Vorfalls vom 21.08.2026, nur eine Ebene hoeher: dort war es das
+   falsche Feld, hier die falsche Datei.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+export interface NamenErgebnis {
+  spiele_abgefragt: number;
+  namen_gefunden: number;
+  /** Zeilen nach `sfv_personen` — seit 10.09.2026. */
+  namen_geschrieben: number;
+  fehler: number;
+  /** Wie viele Spieler ueberhaupt offen sind — fuer den ehrlichen Satz in
+      der Maske („171 von 177"). */
+  offen_gesamt: number;
+  /**
+   * Wie viele gefundene Spieler **keinen lesbaren Jahrgang** haben.
+   *
+   * ⚠ Sie ist der Grund, warum `jahrgangAus()` nicht raet. Die Form von
+   * `birthDate` ist ungemessen — in der aufgezeichneten Antwort ist das Feld
+   * geschwaerzt. Diese Zahl beantwortet sie beim ersten Lauf: 0 heisst
+   * lesbar, `namen_gefunden` heisst „eine andere Form als jede erwartete".
+   *
+   * ⚠ Sie darf ins Protokoll. Eine ZAHL benennt niemanden — anders als der
+   * Jahrgang selbst, der genau deshalb nicht dort steht.
+   */
+  jahrgang_unlesbar: number;
+  /**
+   * ⚠ NUR IN DER ANTWORT. Steht in keiner Allowlist fuers Protokoll und
+   * wird nirgends gespeichert.
+   */
+  namen: OffenerName[];
+}
+
+/**
+ * Was von dieser Aktion nach `api_sync_log.details` darf.
+ *
+ * ⚠ Aufgezaehlt, nicht ausgeschlossen — und getrennt von `fuersProtokoll()`,
+ * weil es ein anderes Objekt ist. Am 21.08.2026 hat genau diese Verwechslung
+ * 903 Klarnamen ins Protokoll geschrieben: die Allowlist war gedacht, aber
+ * am Ausgang der Anzeige gebaut statt am Ausgang, der in die Datenbank ging.
+ *
+ * ⚠ VIER ZAHLEN, und `namen` ist keine davon — weder der Name noch der
+ * Jahrgang. `protokollAllowlist.test.ts` haelt das seit dem 13.09.2026 als
+ * durable Probe: ein neues Feld in `NamenErgebnis` macht den Fall rot.
+ */
+export function namenFuersProtokoll(erg: NamenErgebnis): Record<string, unknown> {
+  return {
+    spiele_abgefragt: erg.spiele_abgefragt,
+    namen_gefunden: erg.namen_gefunden,
+    namen_geschrieben: erg.namen_geschrieben,
+    fehler: erg.fehler,
+    jahrgang_unlesbar: erg.jahrgang_unlesbar,
+  };
+}

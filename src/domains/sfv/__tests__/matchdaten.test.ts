@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import {
   bildeAufstellung, bildeEreignis, istEigener, istKorrekturUeberfluessig,
-  leseHalbzeit, waehleKandidaten, NACHZUG_TAGE, bildeOffeneNamen,
+  leseHalbzeit, waehleKandidaten, NACHZUG_TAGE, bildeOffeneNamen, jahrgangAus,
   aeltesteHolungStunden,
   bildeSfvPerson, entdoppleSfvPersonen, verschmelzeAufstellung,
   zaehleVerbandKorrekturen, gegnerUnveraendert, verlaufUnveraendert,
@@ -606,7 +606,12 @@ describe("bildeOffeneNamen", () => {
 
   it("nennt Vor- und Nachname des eigenen Spielers, ohne zweiten Vornamen", () => {
     const r = bildeOffeneNamen([SPIELER({})], UNSERE, new Set());
-    expect(r).toEqual([{ sfv_person_id: 500, name: "Adrian Schmid", rueckennr: 9, sfv_team_id: 38309 }]);
+    expect(r).toEqual([{
+      sfv_person_id: 500, name: "Adrian Schmid", rueckennr: 9, sfv_team_id: 38309,
+      /* ⚠ Die Attrappe fuehrt kein `birthDate` — also `null`, und das ist
+         die haeufigere Haelfte: die Form des Feldes ist ungemessen. */
+      jahrgang: null,
+    }]);
   });
 
   it("laesst GEGNER weg — auch wenn der Verband ihren Namen mitliefert", () => {
@@ -1003,5 +1008,60 @@ describe("verlaufUnveraendert — die zweite von zwei identischen Stellen", () =
 
   it("leer gegen leer ist unveraendert", () => {
     expect(verlaufUnveraendert([], [])).toBe(true);
+  });
+});
+
+/* ═══════════════════════════════════════════════════════════════
+   jahrgangAus — der Jahrgang aus einem Feld, dessen FORM niemand
+   gemessen hat.
+
+   ⚠ `docs/sfv/matchdaten_beispiel.json` hat `birthDate` geschwärzt —
+   zu Recht, die Allowlist der Probe hat gegriffen. Damit ist offen,
+   ob dort `2011-03-14`, `14.03.2011` oder ein Zeitstempel steht.
+
+   Diese Fälle prüfen deshalb nicht EINE Form, sondern dass alle drei
+   plausiblen dasselbe ergeben — und dass Unsinn `null` ergibt statt
+   einer Zahl, die aussieht wie ein Jahrgang.
+   ═══════════════════════════════════════════════════════════════ */
+describe("jahrgangAus", () => {
+  const HEUTE = new Date("2026-09-13T12:00:00Z");
+
+  it("liest alle drei plausiblen Formen gleich", () => {
+    /* Der Punkt ist die Gleichheit, nicht der Wert: welche Form der
+       Verband auch schickt, es kommt 2011 heraus. */
+    for (const form of ["2011-03-14", "14.03.2011", "2011-03-14T00:00:00Z"]) {
+      expect(jahrgangAus(form, HEUTE)).toBe(2011);
+    }
+  });
+
+  it("gibt null bei leer, null und Unfug", () => {
+    for (const w of [null, undefined, "", "unbekannt", "1.1.11"]) {
+      expect(jahrgangAus(w, HEUTE)).toBeNull();
+    }
+  });
+
+  it("weist eine Zahl ausserhalb des Bereichs ab", () => {
+    /* Ein Zeitstempel in Millisekunden faengt mit 13 Ziffern an; die
+       ersten vier davon sind kein Jahrgang. Und ein Jahr in der
+       Zukunft ist keiner. */
+    expect(jahrgangAus("1763029200000", HEUTE)).toBeNull();
+    expect(jahrgangAus("2027-01-01", HEUTE)).toBeNull();
+    expect(jahrgangAus("1899-01-01", HEUTE)).toBeNull();
+  });
+
+  it("laesst die Grenzen selbst gelten", () => {
+    /* Die Grenze ist eine Zahl, die niemand gemessen hat — deshalb
+       weit, und deshalb hier benannt statt bloss angenommen. */
+    expect(jahrgangAus("1930-01-01", HEUTE)).toBe(1930);
+    expect(jahrgangAus("2026-12-31", HEUTE)).toBe(2026);
+  });
+
+  it("nimmt den Jahrgang in bildeOffeneNamen mit", () => {
+    const mit = bildeOffeneNamen(
+      [{ clubNumber: UNSERE, personId: 500, firstname: "Adrian", name: "Schmid",
+         jerseyNumber: 9, teamId: 38309, birthDate: "2011-03-14" }],
+      UNSERE, new Set(),
+    );
+    expect(mit[0].jahrgang).toBe(2011);
   });
 });

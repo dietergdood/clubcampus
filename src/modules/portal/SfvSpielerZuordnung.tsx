@@ -48,13 +48,16 @@
    ═══════════════════════════════════════════════════════════════ */
 import { useEffect, useMemo, useState } from "react";
 import { Btn, Card, InfoBox } from "../../theme.ts";
-import { holeNamen, leseNamenAntwort } from "../../domains/sfv/sfvService.ts";
+import { holeNamen, leseNamenAntwort, leseNamenJahrgaenge }
+  from "../../domains/sfv/sfvService.ts";
+import { schlageAlleVor } from "../../domains/sfv/spielerVorschlag.ts";
+import type { VorschlagKandidat } from "../../domains/sfv/spielerVorschlag.ts";
 import { TI } from "../../icons.tsx";
 import { baueSpielerZeilen, alsTextliste, alsWxr } from "../../domains/spiele/spielerAusgabe.ts";
 import { dateiDownload, inZwischenablage } from "../../shared/list/exportUtils.ts";
 import { BL } from "../../constants.ts";
 import {
-  gruppiereNachTeam, offeneZuordnungen,
+  gruppiereNachTeam, offeneZuordnungen, OHNE_MANNSCHAFT,
 } from "../../domains/spiele/matchdatenAnzeige.ts";
 import {
   fetchAlleAufstellungen, fetchZuordnungen, loescheZuordnung, speichereZuordnung,
@@ -80,6 +83,13 @@ export function SfvSpielerZuordnung({ sb, vereinId, benutzerId, dbMitglieder, db
   const [namenLaeuft, setNamenLaeuft] = useState(false);
   const [namenFehler, setNamenFehler] = useState<string | null>(null);
   const [ohneNamen, setOhneNamen] = useState(0);
+  /* ⚠ NUR IM ZUSTAND, wie die Namen. Der Jahrgang wird nirgends gespeichert;
+     beim Neuladen ist er weg. Dieselbe Entscheidung wie am 21.08.2026 beim
+     Namen, und aus einem schaerferen Grund — ein Geburtsjahr veraltet nicht. */
+  const [jahrgaenge, setJahrgaenge] = useState<Record<number, number>>({});
+  /* `null` heisst NICHT GEFRAGT (aeltere Fassung der Function), `0` heisst
+     alle lesbar. Die zwei duerfen nicht dieselbe Anzeige bekommen. */
+  const [jahrgangUnlesbar, setJahrgangUnlesbar] = useState<number | null>(null);
   /* Wurde in dieser Sitzung schon geholt? Nicht dasselbe wie „es gibt
      Namen": ein Lauf, der nichts fand, hat trotzdem stattgefunden, und der
      Knopf soll dann nicht aussehen, als wäre er nie gedrückt worden. */
@@ -132,6 +142,11 @@ export function SfvSpielerZuordnung({ sb, vereinId, benutzerId, dbMitglieder, db
     setNamenLaeuft(false);
     if (fehler) { setNamenFehler(fehler); return; }
     setNamen(leseNamenAntwort(daten));
+    setJahrgaenge(leseNamenJahrgaenge(daten));
+    /* ⚠ `undefined` heisst NICHT GEFRAGT, nicht „alle lesbar". Eine Fassung
+       vor dem 13.09.2026 schickt das Feld nicht — dann bleibt es `null` und
+       die Karte sagt das, statt eine Null zu zeigen. */
+    setJahrgangUnlesbar(daten?.jahrgang_unlesbar ?? null);
     setOhneNamen(Math.max(0, (daten?.offen_gesamt ?? 0) - (daten?.namen_gefunden ?? 0)));
     setGeholt(true);
   }
@@ -187,6 +202,48 @@ export function SfvSpielerZuordnung({ sb, vereinId, benutzerId, dbMitglieder, db
       .map(m => ({ id: m.id, name: `${m.nachname ?? ""} ${m.vorname ?? ""}`.trim() || `#${m.id}` }))
       .sort((a, b) => a.name.localeCompare(b.name)),
     [dbMitglieder]);
+
+  /* ══ Der Vorschlag ══════════════════════════════════════════════════
+     ⚠ Er ist eine VORAUSWAHL im Auswahlfeld und nichts weiter. Es gibt
+     bewusst keinen Knopf, der alle Vorschlaege auf einmal speichert — das
+     ist der Punkt, an dem aus einem Vorschlag eine Behauptung wird.
+     (Bedingung Didi, 13.09.2026.)
+
+     ⚠ Und er entsteht nur, wenn die Namen geholt sind: ohne Namen gibt es
+     nichts zu vergleichen, und eine Zuordnung ueber die Rueckennummer waere
+     genau der Fehler, der am 11.09.2026 unsere Spieler beim Gegner
+     erscheinen liess. */
+  const kandidaten = useMemo<VorschlagKandidat[]>(
+    () => (dbMitglieder || []).filter(m => m.aktiv !== false).map(m => ({
+      id: m.id,
+      vorname: m.vorname ?? null,
+      nachname: m.nachname ?? null,
+      geburtsdatum: (m as unknown as { geburtsdatum?: string | null }).geburtsdatum ?? null,
+      teams: ((m as unknown as { kader_teams?: { name: string }[] }).kader_teams || [])
+        .map(t => t.name),
+    })),
+    [dbMitglieder]);
+
+  const vorschlag = useMemo(() => {
+    if (!anzahlNamen) return { vorschlaege: new Map(), mit: 0, ohne: 0 };
+    const spieler = gruppen.flatMap(g => g.offen.map(o => ({
+      sfv_person_id: o.sfv_person_id,
+      name: namen[o.sfv_person_id] ?? "",
+      jahrgang: jahrgaenge[o.sfv_person_id] ?? null,
+      /* „Ohne Mannschaft" ist unsere Gruppenbezeichnung, kein Teamname —
+         sie darf nicht als Mannschaft in den Vergleich gehen. */
+      team: g.teamName === OHNE_MANNSCHAFT ? null : g.teamName,
+    })));
+    return schlageAlleVor(spieler, kandidaten);
+  }, [gruppen, namen, jahrgaenge, kandidaten, anzahlNamen]);
+
+  /* Die vorgewählte Id — leer, wenn es keinen Vorschlag gibt.
+     ⚠ Sie ist eine VORAUSWAHL. Gespeichert wird erst, wenn jemand das Feld
+     bedient; `onChange` feuert bei einem `defaultValue` nicht. */
+  function vorschlagId(sfvPersonId: number): string {
+    const v = vorschlag.vorschlaege.get(sfvPersonId);
+    return v && v.art === "treffer" ? v.mitglied_id : "";
+  }
 
   async function zuordnen(sfvPersonId: number, mitgliedId: string) {
     if (!vereinId || !mitgliedId) return;
@@ -298,6 +355,33 @@ export function SfvSpielerZuordnung({ sb, vereinId, benutzerId, dbMitglieder, db
               )}
             </div>
 
+            {/* ══ Was der Vorschlag leistet — und was er nicht weiss ══════
+                ⚠ DREI ZAHLEN, UND DIE AUFTEILUNG MUSS AUFGEHEN. Eine
+                einzelne Zahl kann nur behauptet werden; eine Aufteilung
+                rechnet sich nach. */}
+            <div className="cc-inline-hint cc-mt-8">
+              {vorschlag.mit} von {vorschlag.mit + vorschlag.ohne} Spielern haben einen
+              Vorschlag. Er ist vorgewählt und <strong>nicht gespeichert</strong> — erst
+              „Übernehmen" oder eine eigene Auswahl schreibt ihn.
+              {vorschlag.ohne > 0 && (
+                <> Bei den übrigen {vorschlag.ohne} steht der Grund an der Zeile.</>
+              )}
+              <br/>
+              {/* ⚠ `null` heisst NICHT GEFRAGT, `0` heisst alle lesbar. Die
+                  zwei dürfen nicht dieselbe Anzeige bekommen — genau diese
+                  Einebnung hat am 11.09.2026 eine Karte drei Nullen zeigen
+                  lassen, wo 129 Personen standen. */}
+              {jahrgangUnlesbar === null
+                ? <>Der Jahrgang wird nicht gemeldet — die Edge Function ist älter als
+                   der 13.09.2026. Ohne ihn bleiben Namensgleiche ohne Vorschlag.</>
+                : jahrgangUnlesbar === 0
+                ? <>Der Jahrgang ist bei allen lesbar; damit sind auch Namensgleiche
+                   unterscheidbar.</>
+                : <>Bei {jahrgangUnlesbar} Spielern ist der Jahrgang nicht lesbar. Die Form
+                   von <code>birthDate</code> beim Verband ist ungemessen — diese Zahl ist
+                   die Messung. Namensgleiche bleiben dort ohne Vorschlag.</>}
+            </div>
+
             {/* ⚠ Die Ausgabe für WordPress. Sie steht HIER, direkt unter der
                 Namensmeldung, und nicht an einer eigenen Stelle: sie ist nur
                 brauchbar, solange die Namen geholt sind, und sie verschwindet
@@ -370,14 +454,51 @@ export function SfvSpielerZuordnung({ sb, vereinId, benutzerId, dbMitglieder, db
                   <div className="cc-inline-hint">
                     {namen[o.sfv_person_id] && `Nr. ${o.rueckennummern.length ? o.rueckennummern.join(", ") : "—"} · `}
                     SFV-personId {o.sfv_person_id}
+                    {jahrgaenge[o.sfv_person_id] ? ` · Jahrgang ${jahrgaenge[o.sfv_person_id]}` : ""}
                   </div>
+                  {/* ⚠ DER GRUND STEHT IMMER DA, auch wenn nichts
+                      vorgeschlagen wird. Eine Zeile, die bloss schweigt, ist
+                      von einer nicht geprüften nicht zu unterscheiden — und
+                      genau diese Ununterscheidbarkeit kostet hier sonst die
+                      meiste Zeit. */}
+                  {vorschlag.vorschlaege.get(o.sfv_person_id) && (
+                    <div className="cc-inline-hint">
+                      {vorschlag.vorschlaege.get(o.sfv_person_id)!.art === "treffer"
+                        ? <>Vorschlag: {vorschlag.vorschlaege.get(o.sfv_person_id)!.grund}</>
+                        : <>Kein Vorschlag: {vorschlag.vorschlaege.get(o.sfv_person_id)!.grund}</>}
+                    </div>
+                  )}
                 </div>
-                <select className="cc-input" style={{ width: "auto", minWidth: 220 }}
-                  defaultValue=""
-                  onChange={ev => zuordnen(o.sfv_person_id, ev.target.value)}>
-                  <option value="">— Mitglied wählen —</option>
-                  {mitgliedOpts.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
-                </select>
+                {/* ⚠ `key` mit dem Vorschlag darin: React setzt `defaultValue`
+                    nur beim ersten Rendern. Ohne den wechselnden Schlüssel
+                    stünde das Feld weiter auf „— Mitglied wählen —", nachdem
+                    die Namen geholt sind — der Vorschlag wäre berechnet,
+                    geliefert und nicht gezeigt. */}
+                <div className="cc-row">
+                  <select key={`${o.sfv_person_id}-${vorschlagId(o.sfv_person_id)}`}
+                    className="cc-input" style={{ width: "auto", minWidth: 220 }}
+                    defaultValue={vorschlagId(o.sfv_person_id)}
+                    onChange={ev => zuordnen(o.sfv_person_id, ev.target.value)}>
+                    <option value="">— Mitglied wählen —</option>
+                    {mitgliedOpts.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
+                  </select>
+                  {/* ⚠ DIESER KNOPF IST NICHT BEQUEMLICHKEIT, SONDERN NOTWENDIG.
+                      `onChange` feuert bei einem `defaultValue` nicht — ohne ihn
+                      wäre ein zutreffender Vorschlag vorgewählt und NICHT
+                      speicherbar: man müsste jemand anderen wählen und zurück.
+                      Berechnet, geliefert, nicht übernehmbar.
+
+                      ⚠ Und er gilt für EINE Person. Ein Knopf, der alle
+                      Vorschläge auf einmal speichert, gibt es bewusst nicht —
+                      das ist der Punkt, an dem aus einem Vorschlag eine
+                      Behauptung wird. (Bedingung Didi, 13.09.2026.) */}
+                  {vorschlagId(o.sfv_person_id) !== "" && (
+                    <Btn variant="outline"
+                      onClick={() => zuordnen(o.sfv_person_id, vorschlagId(o.sfv_person_id))}>
+                      Übernehmen
+                    </Btn>
+                  )}
+                </div>
               </div>
             ))}
           </Card>

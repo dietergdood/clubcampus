@@ -174,6 +174,21 @@ export interface ZuordnungGruppe {
   offen: OffeneZuordnung[];
 }
 
+/**
+ * Die Bezeichnung der Gruppe, deren `sfv_team_id` sich nicht aufloesen laesst.
+ *
+ * ⚠ EINE KONSTANTE, KEINE ZEICHENKETTE AN DREI ORTEN. Der Spieler-Vorschlag
+ * muss diesen Fall von einem echten Mannschaftsnamen unterscheiden — er darf
+ * nicht als Mannschaft in den Vergleich gehen. Stand die Bezeichnung an zwei
+ * Stellen getippt, waere ein Umbenennen hier ein **stiller** Ausfall dort:
+ * jeder Spieler ohne Team-Zuordnung bekaeme keinen Kandidaten und damit
+ * keinen Vorschlag, ohne dass etwas fehlschlaegt.
+ *
+ * Dieselbe Regel wie „ein Filter auf einen NAMEN prueft eine Schreibweise" —
+ * nur ueber zwei Dateien statt ueber zwei Systeme.
+ */
+export const OHNE_MANNSCHAFT = "Ohne Mannschaft";
+
 export function gruppiereNachTeam(
   offen: OffeneZuordnung[], teamNamen: Map<number, string>,
 ): ZuordnungGruppe[] {
@@ -184,7 +199,7 @@ export function gruppiereNachTeam(
     if (!g) {
       g = {
         sfv_team_id: o.sfv_team_id,
-        teamName: (o.sfv_team_id !== null && teamNamen.get(o.sfv_team_id)) || "Ohne Mannschaft",
+        teamName: (o.sfv_team_id !== null && teamNamen.get(o.sfv_team_id)) || OHNE_MANNSCHAFT,
         offen: [],
       };
       proTeam.set(schluessel, g);

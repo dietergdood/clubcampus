@@ -100,6 +100,7 @@ describe("baueAbgleich — fünf Gruppen", () => {
          stehen IMMER da, sonst wäre „kein Eintrag" von „nicht gemessen"
          nicht zu unterscheiden. */
       unsere_nutzbar: { sfv_person_id: 0, email_hash: 0 },
+      geteilte_adressen: { adressen: 0, personen: 0 },
     });
   });
 
@@ -270,6 +271,7 @@ describe("deuteAbgleich — Zahlen mit ihrer Bedeutung", () => {
       gesendet: 10, treffer_sfv: 1, treffer_email: 1,
       ohne_treffer: 1, personen_ohne_uns: 0,
       ohne_treffer_liste: [], ohne_uns_liste: [], drueben_gesamt: 0,
+      geteilte_adressen: { adressen: 0, personen: 0 },
     };
     expect(deuteAbgleich(kaputt).join(" | "))
       .toMatch(/Die Aufteilung geht nicht auf: 3 statt 10/);
@@ -331,5 +333,65 @@ describe("ordneEin — die Gegenrichtung, und nur eine Gruppe ist ein Befund", (
   it("leere Eingabe ergibt drei Nullen, keine Ausnahme", () => {
     expect(ordneEin([], new Set(), new Set()))
       .toEqual({ gefiltert: 0, uebersehen: 0, fremd: 0, nicht_einordenbar: 0, uebersehen_liste: [] });
+  });
+});
+
+describe("geteilte_adressen — teilen sich mehrere Menschen eine Adresse?", () => {
+  /* ⚠ WARUM ES ZÄHLT. Ist die Zahl hoch, ist die E-Mail als Merkmal
+     untauglich: bei Geschwistern steht dieselbe Elternadresse an zwei
+     Kindern, und ein Treffer darauf ordnet die falsche Person zu. Ein
+     Merkmal, das mehrere Menschen benennt, ist kein Schlüssel. */
+  const D = (email_hash: string | null) => ({
+    sfv_person_id: null, email_hash, name_hash: null,
+  });
+
+  it("zaehlt Adressen UND betroffene Personen getrennt", () => {
+    /* Drei Geschwister an einer Adresse sind EINE Adresse und DREI
+       Personen. Eine Zahl allein liesse offen, ob es viele kleine
+       Gruppen sind oder eine grosse. */
+    const e = baueAbgleich([], [D("a"), D("a"), D("a"), D("b"), D("c"), D("c")]);
+    expect(e.geteilte_adressen).toEqual({ adressen: 2, personen: 5 });
+  });
+
+  it("zaehlt eine einmalige Adresse nicht mit", () => {
+    const e = baueAbgleich([], [D("a"), D("b"), D("c")]);
+    expect(e.geteilte_adressen).toEqual({ adressen: 0, personen: 0 });
+  });
+
+  it("die Zahl STEHT in der Deutung — auch als Null", () => {
+    /* ⚠ Der Fall, den acht Zaehler am 10.09.2026 nicht hatten: berechnet,
+       geliefert, nicht gezeigt. „0 geteilt" ist die Auskunft, dass das
+       Merkmal traegt — sie fehlt, wenn nur der schlechte Fall erscheint. */
+    const gut = baueAbgleich([], [D("a"), D("b")]);
+    expect(deuteAbgleich(gut).join(" | ")).toMatch(/0 Adressen drüben werden von mehreren/);
+
+    const schlecht = baueAbgleich([], [D("a"), D("a"), D("b"), D("b"), D("b")]);
+    expect(deuteAbgleich(schlecht).join(" | "))
+      .toMatch(/⚠ 2 Adressen drüben gehören 5 Personen/);
+  });
+
+  it("⚠ eine aeltere Gegenstelle stuerzt die Karte NICHT ab", () => {
+    /* ⚠ ⚠ DER FALL, DER DIE KARTE GEKOSTET HAETTE. `deuteAbgleich` bekommt
+       das Objekt von der GEGENSTELLE — als Pflichtfeld waere `undefined`
+       ein Absturz gewesen, und ein Absturz in einer Zeile nimmt die ganze
+       Anzeige mit. Genau so sah der 12.09.2026 aus.
+
+       ⚠ Und „nicht gemessen" ist ein ANDERER Satz als „0 geteilt". */
+    const alt = {
+      gesendet: 1, treffer_sfv: 1, treffer_email: 0,
+      ohne_treffer: 0, personen_ohne_uns: 0,
+      ohne_treffer_liste: [], ohne_uns_liste: [], drueben_gesamt: 1,
+    };
+    const zeilen = deuteAbgleich(alt).join(" | ");
+    expect(zeilen).toMatch(/Geteilte Adressen: nicht gemessen/);
+    expect(zeilen).not.toMatch(/0 Adressen drüben werden/);
+  });
+
+  it("uebergeht Personen ohne Adresse, statt sie zusammenzuwerfen", () => {
+    /* ⚠ Zwei leere Werte sind nicht dieselbe Adresse. Ohne diese Zeile
+       zaehlten alle Adresslosen als eine geteilte Gruppe — ein
+       Fehlalarm, und zwar der grösste möglicher. */
+    const e = baueAbgleich([], [D(null), D(null), D(null)]);
+    expect(e.geteilte_adressen).toEqual({ adressen: 0, personen: 0 });
   });
 });
