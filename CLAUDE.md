@@ -4006,16 +4006,43 @@ der ganze Umbau: gemessen wird jetzt die eigene Zeile, erkennbar über
 `club_nummer`, die an jeder Ranglistenzeile steht (`sync.ts:150`) — ohne
 Join, ohne Abhängigkeit von der Team-Zuordnung.
 
-⚠ ⚠ **UND DIE AUSKUNFT LAG SCHON IN DER ANTWORT.** `spiele_min` stand bei
-genau diesen Gruppen auf 0. Niemand hat es gelesen, weil die Kopfzahl daneben
-sagte, es sei nichts zu sehen.
+⚠ ⚠ ⚠ **BERICHTIGT AM 14.09.2026, UND ZWAR DERSELBE FEHLER NOCH EINMAL.**
+Hier stand: *„Und die Auskunft lag schon in der Antwort: `spiele_min` stand
+bei diesen Gruppen auf 0. Niemand hat es gelesen, weil die Kopfzahl daneben
+sagte, es sei nichts zu sehen."*
 
-> **Eine Kopfzahl, die beruhigt, erstickt das Detail neben sich.**
+**Falsch.** `spiele_min` ist ein `Math.min` über **alle** Zeilen der Gruppe
+(`index.ts:668`). Steht dort 0, hat die schwächste Mannschaft der Gruppe null
+Spiele — über unsere Zeile sagt es nichts.
 
-Das ist die **Umkehrung** von „berechnet, geliefert, nicht gezeigt": hier war
-es gezeigt — nur neben einer Beruhigung. Deshalb steht die eigene Zeile jetzt
-**vor** der Gruppenzahl, und ein Testfall hält die Reihenfolge fest; sie ist
-nicht Geschmack, sondern der Befund.
+⚠ **Der Beleg ist die Verbandsseite selbst:** für „2. Liga Gruppe 2" führt sie
+FC Herrliberg 1 mit vier Spielen, vier Siegen, 14:1, zwölf Punkten. Ein
+`spiele_min: 0` in dieser Gruppe wäre damit **vollständig verträglich** — es
+hiesse nur, dass irgendeine andere Mannschaft noch nicht gespielt hat.
+
+> **Die alte Probe trug also gar keine Auskunft über unsere Zeile** — weder
+> als Kopfzahl noch im Detail. Ich habe ein Gruppenaggregat als Aussage über
+> eine Zeile gelesen, **in demselben Absatz, der genau davor warnt.**
+
+⚠ **Das macht den Umbau nötiger, nicht weniger nötig** — und es verschiebt
+den Satz darüber: „eine Kopfzahl, die beruhigt, erstickt das Detail neben
+sich" stimmt als Regel, traf hier aber nicht zu, weil es kein Detail gab.
+Was wirklich passiert ist, ist einfacher und schlimmer: **die Probe konnte
+die Frage nicht beantworten, und beide Zahlen — Kopf wie Detail — sahen aus,
+als könnte sie es.**
+
+⚠ **Und die Meldung „der Verband führt dort selbst den alten Stand" ist damit
+zurückgenommen.** Sie stützte sich auf `spiele_min: 0` und ist von dieser
+Zahl nicht gedeckt. Welche Seite nachhinkt, ist bis zum Kopf-an-Kopf-Lauf
+**offen** — siehe den Eintrag darunter.
+
+**Die Regel „eine Kopfzahl, die beruhigt, erstickt das Detail neben sich"
+bleibt richtig** und steht weiter im Papier — sie beschreibt einen echten
+Fall, nur nicht diesen. Was hier gilt, ist die Regel des Theme-Chats oben.
+
+Deshalb steht die eigene Zeile jetzt **vor** der Gruppenzahl, und ein
+Testfall hält die Reihenfolge fest; sie ist nicht Geschmack, sondern der
+Befund.
 
 ⚠ **Und die Gruppenzahl nennt seither ihren eigenen Zuschnitt**, als Feld in
 der Antwort und nicht bloss als Kommentar: *„sagt NICHTS darüber, ob unsere
@@ -4032,6 +4059,89 @@ Verband nennt keine Zahl" — getrennt von `0`, „null Spiele".
 der Kachel.** Dieselbe Verlagerung wie bei `deuteBestand()` nach demselben
 Vorfall: eine Entscheidung, die in einer Komponente steht, lässt sich nicht
 gegen eine erfundene Antwort halten.
+
+### ⚠⚠ ZWEI URSACHEN, DIE VON AUSSEN GLEICH AUSSEHEN — und die Probe hat beide Zahlen in der Hand
+
+14.09.2026. Die Verbandswebsite zeigt für FC Herrliberg 1 vier Spiele, die
+Website drüben drei. Zwei Erklärungen, und sie verlangen **Gegenteiliges**:
+
+| | heisst | zu tun |
+|---|---|---|
+| die Schnittstelle liefert 3 | der **Verband** widerspricht sich selbst | nichts, es ist seine Lage |
+| die Schnittstelle liefert 4 | **unsere** Zwischenspeicherung ist alt | ein Sync-Lauf |
+
+**Von aussen sehen beide gleich aus: „die Tabelle zeigt 3."**
+
+⚠ **Und die Probe ist die einzige Stelle, an der beide Zahlen gleichzeitig
+vorliegen** — sie hat den frischen Abruf in der Hand und kann daneben unseren
+Bestand lesen. Sie meldet seither drei Zahlen je eigener Zeile:
+
+```
+FC Herrliberg 1 · 2. Liga — frisch 4 · bei uns 3 · Spielplan 4
+```
+
+Dazu zwei Zähler, die sich **gegenseitig ausschliessen können** — und genau
+deshalb ist ihre Kombination selbst eine Auskunft: `bestand_hinkt` allein
+heisst „ein Sync genügt", `verband_hinkt` allein heisst „er rechnet seine
+Tabelle nicht nach", beide zusammen heisst beides.
+
+⚠ **Die dritte Zahl ist die Gegenprobe von AUSSEN.** `gespielt_laut_spielplan`
+kommt aus `spiele` — also aus einem **anderen Endpunkt desselben Absenders**.
+Weichen Tabelle und Spielplan des Verbands ab, widerspricht er sich selbst;
+dieselbe Familie wie der Halbzeitstand gegen die Ereignisliste.
+
+⚠ **Sie ist eine Näherung, und das steht IN der Antwort** (`vergleich_naeherung`),
+nicht bloss im Kommentar: `matches` zählt die Spiele DIESER Gruppe, unser
+Filter zählt Spieltyp 1 und Status 2, und ein Derby steht bei uns als eine
+Zeile. **Eine Abweichung ist eine Frage, kein Befund.**
+
+### ⚠ `/api/club/ranking` FÜHRT KEINEN BERECHNUNGSSTAND — 19 Felder, kein Zeitstempel
+
+Gemessen am 14.09.2026 gegen die Spezifikation
+(`docs/sfv/swagger_2026-08-28.json`, Schema `Ranking`), nicht vermutet:
+
+```
+leagueId · leagueNumber · leagueName · divisionId · divisionName
+groupId · groupName · teamName · clubNumber · position · matches
+wins · draws · losses · penaltyPoints · goalsFor · goalsAgainst
+points · teamId
+```
+
+**Neunzehn Felder, und keines ist ein Datum.** Der Verband nennt weder je
+Gruppe noch je Zeile, wann er seine Tabelle gerechnet hat.
+
+⚠ **Damit ist die Bitte um ein `lauf`-Feld je Gruppe endgültig beantwortet,
+und zwar schärfer als am 13.09.2026.** Damals lautete die Antwort „ein Abruf,
+ein Zeitpunkt — es gibt keinen je Gruppe, den wir wegwerfen". Jetzt ist es
+eine Ebene tiefer belegt: **die Quelle kennt den Begriff gar nicht.** Ein
+Stempel wäre immer unser Abrufzeitpunkt, und der sagt nichts über das Alter
+des Inhalts.
+
+> **Ein frischer Zeitstempel auf altem Inhalt macht die Veraltung
+> unsichtbar.**
+
+⚠ **Und daraus folgt, was die Probe stattdessen tut:** sie vergleicht den
+INHALT — frisch gegen Bestand gegen Spielplan. Wo kein Alter zu haben ist,
+ist der Vergleich dreier Zahlen die einzige ehrliche Auskunft.
+
+### ⚠ Die Vollständigkeit der Ranglisten-Lieferung — über die Nummer, nie über den Namen
+
+Gebaut am 14.09.2026 als `teams_ohne_tabellenzeile`. Gefragt: kommt zu
+**jeder** Mannschaft, die wir kennen, eine Tabellenzeile?
+
+Eine Gruppe, die der Verband nicht mehr liefert, fällt im Sync heraus
+(`nicht_mehr_geliefert`) — und auf der Website bliebe eine Tabelle stehen
+oder verschwände, **ohne dass etwas fehlschlägt.**
+
+⚠ **Verglichen wird über `sfv_team_id`.** Am 10.09.2026 ergab ein
+Namensvergleich **13 fehlende Mannschaften statt 8**, und fünf davon waren
+Schreibweisen — „Junioren D (Futsal) a" und „Dd-Junioren" sind dieselbe
+Mannschaft. *Ein Filter auf einen NAMEN prüft eine Schreibweise*, hier über
+Systemgrenzen hinweg.
+
+⚠ **Und die Bezugsgrösse steht daneben**, nicht darunter: „1 von 21" statt
+„1". Eine Zahl ohne Bezugsgrösse ist ein Artefakt — die Regel des
+Theme-Chats, am selben Tag zum dritten Mal angewendet.
 
 ### ⚠ DAS FELD HEISST `spiele`, NICHT `anzahl_spiele` — und deshalb fand er es 0-mal
 

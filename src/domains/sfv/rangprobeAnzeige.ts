@@ -21,14 +21,23 @@
    > Spiele" kann heissen „alle Gruppen haben Spiele" oder „keine Gruppe
    > wurde geprüft."** (Theme-Chat, 14.09.2026)
 
-   ⚠ ⚠  UND DIE AUSKUNFT LAG SCHON IN DER ANTWORT: `spiele_min` stand bei
-   diesen Gruppen auf 0. Niemand hat es gelesen, weil die Kopfzahl
-   daneben sagte, es sei nichts zu sehen. **Eine Kopfzahl, die beruhigt,
-   erstickt das Detail neben sich** — die Umkehrung von „berechnet,
-   geliefert, nicht gezeigt": gezeigt, aber neben einer Beruhigung.
+   ⚠ ⚠  BERICHTIGT AM 14.09.2026. Hier stand: „die Auskunft lag schon in
+   der Antwort — `spiele_min` stand bei diesen Gruppen auf 0."
 
-   Deshalb steht die eigene Zeile jetzt VOR der Gruppenzahl, und die
-   Gruppenzahl nennt ihren eigenen Zuschnitt.
+   **Das war falsch, und zwar derselbe Fehler noch einmal.** `spiele_min`
+   ist ein `Math.min` über ALLE Zeilen der Gruppe. Steht dort 0, hat die
+   schwächste Mannschaft der Gruppe null Spiele — über unsere Zeile sagt
+   es nichts. Für „2. Liga Gruppe 2" führt die Verbandsseite FC Herrliberg 1
+   mit vier Spielen; `spiele_min: 0` wäre dort vollständig damit
+   verträglich.
+
+   ⚠ **Die alte Probe trug also GAR KEINE Auskunft über unsere Zeile** —
+   weder als Kopfzahl noch im Detail. Ich habe ein Gruppenaggregat als
+   Aussage über eine Zeile gelesen, in demselben Absatz, der genau davor
+   warnt. Das macht den Umbau nötiger, nicht weniger nötig.
+
+   **Was bleibt, ist die Regel:** die eigene Zeile steht VOR der
+   Gruppenzahl, und die Gruppenzahl nennt ihren eigenen Zuschnitt.
    ═══════════════════════════════════════════════════════════════════ */
 
 /** Eine eigene Ranglistenzeile, wie `rangprobe` sie meldet. */
@@ -38,6 +47,13 @@ export interface EigeneRangzeile {
   team?: unknown;
   anzahl_spiele?: unknown;
   punkte?: unknown;
+  /** Was in unserer Tabelle `ranglisten` steht — `null` heisst „wir haben
+      dazu keine Zeile", nicht „null Spiele". */
+  bestand_spiele?: unknown;
+  /** Wie viele Meisterschaftsspiele dieser Mannschaft bei uns als
+      ausgetragen stehen. Die Gegenprobe aus einem ANDEREN Endpunkt
+      desselben Absenders. */
+  gespielt_laut_spielplan?: unknown;
 }
 
 /** Wie viele eigene Zeilen namentlich erscheinen, bevor gekürzt wird. */
@@ -104,13 +120,43 @@ export function deuteRangprobe(d: Record<string, unknown>): string[] {
       zeilen.push(`   ⚠ ${ohneZahl} eigene Zeilen ohne jede Spielzahl — `
         + "das ist nicht dasselbe wie null Spiele");
     }
+    /* ══ WELCHE SEITE HINKT — die Frage vom 14.09.2026 ══════════════════
+       ⚠ ⚠ Zwei Zähler, die sich gegenseitig ausschliessen können, und die
+       Kombination ist selbst die Auskunft. Vorher sah „die Tabelle zeigt 3"
+       für beide Ursachen gleich aus. */
+    const bH = z("bestand_hinkt");
+    const vH = z("verband_hinkt");
+    if (d.bestand_hinkt === undefined) {
+      zeilen.push("Welche Seite nachhinkt: nicht gemessen — die Edge Function "
+        + "ist älter als der 14.09.2026.");
+    } else if (bH === 0 && vH === 0) {
+      zeilen.push("Frischer Abruf, unser Bestand und unser Spielplan sind sich einig");
+    } else {
+      if (bH > 0) {
+        zeilen.push(`⚠ ${bH} Mannschaften: UNSER Bestand ist älter als der frische `
+          + "Abruf — ein Sync-Lauf genügt");
+      }
+      if (vH > 0) {
+        zeilen.push(`⚠ ${vH} Mannschaften: der VERBAND führt in seiner Tabelle weniger `
+          + "Spiele, als sein eigener Spielplan als ausgetragen nennt");
+      }
+    }
+
     /* ⚠ Die eigenen namentlich, auch die gesunden. Eine Liste, die nur
        Befunde zeigt, lässt offen, ob überhaupt gemessen wurde — und die
-       Reihenfolge ist aufsteigend, also stehen die nachhinkenden oben. */
+       Reihenfolge ist aufsteigend, also stehen die nachhinkenden oben.
+
+       ⚠ DREI ZAHLEN NEBENEINANDER, nicht eine: frisch · Bestand · Spielplan.
+       Eine allein zeigt immer auf die andere Seite. */
     for (const e of eigene.slice(0, ZEIGE)) {
       const n = e.anzahl_spiele;
+      const frisch = n === null || n === undefined ? "keine Spielzahl" : `${Number(n)}`;
+      const best = e.bestand_spiele === null || e.bestand_spiele === undefined
+        ? "keine Zeile" : `${Number(e.bestand_spiele)}`;
+      const plan = e.gespielt_laut_spielplan === undefined
+        ? "?" : `${Number(e.gespielt_laut_spielplan)}`;
       zeilen.push(`   ${String(e.team ?? "")} · ${String(e.liga ?? "")} — `
-        + (n === null || n === undefined ? "keine Spielzahl" : `${Number(n)} Spiele`));
+        + `frisch ${frisch} · bei uns ${best} · Spielplan ${plan}`);
     }
     /* ⚠ Was weggelassen wird, wird GENANNT. Eine stille Kürzung liest
        sich wie Vollständigkeit. */
@@ -127,6 +173,32 @@ export function deuteRangprobe(d: Record<string, unknown>): string[] {
     : `⚠ ${ohneGr} von ${gruppenGes} Gruppen ohne Spiele — dort führt der VERBAND `
       + "keinen Stand. Wir bilden ihn korrekt ab; dieselbe Lage wie bei den "
       + "Spielen ohne Verlauf.");
+
+  /* ══ VOLLSTÄNDIGKEIT DER LIEFERUNG ══════════════════════════════════
+     ⚠ Kommt zu JEDER Mannschaft, die wir kennen, eine Tabellenzeile? Eine
+     Gruppe, die der Verband nicht mehr liefert, fällt im Sync heraus — und
+     auf der Website bliebe eine Tabelle stehen oder verschwände, ohne dass
+     etwas fehlschlägt.
+
+     ⚠ Verglichen wird über `sfv_team_id`, nie über den Namen: am
+     10.09.2026 ergab ein Namensvergleich 13 fehlende statt 8, fünf davon
+     waren Schreibweisen. */
+  const ohneZeile = (d.teams_ohne_tabellenzeile ?? []) as string[];
+  if (d.teams_ohne_tabellenzeile === undefined) {
+    zeilen.push("Vollständigkeit: nicht gemessen — die Edge Function ist älter "
+      + "als der 14.09.2026.");
+  } else if (ohneZeile.length === 0) {
+    zeilen.push(`Alle ${z("teams_mit_nummer_gesamt")} zugeordneten Mannschaften `
+      + "stehen in einer Tabelle");
+  } else {
+    zeilen.push(`⚠ ${ohneZeile.length} von ${z("teams_mit_nummer_gesamt")} zugeordneten `
+      + "Mannschaften stehen in KEINER Tabelle — dort liefert der Verband keine Gruppe");
+    /* Namentlich: bei acht sucht sonst jemand 21 durch. */
+    for (const t of ohneZeile.slice(0, ZEIGE)) zeilen.push(`   ⚠ ${t}`);
+    if (ohneZeile.length > ZEIGE) {
+      zeilen.push(`   … und ${ohneZeile.length - ZEIGE} weitere (siehe Rohantwort)`);
+    }
+  }
 
   const gruppen = (d.gruppen ?? []) as Record<string, unknown>[];
   for (const g of gruppen.filter((x) => Number(x.zeilen) === Number(x.spiele_null))) {

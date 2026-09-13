@@ -34,17 +34,22 @@ describe("die eigene Zeile steht VOR der Gruppenzahl", () => {
       eigene_erkennbar: true, eigene_zeilen_gesamt: 20,
       eigene_ohne_spiele: 2, eigene_ohne_zahl: 0,
       eigene: [
-        { team: "Senioren 40+", liga: "Senioren 40+", anzahl_spiele: 0 },
-        { team: "FC Herrliberg 3", liga: "5. Liga", anzahl_spiele: 0 },
-        { team: "FC Herrliberg 1", liga: "3. Liga", anzahl_spiele: 4 },
+        { team: "Senioren 40+", liga: "Senioren 40+", anzahl_spiele: 0,
+          bestand_spiele: 0, gespielt_laut_spielplan: 2 },
+        { team: "FC Herrliberg 3", liga: "5. Liga", anzahl_spiele: 0,
+          bestand_spiele: 0, gespielt_laut_spielplan: 1 },
+        { team: "FC Herrliberg 1", liga: "3. Liga", anzahl_spiele: 4,
+          bestand_spiele: 4, gespielt_laut_spielplan: 4 },
       ],
     });
     expect(zus(t)).toMatch(/⚠ 2 von 20 eigenen Mannschaften stehen auf null Spielen/);
     /* Namentlich, nicht nur gezählt — sonst sucht jemand 20 Zeilen durch. */
-    expect(zus(t)).toMatch(/Senioren 40\+ · Senioren 40\+ — 0 Spiele/);
+    /* ⚠ DREI ZAHLEN NEBENEINANDER — eine allein zeigt immer auf die
+       andere Seite. */
+    expect(zus(t)).toMatch(/Senioren 40\+ · Senioren 40\+ — frisch 0 · bei uns \d/);
     /* Auch die gesunde erscheint: eine Liste, die nur Befunde zeigt,
        lässt offen, ob überhaupt gemessen wurde. */
-    expect(zus(t)).toMatch(/FC Herrliberg 1 · 3\. Liga — 4 Spiele/);
+    expect(zus(t)).toMatch(/FC Herrliberg 1 · 3\. Liga — frisch 4/);
   });
 
   it("die eigene Aussage steht VOR der Gruppenaussage", () => {
@@ -106,10 +111,11 @@ describe("drei Lagen, drei Sätze", () => {
     const t = deuteRangprobe({
       ...BASIS, eigene_erkennbar: true, eigene_zeilen_gesamt: 20,
       eigene_ohne_spiele: 0, eigene_ohne_zahl: 3,
-      eigene: [{ team: "Ea-Junioren", liga: "Junioren E", anzahl_spiele: null }],
+      eigene: [{ team: "Ea-Junioren", liga: "Junioren E", anzahl_spiele: null,
+                 bestand_spiele: null, gespielt_laut_spielplan: 0 }],
     });
     expect(zus(t)).toMatch(/3 eigene Zeilen ohne jede Spielzahl/);
-    expect(zus(t)).toMatch(/Ea-Junioren · Junioren E — keine Spielzahl/);
+    expect(zus(t)).toMatch(/Ea-Junioren · Junioren E — frisch keine Spielzahl/);
   });
 });
 
@@ -135,5 +141,100 @@ describe("die Gegenprobe zum Gruppenschluessel bleibt", () => {
       eigene_ohne_spiele: 0, eigene_ohne_zahl: 0, eigene: viele,
     });
     expect(zus(t)).toMatch(/… und 13 weitere \(siehe Rohantwort\)/);
+  });
+});
+
+describe("welche Seite hinkt — die Frage vom 14.09.2026", () => {
+  /* ⚠ ⚠ DIE ZWEI LAGEN SAHEN VORHER GLEICH AUS. „Die Tabelle zeigt 3"
+     konnte heissen, der Verband führe den alten Stand — oder unsere
+     Zwischenspeicherung sei alt. Erst der frische Abruf NEBEN dem
+     Bestand trennt sie, und die Probe ist die einzige Stelle, an der
+     beide Zahlen gleichzeitig vorliegen. */
+  const mit = (ueber: Record<string, unknown>) => deuteRangprobe({
+    ...BASIS, eigene_erkennbar: true, eigene_zeilen_gesamt: 1,
+    eigene_ohne_spiele: 0, eigene_ohne_zahl: 0,
+    bestand_hinkt: 0, verband_hinkt: 0, eigene: [], ...ueber,
+  });
+
+  it("unser Bestand ist alt — ein Sync genuegt", () => {
+    const t = mit({ bestand_hinkt: 7, eigene: [
+      { team: "FC Herrliberg 1", liga: "2. Liga", anzahl_spiele: 4,
+        bestand_spiele: 3, gespielt_laut_spielplan: 4 },
+    ] });
+    expect(zus(t)).toMatch(/7 Mannschaften: UNSER Bestand ist älter/);
+    expect(zus(t)).not.toMatch(/der VERBAND führt in seiner Tabelle weniger/);
+    /* Die drei Zahlen nebeneinander machen es nachvollziehbar. */
+    expect(zus(t)).toMatch(/frisch 4 · bei uns 3 · Spielplan 4/);
+  });
+
+  it("der Verband rechnet seine Tabelle nicht nach", () => {
+    const t = mit({ verband_hinkt: 2, eigene: [
+      { team: "Senioren 40+", liga: "Senioren 40+", anzahl_spiele: 0,
+        bestand_spiele: 0, gespielt_laut_spielplan: 2 },
+    ] });
+    expect(zus(t)).toMatch(/2 Mannschaften: der VERBAND führt in seiner Tabelle weniger/);
+    expect(zus(t)).not.toMatch(/UNSER Bestand ist älter/);
+  });
+
+  it("beide zugleich — dann stehen beide Sätze da", () => {
+    /* Die Kombination ist selbst eine Auskunft; eine Auswahl daraus
+       wäre eine Deutung, die die Probe nicht treffen darf. */
+    const t = mit({ bestand_hinkt: 1, verband_hinkt: 3 });
+    expect(zus(t)).toMatch(/UNSER Bestand ist älter/);
+    expect(zus(t)).toMatch(/der VERBAND führt in seiner Tabelle weniger/);
+  });
+
+  it("einig heisst einig, und es steht da", () => {
+    /* ⚠ Auch der gute Fall bekommt einen Satz. „Nichts gemeldet" und
+       „geprüft und in Ordnung" dürfen nicht gleich aussehen. */
+    expect(zus(mit({}))).toMatch(/sind sich einig/);
+  });
+
+  it("aeltere Function: nicht gemessen, nicht einig", () => {
+    const t = deuteRangprobe({
+      ...BASIS, eigene_erkennbar: true, eigene_zeilen_gesamt: 1,
+      eigene_ohne_spiele: 0, eigene_ohne_zahl: 0, eigene: [],
+    });
+    expect(zus(t)).toMatch(/Welche Seite nachhinkt: nicht gemessen/);
+    expect(zus(t)).not.toMatch(/sind sich einig/);
+  });
+
+  it("keine Zeile bei uns ist nicht null Spiele", () => {
+    /* ⚠ `bestand_spiele: null` heisst „wir haben dazu keine Zeile" —
+       eine fehlende Gruppe, nicht ein Rückstand. */
+    const t = mit({ eigene: [
+      { team: "Ea-Junioren", liga: "Junioren E", anzahl_spiele: 3,
+        bestand_spiele: null, gespielt_laut_spielplan: 3 },
+    ] });
+    expect(zus(t)).toMatch(/frisch 3 · bei uns keine Zeile · Spielplan 3/);
+  });
+});
+
+describe("Vollstaendigkeit der Lieferung", () => {
+  const mitTeams = (ueber: Record<string, unknown>) => deuteRangprobe({
+    ...BASIS, eigene_erkennbar: true, eigene_zeilen_gesamt: 1,
+    eigene_ohne_spiele: 0, eigene_ohne_zahl: 0, bestand_hinkt: 0,
+    verband_hinkt: 0, eigene: [], teams_mit_nummer_gesamt: 21, ...ueber,
+  });
+
+  it("meldet Mannschaften ohne Tabellenzeile namentlich", () => {
+    const t = mitTeams({ teams_ohne_tabellenzeile: ["Ea-Junioren (38310)"] });
+    expect(zus(t)).toMatch(/1 von 21 zugeordneten Mannschaften stehen in KEINER Tabelle/);
+    expect(zus(t)).toMatch(/Ea-Junioren \(38310\)/);
+  });
+
+  it("der gute Fall steht ebenfalls da", () => {
+    const t = mitTeams({ teams_ohne_tabellenzeile: [] });
+    expect(zus(t)).toMatch(/Alle 21 zugeordneten Mannschaften stehen in einer Tabelle/);
+  });
+
+  it("aeltere Function: nicht gemessen", () => {
+    expect(zus(mitTeams({}))).toMatch(/Vollständigkeit: nicht gemessen/);
+  });
+
+  it("kuerzt nicht still", () => {
+    const viele = Array.from({ length: 12 }, (_, i) => `T${i} (${i})`);
+    const t = mitTeams({ teams_ohne_tabellenzeile: viele });
+    expect(zus(t)).toMatch(/… und 4 weitere \(siehe Rohantwort\)/);
   });
 });

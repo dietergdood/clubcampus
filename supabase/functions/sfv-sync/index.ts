@@ -706,6 +706,72 @@ Deno.serve(async (req) => {
          die beruhigt, erstickt das Detail neben sich** — die Umkehrung von
          „berechnet, geliefert, nicht gezeigt": gezeigt, aber neben einer
          Zahl, die sagt, es sei nichts zu sehen. */
+      /* ⚠ Unsere zugeordneten Mannschaften — fuer die Vollstaendigkeitsfrage.
+         `error` gelesen: eine leere Liste meldete sonst „keine Mannschaft
+         ohne Zeile" und waere die glatte Beruhigung. */
+      const { data: teamZeilen, error: tFehler } = await db.from("teams")
+        .select("name, sfv_team_id").eq("verein_id", v.verein_id)
+        .not("sfv_team_id", "is", null);
+      if (tFehler) return json({ fehler: `teams nicht lesbar: ${tFehler.message}` }, 500);
+      const teamsMitNummer = (teamZeilen ?? [])
+        .map((t) => ({ name: String(t.name ?? ""), id: Number(t.sfv_team_id) }))
+        .filter((t) => Number.isFinite(t.id));
+
+      /* ══ DER KOPF-AN-KOPF-VERGLEICH ═══════════════════════════════════
+         ⚠ ⚠  DREI ZAHLEN JE EIGENER ZEILE, und erst zusammen trennen sie die
+         zwei Lagen, die von aussen gleich aussehen:
+
+         | frisch | unser Bestand | heisst |
+         |---|---|---|
+         |   3    |      3        | der VERBAND fuehrt den alten Stand |
+         |   4    |      3        | UNSERE Zwischenspeicherung hinkt nach |
+
+         Ohne den frischen Abruf daneben ist beides „die Tabelle zeigt 3",
+         und genau diese Ununterscheidbarkeit hat den Befund vom 14.09.2026
+         erzeugt. Die Probe hat den Abruf ohnehin in der Hand — sie ist die
+         einzige Stelle, an der beide Zahlen gleichzeitig vorliegen.
+
+         ⚠ Die dritte Zahl ist die Gegenprobe von AUSSEN: wie viele
+         Meisterschaftsspiele dieser Mannschaft stehen bei uns als
+         ausgetragen? Sie kommt aus einem anderen Endpunkt desselben
+         Absenders. Weichen Tabelle und Spielplan ab, widerspricht der
+         Verband sich selbst — dieselbe Familie wie der Halbzeitstand gegen
+         die Ereignisliste.
+
+         ⚠ ⚠ SIE IST EINE NAEHERUNG, und das gehoert in die Antwort statt in
+         diesen Kommentar: `matches` zaehlt die Spiele DIESER Gruppe, unser
+         Filter zaehlt Spieltyp 1 und Status 2. Ein Derby steht bei uns als
+         EINE Zeile (siehe `erg.derbys`) und waere unterzaehlt. Eine
+         Abweichung ist deshalb eine FRAGE, kein Befund. */
+      const { data: unsBestand, error: bFehler } = await db.from("ranglisten")
+        .select("sfv_team_id, anzahl_spiele, stand_vom")
+        .eq("verein_id", v.verein_id);
+      if (bFehler) return json({ fehler: `ranglisten nicht lesbar: ${bFehler.message}` }, 500);
+      const bestandJeTeam = new Map<number, { spiele: number | null; stand: string | null }>();
+      for (const b of unsBestand ?? []) {
+        const t = Number(b.sfv_team_id);
+        if (Number.isFinite(t)) {
+          bestandJeTeam.set(t, {
+            spiele: b.anzahl_spiele === null ? null : Number(b.anzahl_spiele),
+            stand: (b.stand_vom as string | null) ?? null,
+          });
+        }
+      }
+
+      /* ⚠ `error` LESEN. Eine leere Liste hier saehe aus wie „keine Spiele
+         ausgetragen" und meldete jede Mannschaft als nachhinkend — ein
+         Fehlalarm, der wie ein Befund aussieht. Genau so ist am 10.09.2026
+         die Teamprobe danebengegangen. */
+      const { data: gespielt, error: sFehler } = await db.from("spiele")
+        .select("sfv_team_id")
+        .eq("verein_id", v.verein_id).eq("sfv_spiel_typ", 1).eq("sfv_status", 2);
+      if (sFehler) return json({ fehler: `spiele nicht lesbar: ${sFehler.message}` }, 500);
+      const gespieltJeTeam = new Map<number, number>();
+      for (const g of gespielt ?? []) {
+        const t = Number(g.sfv_team_id);
+        if (Number.isFinite(t)) gespieltJeTeam.set(t, (gespieltJeTeam.get(t) ?? 0) + 1);
+      }
+
       const eigene = unsere === null ? [] : roh
         .filter((r) => Number(r.clubNumber) === unsere)
         .map((r) => ({
@@ -717,9 +783,23 @@ Deno.serve(async (req) => {
              Spiele". Die zwei duerfen nicht dieselbe Anzeige bekommen. */
           anzahl_spiele: Number.isFinite(Number(r.matches)) ? Number(r.matches) : null,
           punkte: Number.isFinite(Number(r.points)) ? Number(r.points) : null,
+          /* ⚠ `undefined` kann hier nicht entstehen: fehlt die Mannschaft in
+             unserem Bestand, ist es `null` — „wir haben dazu keine Zeile",
+             was etwas anderes ist als „null Spiele". */
+          bestand_spiele: bestandJeTeam.get(Number(r.teamId) || -1)?.spiele ?? null,
+          bestand_stand_vom: bestandJeTeam.get(Number(r.teamId) || -1)?.stand ?? null,
+          gespielt_laut_spielplan: gespieltJeTeam.get(Number(r.teamId) || -1) ?? 0,
         }))
         .sort((a, b) => (a.anzahl_spiele ?? -1) - (b.anzahl_spiele ?? -1)
           || a.liga.localeCompare(b.liga));
+
+      /* ⚠ Ueber die NUMMER, nicht den Namen — siehe die Begruendung an
+         `teams_ohne_tabellenzeile`. Und namentlich, nicht nur gezaehlt: bei
+         acht Mannschaften ohne Tabelle sucht sonst jemand 21 durch. */
+      const inTabelle = new Set(roh.map((r) => Number(r.teamId)).filter(Number.isFinite));
+      const teamsOhneZeile = teamsMitNummer
+        .filter((t) => !inTabelle.has(t.id))
+        .map((t) => `${t.name} (${t.id})`);
 
       return json({
         hinweis: "Leseprobe. Fragt den Verband, schreibt nichts.",
@@ -754,6 +834,45 @@ Deno.serve(async (req) => {
         eigene_zeilen_gesamt: eigene.length,
         eigene_ohne_spiele: eigene.filter((e) => e.anzahl_spiele === 0).length,
         eigene_ohne_zahl: eigene.filter((e) => e.anzahl_spiele === null).length,
+        /* ⚠ ⚠  DIE ZWEI ZAHLEN, DIE DIE FRAGE VOM 14.09.2026 TRENNEN.
+           Beide zaehlen dieselben Zeilen, aber gegen etwas Verschiedenes —
+           und weil sie sich gegenseitig ausschliessen koennen, ist eine
+           Kombination aus beiden selbst eine Auskunft:
+
+           | bestand_hinkt | verband_hinkt | heisst |
+           |---|---|---|
+           | 0 | 0 | alles einig |
+           | >0 | 0 | **unsere** Zwischenspeicherung ist alt — ein Sync genuegt |
+           | 0 | >0 | der **Verband** rechnet seine Tabelle nicht nach |
+           | >0 | >0 | beides, und dann zuerst unseres | */
+        bestand_hinkt: eigene.filter((e) =>
+          e.bestand_spiele !== null && e.anzahl_spiele !== null
+          && e.bestand_spiele < e.anzahl_spiele).length,
+        verband_hinkt: eigene.filter((e) =>
+          e.anzahl_spiele !== null && e.anzahl_spiele < e.gespielt_laut_spielplan).length,
+        /* ⚠ Was der Vergleich NICHT weiss, steht IN der Antwort. Eine
+           Pruefung, die ihren Zuschnitt nennt, kann nicht fuer mehr genommen
+           werden, als sie ist. */
+        vergleich_naeherung:
+          "`gespielt_laut_spielplan` zählt Spieltyp 1 und Status 2 aus unserem"
+          + " Spielplan, `anzahl_spiele` die Spiele DIESER Gruppe. Ein Derby"
+          + " steht bei uns als eine Zeile und wäre unterzählt. Eine"
+          + " Abweichung ist eine Frage, kein Befund.",
+        /* ⚠ ⚠  DIE VOLLSTAENDIGKEIT DER LIEFERUNG — die Regel, die Didi dem
+           Theme-Chat zugesagt hat.
+
+           Gefragt: kommt zu JEDER Mannschaft, die wir kennen, eine
+           Tabellenzeile? Eine Gruppe, die der Verband nicht mehr liefert,
+           faellt im Sync heraus (`nicht_mehr_geliefert`) — und auf der
+           Website bliebe eine Tabelle stehen oder verschwaende, ohne dass
+           etwas fehlschlaegt.
+
+           ⚠ Verglichen wird ueber `sfv_team_id`, NIE ueber den Namen. Die
+           Verbandsseite und ClubCampus benennen dieselbe Mannschaft
+           verschieden — am 10.09.2026 ergab ein Namensvergleich 13 fehlende
+           statt 8, und fuenf davon waren Schreibweisen. */
+        teams_ohne_tabellenzeile: teamsOhneZeile,
+        teams_mit_nummer_gesamt: teamsMitNummer.length,
         /* ⚠ `null` heisst NICHT GEMESSEN: ohne `vereine.sfv_club_nummer`
            kann diese Probe unsere Zeilen gar nicht finden, und dann waere
            „0 ohne Spiele" die glatte Luege. */
