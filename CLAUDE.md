@@ -4060,6 +4060,102 @@ der Kachel.** Dieselbe Verlagerung wie bei `deuteBestand()` nach demselben
 Vorfall: eine Entscheidung, die in einer Komponente steht, lässt sich nicht
 gegen eine erfundene Antwort halten.
 
+### ⚠⚠ DIE RANGLISTE HING HINTER VIER WÜRFEN, DIE SIE NICHTS ANGEHEN
+
+Der eigentliche Befund vom 14.09.2026 — und er betrifft alle 21 Gruppen,
+nicht die sieben, an denen er auffiel.
+
+Die Reihenfolge in `laufeSync()` ist **Teams → Spielplan → Rangliste →
+Matchdaten**, und vor der Rangliste liegen vier Würfe:
+
+| Zeile | wirft bei |
+|---|---|
+| 233 | `teams` nicht lesbar |
+| 270 | `sync_felder` nennt keine Spalten für `spiele` |
+| 285 | `sync_felder` nennt Spalten, die der Sync nicht berechnet |
+| 332 | Spiele speichern fehlgeschlagen |
+
+**Jeder davon ist für den Spielplan richtig und für die Rangliste
+gegenstandslos.** Sie kennt weder `namen` noch die Feldhoheit von `spiele`;
+sie braucht die Rohzeilen, die `verein_id` und die Saison. Trotzdem hat jeder
+dieser Würfe sie stillschweigend mitgenommen.
+
+> **Auf der Website steht dann eine Tabelle, die einen Spieltag nachhinkt —
+> und nichts sagt, dass sie gar nicht geschrieben wurde.** Ein Ausfall in der
+> Verkleidung einer Datenlage, an Daten, die mit der Ursache nichts zu tun
+> haben.
+
+⚠ **Belegter Präzedenzfall:** am 10.09.2026 landete `ht_resultat` in der
+falschen `sync_felder`-Liste, und jeder Lauf endete am dritten Wurf. In
+diesem Fenster wurde **auch keine einzige Ranglistenzeile geschrieben** —
+bemerkt hat es niemand, weil das Symptom dem Spielplan zugeschrieben wurde.
+
+⚠ ⚠ **UND `geschrieben: 0` HIESS ZWEIERLEI.** „Der Verband liefert nichts"
+und „der Block ist nie gelaufen" ergaben dieselbe Null. Seit dem 14.09.2026
+trägt `erg.ranglisten.gelaufen` die Unterscheidung, und die Meldung sagt es
+im Klartext: *„⚠ Rangliste NICHT gelaufen — das ist etwas anderes als null
+Zeilen."*
+
+**Die Reparatur ist die REICHWEITE, nicht die Lautstärke.** Der Block läuft
+in einem eigenen `try`; der Fehler wird gebunden, geschwärzt und in
+`erg.blockfehler` gesammelt, und der Lauf endet auf `fehler`. Was wegfällt,
+ist nur, dass ein Fehler mitnimmt, was ihn nichts angeht.
+
+⚠ **`blockfehler` ist ausdrücklich in die Protokoll-Allowlist aufgenommen**,
+nicht mitgereist — ein neues Feld erbt jeden Ausgang des Objekts, und genau
+so gingen am 21.08.2026 903 Klarnamen ins Protokoll. Hier ist der Ausgang
+gewollt: ein gescheiterter Block muss von einem übersprungenen zu
+unterscheiden sein. Die Meldungen gehen vorher durch `schwaerze()`.
+
+⚠ **Was die Umstellung NICHT beantwortet:** ob der Rückstand vom 14.09.2026
+*diese* Ursache hatte. Das ist eine Aussage über ein Ereignis, das niemand
+gesehen hat — derselbe Fehlschluss, der in dieser Woche dreimal passiert ist.
+Messbar ist er: `ranglisten.stand_vom` gegen den letzten `ok`-Lauf in
+`api_sync_log` (Abfrage 5). Liegt der Stand deutlich davor, war der Block
+übersprungen.
+
+### ⚠⚠ DER DECKEL WAR RICHTIG, DER LAUF WAR ZU VOLL — und mehr Worker waren LANGSAMER
+
+Gemessen am 14.09.2026, nachdem sieben jsdom-Fälle in den 5000er-Deckel
+liefen. Die Frage lautete: ist der Deckel zu niedrig oder der Lauf zu voll?
+
+**Erste Messung, entscheidend:** die 22 jsdom-Dateien **allein** — 282 Fälle,
+alle grün, kein einziger Timeout, Deckel unverändert 5000 ms.
+
+**Zweite Messung, gegenläufig zur Intuition:**
+
+| | Wanduhr | `environment` | `tests` | Timeouts |
+|---|---|---|---|---|
+| Vorgabe (≈21 Worker auf 22 Kernen) | 97.7 s | **675 s** | **260 s** | **7** |
+| dieselbe, Deckel 20000 | 78.0 s | 603 s | 174 s | 0 |
+| **`--maxWorkers=4`** | 91.5 s | **132 s** | **46 s** | **0** |
+| `--maxWorkers=8` | 80.3 s | — | — | 0 |
+| **`--maxWorkers=12`** | **60.9 s** | — | — | **0** |
+
+> **Die Wanduhr ist bei allen gleich, aber die Arbeit ist bei wenigen Workern
+> vier- bis fünfmal kleiner.** Dieselben Tests laufen mit 4 Workern in 46 s
+> statt 260 s. Sie brechen den Deckel nicht, weil sie langsam sind, sondern
+> weil sie ausgehungert werden.
+
+⚠ **Damit ist die Frage beantwortet: der Deckel ist richtig.** 5000 ms reichen
+für jeden dieser Tests um ein Vielfaches — allein braucht der langsamste
+533 ms.
+
+⚠ ⚠ **UND EIN HÖHERER DECKEL HÄTTE ES VERSTECKT.** Bei 20000 ms ist der Lauf
+grün, die Wanduhr sieht mit 78 s gut aus — und 603 Sekunden `environment`
+stehen daneben, wo niemand hinsieht. **Die Zahl, die den Befund trägt, ist
+nicht die, auf die man schaut.**
+
+⚠ **Und es ist kein Widerspruch zur Entscheidung vom 22.08.2026**, die eine
+feste `maxWorkers`-Zahl ablehnte: dort ging es um eine Zahl, die auf einer
+4-Kern-Prüfkette bremsen würde. Eine **Obergrenze** bremst eine kleinere
+Maschine nie — `min(12, verfügbar)` ist auf `ubuntu-latest` wirkungslos und
+hier die ganze Reparatur.
+
+⚠ **Die Messung ist ein Lauf je Einstellung.** Dass die Vorgabe manchmal grün
+ist (zweimal am selben Tag), zeigt, dass sie auf der Kante sitzt — nicht, dass
+sie trägt. Bei 4, 8 und 12 war sie es nie.
+
 ### ⚠⚠ ZWEI URSACHEN, DIE VON AUSSEN GLEICH AUSSEHEN — und die Probe hat beide Zahlen in der Hand
 
 14.09.2026. Die Verbandswebsite zeigt für FC Herrliberg 1 vier Spiele, die

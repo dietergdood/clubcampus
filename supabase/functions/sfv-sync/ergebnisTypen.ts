@@ -328,7 +328,30 @@ export interface LaufErgebnis {
   status: "ok" | "warnung" | "fehler";
   meldung: string;
   spiele: { neu: number; aktualisiert: number; ohne_team: number; nicht_mehr_geliefert: number };
-  ranglisten: { geschrieben: number; entfernt: number; gruppen: number };
+  /**
+   * ⚠ `gelaufen` unterscheidet „nicht gelaufen" von „nichts geliefert".
+   *
+   * Bis zum 14.09.2026 hiess `geschrieben: 0` beides — und weil der
+   * Ranglisten-Block hinter vier Wuerfen des Spielplans lag, war „nicht
+   * gelaufen" der haeufigere Fall. Auf der Website stand dann eine Tabelle,
+   * die einen Spieltag nachhinkte, und nichts sagte, dass sie gar nicht
+   * geschrieben wurde.
+   */
+  ranglisten: {
+    geschrieben: number; entfernt: number; gruppen: number; gelaufen: boolean;
+  };
+  /**
+   * Fehler EINZELNER Bloecke, die den Lauf nicht mehr ganz abbrechen.
+   *
+   * ⚠ ⚠ NICHT VERSCHLUCKT, sondern eingegrenzt. Der Lauf endet weiterhin
+   * auf `fehler`, und die Meldung nennt den Block beim Namen. Was sich am
+   * 14.09.2026 geaendert hat, ist nur die REICHWEITE: ein Fehler nimmt
+   * nicht mehr mit, was ihn nichts angeht.
+   *
+   * ⚠ Die Meldungen gehen durch `schwaerze()` — eine Datenbankmeldung kann
+   * einen Wert nennen, und ein neues Feld erbt jeden Ausgang des Objekts.
+   */
+  blockfehler: string[];
   verwaiste_zuordnungen: number;
   /**
    * Die Gegenrichtung: Mannschaften, die der VERBAND fuehrt und denen in
@@ -410,6 +433,17 @@ export function fuersProtokoll(erg: LaufErgebnis): Record<string, unknown> {
     ...(erg.feldhoheit_weggeschnitten?.length
       ? { feldhoheit_weggeschnitten: erg.feldhoheit_weggeschnitten } : {}),
     derbys: erg.derbys,
+    /* ⚠ ⚠ AUSDRUECKLICH AUFGEZAEHLT, nicht mitgereist. `blockfehler` ist am
+       14.09.2026 dazugekommen, und ein neues Feld erbt jeden Ausgang des
+       Objekts — genau so gingen am 21.08.2026 903 Klarnamen ins Protokoll.
+       Hier ist der Ausgang gewollt: ein Block, der gescheitert ist, gehoert
+       ins Protokoll, sonst ist er von einem uebersprungenen nicht zu
+       unterscheiden.
+
+       ⚠ Die Meldungen sind SCHON geschwaerzt (`sync.ts`, im catch) — eine
+       Datenbankmeldung kann einen Wert nennen. Und nur wenn es welche gibt:
+       eine leere Liste, die jedes Mal dasteht, wird nicht gelesen. */
+    ...(erg.blockfehler.length ? { blockfehler: erg.blockfehler } : {}),
   };
   if (erg.saison) raus.saison = erg.saison;
   if (erg.logos) raus.logos = erg.logos;

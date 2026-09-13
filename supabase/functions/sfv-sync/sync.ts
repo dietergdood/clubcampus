@@ -18,6 +18,9 @@ import {
 import { schneideAufFeldhoheit } from "../../../src/domains/sfv/feldhoheit.ts";
 import { laufeMatchdaten, laufeLogos, UNZUGEORDNET_WARNUNG } from "./matchdatenLauf.ts";
 import { HOECHSTENS_SPIELE } from "./matchdaten.ts";
+/* ⚠ Fuer die Blockfehler: eine Datenbankmeldung kann eine
+   Verbindungszeichenkette oder einen Wert nennen. */
+import { schwaerze } from "./protokoll.ts";
 import type { LaufErgebnis } from "./ergebnisTypen.ts";
 import type { SfvZugang, SfvTeam, SfvSpiel } from "./sfvApi.ts";
 
@@ -174,7 +177,8 @@ export async function laufeSync(
   const erg: LaufErgebnis = {
     status: "ok", meldung: "",
     spiele: { neu: 0, aktualisiert: 0, ohne_team: 0, nicht_mehr_geliefert: 0 },
-    ranglisten: { geschrieben: 0, entfernt: 0, gruppen: 0 },
+    ranglisten: { geschrieben: 0, entfernt: 0, gruppen: 0, gelaufen: false },
+    blockfehler: [],
     verwaiste_zuordnungen: 0, sfv_teams_ohne_zuordnung: 0,
     sfv_teams_ohne_zuordnung_aktiv: 0,
     teams_ohne_spiele: { anzahl: 0, teams: [], meldepflichtig: false }, derbys: 0,
@@ -333,9 +337,38 @@ export async function laufeSync(
     }
   }
 
-  /* ── Rangliste ── */
-  if (nur !== "spielplan") {
+  /* ── Rangliste ──────────────────────────────────────────────────────────
+     ⚠ ⚠  IN EINEM EIGENEN try, UND DAS IST DER BEFUND VOM 14.09.2026.
+
+     Vor diesem Block liegen vier Wuerfe — Teams nicht lesbar, `sync_felder`
+     nennt keine Spalten, `sync_felder` nennt unberechnete Spalten, Spiele
+     speichern gescheitert. **Jeder von ihnen ist fuer den Spielplan richtig
+     und fuer die Rangliste gegenstandslos:** sie kennt weder `namen` noch
+     die Feldhoheit von `spiele`. Sie braucht die Rohzeilen, die verein_id
+     und die Saison.
+
+     Trotzdem hat jeder dieser Wuerfe sie stillschweigend mitgenommen. Auf
+     der Website steht dann eine Tabelle, die einen Spieltag nachhinkt — und
+     nichts sagt, dass sie gar nicht geschrieben wurde. **Ein Ausfall in der
+     Verkleidung einer Datenlage**, und zwar an Daten, die mit der Ursache
+     nichts zu tun haben.
+
+     ⚠ Belegter Praezedenzfall: am 10.09.2026 landete `ht_resultat` in der
+     falschen `sync_felder`-Liste, und jeder Lauf endete am dritten Wurf.
+     In diesem Fenster wurde auch keine einzige Ranglistenzeile
+     geschrieben — bemerkt hat es niemand, weil das Symptom dem Spielplan
+     zugeschrieben wurde.
+
+     ⚠ ⚠ DER WURF WIRD NICHT VERSCHLUCKT. Er wird gebunden, benannt und in
+     `erg.blockfehler` gesammelt; der Lauf endet auf `fehler`. Was sich
+     aendert, ist nur die REICHWEITE: ein Fehler nimmt nicht mehr mit, was
+     ihn nichts angeht. */
+  if (nur !== "spielplan") try {
     const roh = await holeRangliste(zugang, token, saison.id);
+    /* ⚠ ERST NACH DEM ABRUF. Davor gesetzt hiesse „wir haben es
+       versucht“, und das ist nicht dieselbe Aussage wie „wir haben eine
+       Antwort“. */
+    erg.ranglisten.gelaufen = true;
     const zeilen = roh.map((r) =>
       bildeRanglistenZeile(r, v.verein_id, saison.id, jetzt, saison.name ?? ""));
     erg.ranglisten.geschrieben = zeilen.length;
@@ -369,6 +402,12 @@ export async function laufeSync(
         erg.ranglisten.entfernt = zuLoeschen.length;
       }
     }
+  } catch (e) {
+    /* ⚠ GEBUNDEN UND BENANNT, nie leer. Ein leerer catch machte aus dem
+       Ausfall eine Datenlage — „der Verband liefert keine Tabelle" saehe
+       dann aus wie „der Abruf ist gescheitert". */
+    erg.blockfehler.push(schwaerze(
+      `Rangliste: ${e instanceof Error ? e.message : String(e)}`));
   }
 
   /* ── Matchdaten ── */
@@ -460,6 +499,16 @@ export async function laufeSync(
   }
 
   if (erg.verwaiste_zuordnungen > 0 || erg.spiele.nicht_mehr_geliefert > 0) erg.status = "warnung";
+  /* ⚠ ⚠ EIN GESCHEITERTER BLOCK IST EIN FEHLER, keine Warnung — und er
+     ueberstimmt jede Warnung. Was sich am 14.09.2026 geaendert hat, ist die
+     Reichweite des Wurfs, nicht seine Lautstaerke. */
+  if (erg.blockfehler.length) erg.status = "fehler";
+  /* ⚠ „nicht gelaufen" gehoert in die MELDUNG, nicht nur in ein Feld. Wer
+     die Kachel liest, sieht sonst „Rangliste 0 Zeilen" und haelt es fuer
+     eine Datenlage. */
+  if (!erg.ranglisten.gelaufen && nur !== "spielplan") {
+    teile.push("⚠ Rangliste NICHT gelaufen — das ist etwas anderes als null Zeilen");
+  }
 
   /* ZWEI VERSCHIEDENE LAGEN, die vorher denselben Text bekamen.
 

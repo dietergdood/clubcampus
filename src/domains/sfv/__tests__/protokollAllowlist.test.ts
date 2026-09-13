@@ -27,7 +27,8 @@ const LAUF: LaufErgebnis = {
   status: "ok",
   meldung: "Matchdaten 10 Spiel(e)",
   spiele: { neu: 1, aktualisiert: 2, ohne_team: 0, nicht_mehr_geliefert: 0 },
-  ranglisten: { geschrieben: 4, entfernt: 0, gruppen: 1 },
+  ranglisten: { geschrieben: 4, entfernt: 0, gruppen: 1, gelaufen: true },
+  blockfehler: [],
   verwaiste_zuordnungen: 0,
   sfv_teams_ohne_zuordnung: 0,
   sfv_teams_ohne_zuordnung_aktiv: 0,
@@ -108,6 +109,9 @@ describe("fuersProtokoll", () => {
       "spiele", "status", "teams_ohne_spiele",
       "verwaiste_zuordnungen",
     ]);
+    /* ⚠ `blockfehler` steht hier NICHT, weil die Attrappe keinen
+       hat — der Fall darunter hält fest, dass es erscheint, sobald
+       einer da ist. */
   });
 
   it("laesst saison und logos weg, wenn der Lauf sie nicht hatte", () => {
@@ -336,5 +340,48 @@ describe("namenFuersProtokoll", () => {
     /* Die Gegenrichtung: eine Allowlist, die alles wegliesse, wäre
        genauso falsch. Der Lauf muss im Protokoll auffindbar bleiben. */
     expect(namenFuersProtokoll(NAMEN).namen_gefunden).toBe(2);
+  });
+});
+
+/* ═══════════════════════════════════════════════════════════════
+   blockfehler — ein Fehler, der nicht mehr mitnimmt, was ihn
+   nichts angeht.
+
+   ⚠ ANLASS, 14.09.2026. Der Ranglisten-Block lag hinter vier
+   Würfen des Spielplans — Teams nicht lesbar, `sync_felder` leer,
+   `sync_felder` nennt Unberechnetes, Spiele speichern gescheitert.
+   Jeder davon ist für den Spielplan richtig und für die Rangliste
+   gegenstandslos: sie kennt weder `namen` noch die Feldhoheit.
+
+   Auf der Website stand dann eine Tabelle, die einen Spieltag
+   nachhinkte — und nichts sagte, dass sie gar nicht geschrieben
+   wurde.
+   ═══════════════════════════════════════════════════════════════ */
+describe("blockfehler und ranglisten.gelaufen", () => {
+  it("steht NICHT im Protokoll, wenn es keinen gibt", () => {
+    /* ⚠ Eine leere Liste, die jedes Mal dasteht, wird nicht
+       gelesen — und dann fällt der eine Fall auch nicht auf. */
+    expect(fuersProtokoll(LAUF)).not.toHaveProperty("blockfehler");
+  });
+
+  it("steht im Protokoll, sobald ein Block gescheitert ist", () => {
+    /* ⚠ Der Ausgang ist GEWOLLT und deshalb aufgezählt: ein Block,
+       der gescheitert ist, muss von einem übersprungenen zu
+       unterscheiden sein. */
+    const mit: LaufErgebnis = { ...LAUF, blockfehler: ["Rangliste: 42703"] };
+    expect(fuersProtokoll(mit).blockfehler).toEqual(["Rangliste: 42703"]);
+  });
+
+  it("`gelaufen` reist mit — sonst heisst 0 Zeilen zweierlei", () => {
+    /* ⚠ Bis zum 14.09.2026 hiess `geschrieben: 0` sowohl „nichts
+       geliefert" als auch „nie gelaufen". Ohne das Kennzeichen ist
+       im Protokoll nicht zu sehen, welches von beiden. */
+    const nie: LaufErgebnis = {
+      ...LAUF,
+      ranglisten: { geschrieben: 0, entfernt: 0, gruppen: 0, gelaufen: false },
+    };
+    const r = fuersProtokoll(nie).ranglisten as Record<string, unknown>;
+    expect(r.gelaufen).toBe(false);
+    expect(r.geschrieben).toBe(0);
   });
 });
