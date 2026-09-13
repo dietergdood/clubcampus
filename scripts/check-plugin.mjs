@@ -223,11 +223,26 @@ const REGELN = [
          Regel, die nur Verbotenes zaehlt, ist bei der leeren Menge
          zufrieden. */
       const hatMail = f.texte.includes("mail");
-      return hatMail ? verboten : [...verboten, "liest gar kein 'mail' mehr"];
+      /* ⚠ ⚠ UND DER WEG, NICHT NUR DER NAME — seit 0.9.25. `mail` gibt es
+         drueben zweimal (fch_person und die Taxonomie fch_funktion), und
+         der Name loest dann unvorhersehbar auf. Gelesen wird ueber
+         `cc_feld_schluessel()`, das bei Mehrdeutigkeit verweigert.
+
+         ⚠ Ohne diese Haelfte waere die Regel gruen, wenn jemand auf
+         `get_post_meta( $id, 'mail' )` zurueckfaellt — der Name stimmte
+         dann, und der Weg nicht. */
+      const ueberSchluessel = (f.rufe ?? []).includes("cc_feld_schluessel");
+      const fehlt = [];
+      if (!hatMail) fehlt.push("liest gar kein 'mail' mehr");
+      if (!ueberSchluessel) {
+        fehlt.push("liest nicht ueber cc_feld_schluessel() — der Name ist mehrdeutig");
+      }
+      return [...verboten, ...fehlt];
     },
     kontrolle: "<?php function cc_personen_lage() { "
       + "$a = get_post_meta( 1, 'email', true ); return $a; }",
-    erwarteImKontrollfall: 2,
+    /* 'email' verboten + kein 'mail' + nicht ueber den Schluessel = 3 */
+    erwarteImKontrollfall: 3,
   },
 
   /* ⚠⚠ DIE ZUSAGE, DIE AM HAEUFIGSTEN BEZWEIFELT WURDE — und die bis zum

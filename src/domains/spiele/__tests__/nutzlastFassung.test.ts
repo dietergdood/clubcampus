@@ -52,30 +52,34 @@ describe("NUTZLAST_FASSUNG hält mit den Feldern Schritt", () => {
   /* ⚠ ⚠  WER HIER ETWAS ÄNDERT, ÄNDERT `NUTZLAST_FASSUNG` MIT.
      Sonst merkt der Export nicht, dass es etwas Neues zu senden gibt —
      dreimal passiert: `liga`, `aufstellung`, und die drei
-     Verlaufsfelder am 11.09.2026. */
-  const VERLAUF_FASSUNG_3 = [
-    "minute", "nummer", "ereignis_zusatz", "art", "seite", "text",
-    "stand", "klub", "sfv_person_id", "ein_nummer",
+     Verlaufsfelder am 11.09.2026.
+
+     ⚠ Fassung 4 (13.09.2026): `ohne_person` — das Merkmal statt des
+     Rueckfalltexts „Unser Team“. Der Waechter ist dabei rot geworden,
+     bevor jemand daran denken musste. */
+  const VERLAUF_FASSUNG_4 = [
+    "minute", "nummer", "ereignis_zusatz", "ohne_person", "art", "seite",
+    "text", "stand", "klub", "sfv_person_id", "ein_nummer",
   ];
 
-  const AUFSTELLUNG_FASSUNG_3 = [
+  const AUFSTELLUNG_FASSUNG_4 = [
     "seite", "sfv_person_id", "nummer", "spieler", "position", "rolle",
     "ist_captain", "von_minute", "bis_minute", "spielzeit", "marken",
   ];
 
-  it("⚠⚠ WpVerlaufZeile trägt genau die Felder der Fassung 3", () => {
-    expect(felderVon("WpVerlaufZeile")).toEqual(VERLAUF_FASSUNG_3);
+  it("⚠⚠ WpVerlaufZeile trägt genau die Felder der Fassung 4", () => {
+    expect(felderVon("WpVerlaufZeile")).toEqual(VERLAUF_FASSUNG_4);
   });
 
-  it("⚠⚠ WpAufstellungZeile trägt genau die Felder der Fassung 3", () => {
-    expect(felderVon("WpAufstellungZeile")).toEqual(AUFSTELLUNG_FASSUNG_3);
+  it("⚠⚠ WpAufstellungZeile trägt genau die Felder der Fassung 4", () => {
+    expect(felderVon("WpAufstellungZeile")).toEqual(AUFSTELLUNG_FASSUNG_4);
   });
 
-  it("die Fassung steht auf 3", () => {
+  it("die Fassung steht auf 4", () => {
     /* Der zweite Anker: wer die Listen oben anpasst und die Zahl
        vergisst, wird hier rot. Beide Fälle zusammen erzwingen, dass
        Feldliste und Fassung gemeinsam wandern. */
-    expect(NUTZLAST_FASSUNG).toBe(3);
+    expect(NUTZLAST_FASSUNG).toBe(4);
   });
 
   it("die Konstante steht in derselben Datei wie die Felder", () => {

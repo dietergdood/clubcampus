@@ -4,7 +4,7 @@
  *
  * Plugin Name: ClubCampus Export
  * Description: Nimmt Spielplan, Verlauf und Ranglisten aus ClubCampus entgegen.
- * Version:     0.9.24
+ * Version:     0.9.26
  *
  * ⚠ ⚠  STAND 10.09.2026: DIESE DATEI **IST** DER EMPFAENGER  ⚠ ⚠
  *
@@ -141,6 +141,18 @@ const CC_ROUTE      = 'clubcampus/v1';
    `/status` fuer zwei verschiedene Fassungen dieselbe Zahl, und die eine
    Auskunft, die „laeuft drueben der neue Empfaenger?" beantworten koennte,
    beantwortet sie nicht mehr.
+
+   0.9.26 (13.09.2026): `ohne_person` im Repeater `verlauf` — das Merkmal
+   statt des Rueckfalltexts „Unser Team“. Nutzlast-Fassung 4.
+   ⚠  Drueben muss das Unterfeld angelegt werden, sonst verwirft es ACF
+      still — `unterfelder_ohne_acf` meldet es dann.
+
+   0.9.25 (13.09.2026): die E-Mail wird ueber den FELDSCHLUESSEL gelesen,
+   nicht ueber den Namen. `mail` gibt es zweimal — am fch_person und an
+   der Taxonomie fch_funktion; das zweite gehoert einem Amt.
+   ⚠  Aufgeloest ueber cc_feld_schluessel(), nicht ueber eine importierte
+      Konstante: die Funktion verweigert bei Mehrdeutigkeit, und ein fremder
+      Schluessel im Quelltext waere eine zweite Wahrheit, die veraltet.
 
    0.9.24 (12.09.2026): zwei falsche Feldnamen im Personen-Bestand — 'email'
    heisst 'mail' (Fields/person.php:302), und 'geburtsdatum' gibt es an der
@@ -511,7 +523,7 @@ const CC_ROUTE      = 'clubcampus/v1';
    einander), `autoload` wird nach dem Schreiben geprueft und notfalls
    berichtigt, `/status` nennt Empfaenger, Version, Metaschluessel und die
    Team-Zuordnung. */
-const CC_VERSION    = '0.9.24';
+const CC_VERSION    = '0.9.26';
 const CC_TYP_SPIEL  = 'fch_spiel';
 const CC_TYP_TEAM   = 'fch_team';
 /* ⚠ NUR ZUM ZAEHLEN. Dieses Plugin legt keine Person an und aendert
@@ -751,6 +763,19 @@ const CC_VERLAUF_FELDER = array(
 	   ⚠ Drueben `f_s_v_zusatz`, ein `select` mit `allow_null`. Es kennt
 	   genau zwei Werte; was hier nicht passt, kommt als leerer Text. */
 	'ereignis_zusatz',
+	/* ⚠ ⚠  DAS MERKMAL STATT DES NAMENS — Nutzlast-Fassung 4, 13.09.2026.
+	   Vier Verlaufszeilen trugen `spieler: "Unser Team"`, und das ist unser
+	   Rueckfalltext fuer „eigenes Ereignis, kein zugeordneter Name, keine
+	   Rueckennummer" — keine Mannschaftsstrafe.
+
+	   ⚠ Die Gegenseite haette `"Unser Team"` als ZEICHENKETTE vergleichen
+	   muessen, und beim ersten Umformulieren waere es gebrochen. Ein Name als
+	   Kennzeichen prueft eine Schreibweise.
+
+	   ⚠ Das Feld behauptet nur, was wir wissen: hier steht kein Mensch, den
+	   wir benennen koennen. NICHT `mannschaftsstrafe` — dafuer haben wir kein
+	   Merkmal. */
+	'ohne_person',
 );
 
 /**
@@ -2298,7 +2323,34 @@ function cc_personen_lage(): array {
 		   ⚠ Gelesen wird ueber `get_post_meta` und nicht ueber
 		   `cc_feld_schluessel()`: hier wird nichts geschrieben. Wer das
 		   aendert, aendert die Begruendung mit. */
-		$mail = strtolower( trim( (string) get_post_meta( (int) $id, 'mail', true ) ) );
+		/* ⚠ ⚠  UEBER DEN SCHLUESSEL, NICHT UEBER DEN NAMEN — 13.09.2026.
+		   Der Theme-Chat hat gemessen: `mail` gibt es ZWEIMAL, einmal am
+		   fch_person (`f_p_mail`) und einmal an der Taxonomie fch_funktion
+		   (`f_fn_mail`). Das zweite gehoert einem AMT, nicht einem Menschen.
+
+		   ⚠ Es liegt in `termmeta`, und `get_post_meta` liest `postmeta` —
+		   erreichen konnte es uns also nicht. **Aber das ist ein Zufall der
+		   Speicherorte und keine Absicherung:** kaeme ein zweites `mail` je an
+		   denselben Beitragstyp, traefe der Name unvorhersehbar. Genau dieser
+		   Fall hat am 10.09.2026 einen Abend gekostet.
+
+		   ⚠ Aufgeloest wird ueber `cc_feld_schluessel()`, nicht ueber eine
+		   importierte Konstante `f_p_mail`: die Funktion liest die Feldgruppen
+		   DIESES Beitrags und **verweigert bei Mehrdeutigkeit**. Ein fremder
+		   Schluessel im Quelltext waere eine zweite Wahrheit, die veraltet,
+		   ohne dass etwas fehlschlaegt.
+
+		   ⚠ Findet sich kein Schluessel, wird NICHT auf den Namen
+		   ausgewichen. Dann bleibt der Hash leer, `merkmale_nutzbar`
+		   meldet 0, und `ohne_feldschluessel` nennt das Feld — sichtbar
+		   statt still. */
+		$mailKey = cc_feld_schluessel( (int) $id, 'mail' );
+		if ( null === $mailKey ) {
+			$GLOBALS['cc_ohne_feldschluessel']['mail'] = true;
+		}
+		$mail = ( null === $mailKey )
+			? ''
+			: strtolower( trim( (string) get_field( $mailKey, (int) $id ) ) );
 		/* ⚠ Bleibt leer, solange es kein Jahrgangsfeld gibt. Die Zerlegung
 		   steht hier, damit sie am Tag X nicht neu erfunden wird. */
 		$geb  = '';

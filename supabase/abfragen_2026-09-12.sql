@@ -85,3 +85,46 @@ select p.id,
    and p.geburtsdatum is not null
    and extract(year from p.geburtsdatum) >= 2019
  order by p.geburtsdatum desc;
+
+
+-- ── 4 · Trägt dieselbe Adresse mehrere Personen? ───────────────────────
+--  ⚠ DIE FRAGE HINTER PUNKT 3. Stünde bei Junioren die Adresse eines
+--    Elternteils, hätten zwei Geschwister denselben E-Mail-Hash — und der
+--    Abgleich fände einen Treffer, der richtig aussieht und eine ANDERE
+--    Person bezeichnet. Das ist gefährlicher als null Treffer.
+--
+--  ⚠ Diese Abfrage braucht KEINE Antwort von drüben: mehrere Personen
+--    unter einer Adresse sind bei uns messbar, und sie sind der direkte
+--    Beleg. Die Messung des Theme-Chats über seine 129 Personenkarten kann
+--    es nicht beantworten — dort stehen nur Betreuer, keine Junioren.
+select lower(trim(p.email))                     as adresse_klein,
+       count(*)                                 as personen,
+       count(*) filter (where m.mitgliedtyp = 'Juniorenmitglied') as davon_junioren
+  from public.personen p
+  left join public.mitglieder m on m.person_id = p.id and m.aktiv
+ where p.verein_id = (select id from public.vereine where slug = 'fcherrliberg')
+   and coalesce(p.email, '') <> ''
+ group by 1
+having count(*) > 1
+ order by 2 desc, 1
+ limit 25;
+
+
+-- ── 5 · Wie viele Gegnerzeilen tragen keinen Klubnamen? ────────────────
+--  ⚠ PUNKT 5a. Wir senden `klub` bei Gegnern aus `gegner_club_name`, und
+--    der Sync füllt es (`eigen ? null : text(e.teamName)`). Eine leere
+--    Anzeige kann deshalb nur heissen, dass die Spalte leer IST.
+--
+--  ⚠ Nach `erstmals_gesehen` gruppiert, weil die wahrscheinlichste
+--    Erklärung ein Altbestand ist: Gegnerzeilen haben ihre Felder
+--    nacheinander bekommen, und alte Zeilen tragen die alte Form. Steht
+--    die Leere an alten Tagen und nicht an neuen, ist es der Nachlauf und
+--    kein Defekt.
+select date(e.erstmals_gesehen)                            as erstmals,
+       count(*)                                            as fremde_zeilen,
+       count(*) filter (where coalesce(e.gegner_club_name, '') = '') as ohne_klub
+  from public.spiel_ereignisse e
+ where e.verein_id = (select id from public.vereine where slug = 'fcherrliberg')
+   and e.ist_eigener = false
+ group by 1
+ order by 1;

@@ -13126,3 +13126,124 @@ eine wahre.**
 von Hand.** Umgekehrt füllt jemand 308 Zuordnungen und die Vorschau sagt
 weiter null — der teuerste denkbare Ausgang, weil dann die Zuordnung selbst
 als gescheitert gälte.
+
+### ⚠⚠ „UNSER TEAM" WAR EIN NAME ALS KENNZEICHEN — jetzt ist es ein Merkmal
+
+Befund des Theme-Chats, 13.09.2026: vier Verlaufszeilen tragen
+`spieler: "Unser Team"` — 4 von 994, alle gelbe Karten, alle auf unserer
+Seite. Seine Frage: ist das unser Kennzeichen für eine Mannschaftsstrafe?
+
+**Nein.** `"Unser Team"` ist der Rückfalltext aus `beschreibeWer()` für
+genau einen Zustand: eigenes Ereignis, kein zugeordneter Name, keine
+Rückennummer. Wer keine Nummer trägt, ist nach aller Wahrscheinlichkeit
+Trainer oder Betreuer — bei den eigenen Verwarnungen waren es am
+11.09.2026 fünf von fünf.
+
+⚠ **Seine Bitte war richtig, und der Grund steht in diesem Papier ein
+halbes Dutzend Mal:** die Gegenseite hätte `"Unser Team"` als
+**Zeichenkette** vergleichen müssen, und beim ersten Umformulieren wäre es
+gebrochen. *Ein Filter auf einen NAMEN prüft eine Schreibweise.*
+
+Seit Nutzlast-Fassung 4 trägt die Zeile `ohne_person: boolean`, gesetzt aus
+derselben Bedingung wie der Text — nicht aus dem Text zurückgerechnet.
+
+⚠ ⚠ **UND DAS FELD BEHAUPTET NUR, WAS WIR WISSEN.** Es heisst nicht
+`mannschaftsstrafe`: dafür haben wir kein Merkmal, und der Verband liefert
+keines. Es sagt „hier steht kein Mensch, den wir benennen können" — was die
+Website daraus macht, ist ihre Entscheidung. **Ein Feldname, der eine
+Deutung behauptet, wird beim nächsten Mal geglaubt.**
+
+⚠ Der Fassungswächter ist dabei von selbst rot geworden, bevor jemand an
+`NUTZLAST_FASSUNG` denken musste — genau dafür gibt es ihn.
+
+### ⚠ Die E-Mail über den Feldschlüssel — und warum NICHT über seinen Schlüssel
+
+Gemessen vom Theme-Chat, 13.09.2026: `mail` gibt es drüben **zweimal** —
+`f_p_mail` am `fch_person` und `f_fn_mail` an der Taxonomie
+`fch_funktion`. Das zweite gehört einem **Amt**, nicht einem Menschen.
+
+⚠ **Erreichen konnte es uns nicht:** das Taxonomie-Feld liegt in
+`termmeta`, und `get_post_meta()` liest `postmeta`. **Aber das ist ein
+Zufall der Speicherorte und keine Absicherung** — käme je ein zweites
+`mail` an denselben Beitragstyp, träfe der Name unvorhersehbar. Genau
+dieser Fall hat am 10.09.2026 einen Abend gekostet.
+
+Gelesen wird seit 0.9.25 über `cc_feld_schluessel()`.
+
+⚠ ⚠ **UND AUSDRÜCKLICH NICHT ÜBER DIE KONSTANTE `f_p_mail`, die er
+mitgeliefert hat.** Ein fremder Schlüssel im Quelltext wäre eine zweite
+Wahrheit: er veraltet, wenn die Feldgruppe neu aufgebaut wird, und dann
+liest die Function ins Leere, ohne dass etwas fehlschlägt.
+`cc_feld_schluessel()` liest die Feldgruppen **dieses Beitrags** und
+**verweigert bei Mehrdeutigkeit** — es ist damit das einzige, was den Fall
+auch melden würde, den er beschreibt.
+
+⚠ Findet sich kein Schlüssel, wird **nicht** auf den Namen ausgewichen.
+Dann bleibt der Hash leer, `merkmale_nutzbar` meldet 0 und
+`ohne_feldschluessel` nennt das Feld — sichtbar statt still.
+
+**Die 28. Regel prüft seither den WEG, nicht nur den Namen.** Ohne diese
+Hälfte wäre sie grün, wenn jemand auf `get_post_meta($id, 'mail')`
+zurückfällt: der Name stimmte dann, und der Weg nicht. Gegengeprobt →
+*„liest nicht über cc_feld_schluessel() — der Name ist mehrdeutig"*.
+
+### ⚠⚠ SEINE MESSUNG KANN DIE JUNIOREN-FRAGE NICHT BEANTWORTEN — seine Daten haben keine
+
+Zu Punkt 3, 13.09.2026. Die Frage lautet: steht in `mail` bei Junioren die
+Adresse eines Elternteils? Dann hätten zwei Geschwister denselben Hash, der
+Abgleich fände einen Treffer, **und er sähe richtig aus.**
+
+> Ein Merkmal, das nicht die Person bezeichnet, die es tragen soll, ist ein
+> falscher Schlüssel — und einer, der trifft, ist schlimmer als einer, der
+> nicht trifft.
+
+Er bietet eine reine Zählung auf dem Produktivsystem an, ohne
+Datenweitergabe. **Dagegen ist nichts zu sagen:** es ist eine Zählung über
+seine eigenen Daten, auf seinem eigenen System, und nichts verlässt es.
+
+⚠ ⚠ **SIE KANN DIE FRAGE ABER NICHT BEANTWORTEN, UND DAS IST DER PUNKT.**
+Seine eigene Messung über 71 Personenkarten nennt die Lücke selbst: 1.
+Mannschaft 23 Spieler, **alle 21 Junioren- und Juniorinnenteams null.** Es
+sind Betreuer. Eine Zählung geteilter Adressen unter Betreuern findet
+nichts — und beweist über Junioren nichts, weil dort keine stehen.
+
+**Die Frage ist auf UNSERER Seite messbar, und nur dort:** 912 von 914
+Personen tragen eine Adresse, darunter 388 Juniorenmitglieder — und ein
+Zehnjähriger hat keine eigene. Stünde bei mehreren Personen dieselbe
+Adresse, ist das der direkte Beleg, und er braucht **keine** Antwort von
+drüben.
+
+Die Abfrage steht als Nummer 4 in `supabase/abfragen_2026-09-12.sql` und
+zählt mit, wie viele der Doppelten Juniorenmitglieder sind.
+
+⚠ **Die Reihenfolge ist damit: erst unsere Zählung, dann seine.** Seine
+bestätigt höchstens, was unsere zeigt; umgekehrt geht es nicht. **Eine
+Messung auf der Seite, die den Fall nicht enthält, ist keine Gegenprobe,
+sondern eine leere Menge** — dieselbe Familie wie „129 kennen wir nicht".
+
+### ⚠ 542 gegen 227 — zwei Zahlen über zwei verschiedene Mengen
+
+Punkt 5a, 13.09.2026: er meldet `klub` an Gegnerzeilen als leer, 227 von
+227 — und hatte am Vormittag 542 von 542 gemeldet.
+
+Gemessen auf unserer Seite: wir senden es. `bildeVerlauf()` setzt
+`klub: wir ? unserKlub : (e.gegner_club_name ?? "")`, und der Sync füllt
+die Spalte (`eigen ? null : text(e.teamName)`). **Eine leere Anzeige kann
+deshalb nur heissen, dass die Spalte leer IST** — nicht, dass wir sie
+weglassen.
+
+⚠ **Und die beiden Zahlen widersprechen sich nicht, sie zählen
+Verschiedenes.** 542 ist die Zahl der fremden Zeilen im Bestand (gemessen
+11.09.2026), 227 ist, was in einer Nutzlast ankam. Zwei Mengen, zwei
+Zahlen — und ohne die Bezugsgrösse daneben sieht es aus wie ein
+Widerspruch.
+
+**Die wahrscheinlichste Erklärung ist der Altbestand**, und sie ist
+prüfbar: Gegnerzeilen haben ihre Felder nacheinander bekommen (bis zum
+10.09.2026 filterte ein `eigen ?` die Nummer weg), und alte Zeilen tragen
+die alte Form. Abfrage 5 gruppiert deshalb nach `erstmals_gesehen`:
+**steht die Leere an alten Tagen und nicht an neuen, ist es der Nachlauf
+und kein Defekt.**
+
+⚠ Das ist eine Vermutung mit einer Abfrage daneben, keine Erklärung. Sie
+gehört gemessen, bevor jemand am Sync sucht.

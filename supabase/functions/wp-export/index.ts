@@ -263,6 +263,9 @@ async function alleSeiten<T>(
  *    Auskunft, die `laeuft drueben mein Deploy?` beantworten koennte,
  *    beantwortet sie nicht mehr.
  *
+ *    51  13.09.2026  sfv_zuordnung wird gejoint (die Achse ist
+ *                    angeschlossen statt hart null); ohne_person
+ *                    im Verlauf, Nutzlast-Fassung 4
  *    50  12.09.2026  die Jahrgangs-Ebene ausgebaut (gemessen tot);
  *                    ordneEin bleibt, ist aber ohne Grundlage
  *    49  12.09.2026  unsere_nutzbar neben drueben_nutzbar;
@@ -276,7 +279,7 @@ async function alleSeiten<T>(
  *    46  12.09.2026  Durchreiche von personen/teams/unterfelder/
  *                    geschwister, nichtDurchgereicht(), diese Angabe
  */
-const FUNCTION_FASSUNG = 50;
+const FUNCTION_FASSUNG = 51;
 
 const AKTIONEN = ["probe", "export", "bestand", "status", "ranglisten"];
 
@@ -1034,6 +1037,46 @@ async function holeKandidaten(
     "alle Personen",
   );
 
+  /* ⚠ ⚠  DIE BRUECKE, UND SIE HAT BIS ZUM 13.09.2026 GEFEHLT.
+     `sfv_person_id` stand hier hart auf `null`, mit dem Kommentar „bis
+     `sfv_zuordnung` gefuellt ist". **Der Satz behauptete einen Mechanismus,
+     der danach greift — und es griff nichts:** `sfv_zuordnung` wurde im
+     ganzen Projekt von einer Stelle gelesen, und das war `person-loeschen`.
+
+     Waere die Tabelle gefuellt worden, haette die Vorschau weiter `null`
+     gesendet, und niemand haette es gemerkt: die Null sieht danach genauso
+     aus wie davor. **Dann waere die Zuordnung selbst als gescheitert
+     gegolten** — deshalb erst der Join, dann der Durchgang von Hand.
+
+     ⚠ Solange die Tabelle leer ist, aendert das keine einzige Zahl. Es
+     macht aus einer falschen Zusicherung eine wahre.
+
+     ⚠ Der Weg geht ueber `mitglieder`, nicht ueber `personen`:
+     `sfv_zuordnung` traegt eine `mitglied_id`, und eine Person kann mehrere
+     Mitgliedschaften gehabt haben. Gelesen wird deshalb Person →
+     Mitgliedschaft → Zuordnung. */
+  const zuordnung = new Map<string, number>();
+  {
+    const zRes = await db.from("sfv_zuordnung")
+      .select("sfv_person_id, mitglieder!inner(person_id)")
+      .eq("verein_id", vereinId);
+    /* ⚠ `error` lesen, nicht nur `data`: eine gescheiterte Abfrage saehe
+       sonst aus wie „es gibt keine Zuordnung" — also genau wie der
+       Zustand, den sie beheben soll. Aus einem Ausfall wuerde eine
+       Datenlage. */
+    if (zRes.error) {
+      throw new Error(`SFV-Zuordnung nicht lesbar: ${meldung(zRes.error)}`);
+    }
+    for (const z of (zRes.data ?? []) as unknown as
+         { sfv_person_id: number; mitglieder: { person_id: string } | null }[]) {
+      const pid = z.mitglieder?.person_id;
+      /* ⚠ Die ERSTE gewinnt, und das ist eine Entscheidung: zwei Nummern
+         fuer eine Person waeren ein Widerspruch in der Zuordnung, kein
+         Wahlfall. Er faellt hier nicht auf — gezaehlt wird er daneben. */
+      if (pid && !zuordnung.has(pid)) zuordnung.set(pid, z.sfv_person_id);
+    }
+  }
+
   const raus: UnserePerson[] = [];
   const gefiltert = new Set<string>();
   for (const z of alle) {
@@ -1050,10 +1093,14 @@ async function holeKandidaten(
     raus.push({
       id: z.id,
       /* ⚠ Wir fuehren die Verbandsnummer an `sfv_personen`, nicht an
-         `personen` — und die Bruecke `sfv_zuordnung` stand am 11.09.2026
-         bei NULL Zeilen. Bis sie gefuellt ist, traegt keine unserer
-         Personen eine Nummer, und `treffer_sfv` ist strukturell 0. */
-      sfv_person_id: null,
+         `personen`. Sie kommt deshalb ueber die Bruecke `sfv_zuordnung` —
+         siehe die Karte weiter oben.
+
+         ⚠ Ist die Bruecke leer, bleibt es bei `null`, und `treffer_sfv` ist
+         0. **Das ist seit dem 13.09.2026 eine Datenlage und keine
+         Verdrahtung mehr** — vorher stand hier eine harte Null, und die
+         haette auch nach dem Zuordnungslauf nichts geliefert. */
+      sfv_person_id: zuordnung.get(z.id) ?? null,
       /* ⚠ Nur das JAHR, kein Datum — es geht in die Liste der
          Ohne-Treffer und steht dort neben einem Hash. Ein Jahrgang
          allein benennt niemanden; ein Geburtsdatum schon eher. */

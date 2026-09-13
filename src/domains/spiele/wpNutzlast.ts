@@ -94,7 +94,7 @@ export type WpVerlaufArt = "tor" | "gelb" | "gelbrot" | "rot" | "wechsel";
  * einem SQL-Block. Gehalten wird es von `nutzlastFassung.test.ts`: ändert
  * sich ein Feldname, ist der Fall rot, und er nennt beide Stellen.
  */
-export const NUTZLAST_FASSUNG = 3;
+export const NUTZLAST_FASSUNG = 4;
 
 export interface WpVerlaufZeile {
   /** Text, nicht Zahl — damit „45+2" hineinpasst. */
@@ -120,6 +120,32 @@ export interface WpVerlaufZeile {
    * **bewusst keinen Zusatz**: er wäre eine Wiederholung.
    */
   ereignis_zusatz: "eigentor" | "penalty" | "";
+  /**
+   * Wir können die Person dieser Zeile **nicht benennen** — weder über die
+   * Zuordnung noch über eine Rückennummer.
+   *
+   * ⚠ ⚠ ANLASS, 13.09.2026: der Theme-Chat fand vier Verlaufszeilen mit
+   * `spieler: "Unser Team"` (4 von 994, alle gelbe Karten, alle auf unserer
+   * Seite) und fragte, ob das unser Kennzeichen für eine Mannschaftsstrafe
+   * sei.
+   *
+   * **Es ist keines.** `"Unser Team"` ist unser Rückfalltext für genau
+   * diesen Zustand: eigenes Ereignis, kein zugeordneter Name, keine
+   * Rückennummer. Wer keine Nummer trägt, ist nach aller Wahrscheinlichkeit
+   * Trainer oder Betreuer — bei den eigenen Verwarnungen waren es am
+   * 11.09.2026 fünf von fünf.
+   *
+   * ⚠ Ein Name als Kennzeichen ist genau das, was dieses Papier an einem
+   * halben Dutzend Stellen auseinandernimmt: *ein Filter auf einen NAMEN
+   * prüft eine Schreibweise.* Die Gegenseite müsste `"Unser Team"` als
+   * Zeichenkette vergleichen — und beim ersten Umformulieren bräche es.
+   *
+   * ⚠ ⚠ UND DAS FELD BEHAUPTET NUR, WAS WIR WISSEN. Es heisst nicht
+   * `mannschaftsstrafe` — das wäre eine Deutung, für die wir kein Merkmal
+   * haben. Es sagt: **hier steht kein Mensch, den wir benennen können.**
+   * Was die Website daraus macht, ist ihre Entscheidung.
+   */
+  ohne_person: boolean;
   art: WpVerlaufArt;
   seite: "heim" | "gast";
   text: string;
@@ -594,6 +620,11 @@ export function bildeVerlauf(
          hat: `update_field()` verwirft unbekannte Unterfelder still, und
          `unbeachtete_felder` sieht nur die oberste Ebene. */
       ereignis_zusatz: torZusatz(e.typ_id, e.subtyp_id ?? null),
+      /* ⚠ Dieselbe Bedingung wie der Rückfalltext in `beschreibeWer()` —
+         und sie steht hier, weil sie EINE Frage beantwortet: konnten wir
+         die Person benennen? Aus dem Text zurückzurechnen wäre der Umweg,
+         den dieses Papier als teuersten Fehler führt. */
+      ohne_person: wir && e.sfv_person_id == null && e.rueckennr == null,
       /* ⚠ ⚠  EBENFALLS BEIDE SEITEN, seit dem 11.09.2026.
 
          Hier stand: „nur bei uns — die Nummer steht beim Gegner an der
