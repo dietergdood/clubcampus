@@ -1192,6 +1192,13 @@ Ohne Docker (z.B. wenn Docker Desktop nicht läuft) geht ein Dump auch direkt ü
 - `supabase/auth_triggers.sql` — die zwei Trigger auf `auth.users`, die in keinem `public`-Dump stehen.
 - `supabase/cron_sfv_sync.sql` — der stündliche Zeitplan des SFV-Sync (pg_cron + pg_net, Ausweis aus dem Vault). Steht ebenfalls in keinem Dump, weil `cron.job` nicht im Schema `public` liegt. Enthält auch die zwei Abfragen zum Nachschauen: `cron.job_run_details` sagt, ob der Aufruf abgesetzt wurde, `api_sync_log` sagt, ob der Lauf gelang.
 - `supabase/migration_sfv_sync.sql` — Laufsperre (`api_verbindungen.sync_laeuft_seit`) und die Korrektur der Feldhoheit (`ht_resultat` gehört dem Verein, der Spielplan-Endpunkt liefert keine Halbzeit). Ausgeführt am 14.08.2026; enthält am Ende den Nachtrag über den ausgefallenen Block A.
+- `docs/auftrag_spielerzuordnung.md` — der Vorschlagsweg für die 381 offenen
+  Spieler. **Plan, nicht gebaut.** Enthält drei gemessene Berichtigungen einer
+  Annahme: die Maske existiert und schreibt (412 Zeilen, `ApiTab.tsx:508`), die
+  Zuordnung ändert im Portal sehr wohl etwas (`fetchSfvNamen` →
+  `TermineModul.tsx:584`), und den Jahrgang liefert der Verband — wir speichern
+  ihn nur nicht. ⚠ Der Risikopunkt ist ein neues Feld an einem Objekt mit
+  mehreren Ausgängen; siehe „Ein neues Feld erbt JEDEN Ausgang“.
 - `README.md` — Produktüberblick, Rollen, Einrichtung eines neuen Vereins.
 
 ## Bekannte Defekte
