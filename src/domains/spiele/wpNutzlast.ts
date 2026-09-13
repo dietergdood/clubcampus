@@ -482,6 +482,42 @@ export function verlaufArt(typId: number, subtypId: number | null): WpVerlaufArt
   return null;
 }
 
+/**
+ * Steht der Verlauf einer Nutzlast chronologisch?
+ *
+ * ⚠ ⚠ ANLASS, 13.09.2026: auf der Spielseite sammeln sich die Wechsel am
+ * Ende. Gemessen ist, dass es nicht bei uns liegt — `mischeEreignisse()`
+ * sortiert nach `(minute, zusatzminute)` und ist seit ihrem ersten Commit
+ * nie angefasst worden; `bildeVerlauf()` ordnet nicht um.
+ *
+ * **Aber eine Messung ist keine Auskunft, solange sie in einem Bericht
+ * steht und nicht in der Antwort.** Zweimal ist an diesem Tag auf der
+ * falschen Seite gesucht worden, weil eine Deutung weitergereicht wurde
+ * statt einer Zahl. Diese Funktion macht daraus eine: steht in der
+ * Vorschau `verlauf_unsortiert: 0`, ist unsere Seite belegt — nicht
+ * behauptet.
+ *
+ * ⚠ Verglichen wird die ZAHL, nicht die Anzeigeangabe. `minute` ist in der
+ * Nutzlast eine Zeichenkette (`"90+1"`), und `"8" > "46"` wäre lexikalisch
+ * wahr — wer den Ausgabetext vergleicht, misst seine Formatierung mit.
+ */
+export function verlaufSortiert(
+  zeilen: { minute: string }[],
+): boolean {
+  let vorher = -1;
+  for (const z of zeilen) {
+    const [m, zus] = z.minute.split("+");
+    /* Eine leere Minute trägt keine Ordnung — sie bricht den Vergleich
+       nicht, sie wird übersprungen. */
+    if (m === "") continue;
+    const wert = Number(m) * 100 + (zus ? Number(zus) : 0);
+    if (!Number.isFinite(wert)) continue;
+    if (wert < vorher) return false;
+    vorher = wert;
+  }
+  return true;
+}
+
 /** `34` → `"34"`, `45` mit Zusatz `2` → `"45+2"`. */
 export function verlaufMinute(minute: number | null, zusatz: number | null): string {
   if (minute === null) return "";

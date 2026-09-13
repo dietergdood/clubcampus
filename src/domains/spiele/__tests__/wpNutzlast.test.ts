@@ -20,7 +20,7 @@ import {
   hatDoppelabstand, sammleMarken, markeSchluessel, zaehleWechselWiderspruch,
   halbzeitWiderspruch,
   leererWechselWiderspruch,
-  spielerAnzeige, rolleAus, ROLLE_ERSATZ_ID, ROLLE_KEIN_EINSATZ_ID,
+  spielerAnzeige, rolleAus, ROLLE_ERSATZ_ID, ROLLE_KEIN_EINSATZ_ID, verlaufSortiert,
   ROLLE_CAPTAIN_ID, baueAufstellung, leereAufstellungZahlen,
 } from "../wpNutzlast.ts";
 import { baueNummernBruecke, beschreibeGewechselten } from "../matchdatenAnzeige.ts";
@@ -156,6 +156,38 @@ describe("Verlauf — Art und Minute", () => {
   it("schreibt die Nachspielzeit als 45+2", () => {
     expect(verlaufMinute(45, 2)).toBe("45+2");
     expect(verlaufMinute(34, null)).toBe("34");
+  });
+});
+
+describe("⚠ verlaufSortiert — die Zahl, die eine Behauptung ersetzt", () => {
+  /* ⚠ ⚠ Sie vergleicht die ZAHL, nicht die Anzeigeangabe. `minute` ist in
+     der Nutzlast eine Zeichenkette, und `"8" > "46"` ist lexikalisch wahr —
+     wer den Ausgabetext vergleicht, misst seine Formatierung mit. Genau
+     dieser Fehler hat am 05.09.2026 431 Klarnamen gemeldet, wo 0 waren. */
+  it("erkennt aufsteigend, auch ueber die Zehnergrenze", () => {
+    expect(verlaufSortiert([{ minute: "8" }, { minute: "46" }, { minute: "90" }])).toBe(true);
+  });
+
+  it("⚠ und lexikalisch waere genau das falsch", () => {
+    /* Als Zeichenketten ist "8" > "46" — ein Vergleich auf dem Text
+       meldete hier unsortiert. */
+    expect(["8", "46"].slice().sort().join(",")).toBe("46,8");
+    expect(verlaufSortiert([{ minute: "8" }, { minute: "46" }])).toBe(true);
+  });
+
+  it("die Zusatzminute ordnet innerhalb derselben Minute", () => {
+    expect(verlaufSortiert([{ minute: "90" }, { minute: "90+1" }, { minute: "90+2" }])).toBe(true);
+    expect(verlaufSortiert([{ minute: "90+2" }, { minute: "90+1" }])).toBe(false);
+  });
+
+  it("meldet den gemeldeten Fall: Wechsel am Ende", () => {
+    expect(verlaufSortiert([{ minute: "35" }, { minute: "70" }, { minute: "20" }])).toBe(false);
+  });
+
+  it("⚠ eine leere Minute traegt keine Ordnung und bricht nichts", () => {
+    /* Sie kommt vor: `verlaufMinute(null, …)` gibt "". Sie als 0 zu lesen
+       machte aus einer fehlenden Angabe einen Messwert. */
+    expect(verlaufSortiert([{ minute: "35" }, { minute: "" }, { minute: "70" }])).toBe(true);
   });
 });
 

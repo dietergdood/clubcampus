@@ -13461,3 +13461,62 @@ diesem Papier viermal vorgekommen, und sie sagt immer grün.
 ⚠ Gegengeprobt mit einem `insert` in `rangprobe`: *„rangprobe
 protokolliert, obwohl es nur liest"* — mit dem Namen im Fehlertext, damit
 niemand suchen muss, welche der Proben es war.
+
+### ⚠⚠ EINE MESSUNG IM BERICHT MUSS BEIM NÄCHSTEN MAL NEU GEMACHT WERDEN — eine in der Antwort nicht
+
+13.09.2026, dritter Tag mit derselben Meldung: auf der Spielseite sammeln
+sich die Wechsel am Ende.
+
+Gemessen ist es zweimal, und beide Male mit demselben Ergebnis.
+`mischeEreignisse()` sortiert nach `(minute, zusatzminute)` — und **sie ist
+seit ihrem ersten Commit nie angefasst worden**, keine Änderung vom
+11./12.09.2026 hat sie berührt. `bildeVerlauf()` ordnet nicht um.
+
+⚠ **Und trotzdem war die Frage nach zwei Tagen noch offen.** Der Grund ist
+nicht die Messung, sondern ihr Ort: sie stand in einem Bericht.
+
+> **Eine Messung im Bericht ist eine Behauptung mit Datum. Eine Zahl in der
+> Antwort ist ein Beleg, den jeder selbst nachsieht.**
+
+Seit `FUNCTION_FASSUNG` 52 nennt die Vorschau `verlauf_unsortiert` — die
+Zahl der Spiele, deren Verlauf unsere Seite **nicht** chronologisch
+verlässt. Steht dort 0, ist unsere Seite belegt und niemand muss meinem
+Satz glauben; steht dort eine Zahl, ist es ein Befund und die zwei Tage
+waren meine Schuld.
+
+⚠ **`verlaufSortiert()` vergleicht die ZAHL, nicht die Anzeigeangabe.**
+`minute` ist in der Nutzlast eine Zeichenkette (`"90+1"`), und `"8" > "46"`
+ist lexikalisch wahr — ein Vergleich auf dem Text meldete sortierte Zeilen
+als unsortiert. Dieselbe Falle wie der Zähler, der 431 statt 0 meldete:
+**wer seinen eigenen Ausgabetext wieder zerlegt, misst seine Formatierung
+mit.** Ein Testfall hält beides fest, auch dass eine leere Minute keine
+Ordnung trägt und nichts bricht.
+
+⚠ Das ist die allgemeine Lehre dieses Tages, und sie gilt über den Verlauf
+hinaus: **wo eine Messung eine Streitfrage zwischen zwei Systemen
+entscheidet, gehört sie in die Auskunft der Kette — nicht in die Antwort
+eines Menschen.** Zweimal ist an diesem Tag auf der falschen Seite gesucht
+worden, weil eine Deutung weitergereicht wurde statt einer Zahl.
+
+### ✅ Der Personen-Export ist vom Tisch — und was damit fällt
+
+Entscheid Didi, 13.09.2026: Personen werden von Hand gepflegt und kommen
+später. Damit fällt die ganze Schnittmenge.
+
+**Was eingestellt ist:** der Hash-Abgleich, die Frage nach den
+Elternadressen, die Testdaten-Frage, die Abfragen 6 und 7 zur Herkunft der
+914. `sfv_zuordnung` bleibt — sie gehört zur Spielerstatistik, nicht zum
+Personen-Export.
+
+⚠ **Abfrage 4 steht als VERMERK in der Datei, nicht als Abfrage.** Ein
+gelöschter Block sieht aus wie einer, den niemand geschrieben hat; ein
+Vermerk sagt, dass die Frage gestellt war und warum sie ruht. Sie kommt
+zurück, sobald der Weg wieder aufgeht.
+
+⚠ ⚠ **Und der Ertrag bleibt, obwohl der Strang fällt.** Aus zwei Tagen an
+einem Weg, der jetzt ruht, stammen acht Einträge dieses Papiers — unter
+anderem *„nicht feststellbar ist nicht dasselbe wie nichts gefunden"*,
+*„eine halbe Auskunft über einen Vergleich zeigt immer auf die andere
+Seite"* und die drei erfundenen Spaltennamen. **Ein eingestellter Strang
+ist keine verlorene Zeit, wenn das Gelernte an den Regeln hängt und nicht
+am Gegenstand.**

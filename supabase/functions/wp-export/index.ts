@@ -60,6 +60,7 @@ import {
   bildeSpiel, zaehleVerlaufNamen, hatDoppelabstand,
   baueAufstellung, leereAufstellungZahlen, sammleMarken,
   zaehleWechselWiderspruch, leererWechselWiderspruch, halbzeitWiderspruch,
+  verlaufSortiert,
 } from "../../../src/domains/spiele/wpNutzlast.ts";
 /* ⚠ Der Zeitraum ist RECHNUNG, keine Zusage — er gehoert dorthin, wo tsc
    und vitest ihn lesen koennen. Diese Datei importiert von esm.sh und wird
@@ -263,6 +264,7 @@ async function alleSeiten<T>(
  *    Auskunft, die `laeuft drueben mein Deploy?` beantworten koennte,
  *    beantwortet sie nicht mehr.
  *
+ *    52  13.09.2026  verlauf_unsortiert in der Vorschau
  *    51  13.09.2026  sfv_zuordnung wird gejoint (die Achse ist
  *                    angeschlossen statt hart null); ohne_person
  *                    im Verlauf, Nutzlast-Fassung 4
@@ -279,7 +281,7 @@ async function alleSeiten<T>(
  *    46  12.09.2026  Durchreiche von personen/teams/unterfelder/
  *                    geschwister, nichtDurchgereicht(), diese Angabe
  */
-const FUNCTION_FASSUNG = 51;
+const FUNCTION_FASSUNG = 52;
 
 const AKTIONEN = ["probe", "export", "bestand", "status", "ranglisten"];
 
@@ -1673,6 +1675,13 @@ async function laufeProbe(
      dem ersten Tag, ohne Entscheid und ohne Bedingung. Weg B hat die
      Aufstellung geschlossen und ihn NICHT. */
   let verlaufGeleert = 0;
+  /* ⚠ ⚠  DIE ZAHL, DIE EINE BEHAUPTUNG ERSETZT. Auf der Spielseite
+     sammeln sich die Wechsel am Ende; gemessen ist, dass unsere Seite
+     chronologisch sendet. **Eine Messung, die in einem Bericht steht und
+     nicht in der Antwort, muss beim naechsten Mal neu gemacht werden** —
+     und zweimal an diesem Tag wurde deshalb auf der falschen Seite
+     gesucht. Steht hier 0, ist unsere Seite belegt. */
+  let verlaufUnsortiert = 0;
   const namensZaehlung = {
     mit_eigenem_namen: 0, mit_sfv_namen: 0, mit_rueckennummer: 0, mit_gegnername: 0,
     zeilen_mit_zweitem_namen: 0,
@@ -1774,6 +1783,7 @@ async function laufeProbe(
       spieleOhneAufstellung++;
     }
     if (spiel.verlauf.length === 0) verlaufGeleert++;
+    if (!verlaufSortiert(spiel.verlauf)) verlaufUnsortiert += 1;
     gebaut.push(spiel);
 
     /* ⚠ Gezaehlt wird die ENTSCHEIDUNG, nicht der fertige Text. Die erste
@@ -1844,6 +1854,10 @@ async function laufeProbe(
          Befunds — und die aeltere: der Verlauf wird bei JEDEM Lauf
          ersetzt, auch leer. */
       spiele_verlauf_geleert: verlaufGeleert,
+      /* ⚠ Immer da, auch als Null — sonst waere „nicht gemessen" von „in
+         Ordnung" nicht zu unterscheiden. Steht hier eine Zahl ueber null,
+         liegt die Reihenfolge doch bei uns, und dann ist es ein Befund. */
+      verlauf_unsortiert: verlaufUnsortiert,
       aufstellung_zeilen_eigen: aufZahlen.zeilen_eigen,
       aufstellung_zeilen_fremd: aufZahlen.zeilen_fremd,
       /* Eigene Zeilen, die als „Nr. 18" erscheinen. Gegnerzeilen zaehlen
