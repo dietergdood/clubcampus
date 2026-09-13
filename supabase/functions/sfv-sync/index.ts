@@ -623,6 +623,16 @@ Deno.serve(async (req) => {
       const saison = await holeSaison(zugang, token, new Date());
       const roh = await holeRangliste(zugang, token, saison.id);
 
+      /* ⚠ ⚠  UNSERE CLUBNUMMER — der Grund, warum diese Probe ueberhaupt
+         umgebaut wurde. `club_nummer` steht an JEDER Ranglistenzeile
+         (`sync.ts:150`), also sind unsere eigenen Zeilen ohne jeden Join
+         erkennbar. Ohne sie misst die Probe nur Gruppen, und **eine Gruppe
+         interessiert uns nur insoweit, als wir darin stehen.** */
+      const { data: verein, error: vFehler } = await db.from("vereine")
+        .select("sfv_club_nummer").eq("id", v.verein_id).maybeSingle();
+      if (vFehler) return json({ fehler: `vereine nicht lesbar: ${vFehler.message}` }, 500);
+      const unsere = (verein?.sfv_club_nummer as number | null) ?? null;
+
       /* Je Gruppe zusammenfassen. Der Schluessel ist derselbe wie im Sync
          (`gruppenSchluessel`) — eine zweite Bildung liefe auseinander. */
       const gruppen = new Map<string, {
@@ -680,6 +690,37 @@ Deno.serve(async (req) => {
         return !Number.isFinite(g) || g === 0;
       }).length;
 
+      /* ⚠ ⚠  DIE ZEILE, NICHT DIE GRUPPE. `gruppen_ohne_spiele` zaehlt
+         Gruppen, in denen JEDE Mannschaft null Spiele hat — und meldete
+         deshalb 0, waehrend sieben unserer Mannschaften nachhinkten: in
+         „Senioren 40+" haben dreizehn Gegner Spiele und wir keine, also
+         ist die Gruppe nicht leer.
+
+         **Die Zahl war nicht falsch, sie beantwortete eine andere Frage.**
+         Sie sagt „fuehrt der Verband den Stand dieser Gruppe ueberhaupt?";
+         gefragt war „hinkt UNSERE Zeile nach?".
+
+         ⚠ ⚠ UND DIE AUSKUNFT LAG SCHON IN DER ANTWORT: `spiele_min` stand
+         bei diesen Gruppen auf 0. Niemand hat es gelesen, weil die
+         Kopfzahl daneben „0 Gruppen ohne Spiele" sagte. **Eine Kopfzahl,
+         die beruhigt, erstickt das Detail neben sich** — die Umkehrung von
+         „berechnet, geliefert, nicht gezeigt": gezeigt, aber neben einer
+         Zahl, die sagt, es sei nichts zu sehen. */
+      const eigene = unsere === null ? [] : roh
+        .filter((r) => Number(r.clubNumber) === unsere)
+        .map((r) => ({
+          liga: String(r.leagueName ?? ""),
+          gruppe: String(r.groupName ?? ""),
+          team: String(r.teamName ?? ""),
+          sfv_team_id: Number(r.teamId) || null,
+          /* `null` heisst „der Verband nennt keine Zahl", `0` heisst „null
+             Spiele". Die zwei duerfen nicht dieselbe Anzeige bekommen. */
+          anzahl_spiele: Number.isFinite(Number(r.matches)) ? Number(r.matches) : null,
+          punkte: Number.isFinite(Number(r.points)) ? Number(r.points) : null,
+        }))
+        .sort((a, b) => (a.anzahl_spiele ?? -1) - (b.anzahl_spiele ?? -1)
+          || a.liga.localeCompare(b.liga));
+
       return json({
         hinweis: "Leseprobe. Fragt den Verband, schreibt nichts.",
         saison: saison.id,
@@ -697,7 +738,27 @@ Deno.serve(async (req) => {
            hier 0, fuehrt er den Stand nicht — dann bilden wir ihn korrekt
            ab, und die Luecke liegt bei ihm. Liefert er eine Zahl und bei
            uns steht 0, liegt es an uns. */
+        /* ⚠ ⚠  DIESE ZAHL BEANTWORTET NICHT, OB WIR NACHHINKEN. Sie zaehlt
+           Gruppen, in denen JEDE Mannschaft null Spiele hat — eine Aussage
+           ueber den Verband, nicht ueber uns. Der Satz daneben steht
+           deshalb IN der Antwort und nicht bloss hier im Kommentar: **eine
+           Prüfung, die ihren eigenen Zuschnitt nennt, kann nicht für mehr
+           genommen werden, als sie ist.** */
         gruppen_ohne_spiele: liste.filter((g) => g.zeilen === g.spiele_null).length,
+        gruppen_ohne_spiele_heisst:
+          "Gruppen, in denen JEDE Mannschaft null Spiele hat — sagt NICHTS darüber,"
+          + " ob unsere eigene Zeile nachhinkt. Dafür ist eigene_ohne_spiele da.",
+        /* ⚠ Die Bezugsgroesse gehoert in DIESELBE Zeile wie die Zahl.
+           „0 ohne Spiele" laesst offen, ob alle Zeilen Spiele haben oder ob
+           keine geprueft wurde. (Regel des Theme-Chats, 14.09.2026.) */
+        eigene_zeilen_gesamt: eigene.length,
+        eigene_ohne_spiele: eigene.filter((e) => e.anzahl_spiele === 0).length,
+        eigene_ohne_zahl: eigene.filter((e) => e.anzahl_spiele === null).length,
+        /* ⚠ `null` heisst NICHT GEMESSEN: ohne `vereine.sfv_club_nummer`
+           kann diese Probe unsere Zeilen gar nicht finden, und dann waere
+           „0 ohne Spiele" die glatte Luege. */
+        eigene_erkennbar: unsere !== null,
+        eigene: eigene,
         /* ⚠ Alle Gruppen, nicht nur die auffaelligen: eine Liste, die nur
            Befunde zeigt, laesst offen, ob ueberhaupt gemessen wurde. */
         gruppen: liste,

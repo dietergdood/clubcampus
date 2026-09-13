@@ -1,0 +1,139 @@
+/* ═══════════════════════════════════════════════════════════════
+   deuteRangprobe — die drei Lagen, und keine sieht wie eine andere aus.
+
+   ⚠ ANLASS, 14.09.2026. `gruppen_ohne_spiele` meldete 0, während auf
+   sieben Teamseiten die Tabelle nachhinkte. Die Zahl war nicht
+   falsch — sie beantwortete eine andere Frage: „führt der Verband
+   den Stand dieser Gruppe überhaupt?" statt „hinkt UNSERE Zeile
+   nach?".
+
+   > Eine Zahl ohne Bezugsgrösse ist ein Artefakt. „0 Gruppen ohne
+   > Spiele" kann heissen „alle Gruppen haben Spiele" oder „keine
+   > Gruppe wurde geprüft." (Theme-Chat, 14.09.2026)
+   ═══════════════════════════════════════════════════════════════ */
+import { describe, it, expect } from "vitest";
+import { deuteRangprobe } from "../rangprobeAnzeige.ts";
+
+/* ⚠ Die Zahlen sind ERFUNDEN und runde Werte. In einer Attrappe ist
+   das richtig — sie ist eine Vorgabe, keine Behauptung. Sie soll aber
+   nicht die echte Messreihe abschreiben: der nächste Leser hielte sie
+   sonst für einen Stand. */
+const BASIS = {
+  gruppen_gesamt: 20, zeilen_gesamt: 240, zeilen_je_gruppe: 12,
+  zeilen_ohne_gruppennummer: 0, gruppen_ohne_spiele: 0, gruppen: [],
+};
+const zus = (t: string[]) => t.join(" | ");
+
+describe("die eigene Zeile steht VOR der Gruppenzahl", () => {
+  it("meldet nachhinkende eigene Mannschaften, obwohl keine Gruppe leer ist", () => {
+    /* ⚠ ⚠ DER FALL, DER DEN UMBAU AUSGELÖST HAT. Keine Gruppe steht
+       ganz auf null — und zwei unserer Mannschaften doch. Vorher war
+       die Antwort auf beides „0". */
+    const t = deuteRangprobe({
+      ...BASIS,
+      eigene_erkennbar: true, eigene_zeilen_gesamt: 20,
+      eigene_ohne_spiele: 2, eigene_ohne_zahl: 0,
+      eigene: [
+        { team: "Senioren 40+", liga: "Senioren 40+", anzahl_spiele: 0 },
+        { team: "FC Herrliberg 3", liga: "5. Liga", anzahl_spiele: 0 },
+        { team: "FC Herrliberg 1", liga: "3. Liga", anzahl_spiele: 4 },
+      ],
+    });
+    expect(zus(t)).toMatch(/⚠ 2 von 20 eigenen Mannschaften stehen auf null Spielen/);
+    /* Namentlich, nicht nur gezählt — sonst sucht jemand 20 Zeilen durch. */
+    expect(zus(t)).toMatch(/Senioren 40\+ · Senioren 40\+ — 0 Spiele/);
+    /* Auch die gesunde erscheint: eine Liste, die nur Befunde zeigt,
+       lässt offen, ob überhaupt gemessen wurde. */
+    expect(zus(t)).toMatch(/FC Herrliberg 1 · 3\. Liga — 4 Spiele/);
+  });
+
+  it("die eigene Aussage steht VOR der Gruppenaussage", () => {
+    /* ⚠ Die Reihenfolge ist der Punkt, nicht bloss Geschmack: die
+       Kopfzahl „0 Gruppen ohne Spiele" hat am 14.09.2026 das Detail
+       daneben erstickt. Wer zuerst eine Beruhigung liest, liest nicht
+       weiter. */
+    const t = deuteRangprobe({
+      ...BASIS, eigene_erkennbar: true, eigene_zeilen_gesamt: 20,
+      eigene_ohne_spiele: 2, eigene_ohne_zahl: 0, eigene: [],
+    });
+    const eig = t.findIndex(z => /eigenen Mannschaften/.test(z));
+    const gru = t.findIndex(z => /JEDE Mannschaft auf null/.test(z));
+    expect(eig).toBeGreaterThanOrEqual(0);
+    expect(gru).toBeGreaterThan(eig);
+  });
+
+  it("die Gruppenzahl nennt ihren eigenen Zuschnitt", () => {
+    /* Eine Prüfung, die ihren Zuschnitt nennt, kann nicht für mehr
+       genommen werden, als sie ist. */
+    const t = deuteRangprobe({
+      ...BASIS, eigene_erkennbar: true, eigene_zeilen_gesamt: 20,
+      eigene_ohne_spiele: 0, eigene_ohne_zahl: 0, eigene: [],
+    });
+    expect(zus(t)).toMatch(/sagt nichts darüber, ob wir nachhinken/);
+  });
+});
+
+describe("drei Lagen, drei Sätze", () => {
+  it("ohne Clubnummer: NICHT als „0 ohne Spiele\"", () => {
+    /* ⚠ Ohne `vereine.sfv_club_nummer` kann die Probe unsere Zeilen
+       gar nicht finden. Eine Null wäre hier die glatte Lüge — genau
+       die Einebnung, die am 11.09.2026 drei Nullen für 129 Personen
+       stehen liess. */
+    const t = deuteRangprobe({ ...BASIS, eigene_erkennbar: false });
+    expect(zus(t)).toMatch(/NICHT erkennbar/);
+    expect(zus(t)).not.toMatch(/eigenen Mannschaften stehen auf null/);
+    expect(zus(t)).not.toMatch(/0 davon auf null Spielen/);
+  });
+
+  it("aeltere Function: nicht gemeldet, nicht null", () => {
+    const t = deuteRangprobe(BASIS);
+    expect(zus(t)).toMatch(/nicht gemeldet — die Edge Function ist älter/);
+    expect(zus(t)).not.toMatch(/0 davon auf null Spielen/);
+  });
+
+  it("alles in Ordnung: die Null steht da, mit Bezugsgroesse", () => {
+    const t = deuteRangprobe({
+      ...BASIS, eigene_erkennbar: true, eigene_zeilen_gesamt: 20,
+      eigene_ohne_spiele: 0, eigene_ohne_zahl: 0, eigene: [],
+    });
+    expect(zus(t)).toMatch(/20 eigene Mannschaften in der Tabelle, 0 davon auf null/);
+  });
+
+  it("keine Spielzahl ist nicht null Spiele", () => {
+    /* ⚠ `null` heisst „der Verband nennt keine Zahl", `0` heisst
+       „null Spiele". Die zwei zusammenzuwerfen wäre der Fehler,
+       gegen den der ganze Umbau gebaut ist. */
+    const t = deuteRangprobe({
+      ...BASIS, eigene_erkennbar: true, eigene_zeilen_gesamt: 20,
+      eigene_ohne_spiele: 0, eigene_ohne_zahl: 3,
+      eigene: [{ team: "Ea-Junioren", liga: "Junioren E", anzahl_spiele: null }],
+    });
+    expect(zus(t)).toMatch(/3 eigene Zeilen ohne jede Spielzahl/);
+    expect(zus(t)).toMatch(/Ea-Junioren · Junioren E — keine Spielzahl/);
+  });
+});
+
+describe("die Gegenprobe zum Gruppenschluessel bleibt", () => {
+  it("meldet einen kollabierten Schluessel", () => {
+    /* 232 / 8 ist keine Tabelle — so ist die dreiteilige erste Fassung
+       der Probe aufgefallen. */
+    const t = deuteRangprobe({ ...BASIS, zeilen_je_gruppe: 29 });
+    expect(zus(t)).toMatch(/29 Mannschaften je Gruppe — das ist keine Tabelle/);
+  });
+
+  it("und schweigt nicht, wenn er traegt", () => {
+    expect(zus(deuteRangprobe(BASIS))).toMatch(/12 je Gruppe — in der Grösse einer Tabelle/);
+  });
+
+  it("kuerzt die eigenen nicht still", () => {
+    /* Was weggelassen wird, wird GENANNT. Eine stille Kürzung liest
+       sich wie Vollständigkeit. */
+    const viele = Array.from({ length: 21 }, (_, i) =>
+      ({ team: `T${i}`, liga: "L", anzahl_spiele: 4 }));
+    const t = deuteRangprobe({
+      ...BASIS, eigene_erkennbar: true, eigene_zeilen_gesamt: 21,
+      eigene_ohne_spiele: 0, eigene_ohne_zahl: 0, eigene: viele,
+    });
+    expect(zus(t)).toMatch(/… und 13 weitere \(siehe Rohantwort\)/);
+  });
+});

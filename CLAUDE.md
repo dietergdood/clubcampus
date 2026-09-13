@@ -3980,6 +3980,128 @@ Frage offen, wenn sie je gestellt würde. **Heute wird sie nicht gestellt,
 und das ist der einzige Grund, warum die Spalte nicht gebraucht wird.**
 
 
+### ⚠⚠ EINE ZAHL OHNE BEZUGSGRÖSSE IST EIN ARTEFAKT — und die Kopfzahl erstickt das Detail neben sich
+
+Regel des Theme-Chats, 14.09.2026, und sie ist an einem Tag zweimal
+aufgetreten:
+
+> **„0 Gruppen ohne Spiele" kann heissen „alle Gruppen haben Spiele" oder
+> „keine Gruppe wurde geprüft."**
+
+**Der Fall.** `rangprobe` meldete `gruppen_ohne_spiele: 0`, während auf sieben
+Teamseiten die Rangtabelle nachhinkte — FC Herrliberg 1 kennt drei Spiele bei
+vier gespielten, Senioren 40+ null bei zwei.
+
+⚠ **Die Zahl war nicht falsch.** Gemessen am Code: sie zählt Gruppen, in denen
+**jede** Mannschaft auf null steht. In „Senioren 40+" haben dreizehn Gegner
+Spiele und wir keine — die Gruppe ist also nicht leer, und die Zahl bleibt
+korrekt bei 0.
+
+| die Zahl beantwortet | gefragt war |
+|---|---|
+| führt der Verband den Stand **dieser Gruppe** überhaupt? | hinkt **unsere Zeile** nach? |
+
+**Eine Gruppe interessiert uns nur insoweit, als wir darin stehen.** Das ist
+der ganze Umbau: gemessen wird jetzt die eigene Zeile, erkennbar über
+`club_nummer`, die an jeder Ranglistenzeile steht (`sync.ts:150`) — ohne
+Join, ohne Abhängigkeit von der Team-Zuordnung.
+
+⚠ ⚠ **UND DIE AUSKUNFT LAG SCHON IN DER ANTWORT.** `spiele_min` stand bei
+genau diesen Gruppen auf 0. Niemand hat es gelesen, weil die Kopfzahl daneben
+sagte, es sei nichts zu sehen.
+
+> **Eine Kopfzahl, die beruhigt, erstickt das Detail neben sich.**
+
+Das ist die **Umkehrung** von „berechnet, geliefert, nicht gezeigt": hier war
+es gezeigt — nur neben einer Beruhigung. Deshalb steht die eigene Zeile jetzt
+**vor** der Gruppenzahl, und ein Testfall hält die Reihenfolge fest; sie ist
+nicht Geschmack, sondern der Befund.
+
+⚠ **Und die Gruppenzahl nennt seither ihren eigenen Zuschnitt**, als Feld in
+der Antwort und nicht bloss als Kommentar: *„sagt NICHTS darüber, ob unsere
+eigene Zeile nachhinkt."* Eine Prüfung, die ihren Zuschnitt nennt, kann nicht
+für mehr genommen werden, als sie ist.
+
+**Drei Lagen, drei Sätze** — und keine darf wie eine andere aussehen: ohne
+`vereine.sfv_club_nummer` kann die Probe unsere Zeilen gar nicht finden (eine
+Null wäre dort die glatte Lüge), eine Function vor dem 14.09.2026 meldet das
+Feld nicht, und `0` heisst gemessen. Dazu `anzahl_spiele = null` — „der
+Verband nennt keine Zahl" — getrennt von `0`, „null Spiele".
+
+⚠ **Die Deutung liegt seither in `domains/sfv/rangprobeAnzeige.ts`, nicht in
+der Kachel.** Dieselbe Verlagerung wie bei `deuteBestand()` nach demselben
+Vorfall: eine Entscheidung, die in einer Komponente steht, lässt sich nicht
+gegen eine erfundene Antwort halten.
+
+### ⚠ DAS FELD HEISST `spiele`, NICHT `anzahl_spiele` — und deshalb fand er es 0-mal
+
+Berichtigung vom 14.09.2026. Ich hatte gemeldet, die Spielzahl liege „schon in
+der Nutzlast" — richtig in der Sache, falsch im Namen, und der Name war genau
+das Problem.
+
+| | |
+|---|---|
+| unsere Spalte | `ranglisten.anzahl_spiele` (`schema.sql:1916`) |
+| **in der Nutzlast** | **`spiele`** (`wpRangliste.ts:182`) |
+| je | **Tabellenzeile**, nicht je Gruppe |
+
+Und die Umbenennung ist **Absicht**, kein Versehen:
+`migration_sfv_spielplan.sql:116` begründet sie ausdrücklich — die Spalte
+heisst anders, damit sie sich nicht mit etwas anderem verwechselt. Die Nutzlast
+geht den Weg zurück.
+
+⚠ **Drei weitere Feldnamen weichen genauso ab**, und wer nach dem
+Datenbanknamen sucht, findet keinen davon: `fair` aus `fairplay_punkte`,
+`tore_plus`/`tore_minus` aus `tore`/`gegentore`, `rang` aus `position`.
+
+> **Ein Spaltenname und ein Nutzlast-Feldname sind zwei Namen für dieselbe
+> Sache — und wer den einen nennt, wenn der andere gemeint ist, schickt die
+> Suche ins Leere.** Dieselbe Familie wie `spiele.date`, das nicht `datum`
+> heisst, und wie `mail` gegen `email` im Empfänger.
+
+**Was daraus folgt:** auf ein Feld zu bauen, dessen Bedeutung niemand genannt
+hat, ist Raten mit Quellenangabe — sein Satz trifft. Wer einer Gegenstelle ein
+Feld nennt, nennt den Namen **in der Nutzlast** und nicht den in der eigenen
+Datenbank.
+
+### ⚠ MANNSCHAFTSSTRAFEN: wir haben kein Merkmal — der VERBAND hat drei
+
+Berichtigung vom 14.09.2026, und sie dreht die Hälfte meiner Auskunft.
+
+**Richtig bleibt:** in unserer Nutzlast und in `spiel_ereignisse` gibt es
+nichts, was eine Mannschaftsstrafe von einer persönlichen trennt. Und
+`ohne_person` heisst ausdrücklich nicht `mannschaftsstrafe` — das wäre eine
+Deutung, für die wir kein Merkmal haben (`wpNutzlast.ts:144`).
+
+⚠ **Überholt ist „der Platzhaltername ist der einzige Hinweis":** seit
+Nutzlast-Fassung 4 (13.09.2026) trägt jede Verlaufszeile `ohne_person` als
+echtes Feld. Es sagt „hier steht kein Mensch, den wir benennen können" — nicht
+mehr, aber das prüfbar.
+
+⚠ ⚠ **FALSCH WAR „ES GIBT KEINES":** der Verband liefert bei **jedem**
+Ereignis `isPlayer`, `roleCategoryId` und `roleCategoryName`
+(`docs/sfv/matchdaten_struktur.json:101,107-109`), und die Probe führt sie
+sogar in ihrer Erlaubt-Liste (`scripts/sfv-matchdaten-probe.mjs:88`).
+`bildeEreignis()` liest keines davon (`matchdaten.ts:180-206`).
+
+**Es fällt also bei uns, nicht am Verband** — dieselbe Lage wie bei `holeMatch`,
+dessen Antwort stündlich geholt und weggeworfen wird.
+
+⚠ **Und er hat einen eigenen Ereignistyp dafür:**
+`sfv_stammdaten.json:2431` führt **15 „Strafen (Trainer, Funktionäre,
+Zuschauer)"**, dazu 24 „Zeitstrafen" und 25 „Strafen sonstige".
+
+**Genau das entscheidet die Ausgangsfrage, und zwar gegen die
+Mannschaftsstrafe:** die vier gemeldeten Zeilen waren Typ **3**, also eine
+persönliche Verwarnung. Wäre es eine Mannschaftsstrafe gewesen, stünde dort
+Typ 15. Die Lesart „Trainer oder Betreuer ohne Rückennummer" ist damit
+gestützt, nicht bloss plausibel.
+
+⚠ **Typ 15 käme heute gar nicht in den Verlauf:** `verlaufArt()` kennt vier
+Typen (`wpNutzlast.ts:560`), und was dort durchfällt, erscheint nicht. Eine
+Strafe gegen einen Trainer ist für unsere Anzeige unsichtbar — offener Punkt,
+ungemessen, wie oft Typ 15 im Bestand vorkommt.
+
 ### ⚠⚠ GESCHÜTZT WAR DER AUSGANG, DEN DER AUTOR IM BLICK HATTE — zum zweiten Mal, an derselben Sache
 
 Befund vom 13.09.2026, beim Erweitern der Aktion `namen` um den Jahrgang.

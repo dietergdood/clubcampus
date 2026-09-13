@@ -12,6 +12,7 @@ import { SfvSpielerZuordnung } from "./SfvSpielerZuordnung.tsx";
 import { starteSync, holeVorschau, holeRohschluessel, holeRangprobe } from "../../domains/sfv/sfvService.ts";
 import { starteWpExport, fasseExportZusammen, holeEmpfaengerStatus, holeBestand } from "../../domains/spiele/wpExportService.ts";
 import { deuteBestand } from "../../domains/spiele/bestandAnzeige.ts";
+import { deuteRangprobe } from "../../domains/sfv/rangprobeAnzeige.ts";
 import type { Mitglied, Sb, Team } from "../../types.ts";
 
 /* Zeile aus api_verbindungen. Fehlt die Tabelle, baut der Tab aus
@@ -355,44 +356,13 @@ export function ApiTab({loading,isMobile,mobileKachel,apiVerbindungen,tab,sb=nul
       return;
     }
     if(was==="rangprobe"){
-      /* ⚠ ⚠ DIE EINE ZAHL ZUERST, und die Bezugsgroesse daneben. Liefert
-         der Verband bei einer Gruppe null Spiele, fuehrt er den Stand nicht
-         — dann bilden wir ihn korrekt ab, und es ist dieselbe Familie wie
-         die vierzehn Spiele ohne Verlauf. Ohne die Gesamtzahl waere „3" von
-         „3 von 3" nicht zu unterscheiden. */
-      const ohne=Number(daten.gruppen_ohne_spiele??0);
-      const ges=Number(daten.gruppen_gesamt??0);
-      const gr=(daten.gruppen??[]) as Record<string,unknown>[];
-      const jeGruppe=Number(daten.zeilen_je_gruppe??0);
-      const ohneNr=Number(daten.zeilen_ohne_gruppennummer??0);
-      const zeilen=[
-        `${ges} Gruppen beim Verband · ${Number(daten.zeilen_gesamt??0)} Zeilen`
-          +` · ${jeGruppe} je Gruppe`,
-        /* ⚠ ⚠ DIE GEGENPROBE ZUM SCHLUESSEL. Eine Tabelle hat zehn bis
-           vierzehn Mannschaften. Liegt der Wert weit darueber, kollabiert
-           die Gruppenkennung — und die Gruppenzahl ist dann ein Befund
-           ueber den Schluessel, nicht ueber die Daten. Genau so ist meine
-           dreiteilige erste Fassung aufgefallen: 232 / 8. */
-        jeGruppe>20
-          ? `⚠ ${jeGruppe} Mannschaften je Gruppe — das ist keine Tabelle. `
-            +"Die Gruppenkennung kollabiert; die Gruppenzahl sagt nichts."
-          : `${jeGruppe} je Gruppe — in der Grösse einer Tabelle, der Schlüssel trägt`,
-        ohneNr===0
-          ? "0 Zeilen ohne Gruppennummer"
-          : `⚠ ${ohneNr} von ${Number(daten.zeilen_gesamt??0)} Zeilen ohne Gruppennummer — `
-            +"dort ruht die Gruppenidentität auf Liga und Division allein",
-      ];
-      zeilen.push(ohne===0
-          ? `0 von ${ges} Gruppen ohne Spiele — der Verband führt überall einen Stand`
-          : `⚠ ${ohne} von ${ges} Gruppen ohne Spiele — dort führt der VERBAND keinen `
-            + "Stand. Wir bilden ihn korrekt ab; dieselbe Lage wie bei den Spielen ohne Verlauf.");
-      /* ⚠ Die betroffenen namentlich, nicht nur gezaehlt — sonst sucht
-         jemand 29 Gruppen durch. */
-      for(const g of gr.filter(x=>Number(x.zeilen)===Number(x.spiele_null))){
-        zeilen.push(`   ⚠ ${String(g.liga||"")} · ${String(g.gruppe||"")} — `
-          +`${Number(g.zeilen)} Mannschaften, alle auf 0 Spielen`);
-      }
-      setAuskunft({titel:"Ranglisten beim Verband", zeilen, roh: daten});
+      /* ⚠ Die Deutung liegt in `domains/sfv/rangprobeAnzeige.ts`, nicht
+         hier. Grund: sie ist am 14.09.2026 umgebaut worden, weil
+         `gruppen_ohne_spiele` die falsche Frage beantwortete — und eine
+         Entscheidung, die in einer Komponente steht, laesst sich nicht
+         gegen eine erfundene Antwort halten. Dieselbe Verlagerung wie bei
+         `deuteBestand()` nach demselben Vorfall. */
+      setAuskunft({titel:"Ranglisten beim Verband", zeilen:deuteRangprobe(daten), roh: daten});
       return;
     }
     if(was==="bestand"){
