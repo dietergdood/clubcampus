@@ -4144,6 +4144,85 @@ Ausdruck genau auf `"jahrgang":` mit Doppelpunkt. Dieselbe Familie wie die
 negativ formulierte Erwartung vom Vortag: **sie trifft, was gleich
 AUSSIEHT.**
 
+### ⚠⚠ EINE PROBE, DIE EINE DATEI NICHT LESEN KANN, PRÜFT SIE NICHT — und das sieht wie Grün aus
+
+Der bleibende Teil des Funds vom 13.09.2026, und er reicht weiter als der
+Fall. (Didi, 14.09.2026.)
+
+`namenFuersProtokoll()` hatte keine Probe, weil `namenLauf.ts`
+`SupabaseClient` von esm.sh importiert und damit aus einem vitest-Lauf
+**nicht ladbar** ist. Es gab keinen Widerstand, keine Fehlermeldung, keine
+rote Zeile — es gab nur keinen Test.
+
+> **Die Unmöglichkeit, etwas zu prüfen, erzeugt dasselbe Bild wie die
+> geprüfte Richtigkeit: eine grüne Kette.**
+
+⚠ **Und sie ist noch schwerer zu sehen als eine Prüfung, die grundlos grün
+ist.** Dort gibt es wenigstens einen Gegenstand, den man anzweifeln kann.
+Hier fehlt die Prüfung ganz, und was fehlt, steht in keiner Ausgabe:
+
+| | fällt auf |
+|---|---|
+| eine Prüfung, die **rot** ist | sofort |
+| eine Prüfung, die **grundlos grün** ist | wenn jemand sie sabotiert |
+| eine Prüfung, die es **nicht gibt** | ⚠ **nie** — es steht nichts da |
+
+**Die Gegenmassnahme ist keine Regel, sondern ein ORT:**
+`supabase/functions/sfv-sync/ergebnisTypen.ts` ist absichtlich esm.sh-frei,
+damit `deno check` **und** vitest sie lesen. Was eine Zusage trägt, gehört
+dorthin — nicht in die Datei, in der es gebraucht wird.
+
+⚠ **Das ist derselbe Ort und dieselbe Begründung wie am 21.08.2026**, als
+`ergebnisTypen.ts` überhaupt entstand: *wo eine Testattrappe die Form eines
+echten Objekts nachbildet, gehört ihr dessen Typ — und wenn der in einer
+Deno-Datei steht, die `tsc` nicht lesen kann, gehört die Form in eine eigene
+Datei, die beide Welten lesen.* Die Datei war da, die Regel war da, und
+`namenFuersProtokoll` stand drei Wochen daneben.
+
+**Die Frage beim nächsten Mal ist deshalb nicht „ist das geprüft?", sondern:
+KANN ein Test diese Datei überhaupt laden?** Sie kostet einen Blick auf die
+Importzeilen und ist die einzige, die diesen Fall findet.
+
+### ⚠⚠ DREI EIGENE FEHLER AN EINEM BAU — und der dritte ist NICHT wie die zwei anderen
+
+Beim Bau des Spielerzuordnungs-Vorschlags am 13.09.2026. Sie gehören
+zusammen, weil sie **aus derselben Gewohnheit** kommen: gebaut wurde gegen
+das, was ich erwartete, nicht gegen das, was geschieht.
+
+⚠ **Didis Zusammenfassung lautete „drei Fehlalarme aus drei zu weit gefassten
+Regeln". Für zwei trifft sie, für den dritten nicht** — und die Abweichung
+ist der Grund, warum die Gruppe etwas taugt:
+
+| | die Regel | wie sie scheiterte |
+|---|---|---|
+| **1** | „kein Schreibaufruf in einer Schleife" | ⚠ **zu weit** — vier Fehlalarme: `onChange` und der Übernehmen-Knopf stehen syntaktisch im Render-`map` und sind kein Sammelspeichern |
+| **2** | `not.toContain("jahrgang")` | ⚠ **zu weit** — verbot den eigenen Zähler `jahrgang_unlesbar` |
+| **3** | Vorauswahl über `defaultValue` | ⚠ ⚠ **kein Fehlalarm, sondern das Gegenteil: STILL.** `onChange` feuert bei einem `defaultValue` nicht |
+
+**Die ersten zwei sind laut und darum billig.** Ein Melder, der grundlos
+anschlägt, kostet Minuten und wird gefunden, weil er anschlägt.
+
+⚠ ⚠ **Der dritte hätte niemand gemeldet.** Ein zutreffender Vorschlag wäre
+vorgewählt und **nicht speicherbar** gewesen — man hätte jemand anderen wählen
+und zurückwählen müssen. Die Maske hätte richtig gerechnet, richtig angezeigt,
+und beim Klicken nichts getan. Berechnet, geliefert, **nicht übernehmbar**.
+
+**Und alle drei kommen aus derselben Quelle:**
+
+> **Ich habe jeweils gebaut, was ich für das Verhalten hielt, statt zu
+> prüfen, was es ist.** Bei einer Regel heisst das zu weit gefasst, bei einer
+> Oberfläche heisst es unbenutzbar — dieselbe Ursache, zwei Fehlerrichtungen.
+
+⚠ **Nur die lauten hätte eine Prüfkette gefunden.** Gegen den dritten hat
+allein der Einbau-Test geholfen, und der existierte, weil dieses Papier ihn
+seit dem 28.08.2026 verlangt: *ein Komponententest prüft die Komponente, nicht
+ihren Einbau.* Er war die einzige Stelle, an der „vorgewählt" von
+„speicherbar" zu unterscheiden war.
+
+**Die Frage, die alle drei gefunden hätte:** *was passiert wirklich, wenn ich
+das ausführe?* — nicht *was soll passieren?* Sie kostet einen Lauf und stand
+bei zwei von drei aus.
+
 ### ⚠ EIN FELD, DESSEN FORM UNGEMESSEN IST, WIRD GEZÄHLT — nicht geraten
 
 `birthDate` liefert der Verband bei jedem Aufstellungs-Abruf mit, und
