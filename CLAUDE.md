@@ -13052,3 +13052,77 @@ liest ein grünes Ergebnis über eine leere Menge — dieselbe Familie wie
 ⚠ Der Zuschnitt auf `supabase/` ist trotzdem richtig: dort liegen die
 Migrationen und die Abfragedateien (`testkonto_trainer.sql` als Muster).
 **Was zu ändern war, ist nicht die Prüfung, sondern der Ort der Datei.**
+
+### ⚠⚠ `sfv_person_id: null` IST KEINE WARTESTELLUNG — es gibt keinen LESER für die Brücke
+
+Frage Didi, 12./13.09.2026: *„Warum setzen wir `sfv_person_id` auf null?
+Wir haben die Nummern für 361 Personen — wenn wir sie in der Vorschau
+weglassen, messen wir eine Achse, die wir selbst abgeschaltet haben."*
+
+Die Frage trifft, und die Antwort ist schlechter als „wir warten".
+
+Gemessen am 13.09.2026: `personen` hat **keine** Spalte `sfv_person_id`.
+Die Nummern liegen in `sfv_personen` — dort stehen sie neben dem **Namen
+des Verbands**, nicht neben einer unserer Personen. Die Brücke zu uns ist
+`sfv_zuordnung` (`sfv_person_id` → `mitglied_id`), und die war am
+29.08.2026 leer.
+
+⚠ ⚠ **UND SIE HAT IM EXPORT KEINEN LESER.** `sfv_zuordnung` wird im ganzen
+Projekt von **einer** Stelle gelesen: `person-loeschen`, für die
+Löschvorschau. `wp-export` joint sie nirgends.
+
+**Damit ist die Begründung im Code eine Zusicherung über eine Stelle, die
+es nicht gibt:**
+
+> *„Bis sie gefüllt ist, trägt keine unserer Personen eine Nummer, und
+> `treffer_sfv` ist strukturell 0."*
+
+„Bis sie gefüllt ist" behauptet einen Mechanismus, der danach greift. **Es
+greift nichts.** Würde `sfv_zuordnung` morgen mit 308 Zuordnungen gefüllt,
+sendete die Vorschau weiter `null` — und niemand würde es merken, weil die
+Null dann genauso aussieht wie heute.
+
+⚠ **Das ist die dritte Ausprägung derselben Sache an zwei Tagen:** eine
+Tabelle ist gebaut, die Oberfläche zum Füllen steht
+(`SfvSpielerZuordnung`), und der eine Verbraucher, der sie bräuchte, liest
+sie nicht. Dieselbe Familie wie *„wer eine Spalte anlegt, nennt die Stelle,
+die sie liest"* — nur eine Ebene grösser, weil es um eine ganze
+Brückentabelle geht.
+
+⚠ **Der Unterschied zur Jahrgangs-Ebene bleibt trotzdem bestehen** und ist
+der Grund, warum hier nichts entfernt wird: dort fehlt das FELD, hier
+fehlen die ZEILEN und der JOIN. Das erste ist nicht herstellbar, das
+zweite mit einer Abfrage und einem Durchgang von Hand.
+
+#### ✅ Und die zweite Hälfte der Frage: es betrifft NUR die Vorschau
+
+*„Sag mir, ob das nur die Vorschau betrifft oder auch den echten
+Personen-Export. Wenn auch dort null steht, bekämen die 129 drüben nie eine
+Nummer."*
+
+Gemessen: **es gibt keinen Personen-Export.** Der Empfänger führt vier
+Routen — `/spiele`, `/ranglisten`, `/status`, `/bestand` — und keine davon
+schreibt Personen. `AKTIONEN` in `wp-export` kennt `probe`, `export`,
+`bestand`, `status`, `ranglisten`; ein `personen` ist nicht darunter.
+
+**Es wird also nichts mit `null` geschrieben, weil überhaupt nichts
+geschrieben wird.** Der Personenweg ist eine Vorschau ohne Lauf.
+
+⚠ **Damit ist die Sorge gegenstandslos und der Befund grösser:** nicht „die
+129 bekommen nie eine Nummer", sondern „die 129 bekommen nie etwas". Wer
+`42 neue Datensätze abgelehnt` aus einer früheren Sitzung liest, liest das
+Ergebnis einer **Vorschau** — nicht eines abgelehnten Laufs.
+
+#### Was daraus folgt, und was nicht
+
+**Nicht gebaut** — die Sperre auf die Schnittmenge gilt, und die
+Nummern-Achse ist Teil davon. Was zu tun wäre, ist klein und benannt:
+`holeKandidaten()` joint `sfv_zuordnung` über `mitglieder.id` und setzt die
+Nummer, statt sie hart auf `null` zu legen. Solange die Tabelle leer ist,
+ändert das keine einzige Zahl — **es macht aus einer falschen Zusicherung
+eine wahre.**
+
+⚠ Und die Reihenfolge ist damit klar: **zuerst der Join, dann der Durchgang
+von Hand.** Umgekehrt füllt jemand 308 Zuordnungen und die Vorschau sagt
+weiter null — der teuerste denkbare Ausgang, weil dann die Zuordnung selbst
+als gescheitert gälte.
