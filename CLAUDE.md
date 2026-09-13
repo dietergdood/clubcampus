@@ -13315,3 +13315,92 @@ viermal vorgekommen.
 
 Gegengeprobt: ein `insert` in `rangprobe` → *„rangprobe protokolliert,
 obwohl es nur liest"*, mit dem Namen im Fehlertext.
+
+### ⚠⚠ DREI ERFUNDENE SPALTENNAMEN IN ZWEI TAGEN — und `check:spalten` fängt genau die nicht
+
+12./13.09.2026. Drei Abfragen sind an Spalten gescheitert, die es nicht
+gibt: `spiele.datum` (heisst `date`), `personen.sfv_person_id` (gibt es
+nicht), `spiel_ereignisse.erstmals_gesehen` (gibt es nicht).
+
+⚠ **Und für genau diese drei ist `check:spalten` blind**, obwohl es dafür
+gebaut ist. Es liest `.sql`-Dateien im Repository. Eine Abfrage in einer
+Nachricht ist keine Datei — **der Zuschnitt der Prüfung ist richtig, und
+der Ort des Fehlers liegt daneben.**
+
+Die Gegenmassnahme ist deshalb keine Prüfung, sondern eine Reihenfolge:
+**erst am Schema messen, dann schreiben.** Ein `awk` über
+`supabase/schema.sql` kostet fünf Sekunden:
+
+    awk '/CREATE TABLE IF NOT EXISTS "public"."spiel_ereignisse"/,/^\);/' \
+      supabase/schema.sql | grep -E '^\s+"'
+
+⚠ **Und seit dem 13.09.2026 gehen Abfragen als DATEI heraus**, nicht als
+Textblock — dann sieht `check:spalten` sie, und die Dateizahl steigt
+sichtbar von 80 auf 81. Das ist billiger als Sorgfalt und hält länger.
+
+#### ⚠⚠ Der dritte Fall war nicht bloss falsch benannt, sondern NICHT MESSBAR
+
+`spiel_ereignisse` hat überhaupt keine Spalte für „seit wann existiert
+diese Zeile". `spiel_aufstellung` hat `erstmals_gesehen` und trägt sie beim
+Ersetzen ausdrücklich weiter; `spiel_ereignisse` nicht — und seit dem
+11.09.2026 werden seine Zeilen bei jedem Abruf **gelöscht und neu
+angelegt.**
+
+> **Ersetzen vernichtet das Alter der Zeile.** Wer danach nach „seit wann"
+> fragt, sucht eine Angabe, die der eigene Reparaturweg entfernt hat.
+
+**Damit war die Hypothese „die Gegnerzeilen haben ihre Felder nacheinander
+bekommen" so nicht prüfbar** — nicht wegen eines Tippfehlers, sondern weil
+der Gegenstand fehlt. Der tragfähige Stellvertreter steht am Spiel:
+`spiele.matchdaten_geholt_am`. Weil ein Abruf **alle** Zeilen eines Spiels
+ersetzt, können nur Spiele die alte Form tragen, die seither nicht mehr
+geholt wurden.
+
+⚠ Das ist der Unterschied zwischen einer Abfrage, die man berichtigt, und
+einer, die man **anders stellen** muss. Die erste kostet einen Namen, die
+zweite eine Überlegung — und wer den Unterschied nicht bemerkt, berichtigt
+dreimal denselben Namen und misst weiterhin nichts.
+
+### ⚠⚠ ES GIBT KEIN MERKMAL „TESTDATENSATZ" — und damit ist eine Entwarnung nicht belastbar
+
+Befund Didi, 13.09.2026, und er nimmt eine eigene Entwarnung zurück.
+
+Abfrage 4 kam leer zurück: keine Adresse trägt mehr als eine Person, auch
+nicht bei den 388 Junioren. Daraus war die Entwarnung geworden, der
+Elternadressen-Verdacht sei ausgeräumt — **und sie ist schon an den
+Theme-Chat gegangen**, mit dem Zusatz, sie sei belastbar, weil wir 388
+Junioren haben und er null.
+
+⚠ **Abfrage 3 stellt das in Frage.** 44 Personen mit Geburtsdatum ab 2019,
+davon 43 als Juniorenmitglieder plausibel — nur heissen sie *Heinz
+Nussbaum, Rosa Ritter, Ruth Lanz, Walter Lang, Otto Rüegg, Rudolf Kern,
+Susanne Brunner, Heidi Huber.* **Das sind keine Namen von Fünfjährigen.**
+
+> **Ein Generator zieht Namen und Geburtsjahre aus zwei Töpfen. Die
+> Kombination ist der Verräter, nicht der Einzelwert** — jeder Name ist
+> plausibel, jedes Jahr ist plausibel, und zusammen sind sie unmöglich.
+
+#### Gemessen: es gibt kein Kennzeichen, nur drei Stellvertreter
+
+`personen` führt weder eine Quelle noch ein Kennzeichen. Was es gibt:
+
+`personen.created_at` — ein Generator legt hunderte Zeilen in derselben
+Minute an, ein Verein wächst über Jahre. `mitglieder.fairgate_id` — echte
+Mitglieder kommen aus dem Import. Und die **E-Mail-Domäne**.
+
+⚠ ⚠ **DIE DRITTE ENTSCHEIDET ZUGLEICH ÜBER ABFRAGE 4, und das ist der
+eigentliche Punkt.** Vergibt ein Generator je Person eine eigene erfundene
+Adresse, kann sich **keine** wiederholen — dann ist „keine geteilte
+Adresse" kein Befund über Familien, sondern eine **Eigenschaft des
+Generators.** Die leere Antwort wäre dann garantiert, nicht gemessen.
+
+Dieselbe Familie wie eine Prüfung hinter dem Filter, den sie prüfen soll:
+sie kann nur „in Ordnung" sagen.
+
+⚠ **Bis das gemessen ist, gilt: wir wissen es nicht.** Nicht „der Verdacht
+ist ausgeräumt" und nicht „die Daten sind erfunden" — die Entwarnung ist
+**zurückzunehmen**, weil ihre Grundlage offen ist, nicht weil sie
+widerlegt wäre. Das ist der ehrliche Zustand, und er ist unbequemer als
+beide Enden.
+
+Die Abfragen 6 und 7 in `supabase/abfragen_2026-09-13.sql` beantworten es.
