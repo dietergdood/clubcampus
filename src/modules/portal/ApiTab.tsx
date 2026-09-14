@@ -9,11 +9,15 @@ import { API_INFOS, hostVon, zielAusLauf, hatLaufProtokolliert } from "./portalU
 import type { SyncLogZeile } from "./portalUtils.ts";
 import { SfvZuordnung } from "./SfvZuordnung.tsx";
 import { SfvSpielerZuordnung } from "./SfvSpielerZuordnung.tsx";
-import { starteSync, holeVorschau, holeRohschluessel, holeRangprobe, holeTeamprobe } from "../../domains/sfv/sfvService.ts";
+import {
+  starteSync, holeVorschau, holeRohschluessel, holeRangprobe, holeTeamprobe,
+  holeNummernprobe,
+} from "../../domains/sfv/sfvService.ts";
 import { starteWpExport, fasseExportZusammen, holeEmpfaengerStatus, holeBestand } from "../../domains/spiele/wpExportService.ts";
 import { deuteBestand } from "../../domains/spiele/bestandAnzeige.ts";
 import { deuteRangprobe } from "../../domains/sfv/rangprobeAnzeige.ts";
 import { deuteTeamprobe } from "../../domains/sfv/teamprobeAnzeige.ts";
+import { deuteNummernprobe } from "../../domains/sfv/nummernprobeAnzeige.ts";
 import type { Mitglied, Sb, Team } from "../../types.ts";
 
 /* Zeile aus api_verbindungen. Fehlt die Tabelle, baut der Tab aus
@@ -331,7 +335,7 @@ export function ApiTab({loading,isMobile,mobileKachel,apiVerbindungen,tab,sb=nul
      Personenname, aber die Regel gilt hier trotzdem: eine Auskunft in
      der Oberflaeche nennt Mengen, keine Bestaende. */
 
-  async function auskunftHolen(was: "vorschau"|"rohschluessel"|"empfaenger"|"bestand"|"rangprobe"|"teamprobe"){
+  async function auskunftHolen(was: "vorschau"|"rohschluessel"|"empfaenger"|"bestand"|"rangprobe"|"teamprobe"|"nummernprobe"){
     if(!sb||auskunftLaeuft) return;
     setAuskunftLaeuft(was); setAuskunft(null);
     const {daten,fehler}= was==="vorschau" ? await holeVorschau(sb)
@@ -339,12 +343,14 @@ export function ApiTab({loading,isMobile,mobileKachel,apiVerbindungen,tab,sb=nul
       : was==="bestand" ? await holeBestand(sb)
       : was==="rangprobe" ? await holeRangprobe(sb)
       : was==="teamprobe" ? await holeTeamprobe(sb)
+      : was==="nummernprobe" ? await holeNummernprobe(sb)
       : await holeRohschluessel(sb);
     setAuskunftLaeuft(null);
     if(fehler||!daten){
       const t= was==="vorschau"?"Vorschau":was==="empfaenger"?"Empfänger"
         :was==="bestand"?"Bestand drüben":was==="rangprobe"?"Ranglisten beim Verband"
         :was==="teamprobe"?"Teams und roher Spielplan"
+        :was==="nummernprobe"?"Nummernprobe 38315"
         :"Rohschlüssel";
       setAuskunft({titel:t, zeilen:[fehler??"Keine Antwort"], fehler:true});
       return;
@@ -356,6 +362,10 @@ export function ApiTab({loading,isMobile,mobileKachel,apiVerbindungen,tab,sb=nul
     }
     if(was==="empfaenger"){
       setAuskunft({titel:"Empfänger", zeilen: deuteEmpfaenger(daten)});
+      return;
+    }
+    if(was==="nummernprobe"){
+      setAuskunft({titel:"Nummernprobe", zeilen:deuteNummernprobe(daten), roh: daten});
       return;
     }
     if(was==="teamprobe"){
@@ -789,6 +799,15 @@ export function ApiTab({loading,isMobile,mobileKachel,apiVerbindungen,tab,sb=nul
                         <Btn small variant="outline" color="#888"
                              onClick={()=>auskunftHolen("teamprobe")} disabled={!!auskunftLaeuft}>
                           {auskunftLaeuft==="teamprobe"?"Läuft…":"Teams und roher Spielplan"}
+                        </Btn>
+                        {/* ⚠ ⚠ Die entscheidende Frage vom 14.09.2026: antwortet
+                            die Schnittstelle auf 38315, obwohl sie die
+                            Mannschaft nicht von selbst nennt? Eine Liste, die
+                            eine Mannschaft nicht nennt, muss sie nicht
+                            ablehnen — das sind zwei verschiedene Dinge. */}
+                        <Btn small variant="outline" color="#888"
+                             onClick={()=>auskunftHolen("nummernprobe")} disabled={!!auskunftLaeuft}>
+                          {auskunftLaeuft==="nummernprobe"?"Läuft…":"Nummernprobe 38315"}
                         </Btn>
                       </>
                       :api.key==="wordpress"

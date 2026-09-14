@@ -176,6 +176,60 @@ export async function holeGemeinsameIds(z: SfvZugang, token: string): Promise<un
   return await hole(z, token, `/api/common/ids?ClubId=${z.clubId}&Language=1`);
 }
 
+/**
+ * Einen Pfad versuchen und den AUSGANG melden, statt zu werfen.
+ *
+ * ⚠ ⚠  ANLASS, 14.09.2026. Didi hat die Teamseite einer Turniermannschaft
+ * beim Verband aufgerufen: `t=38315`. **Diese Mannschaften haben also eine
+ * Teamnummer** — sie stehen nur nicht in `/api/team/list`.
+ *
+ * > **Eine Liste, die eine Mannschaft nicht nennt, muss sie nicht ablehnen.**
+ * > Das sind zwei verschiedene Dinge, und gemessen war bisher nur das erste.
+ *
+ * ⚠ Deshalb wirft diese Funktion NICHT. Ein 404 ist hier eine Antwort und
+ * kein Fehler: „der Endpunkt kennt die Nummer nicht" ist genau das, was die
+ * Probe wissen will. Ein Wurf machte daraus einen Abbruch und nur die
+ * ersten Pfade waeren gemessen.
+ *
+ * ⚠ Zurueck kommt die FORM, nie ein Wert — dieselbe Regel wie in
+ * `rohschluessel`.
+ */
+export async function versucheRoh(
+  z: SfvZugang, token: string, pfad: string,
+): Promise<{ pfad: string; status: number | null; ausgang: string; roh?: unknown }> {
+  let antwort: Response;
+  try {
+    antwort = await fetch(`${z.basis}${pfad}`, {
+      headers: { "X-User-Token": token, "X-User-Language": "1", Accept: "application/json" },
+    });
+  } catch (e) {
+    return { pfad, status: null,
+      ausgang: `nicht erreichbar: ${e instanceof Error ? e.message : String(e)}` };
+  }
+  if (!antwort.ok) return { pfad, status: antwort.status, ausgang: `HTTP ${antwort.status}` };
+
+  let daten: unknown;
+  const text = await antwort.text();
+  try { daten = JSON.parse(text); }
+  catch { return { pfad, status: antwort.status, ausgang: "kein JSON" }; }
+  if (typeof daten === "string") {
+    try { daten = JSON.parse(daten); } catch { /* dann eben der String */ }
+  }
+
+  /* ⚠ „Leer" und „Daten" getrennt: eine leere Liste ist eine Antwort, und
+     zwar eine andere als ein 404. Der Endpunkt kennt die Nummer dann, hat
+     aber nichts zu ihr. */
+  if (Array.isArray(daten)) {
+    return { pfad, status: antwort.status,
+      ausgang: daten.length ? `${daten.length} Eintrag/Eintraege` : "leere Liste",
+      roh: daten };
+  }
+  if (daten && typeof daten === "object") {
+    return { pfad, status: antwort.status, ausgang: "Objekt", roh: daten };
+  }
+  return { pfad, status: antwort.status, ausgang: `${typeof daten}`, roh: daten };
+}
+
 export type SfvRangliste = Record<string, unknown>;
 
 export async function holeRangliste(z: SfvZugang, token: string, saisonId: number): Promise<SfvRangliste[]> {

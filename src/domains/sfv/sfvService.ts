@@ -320,6 +320,33 @@ export async function holeTeamprobe(
   return { daten: data as Record<string, unknown>, fehler: null };
 }
 
+/**
+ * Die Nummernprobe — antwortet die Schnittstelle auf eine Mannschaftsnummer,
+ * die sie von sich aus nicht nennt?
+ *
+ * ⚠ ANLASS, 14.09.2026: die Teamseite einer Turniermannschaft beim Verband
+ * trägt `t=38315`. **Die Mannschaften ohne Rangliste haben eine Nummer** —
+ * sie stehen nur nicht in `/api/team/list`.
+ *
+ * > Eine Liste, die eine Mannschaft nicht nennt, muss sie nicht ablehnen.
+ *
+ * ⚠ Sie liest und schreibt nichts.
+ */
+export async function holeNummernprobe(
+  sb: Sb, team?: number,
+): Promise<{ daten: Record<string, unknown> | null; fehler: string | null }> {
+  if (!sb) return { daten: null, fehler: "Keine Verbindung" };
+  const { data, error } = await sb.functions.invoke("sfv-sync", {
+    body: team === undefined ? { aktion: "nummernprobe" }
+      : { aktion: "nummernprobe", team },
+  });
+  if (error) return { daten: null, fehler: await fehlerText(error, data) };
+  if ((data as { fehler?: unknown })?.fehler) {
+    return { daten: null, fehler: String((data as { fehler: unknown }).fehler) };
+  }
+  return { daten: data as Record<string, unknown>, fehler: null };
+}
+
 export async function holeRohschluessel(
   sb: Sb,
 ): Promise<{ daten: Record<string, unknown> | null; fehler: string | null }> {

@@ -47,7 +47,7 @@ import {
 import { bildeEreignis } from "./matchdaten.ts";
 import {
   holeToken, holeSaison, holeTeams, holeTeamsRoh, holeSpielplan, holeEreignisse,
-  holeBank, holeRangliste, holeGemeinsameIds,
+  holeBank, holeRangliste, holeGemeinsameIds, versucheRoh,
 } from "./sfvApi.ts";
 import type { SfvZugang } from "./sfvApi.ts";
 import { laufeSync, bildeSpiel } from "./sync.ts";
@@ -78,10 +78,15 @@ Deno.serve(async (req) => {
   if (req.method !== "POST") return json({ fehler: "Nur POST" }, 405);
 
   let aktion = "", nur: string | null = null;
+  /* ⚠ Nur die Aktion und `nur` werden gelesen; `teamNummer` kam am
+     14.09.2026 fuer `nummernprobe` dazu. Aufgezaehlt statt durchgereicht —
+     ein Rumpf, den jemand blind weitergibt, ist ein Ausgang mehr. */
+  let teamNummer: number | null = null;
   try {
     const body = await req.json();
     aktion = String(body?.aktion || "");
     nur = body?.nur ? String(body.nur) : null;
+    teamNummer = body?.team === undefined ? null : Number(body.team);
   } catch {
     return json({ fehler: "Ungültiger Aufruf" }, 400);
   }
@@ -89,7 +94,7 @@ Deno.serve(async (req) => {
      kann — dieselbe Regel wie in wp-export. */
   const AKTIONEN = [
   "teams", "sync", "namen", "teamprobe", "wechselprobe", "wechselnachtrag", "cupprobe",
-  "rohschluessel", "vertragsprobe", "rangprobe",
+  "rohschluessel", "vertragsprobe", "rangprobe", "nummernprobe",
 ];
   if (!AKTIONEN.includes(aktion)) {
     return json({ fehler: `Unbekannte Aktion: ${aktion}`, gueltig: AKTIONEN }, 400);
@@ -1063,6 +1068,134 @@ Deno.serve(async (req) => {
       /* ⚠ Gebunden und benannt. Ein leerer catch machte aus dem Ausfall
          eine Datenlage — „der Verband fuehrt keine Tabelle" saehe dann
          aus wie „der Abruf ist gescheitert". */
+      return json({ fehler: e instanceof Error ? e.message : String(e) }, 502);
+    }
+  }
+
+  /* ══════════════════════════════════════════════════════════════════════
+     nummernprobe — antwortet die Schnittstelle auf eine Mannschaftsnummer,
+     die sie von sich aus nicht nennt?
+
+     ⚠ ⚠  ANLASS, 14.09.2026. Didi hat die Teamseite einer Turniermannschaft
+     beim Verband aufgerufen: `t=38315`, dieselbe Vereinskennung 1516. **Die
+     Mannschaften ohne Rangliste HABEN also eine Teamnummer**, und sie liegt
+     im selben Bereich wie unsere (38301–38312) — kein anderer Nummernkreis,
+     sie steht schlicht nicht in der Liste.
+
+     > **Eine Liste, die eine Mannschaft nicht nennt, muss sie nicht
+     > ablehnen.** Das sind zwei verschiedene Dinge, und gemessen war bisher
+     > nur das erste.
+
+     ⚠ DREI PFADE NEHMEN EINE `TeamId` ENTGEGEN — und wir setzen sie bei
+     keinem: `/api/team/list`, `/api/club/schedule`, `/api/club/ranking`.
+     Dazu `/api/team/picture/{teamId}` im Pfad. Ein Filter, den niemand
+     setzt, kann etwas ausschliessen; einer, den man setzen muesste, etwas
+     einschliessen.
+
+     ⚠ SIE WIRFT NICHT. Ein 404 ist hier eine Antwort und kein Fehler — und
+     ein Wurf haette nur die ersten Pfade gemessen. Jeder Pfad bekommt eine
+     Zeile, auch der, der nichts liefert.
+
+     ⚠ UND DER SUCHRAUM WIRD GENANNT. „Fuenfzehn Pfade geprueft, vier nehmen
+     eine Nummer, einer antwortet" ist ein Befund; „nichts gefunden" waere
+     keiner.
+     ══════════════════════════════════════════════════════════════════════ */
+  if (aktion === "nummernprobe") {
+    const v = eigene[0];
+    if (!v.api_url) return json({ fehler: "api_verbindungen.api_url fehlt" }, 400);
+    /* ⚠ Die Nummer kommt aus dem Aufruf, mit 38315 als Vorgabe — damit ist
+       die Probe fuer JEDE Nummer brauchbar und nicht nur fuer diese eine. */
+    const nummer = teamNummer ?? 38315;
+    if (!Number.isFinite(nummer) || nummer <= 0) {
+      return json({ fehler: "team muss eine positive Zahl sein" }, 400);
+    }
+    try {
+      const zugang = zugangFuer(v.api_url);
+      const token = await holeToken(zugang);
+      const saison = await holeSaison(zugang, token, new Date());
+      const basis = `SeasonId=${saison.id}&ClubId=${zugang.clubId}&Language=1`;
+
+      /* ⚠ Streng seriell mit DEMSELBEN Token: die SFV-API kennt je Anwendung
+         genau ein gueltiges — parallel liefe einer dem anderen davon. */
+      const versuche: Array<Record<string, unknown>> = [];
+      const pfade: Array<[string, string]> = [
+        ["team/list mit TeamId", `/api/team/list?${basis}&TeamId=${nummer}`],
+        ["club/schedule mit TeamId", `/api/club/schedule?${basis}&TeamId=${nummer}`],
+        ["club/ranking mit TeamId", `/api/club/ranking?${basis}&TeamId=${nummer}`],
+        ["team/picture", `/api/team/picture/${nummer}`],
+        /* ⚠ ⚠  DER SPIELPLAN JE SPIELTYP — und diese Luecke ist alt.
+           `teamprobe` fragt seit dem 10.09.2026 die TEAMLISTE je MatchType
+           (1, 6, 8). Den SPIELPLAN je MatchType hat nie jemand gefragt.
+
+           Die Stammdaten fuehren 6 „Turnier" und 8 „Mini-Turniere"; das
+           Datenmodell des Verbands kennt sie also. In `Schedule` gibt es
+           aber nur zwei Mannschaftsplaetze — ein Turnier mit vier Teams
+           passt nicht hinein, es sei denn, er loest es in Paarungen auf.
+           Diese zwei Aufrufe sagen, ob er das tut. */
+        ["club/schedule MatchType 6 (Turnier)", `/api/club/schedule?${basis}&MatchType=6`],
+        ["club/schedule MatchType 8 (Mini)", `/api/club/schedule?${basis}&MatchType=8`],
+        /* ⚠ Und derselbe Typ mit der Nummer zusammen — falls der Filter nur
+           in Kombination greift. */
+        ["club/schedule Typ 6 + TeamId", `/api/club/schedule?${basis}&MatchType=6&TeamId=${nummer}`],
+      ];
+      for (const [name, pfad] of pfade) {
+        const r = await versucheRoh(zugang, token, pfad);
+        versuche.push({
+          weg: name, pfad: r.pfad, status: r.status, ausgang: r.ausgang,
+          /* ⚠ Nur Feldnamen, nie Werte — dieselbe Regel wie in
+             `rohschluessel`. Eine Antwort mit Daten ist der Befund; WAS
+             darin steht, ist die naechste Frage und nicht diese. */
+          schluessel: r.roh === undefined ? null : schluesselVon(r.roh),
+        });
+      }
+
+      /* ══ DIE ZWEI GRUNDMESSUNGEN, die den Befund kippen koennen ══════════
+         ⚠ Steht die Nummer im ROHEN Spielplan, ist es ein FILTERproblem und
+         der Befund von heute Abend faellt. Steht sie nicht in der Teamliste
+         und nicht im Spielplan, bleibt es ein Quellenproblem — aber die
+         gezielte Abfrage oben kann es trotzdem aufloesen. */
+      const listeRoh = await holeTeamsRoh(zugang, token, saison.id);
+      const inListe = listeRoh.some((t) => Number(t.teamId) === nummer);
+      const planRoh = await holeSpielplan(zugang, token, saison.id);
+      const imPlan = planRoh.filter((r) => {
+        const o = r as Record<string, unknown>;
+        return Number(o.teamAId) === nummer || Number(o.teamBId) === nummer;
+      });
+
+      return json({
+        hinweis: "Leseprobe. Fragt den Verband, schreibt nichts.",
+        gesucht: nummer,
+        saison: { id: saison.id, name: saison.name },
+        /* ⚠ DER SUCHRAUM, damit „nichts gefunden" nicht mit „nicht gesucht"
+           verwechselt wird. */
+        suchraum: {
+          pfade_in_der_spezifikation: 15,
+          /* ⚠ Drei nehmen eine `TeamId` als Filter (`team/list`,
+             `club/schedule`, `club/ranking`), einer im Pfad
+             (`team/picture`). Die uebrigen elf nehmen entweder eine
+             MATCH-Nummer oder eine KLUB-Nummer — keine Mannschaft. */
+          pfade_mit_teamnummer: 4,
+          versuche_gesamt: pfade.length,
+          begriffe_geprueft:
+            "tournament 0x, turnier 0x, junior 0x, training 0x, festival 0x, "
+            + "mini 0x — die Spezifikation kennt keinen Turnierbegriff "
+            + "(19 Schemata, am 14.09.2026 gemessen)",
+          pfade_versucht: versuche.length,
+        },
+        steht_in_teamliste: inListe,
+        teamliste_gesamt: listeRoh.length,
+        zeilen_im_rohen_spielplan: imPlan.length,
+        spielplan_gesamt: planRoh.length,
+        versuche,
+        /* ⚠ Die eine Zahl, die entscheidet: antwortet IRGENDEIN Weg mit
+           Daten? */
+        wege_mit_daten: versuche.filter((x) =>
+          typeof x.ausgang === "string"
+          && !x.ausgang.startsWith("HTTP")
+          && x.ausgang !== "leere Liste"
+          && !x.ausgang.startsWith("nicht erreichbar")).length,
+      });
+    } catch (e) {
       return json({ fehler: e instanceof Error ? e.message : String(e) }, 502);
     }
   }

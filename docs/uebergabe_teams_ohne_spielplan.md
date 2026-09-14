@@ -1,5 +1,33 @@
 # Übergabe an den Theme-Chat — Mannschaften ohne Spielplan
 
+> # ⚠ ⚠ ⚠ ANGEHALTEN AM 14.09.2026 — NICHT UMSETZEN
+>
+> **Zwei Annahmen dieses Papiers sind widerlegt.** Didi hat die Teamseite
+> einer Turniermannschaft beim Verband aufgerufen:
+>
+> ```
+> https://matchcenter.fvrz.ch/default.aspx?v=1516&oid=11&lng=1&t=38315&a=trr
+> ```
+>
+> **`t=38315`.** Diese Mannschaften haben also sehr wohl eine Teamnummer
+> beim Verband — sie stehen nur nicht in `/api/team/list`.
+>
+> Damit fällt:
+>
+> - „ohne Nummer, deshalb kein Ort" — es gibt einen Ort
+> - „der Link muss auf die **Vereinsseite** gehen, weil es keine
+>   Teamadresse gibt" — es gibt eine, und sie ist besser
+>
+> ⚠ **Und die offene Frage dahinter ist grösser als der Link:** antwortet
+> die SCHNITTSTELLE auf 38315, obwohl sie die Mannschaft nicht von selbst
+> nennt? **Eine Liste, die eine Mannschaft nicht nennt, muss sie nicht
+> ablehnen** — das sind zwei verschiedene Dinge, und gemessen war bisher
+> nur das erste.
+>
+> Bis das gemessen ist, wird hier nichts umgesetzt. Alles unterhalb dieser
+> Zeile ist der Stand von vorher.
+
+
 Stand 14.09.2026. Alle Zahlen an diesem Tag gemessen (`aktion: "teamprobe"`),
 nicht aus einem Dokument zitiert.
 
