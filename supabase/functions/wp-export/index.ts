@@ -259,11 +259,23 @@ async function alleSeiten<T>(
  *    waere bequemer und sagte nur, WANN — nicht WAS. Die Zahl steht fuer
  *    einen Stand, den jemand entschieden hat.
  *
- * ⚠  WER DIESE DATEI INHALTLICH AENDERT, ERHOEHT SIE. Sonst meldet die
- *    Kachel fuer zwei verschiedene Staende dieselbe Zahl — und die eine
+ * ⚠  WER AENDERT, WAS DIESE FUNCTION ANTWORTET, ERHOEHT SIE. Sonst meldet
+ *    die Kachel fuer zwei verschiedene Staende dieselbe Zahl — und die eine
  *    Auskunft, die `laeuft drueben mein Deploy?` beantworten koennte,
  *    beantwortet sie nicht mehr.
  *
+ * ⚠ ⚠  UND DAS SCHLIESST DIE IMPORTIERTEN DATEIEN EIN. Bis zum 14.09.2026
+ *    stand hier „wer diese DATEI inhaltlich aendert" — und `geteilte_adressen`
+ *    kam aus `personenAbgleich.ts`, ohne dass `index.ts` eine Zeile anders
+ *    war. Der Stempel waere stehengeblieben, waehrend die Antwort ein Feld
+ *    mehr trug: **genau der Fall, gegen den es ihn gibt**, nur durch eine
+ *    Tuer, die der Satz nicht abgedeckt hat.
+ *
+ *    Die Frage ist deshalb nicht „habe ich index.ts angefasst?", sondern
+ *    **„antwortet sie jetzt anders?"**.
+ *
+ *    53  14.09.2026  geteilte_adressen (aus personenAbgleich.ts — die
+ *                    erste Erhoehung wegen einer IMPORTIERTEN Datei)
  *    52  13.09.2026  verlauf_unsortiert in der Vorschau
  *    51  13.09.2026  sfv_zuordnung wird gejoint (die Achse ist
  *                    angeschlossen statt hart null); ohne_person
@@ -281,7 +293,7 @@ async function alleSeiten<T>(
  *    46  12.09.2026  Durchreiche von personen/teams/unterfelder/
  *                    geschwister, nichtDurchgereicht(), diese Angabe
  */
-const FUNCTION_FASSUNG = 52;
+const FUNCTION_FASSUNG = 53;
 
 const AKTIONEN = ["probe", "export", "bestand", "status", "ranglisten"];
 
