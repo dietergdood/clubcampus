@@ -9,10 +9,11 @@ import { API_INFOS, hostVon, zielAusLauf, hatLaufProtokolliert } from "./portalU
 import type { SyncLogZeile } from "./portalUtils.ts";
 import { SfvZuordnung } from "./SfvZuordnung.tsx";
 import { SfvSpielerZuordnung } from "./SfvSpielerZuordnung.tsx";
-import { starteSync, holeVorschau, holeRohschluessel, holeRangprobe } from "../../domains/sfv/sfvService.ts";
+import { starteSync, holeVorschau, holeRohschluessel, holeRangprobe, holeTeamprobe } from "../../domains/sfv/sfvService.ts";
 import { starteWpExport, fasseExportZusammen, holeEmpfaengerStatus, holeBestand } from "../../domains/spiele/wpExportService.ts";
 import { deuteBestand } from "../../domains/spiele/bestandAnzeige.ts";
 import { deuteRangprobe } from "../../domains/sfv/rangprobeAnzeige.ts";
+import { deuteTeamprobe } from "../../domains/sfv/teamprobeAnzeige.ts";
 import type { Mitglied, Sb, Team } from "../../types.ts";
 
 /* Zeile aus api_verbindungen. Fehlt die Tabelle, baut der Tab aus
@@ -330,18 +331,20 @@ export function ApiTab({loading,isMobile,mobileKachel,apiVerbindungen,tab,sb=nul
      Personenname, aber die Regel gilt hier trotzdem: eine Auskunft in
      der Oberflaeche nennt Mengen, keine Bestaende. */
 
-  async function auskunftHolen(was: "vorschau"|"rohschluessel"|"empfaenger"|"bestand"|"rangprobe"){
+  async function auskunftHolen(was: "vorschau"|"rohschluessel"|"empfaenger"|"bestand"|"rangprobe"|"teamprobe"){
     if(!sb||auskunftLaeuft) return;
     setAuskunftLaeuft(was); setAuskunft(null);
     const {daten,fehler}= was==="vorschau" ? await holeVorschau(sb)
       : was==="empfaenger" ? await holeEmpfaengerStatus(sb)
       : was==="bestand" ? await holeBestand(sb)
       : was==="rangprobe" ? await holeRangprobe(sb)
+      : was==="teamprobe" ? await holeTeamprobe(sb)
       : await holeRohschluessel(sb);
     setAuskunftLaeuft(null);
     if(fehler||!daten){
       const t= was==="vorschau"?"Vorschau":was==="empfaenger"?"Empfänger"
         :was==="bestand"?"Bestand drüben":was==="rangprobe"?"Ranglisten beim Verband"
+        :was==="teamprobe"?"Teams und roher Spielplan"
         :"Rohschlüssel";
       setAuskunft({titel:t, zeilen:[fehler??"Keine Antwort"], fehler:true});
       return;
@@ -353,6 +356,14 @@ export function ApiTab({loading,isMobile,mobileKachel,apiVerbindungen,tab,sb=nul
     }
     if(was==="empfaenger"){
       setAuskunft({titel:"Empfänger", zeilen: deuteEmpfaenger(daten)});
+      return;
+    }
+    if(was==="teamprobe"){
+      /* ⚠ Die Deutung liegt in `domains/sfv/teamprobeAnzeige.ts` — sie
+         entscheidet Filterproblem gegen Quellenproblem, und eine
+         Entscheidung in einer Komponente laesst sich nicht gegen eine
+         erfundene Antwort halten. */
+      setAuskunft({titel:"Teams und roher Spielplan", zeilen:deuteTeamprobe(daten), roh: daten});
       return;
     }
     if(was==="rangprobe"){
@@ -718,6 +729,18 @@ export function ApiTab({loading,isMobile,mobileKachel,apiVerbindungen,tab,sb=nul
                         <Btn small variant="outline" color="#888"
                              onClick={()=>auskunftHolen("rangprobe")} disabled={!!auskunftLaeuft}>
                           {auskunftLaeuft==="rangprobe"?"Läuft…":"Ranglisten beim Verband"}
+                        </Btn>
+                        {/* ⚠ ⚠ SEIT DEM 10.09.2026 GEBAUT UND BIS ZUM 14.09.2026
+                            NICHT ANGESCHLOSSEN — kein Dienst, kein Knopf, nur ein
+                            direkter Aufruf der Function. Derselbe Fall wie
+                            `rangprobe` vier Tage vorher.
+
+                            ⚠ Sie entscheidet die Turnierfrage: kommen die Spiele
+                            der elf Mannschaften ohne Rangliste an und wir werfen
+                            sie weg — oder liefert der Verband sie nicht? */}
+                        <Btn small variant="outline" color="#888"
+                             onClick={()=>auskunftHolen("teamprobe")} disabled={!!auskunftLaeuft}>
+                          {auskunftLaeuft==="teamprobe"?"Läuft…":"Teams und roher Spielplan"}
                         </Btn>
                       </>
                       :api.key==="wordpress"

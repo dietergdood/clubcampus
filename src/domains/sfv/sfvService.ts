@@ -297,6 +297,29 @@ export async function holeRangprobe(
   return { daten: data as Record<string, unknown>, fehler: null };
 }
 
+/**
+ * Die Teamprobe — welche Mannschaften kennt der Verband, und was steht im
+ * rohen Spielplan?
+ *
+ * ⚠ Sie gibt es seit dem 10.09.2026 und war bis zum 14.09.2026 **nicht
+ * angeschlossen**: kein Dienst, kein Knopf, nur ein direkter Aufruf der
+ * Function. Gebaut, nicht angeschlossen — derselbe Fall wie `rangprobe`,
+ * `leseHalbzeit()` und `merkmale_nutzbar`.
+ *
+ * ⚠ Sie liest und schreibt nichts.
+ */
+export async function holeTeamprobe(
+  sb: Sb,
+): Promise<{ daten: Record<string, unknown> | null; fehler: string | null }> {
+  if (!sb) return { daten: null, fehler: "Keine Verbindung" };
+  const { data, error } = await sb.functions.invoke("sfv-sync", { body: { aktion: "teamprobe" } });
+  if (error) return { daten: null, fehler: await fehlerText(error, data) };
+  if ((data as { fehler?: unknown })?.fehler) {
+    return { daten: null, fehler: String((data as { fehler: unknown }).fehler) };
+  }
+  return { daten: data as Record<string, unknown>, fehler: null };
+}
+
 export async function holeRohschluessel(
   sb: Sb,
 ): Promise<{ daten: Record<string, unknown> | null; fehler: string | null }> {

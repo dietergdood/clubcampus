@@ -1032,6 +1032,47 @@ Deno.serve(async (req) => {
       const ohneFilter = await holeTeamsRoh(zugang, token, saison.id);
       const basis = nummern(ohneFilter);
 
+      /* ⚠ ⚠  DIE DREI MENGEN NEBENEINANDER — sie werden sonst aus drei
+         Quellen zitiert und treiben auseinander. Am 14.09.2026 standen im
+         Gespraech „21 von 21", „21 von 34" und „31 Teamseiten, davon 21 mit
+         Nummer" nebeneinander, und keiner wusste mehr, welche 21 gemeint
+         war.
+
+         **Eine Zahl, die man nicht selbst gemessen hat, wird mit ihrer
+         Quelle zitiert — oder gar nicht.** Hier kommen alle drei aus
+         DEMSELBEN Lauf, und damit ist die Frage „sind es dieselben?"
+         beantwortbar statt vermutbar.
+
+         ⚠ `error` gelesen: eine leere Liste saehe aus wie „keine
+         Mannschaften" und machte jede folgende Zahl zur Behauptung. */
+      const { data: teamZeilen, error: tFehler } = await db.from("teams")
+        .select("name, sfv_team_id, aktiv").eq("verein_id", v.verein_id);
+      if (tFehler) return json({ fehler: `teams nicht lesbar: ${tFehler.message}` }, 500);
+      const alleTeams = teamZeilen ?? [];
+      const mitNummer = alleTeams.filter((t) => t.sfv_team_id != null);
+      const nummernBeiUns = new Set(mitNummer.map((t) => Number(t.sfv_team_id)));
+
+      const mengen = {
+        teams_tabelle_gesamt: alleTeams.length,
+        /* ⚠ `aktiv` getrennt: eine ausgelaufene Mannschaft ohne Nummer ist
+           kein Befund, eine aktive schon. */
+        teams_tabelle_aktiv: alleTeams.filter((t) => t.aktiv !== false).length,
+        teams_mit_sfv_nummer: mitNummer.length,
+        teams_ohne_sfv_nummer: alleTeams.length - mitNummer.length,
+        /* Namentlich — genau die koennen keinen Spielplan haben, weil
+           `bildeSpiel()` ueber die Nummer filtert. */
+        ohne_nummer_namen: alleTeams
+          .filter((t) => t.sfv_team_id == null)
+          .map((t) => String(t.name ?? "")),
+        teamliste_des_verbands: basis.size,
+        /* ⚠ Die Schnittmenge sagt, ob es DIESELBEN sind — zwei gleich
+           grosse Mengen sind nicht dieselbe Menge. */
+        unsere_nummern_die_die_liste_kennt:
+          [...nummernBeiUns].filter((n) => basis.has(n)).length,
+        unsere_nummern_die_die_liste_NICHT_kennt:
+          [...nummernBeiUns].filter((n) => !basis.has(n)).length,
+      };
+
       /* ⚠ Je Spieltyp EIN Aufruf. Scheitert einer, wird er als Fehler
          ausgewiesen — nicht als leere Liste. Ein Endpunkt, der nichts
          liefert, muss von einem unterschieden werden, der nicht gefragt
@@ -1064,12 +1105,82 @@ Deno.serve(async (req) => {
             if (Number.isFinite(n)) imPlan.add(n);
           }
         }
+        /* ⚠ ⚠  JE SPIELTYP, UND MIT EINEM DISKRIMINATOR OHNE NAMEN.
+           14.09.2026, Frage: kommen die Turniere der Junioren E ueberhaupt
+           an? Elf von einundzwanzig Mannschaften spielen in Turnierform.
+
+           `nicht_in_teamliste` darunter ist fuer diese Frage STUMPF: unter
+           den unbekannten Nummern steht jeder Gegner, und das sind
+           hunderte. **Eine Zahl, die die gesuchte Menge nicht von einer
+           viel groesseren trennt, beantwortet die Frage nicht** — dieselbe
+           Form wie `gruppen_ohne_spiele`.
+
+           ⚠ DER DISKRIMINATOR: `/api/club/schedule` ist ein KLUB-Spielplan
+           (`ClubId` im Aufruf). In jeder Zeile ist damit eine Seite unsere.
+           Ist KEINE der beiden Nummern in der Teamliste, dann ist unsere
+           eigene Mannschaft eine, die die Liste nicht kennt — also genau
+           eine ohne Rangliste. Kein Namensvergleich noetig; am 10.09.2026
+           ergab ein Namensvergleich 13 statt 8, und fuenf davon waren
+           Schreibweisen.
+
+           ⚠ DIE PRAEMISSE IST EINE ANNAHME, und sie wird mitgeliefert:
+           `beide_bekannt + eine_bekannt + keine_bekannt === zeilen`. Ist
+           `eine_bekannt` nicht die grosse Mehrheit, stimmt die Praemisse
+           nicht, und `keine_bekannt` bedeutet etwas anderes.
+
+           ⚠ UND `keine_bekannt` IST GENAU DIE MENGE, DIE `bildeSpiel()`
+           VERWIRFT (`if (!aIstUns && !bIstUns) return null`). Steht dort
+           bei Typ 6 oder 8 eine Zahl, kommen die Turniere an und wir werfen
+           sie weg — ein FILTERproblem. Steht ueberall 0, liefert der Verband
+           sie nicht — ein QUELLENproblem. Davon haengt alles Weitere ab. */
+        const jeTyp = new Map<string, {
+          typ: number | null; name: string; zeilen: number;
+          beide_bekannt: number; eine_bekannt: number; keine_bekannt: number;
+          beispiele: string[];
+        }>();
+        for (const r of spiele) {
+          const o = r as Record<string, unknown>;
+          const k = String(o.matchType ?? "null");
+          const g = jeTyp.get(k) ?? {
+            typ: Number.isFinite(Number(o.matchType)) ? Number(o.matchType) : null,
+            name: String(o.matchTypeName ?? ""), zeilen: 0,
+            beide_bekannt: 0, eine_bekannt: 0, keine_bekannt: 0, beispiele: [],
+          };
+          g.zeilen += 1;
+          const a = basis.has(Number(o.teamAId)), b = basis.has(Number(o.teamBId));
+          if (a && b) g.beide_bekannt += 1;
+          else if (a || b) g.eine_bekannt += 1;
+          else {
+            g.keine_bekannt += 1;
+            /* ⚠ Hoechstens drei, und die Namen stehen NUR hier — als
+               Anhaltspunkt fuer einen Menschen, nicht als Vergleichsmerkmal.
+               Ohne sie waere „7 Zeilen" nicht nachzusehen. */
+            if (g.beispiele.length < 3) {
+              g.beispiele.push(`${String(o.teamNameA ?? "?")} (${Number(o.teamAId)})`
+                + ` vs ${String(o.teamNameB ?? "?")} (${Number(o.teamBId)})`
+                + ` am ${String(o.matchDate ?? "?").slice(0, 10)}`);
+            }
+          }
+          jeTyp.set(k, g);
+        }
+
         ausSpielplan = {
           gefragt: true, spiele: spiele.length, teamnummern_im_plan: imPlan.size,
           /* ⚠ Darunter sind auch GEGNER. Die Zahl allein beweist nichts —
              sie zeigt nur, ob im Spielplan Nummern stehen, die die
              Teamliste nicht kennt. */
           nicht_in_teamliste: [...imPlan].filter((n) => !basis.has(n)).length,
+          /* ⚠ `zeilen_je_spieltyp`, NICHT `je_spieltyp` — das gibt es in
+             derselben Antwort schon eine Ebene hoeher und meint die
+             TEAMLISTE je Spieltyp. Zwei Felder gleichen Namens mit
+             verschiedener Bedeutung sind die Falle, die dieses Papier an
+             einem Dutzend Stellen fuehrt. */
+          zeilen_je_spieltyp: [...jeTyp.values()].sort((x, y) => y.zeilen - x.zeilen),
+          /* ⚠ Die eine Zahl, die die Frage entscheidet — ueber alle Typen. */
+          zeilen_ohne_bekannte_mannschaft:
+            [...jeTyp.values()].reduce((n, g) => n + g.keine_bekannt, 0),
+          aufteilung_stimmt: [...jeTyp.values()].every((g) =>
+            g.beide_bekannt + g.eine_bekannt + g.keine_bekannt === g.zeilen),
         };
       } catch (e) {
         ausSpielplan = { gefragt: true, gescheitert: e instanceof Error ? e.message : String(e) };
@@ -1078,6 +1189,7 @@ Deno.serve(async (req) => {
       return json({
         hinweis: "Messung. Schreibt nichts, protokolliert nichts.",
         saison,
+        mengen,
         ohne_filter: {
           anzahl: basis.size,
           teams: ohneFilter.map((t) => ({
