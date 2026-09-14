@@ -318,39 +318,75 @@ describe("die Aufschluesselung loest eine Abweichung auf", () => {
   });
 });
 
-describe("welche Lesart geht auf — gezaehlt statt entschieden", () => {
-  /* ⚠ ⚠ Beim ersten Treffer ging 2× Status 2 plus ein Forfait genau auf.
-     Bei EINER Mannschaft. Diese Zeile macht aus n=1 ein n=21 je Lauf —
-     die Frage beantwortet sich, statt entschieden zu werden. */
-  const mit = (ueber: Record<string, unknown>) => deuteRangprobe({
+describe("welche Lesart geht auf — und die Schwelle steht vorher fest", () => {
+  /* ⚠ ⚠ HIER STANDEN ZWEI FÄLLE, DIE „18 von 21" FESTHIELTEN. Die
+     Formulierung war irreführend: eine Mannschaft ohne Forfait erfüllt
+     BEIDE Lesarten und kann nichts trennen. „21 von 21" liest sich wie
+     eine grosse Stichprobe und ist grösstenteils Rauschen — am
+     14.09.2026 unterschied genau EINE von 21 Zeilen.
+
+     Sie sind ersetzt, nicht angepasst: das alte Verhalten war messbar
+     irreführend, und ein Test, der es festhält, bewacht etwas Falsches. */
+  const mit = (ent: Array<Record<string, unknown>>) => deuteRangprobe({
     ...BASIS, eigene_erkennbar: true, eigene_zeilen_gesamt: 21,
     eigene_ohne_spiele: 0, eigene_ohne_zahl: 0, bestand_hinkt: 0,
-    verband_hinkt: 0, eigene: [], treffer_grundmenge: 21, ...ueber,
+    verband_hinkt: 0, eigene: [], treffer_grundmenge: 21,
+    treffer_nur_status2: 18, treffer_mit_forfait: 21, entscheidend: ent,
+  });
+  const Z = (team: string, passt: string) =>
+    ({ team, verband: 3, eng: 2, weit: 3, passt });
+
+  it("nennt die UNTERSCHEIDENDE Menge, nicht die Gesamtzahl", () => {
+    const t = zus(mit([Z("Juniorinnen C b", "weit")]));
+    expect(t).toMatch(/1 von 21 Zeilen unterscheiden/);
+    /* ⚠ Die alte, irreführende Formulierung darf nicht zurückkommen. */
+    expect(t).not.toMatch(/21 von 21 mit Status 2 und 3/);
   });
 
-  it("stellt beide Lesarten mit derselben Bezugsgroesse gegenueber", () => {
-    const t = zus(mit({ treffer_nur_status2: 18, treffer_mit_forfait: 21 }));
-    expect(t).toMatch(/18 von 21 Zeilen gehen mit Status 2 allein auf/);
-    expect(t).toMatch(/21 von 21 mit Status 2 und 3 \(forfait\)/);
+  it("nennt sie NAMENTLICH — dieselbe über zehn Läufe ist n=1", () => {
+    expect(zus(mit([Z("Juniorinnen C b", "weit")])))
+      .toMatch(/Juniorinnen C b — Verband 3, eng 2, weit 3 → weit/);
   });
 
-  it("deutet, statt den Leser schliessen zu lassen", () => {
-    expect(zus(mit({ treffer_nur_status2: 18, treffer_mit_forfait: 21 })))
-      .toMatch(/weite Lesart geht öfter auf.*Ein Lauf ist noch keine Reihe/s);
-    expect(zus(mit({ treffer_nur_status2: 21, treffer_mit_forfait: 18 })))
-      .toMatch(/⚠ Die enge Lesart geht öfter auf/);
-    expect(zus(mit({ treffer_nur_status2: 20, treffer_mit_forfait: 20 })))
-      .toMatch(/Beide gleich — dieser Lauf entscheidet nichts/);
+  it("sagt, dass ein Lauf ohne Forfait nichts beiträgt", () => {
+    const t = zus(mit([]));
+    expect(t).toMatch(/keine der 21 Zeilen unterscheidet/);
+    expect(t).toMatch(/Dieser Lauf trägt nichts bei/);
+  });
+
+  it("EIN Gegenbeispiel widerlegt — die Schwelle ist asymmetrisch", () => {
+    /* ⚠ Ob ein Forfait zählt, ist eine REGEL, keine verrauschte Grösse.
+       Ein Gegenbeispiel genügt; drei Bestätigungen braucht es. */
+    expect(zus(mit([Z("A", "eng")]))).toMatch(/⚠ WIDERLEGT/);
+  });
+
+  it("beides zugleich ist ein eigener Befund, kein Patt", () => {
+    expect(zus(mit([Z("A", "weit"), Z("B", "eng")])))
+      .toMatch(/⚠ WIDERSPRÜCHLICH — dann taugt kein Filter/);
+  });
+
+  it("keine der beiden Lesarten geht auf — das ist ein dritter Fall", () => {
+    expect(zus(mit([Z("A", "keine")])))
+      .toMatch(/Keine der beiden Lesarten geht auf/);
+  });
+
+  it("unter drei Mannschaften ist die Schwelle NICHT erreicht", () => {
+    const t = zus(mit([Z("A", "weit"), Z("B", "weit")]));
+    expect(t).toMatch(/erst 2 von 3 Mannschaften/);
+    expect(t).not.toMatch(/Schwelle erreicht/);
+  });
+
+  it("ab drei meldet sie die Schwelle — mit dem Vorbehalt", () => {
+    const t = zus(mit([Z("A", "weit"), Z("B", "weit"), Z("C", "weit")]));
+    expect(t).toMatch(/Schwelle erreicht, WENN es drei VERSCHIEDENE Mannschaften sind/);
   });
 
   it("schweigt bei einer aelteren Function", () => {
-    /* ⚠ Nicht als „0 von 0" ausgeben — eine nicht gestellte Frage ist
-       keine Messung. */
     const t = deuteRangprobe({
       ...BASIS, eigene_erkennbar: true, eigene_zeilen_gesamt: 21,
       eigene_ohne_spiele: 0, eigene_ohne_zahl: 0, bestand_hinkt: 0,
       verband_hinkt: 0, eigene: [],
     });
-    expect(zus(t)).not.toMatch(/Lesart:/);
+    expect(zus(t)).not.toMatch(/Lesart Forfait:/);
   });
 });

@@ -225,6 +225,30 @@ export function deuteRangprobe(d: Record<string, unknown>): string[] {
       + "Spielen ohne Verlauf.");
 
   /* ══ WELCHE LESART GEHT AUF? ════════════════════════════════════════
+     ⚠ ⚠ DIE SCHWELLE STEHT HIER, NICHT IM GESPRÄCH — und sie ist vor den
+     Daten festgelegt. Eine Zahl, die jemand im Nachhinein nennt, wenn ihm
+     das Ergebnis passt, ist keine Schwelle. (Bedingung Didi, 14.09.2026.)
+
+     ⚠ SIE IST ASYMMETRISCH, weil die Frage es ist. Ob ein Forfait für die
+     Tabelle zählt, ist eine REGEL des Verbands, keine verrauschte Grösse:
+
+     | | |
+     |---|---|
+     | **widerlegt** | EINE Mannschaft, bei der die enge Lesart aufgeht und die weite nicht. Ein Gegenbeispiel genügt |
+     | **bestätigt** | DREI VERSCHIEDENE Mannschaften, alle mit der weiten Lesart, und kein Gegenbeispiel |
+     | **uneinheitlich** | beides zugleich — dann taugt KEIN Filter, und das ist ein eigener Befund |
+
+     ⚠ ⚠ DREI MANNSCHAFTEN, NICHT DREISSIG BEOBACHTUNGEN. Dieselbe
+     Mannschaft über zehn Läufe ist **n=1**, nicht n=10 — das Forfait ist
+     dasselbe, der Abruf nur wiederholt. Deshalb nennt die Probe die Namen
+     und nicht bloss eine Zahl: nur an ihnen ist zu sehen, ob eine NEUE
+     dazugekommen ist.
+
+     ⚠ Und drei statt einer, weil eine Liga eine örtliche Eigenheit haben
+     kann. Drei verschiedene decken das ab; mehr zu verlangen hiesse, auf
+     ein Ereignis zu warten, das vielleicht nie eintritt — ein Forfait ist
+     selten.
+
      ⚠ ⚠ NICHT ENTSCHIEDEN, SONDERN GEZÄHLT. Beim ersten Treffer der
      Gegenprobe (Juniorinnen C, 14.09.2026) ging 2× Status 2 plus ein
      Forfait genau auf die 3 des Verbands auf — bei EINER Mannschaft. Aus
@@ -237,19 +261,39 @@ export function deuteRangprobe(d: Record<string, unknown>): string[] {
      zu werden.** */
   if (d.treffer_grundmenge !== undefined) {
     const g = z("treffer_grundmenge");
-    const nur2 = z("treffer_nur_status2");
-    const mitF = z("treffer_mit_forfait");
-    zeilen.push(`Lesart: ${nur2} von ${g} Zeilen gehen mit Status 2 allein auf, `
-      + `${mitF} von ${g} mit Status 2 und 3 (forfait)`);
-    /* ⚠ Der Satz dazu, weil eine nackte Gegenüberstellung den Leser
-       schliessen lässt — und die Hälfte der Fehlschlüsse dieser Woche
-       entstand genau so. */
-    zeilen.push(mitF > nur2
-      ? "   Die weite Lesart geht öfter auf — ein Hinweis, dass das Forfait "
-        + "mitzählt. Ein Lauf ist noch keine Reihe."
-      : mitF < nur2
-      ? "   ⚠ Die enge Lesart geht öfter auf — das Forfait zählt offenbar NICHT mit."
-      : "   Beide gleich — dieser Lauf entscheidet nichts.");
+    const ent = (d.entscheidend ?? []) as Array<Record<string, unknown>>;
+    /* ⚠ ⚠ DIE UNTERSCHEIDENDE MENGE ZUERST, und die Gesamtzahl daneben.
+       „21 von 21" liest sich wie eine grosse Stichprobe — die Zeilen ohne
+       Forfait erfüllen aber BEIDE Lesarten und können nichts trennen. */
+    if (ent.length === 0) {
+      zeilen.push(`Lesart Forfait: keine der ${g} Zeilen unterscheidet — `
+        + "ohne ein Forfait erfüllen beide Lesarten dasselbe. Dieser Lauf trägt nichts bei.");
+    } else {
+      const weit = ent.filter((e) => e.passt === "weit");
+      const eng = ent.filter((e) => e.passt === "eng");
+      const keine = ent.filter((e) => e.passt === "keine");
+      zeilen.push(`Lesart Forfait: ${ent.length} von ${g} Zeilen unterscheiden — `
+        + `${weit.length} für die weite, ${eng.length} für die enge, `
+        + `${keine.length} für keine von beiden`);
+      /* Namentlich, weil dieselbe Mannschaft über zehn Läufe n=1 ist. */
+      for (const e of ent) {
+        zeilen.push(`   ${String(e.team ?? "")} — Verband ${Number(e.verband)}, `
+          + `eng ${Number(e.eng)}, weit ${Number(e.weit)} → ${String(e.passt)}`);
+      }
+      /* ⚠ Die Schwelle wird ANGEWENDET, nicht bloss dokumentiert — sonst
+         entscheidet sie doch jemand im Nachhinein. */
+      zeilen.push(eng.length > 0 && weit.length > 0
+        ? "   ⚠ WIDERSPRÜCHLICH — dann taugt kein Filter, und das ist der Befund."
+        : eng.length > 0
+        ? "   ⚠ WIDERLEGT — das Forfait zählt NICHT mit. Ein Gegenbeispiel genügt."
+        : keine.length > 0
+        ? "   ⚠ Keine der beiden Lesarten geht auf — es fehlt ein Spiel oder ein dritter Status."
+        : weit.length >= 3
+        ? "   ✓ Schwelle erreicht, WENN es drei VERSCHIEDENE Mannschaften sind — "
+          + "dieselbe über mehrere Läufe ist n=1. Die Namen oben entscheiden es."
+        : `   Für die weite Lesart, aber erst ${weit.length} von 3 Mannschaften — `
+          + "dieselbe über mehrere Läufe zählt einmal.");
+    }
   }
 
   /* ══ WAR DER RANGLISTEN-BLOCK ÜBERSPRUNGEN? ═════════════════════════

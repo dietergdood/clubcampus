@@ -942,6 +942,32 @@ Deno.serve(async (req) => {
         treffer_mit_forfait: eigene.filter((e) =>
           e.anzahl_spiele !== null && e.anzahl_spiele === e.gespielt_mit_forfait).length,
         treffer_grundmenge: eigene.filter((e) => e.anzahl_spiele !== null).length,
+        /* ⚠ ⚠  DIE UNTERSCHEIDENDE MENGE — und sie ist die einzige, die
+           etwas beitraegt. Eine Mannschaft ohne Forfait erfuellt BEIDE
+           Lesarten; sie geht in `treffer_*` ein und kann nichts trennen.
+           „21 von 21" liest sich wie eine grosse Stichprobe und ist
+           groesstenteils Rauschen.
+
+           **Unterscheidend ist eine Zeile nur, wenn die zwei Zaehlungen
+           verschieden sind** — also wenn die Mannschaft mindestens ein
+           Forfait hat. Am 14.09.2026 war das genau EINE von 21.
+
+           ⚠ UND SIE WERDEN NAMENTLICH GENANNT, nicht nur gezaehlt. Ueber
+           mehrere Laeufe ist dieselbe Mannschaft dieselbe Beobachtung —
+           zehn Abrufe desselben Forfaits sind n=1, nicht n=10. Nur die
+           NAMEN sagen, ob eine neue dazugekommen ist. */
+        entscheidend: eigene
+          .filter((e) => e.anzahl_spiele !== null
+            && e.gespielt_laut_spielplan !== e.gespielt_mit_forfait)
+          .map((e) => ({
+            team: e.team,
+            verband: e.anzahl_spiele,
+            eng: e.gespielt_laut_spielplan,
+            weit: e.gespielt_mit_forfait,
+            /* Welche Lesart trifft — oder keine, und das waere der Befund. */
+            passt: e.anzahl_spiele === e.gespielt_mit_forfait ? "weit"
+              : e.anzahl_spiele === e.gespielt_laut_spielplan ? "eng" : "keine",
+          })),
         verband_hinkt: eigene.filter((e) =>
           e.anzahl_spiele !== null && e.anzahl_spiele < e.gespielt_laut_spielplan).length,
         /* ⚠ Was der Vergleich NICHT weiss, steht IN der Antwort. Eine

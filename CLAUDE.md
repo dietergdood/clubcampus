@@ -4251,27 +4251,91 @@ waren, und wie die fünf Spielstatus, bei denen es zwölf sind. **Eine
 unvollständige Aufzählung wird für vollständig gehalten, gerade weil sie
 aufzählt.**
 
-### ⚠ Die Anführungszeichen-Falle, am eigenen Papier vorbeigelaufen
+### ⚠⚠ EINE PRÜFUNG, DIE HINTER DEM STEHT, WAS SIE PRÜFEN SOLL, LÄUFT NIE — dritte Stelle an einem Tag
 
-Beim Schreiben eines Testnamens am 14.09.2026:
+14.09.2026. In einem Testnamen stand ein ASCII-`"` als schliessendes
+deutsches Anführungszeichen. `check:quotes` ist genau dafür gebaut, seit dem
+25.08.2026, und **hat nichts gemeldet** — weil es nie an die Reihe kam:
 
-```ts
-it("trennt „unser Filter" von „uns fehlt ein Spiel"", () => {
+```
+pruefkette = npm test && npm run typecheck && … && npm run check:quotes && …
 ```
 
-Das schliessende Zeichen war ein **ASCII-`"`**, und damit endete der String
-mitten im Titel. `vitest` meldete `[PARSE_ERROR] Expected ',' or ')'` und
-zeigte auf eine Stelle, die mit der Ursache nichts zu tun hatte — genau wie
-im Papier seit dem 25.08.2026 beschrieben.
+Der Parser bricht bei `npm test` ab, und die Kette endet dort. Die Prüfung,
+die den Fehler in einer Zeile benannt hätte, steht zehn Schritte dahinter.
 
-⚠ **`check:quotes` hätte es gefunden und kam nicht dazu:** der Parser bricht
-vorher ab, und die Prüfkette beginnt mit `npm test`. **Eine Prüfung, die
-hinter dem steht, was sie prüfen soll, läuft nie.**
+> **Eine Prüfung, die hinter dem steht, was sie prüfen soll, läuft nie.**
+> (Didi, 14.09.2026)
 
-Behoben mit `'`-Begrenzung. Und die Regel bleibt die aus dem Papier: zerrissen
-wird der String nicht vom deutschen Zeichen, sondern vom ASCII-`"`, das
-jemand als schliessendes tippt.
+⚠ **Und stattdessen meldet das vordere Glied.** `vitest` sagte
+`[PARSE_ERROR] Expected ',' or ')'` und zeigte auf eine Stelle, die mit der
+Ursache nichts zu tun hatte — dieselbe Familie wie „eine Meldung nennt das
+letzte Glied der Kette, nicht das gerissene", nur in der Prüfkette selbst.
 
+#### Die drei Stellen desselben Tages
+
+| | die Prüfung | warum sie nichts sagte |
+|---|---|---|
+| **1** | die Zählprobe in `alleSeiten()` | stand **hinter** dem Filter, den sie prüfen sollte — sie konnte nur „in Ordnung" sagen |
+| **2** | die durable Probe auf `namenFuersProtokoll` | stand an der **falschen Datei** — die richtige war aus vitest nicht ladbar |
+| **3** | `check:quotes` | steht **hinter** dem Schritt, den der Fehler abbricht |
+
+**Gemeinsam ist nicht der Fehler, sondern die Stellung.** Keine der drei war
+falsch gebaut; jede stand am falschen Ort in einer Reihenfolge — hinter dem
+Filter, hinter der Sprachgrenze, hinter dem Abbruch.
+
+⚠ **Die Frage, die alle drei findet, ist nicht „prüft das?", sondern: WAS
+STEHT DAVOR?** Kommt die Prüfung überhaupt dazu, und sieht sie den Zustand,
+den sie beurteilen soll — oder einen, den etwas anderes schon bearbeitet hat?
+
+**Zur dritten ist ausdrücklich nichts gebaut.** Die Reihenfolge umzudrehen
+hiesse, die schnellen Prüfungen vor den Testlauf zu ziehen — das wäre eine
+Änderung an der Kette für einen Fall, der in dieser Form selten ist, und sie
+verschöbe das Problem nur auf den nächsten Schritt. **Der Befund ist der
+Eintrag**, nicht die Umstellung.
+
+### ⚠⚠ „21 VON 21" WAR GRÖSSTENTEILS RAUSCHEN — die Bezugsgrösse war die falsche
+
+Am 14.09.2026 gebaut und am selben Tag berichtigt, bevor eine Entscheidung
+darauf fiel.
+
+Die Frage war, ob ein Forfait für die Tabelle des Verbands zählt. Gebaut
+waren zwei Zähler über alle 21 eigenen Zeilen: `treffer_nur_status2` gegen
+`treffer_mit_forfait`, mit der Ansage „nach einem Lauf ist n=21".
+
+⚠ **Es war n=1.** Eine Mannschaft **ohne** Forfait erfüllt beide Lesarten —
+die zwei Zählungen sind dort gleich, und die Zeile kann nichts trennen. Von
+21 Zeilen unterschied genau eine.
+
+> **Eine Bezugsgrösse, die auch die nicht unterscheidenden Fälle enthält,
+> lässt eine Stichprobe gross aussehen, die klein ist.** Dieselbe Familie wie
+> ein Zähler, dessen Name mehr behauptet als er misst — nur sitzt der Fehler
+> hier im NENNER.
+
+**Gezählt wird seither die unterscheidende Menge**, und sie wird **namentlich**
+genannt: dieselbe Mannschaft über zehn Läufe ist eine Beobachtung, nicht
+zehn. Das Forfait ist dasselbe, nur der Abruf wiederholt sich.
+
+#### Die Schwelle, vor den Daten festgelegt
+
+| | |
+|---|---|
+| **widerlegt** | EINE Mannschaft, bei der die enge Lesart aufgeht und die weite nicht |
+| **bestätigt** | DREI VERSCHIEDENE Mannschaften für die weite, kein Gegenbeispiel |
+| **uneinheitlich** | beides zugleich — dann taugt kein Filter, und das ist der Befund |
+| **keine von beiden** | ein dritter Status oder ein wirklich fehlendes Spiel |
+
+⚠ **Sie ist asymmetrisch, weil die Frage es ist.** Ob ein Forfait zählt, ist
+eine Regel des Verbands und keine verrauschte Grösse — ein Gegenbeispiel
+widerlegt sie, eine Bestätigung belegt sie nicht.
+
+⚠ **Drei statt einer**, weil eine Liga eine örtliche Eigenheit haben kann.
+Mehr zu verlangen hiesse, auf ein Ereignis zu warten, das vielleicht nie
+eintritt.
+
+⚠ **Und sie wird ANGEWENDET, nicht bloss dokumentiert.** Die Anzeige sagt
+selbst „widerlegt", „widersprüchlich" oder „erst 2 von 3" — sonst entscheidet
+sie doch jemand im Nachhinein, und genau das war die Bedingung.
 ### ⚠ `gespielt_laut_spielplan` ZÄHLT UNSERE MANNSCHAFT — am Code entschieden
 
 Frage des Theme-Chats, 14.09.2026, bevor er die Zahl anzeigt: zählt sie
