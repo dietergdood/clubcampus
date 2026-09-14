@@ -2541,7 +2541,9 @@ CREATE TABLE IF NOT EXISTS "public"."vereine" (
     "updated_at" timestamp with time zone DEFAULT "now"(),
     "slug" "text",
     "sfv_club_nummer" integer,
-    "austritt_art_id" "uuid"
+    "austritt_art_id" "uuid",
+    "sfv_club_id" integer,
+    "sfv_verband_oid" integer
 );
 
 
@@ -2553,6 +2555,14 @@ COMMENT ON COLUMN "public"."vereine"."sfv_club_nummer" IS 'SFV clubNumber des Ve
 
 
 COMMENT ON COLUMN "public"."vereine"."austritt_art_id" IS 'Personenart, zu der eine Person beim Austritt wird. Nur GESETZTE Arten (personenarten.ableitung IS NULL) sind zulaessig — geprueft in der Portalverwaltung, nicht per CHECK; Begruendung im Kopf von migration_austritt.sql.';
+
+
+
+COMMENT ON COLUMN "public"."vereine"."sfv_club_id" IS 'Die ClubId des Verbands — dieselbe Zahl, die jeder API-Aufruf als ClubId fuehrt und die im Matchcenter als v=… steht. FCH: 1516. NICHT sfv_club_nummer (das ist die clubNumber aus Ranglisten, FCH: 11057).';
+
+
+
+COMMENT ON COLUMN "public"."vereine"."sfv_verband_oid" IS 'Der Regionalverband im Matchcenter (oid=…). FVRZ: 11. Der SFV hat dreizehn; ein Klub in einem anderen Verband hat eine andere Zahl.';
 
 
 

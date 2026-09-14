@@ -4871,7 +4871,9 @@ export type Database = {
           created_at: string | null
           id: string
           name: string
+          sfv_club_id: number | null
           sfv_club_nummer: number | null
+          sfv_verband_oid: number | null
           slug: string | null
           theme: Json | null
           updated_at: string | null
@@ -4881,7 +4883,9 @@ export type Database = {
           created_at?: string | null
           id?: string
           name: string
+          sfv_club_id?: number | null
           sfv_club_nummer?: number | null
+          sfv_verband_oid?: number | null
           slug?: string | null
           theme?: Json | null
           updated_at?: string | null
@@ -4891,7 +4895,9 @@ export type Database = {
           created_at?: string | null
           id?: string
           name?: string
+          sfv_club_id?: number | null
           sfv_club_nummer?: number | null
+          sfv_verband_oid?: number | null
           slug?: string | null
           theme?: Json | null
           updated_at?: string | null

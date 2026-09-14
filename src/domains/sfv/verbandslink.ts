@@ -24,6 +24,8 @@
    nach „Vereinsnummer" aus und sind es in verschiedenen Systemen.
    ═══════════════════════════════════════════════════════════════════ */
 
+import type { Tables } from "../../types.ts";
+
 /**
  * Eine Zahl, die wirklich eine ist.
  *
@@ -41,11 +43,18 @@ function zahl(x: unknown): number | null {
   return Number.isFinite(n) && n > 0 ? n : null;
 }
 
-/** Was der Link braucht — aus `vereine`, nicht aus einem Secret. */
-export interface Verbandskennung {
-  sfv_club_id?: number | null;
-  sfv_verband_oid?: number | null;
-}
+/**
+ * Was der Link braucht — aus `vereine`, nicht aus einem Secret.
+ *
+ * ⚠ Ein `Pick` auf die Tabelle, kein eigenes Interface. Bis zum
+ * 14.09.2026 stand hier eine handgeschriebene Fassung, **weil es die
+ * Spalten noch nicht gab** — seit der Migration gibt es sie, und damit
+ * fällt der Grund weg. Ein handgeschriebenes Interface mit denselben
+ * Feldern läuft still auseinander, sobald der Basistyp sich ändert.
+ */
+export type Verbandskennung = Partial<
+  Pick<Tables<"vereine">, "sfv_club_id" | "sfv_verband_oid">
+>;
 
 /**
  * Die Adresse der Mannschaftsseite beim Verband.

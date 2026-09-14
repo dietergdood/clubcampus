@@ -10442,6 +10442,35 @@ andere nicht; wer nur die erste macht, geht mit einem grünen Ergebnis
 nach Hause.
 
 
+#### ⚠ Nachtrag 14.09.2026 — diesmal war BEIDES veraltet, und der Anlass war fremd
+
+Am Sessionabschluss gemessen: der frische Dump wich ab, die Typen ebenso.
+**Nicht wegen einer eigenen Änderung** — Didi hatte
+`migration_vereine_verbandskennung.sql` ausgeführt, und davon weiß ein
+Repository nichts.
+
+| | |
+|---|---|
+| Dump | zwei Spalten und zwei `COMMENT ON COLUMN` |
+| Zählprobe | **unverändert** 92/177/64/317 — richtig: zwei nullable Spalten sind kein neues Objekt |
+| Typen | `sfv_club_id` und `sfv_verband_oid` in allen drei Blöcken |
+
+> **Der Dump veraltet nicht nur durch eigene Arbeit.** Wer die Probe nur
+> nach einer eigenen Migration macht, verpasst genau die Migrationen, die
+> jemand anders ausgeführt hat — und das sind die, von denen man nichts
+> weiß.
+
+⚠ **Und der Nachzug hat sofort eine zweite Stelle fällig gemacht.**
+`Verbandskennung` in `verbandslink.ts` war ein handgeschriebenes Interface
+mit denselben zwei Feldern — **geschrieben, WEIL es die Spalten noch nicht
+gab.** Mit der Migration fällt der Grund weg, und aus dem Interface wird ein
+`Pick<Tables<"vereine">, …>`.
+
+> **Ein handgeschriebenes Interface hat oft ein Ablaufdatum, und es steht
+> nirgends.** Es entsteht als Notlösung für einen Typ, den es noch nicht
+> gibt — und bleibt stehen, wenn es ihn gibt. Wer Typen nachzieht, sucht
+> danach: die Felder sind dieselben, also meldet nichts.
+
 ### ✅ VIER SPIELE, DEREN VERLAUF NICHT ZUM RESULTAT PASST — alle vier erklärt, keines ein Fehler bei uns
 
 Gemeldet von der Website-Seite am 11.09.2026, gemessen über alle 68
