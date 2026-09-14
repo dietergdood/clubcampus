@@ -706,6 +706,39 @@ Deno.serve(async (req) => {
          die beruhigt, erstickt das Detail neben sich** — die Umkehrung von
          „berechnet, geliefert, nicht gezeigt": gezeigt, aber neben einer
          Zahl, die sagt, es sei nichts zu sehen. */
+      /* ⚠ ⚠  WAR DER RANGLISTEN-BLOCK UEBERSPRUNGEN? — Abfrage 5 als
+         stehende Auskunft statt als einmaliges SQL.
+
+         `ranglisten.stand_vom` wird bei JEDEM Ranglisten-Schreibvorgang auf
+         `jetzt` gesetzt. Liegt der neueste Stand deutlich vor dem letzten
+         Lauf, der auf `ok` endete, hat der Block nicht geschrieben — und bis
+         zum 14.09.2026 war genau das moeglich, weil er hinter vier Wuerfen
+         des Spielplans lag.
+
+         ⚠ Die Zahl steht IMMER da, auch als Null. „0 Minuten Rueckstand"
+         ist die Auskunft, dass der Block laeuft; sie fehlt, wenn nur der
+         schlechte Fall angezeigt wird.
+
+         ⚠ `null` heisst NICHT GEMESSEN und ist von „0" zu unterscheiden:
+         ohne einen `ok`-Lauf im Protokoll gibt es nichts, wogegen man halten
+         koennte. */
+      const { data: letzterOk, error: lFehler } = await db.from("api_sync_log")
+        .select("beendet_am").eq("verein_id", v.verein_id).eq("status", "ok")
+        .not("beendet_am", "is", null)
+        .order("beendet_am", { ascending: false }).limit(1).maybeSingle();
+      if (lFehler) return json({ fehler: `api_sync_log nicht lesbar: ${lFehler.message}` }, 500);
+
+      const { data: neuesterStand, error: nFehler } = await db.from("ranglisten")
+        .select("stand_vom").eq("verein_id", v.verein_id)
+        .order("stand_vom", { ascending: false }).limit(1).maybeSingle();
+      if (nFehler) return json({ fehler: `ranglisten nicht lesbar: ${nFehler.message}` }, 500);
+
+      const okZeit = letzterOk?.beendet_am ? Date.parse(String(letzterOk.beendet_am)) : null;
+      const standZeit = neuesterStand?.stand_vom
+        ? Date.parse(String(neuesterStand.stand_vom)) : null;
+      const rueckstandMinuten = (okZeit !== null && standZeit !== null)
+        ? Math.round((okZeit - standZeit) / 60000) : null;
+
       /* ⚠ Unsere zugeordneten Mannschaften — fuer die Vollstaendigkeitsfrage.
          `error` gelesen: eine leere Liste meldete sonst „keine Mannschaft
          ohne Zeile" und waere die glatte Beruhigung. */
@@ -871,6 +904,11 @@ Deno.serve(async (req) => {
            Verbandsseite und ClubCampus benennen dieselbe Mannschaft
            verschieden — am 10.09.2026 ergab ein Namensvergleich 13 fehlende
            statt 8, und fuenf davon waren Schreibweisen. */
+        /* ⚠ ⚠  WAR DER BLOCK UEBERSPRUNGEN? Drei Felder, und `null` heisst
+           bei allen dreien „nicht feststellbar", nicht „0". */
+        ranglisten_stand_vom: neuesterStand?.stand_vom ?? null,
+        letzter_ok_lauf: letzterOk?.beendet_am ?? null,
+        ranglisten_rueckstand_minuten: rueckstandMinuten,
         teams_ohne_tabellenzeile: teamsOhneZeile,
         teams_mit_nummer_gesamt: teamsMitNummer.length,
         /* ⚠ `null` heisst NICHT GEMESSEN: ohne `vereine.sfv_club_nummer`

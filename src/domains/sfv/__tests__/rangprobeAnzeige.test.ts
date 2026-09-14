@@ -238,3 +238,36 @@ describe("Vollstaendigkeit der Lieferung", () => {
     expect(zus(t)).toMatch(/… und 4 weitere \(siehe Rohantwort\)/);
   });
 });
+
+describe("war der Ranglisten-Block uebersprungen?", () => {
+  /* ⚠ Abfrage 5 als stehende Auskunft statt als einmaliges SQL. Der
+     Block lag bis zum 14.09.2026 hinter vier Würfen des Spielplans;
+     lief einer, wurde keine Zeile geschrieben — und nichts sagte es. */
+  const mit = (ueber: Record<string, unknown>) => deuteRangprobe({
+    ...BASIS, eigene_erkennbar: true, eigene_zeilen_gesamt: 1,
+    eigene_ohne_spiele: 0, eigene_ohne_zahl: 0, bestand_hinkt: 0,
+    verband_hinkt: 0, eigene: [], ...ueber,
+  });
+
+  it("meldet einen uebersprungenen Block", () => {
+    expect(zus(mit({ ranglisten_rueckstand_minuten: 4000 })))
+      .toMatch(/⚠ Der Ranglisten-Stand ist 4000 Minuten älter.*übersprungen/);
+  });
+
+  it("der gute Fall steht ebenfalls da", () => {
+    /* ⚠ Auch die Null bekommt einen Satz. „Nichts gemeldet" und
+       „geprüft und in Ordnung" dürfen nicht gleich aussehen. */
+    expect(zus(mit({ ranglisten_rueckstand_minuten: 3 })))
+      .toMatch(/3 Minuten älter als der letzte ok-Lauf — der Block läuft/);
+  });
+
+  it("unterscheidet drei Lagen, nicht zwei", () => {
+    /* `undefined` = alte Function · `null` = kein ok-Lauf vorhanden ·
+       Zahl = gemessen. Keine davon darf wie eine andere aussehen. */
+    expect(zus(mit({}))).toMatch(/nicht gemeldet — die Edge Function/);
+    expect(zus(mit({ ranglisten_rueckstand_minuten: null })))
+      .toMatch(/nicht feststellbar — es gibt keinen abgeschlossenen ok-Lauf/);
+    expect(zus(mit({ ranglisten_rueckstand_minuten: null })))
+      .not.toMatch(/der Block läuft/);
+  });
+});

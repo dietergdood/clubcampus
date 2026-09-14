@@ -89,8 +89,34 @@ describe("Schreibende Aktionen protokollieren — und zwar vorher", () => {
     for (const a of lesend) {
       const t = abschnitt(roh, a);
       expect(t).not.toBe("");
-      expect(t, `${a} protokolliert, obwohl es nur liest`).not.toContain("api_sync_log");
+      /* ⚠ ⚠ VERBOTEN IST DAS SCHREIBEN, NICHT DER NAME. Bis zum 14.09.2026
+         stand hier `not.toContain("api_sync_log")` — und das traf, sobald
+         eine Leseprobe das Protokoll LIEST. `rangprobe` tut genau das, seit
+         sie den letzten ok-Lauf gegen `ranglisten.stand_vom` hält; das ist
+         der Sinn der Probe und kein Verstoss.
+
+         **Eine Regel, die einen Bezeichner sucht, prüft eine Schreibweise.**
+         Dieselbe Familie wie `name !== "Elternteil"` — und diesmal im
+         Prüfwerkzeug selbst, also an der Stelle, an der niemand mehr
+         nachsieht. Der Zuschnitt ist jetzt der VORGANG: ein `insert` oder
+         `update` auf `api_sync_log`. */
+      const schreibt = /\.from\(\s*["'`]api_sync_log["'`]\s*\)[\s\S]{0,200}?\.(insert|update|upsert|delete)\(/
+        .test(t);
+      expect(schreibt, `${a} SCHREIBT ins Protokoll, obwohl es nur liest`).toBe(false);
     }
+  });
+
+  it("Positivkontrolle: ein schreibender Zugriff in einer Leseprobe wäre rot", () => {
+    /* ⚠ PFLICHT, und hier besonders: die verengte Regel könnte zu weit
+       gelockert sein und gar nichts mehr treffen. Ohne diesen Fall wäre
+       „keine Leseprobe schreibt" von „die Abfrage findet nichts mehr"
+       nicht zu unterscheiden. */
+    const schreibt = /\.from\(\s*["'`]api_sync_log["'`]\s*\)[\s\S]{0,200}?\.(insert|update|upsert|delete)\(/;
+    expect(schreibt.test('db.from("api_sync_log").insert({ status: "ok" })')).toBe(true);
+    expect(schreibt.test('db.from("api_sync_log").update({ status: "ok" }).eq("id", x)')).toBe(true);
+    /* Und ein reines Lesen trifft sie NICHT — sonst wäre die Verengung
+       wirkungslos. */
+    expect(schreibt.test('db.from("api_sync_log").select("beendet_am").limit(1)')).toBe(false);
   });
 
   it("⚠ der Sync trägt seine Aktion ebenfalls", () => {

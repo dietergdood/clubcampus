@@ -174,6 +174,35 @@ export function deuteRangprobe(d: Record<string, unknown>): string[] {
       + "keinen Stand. Wir bilden ihn korrekt ab; dieselbe Lage wie bei den "
       + "Spielen ohne Verlauf.");
 
+  /* ══ WAR DER RANGLISTEN-BLOCK ÜBERSPRUNGEN? ═════════════════════════
+     ⚠ ⚠ Der Befund vom 14.09.2026: der Block lag hinter vier Würfen des
+     Spielplans, die ihn nichts angehen. Lief einer davon, wurde keine
+     Ranglistenzeile geschrieben — und auf der Website stand eine Tabelle,
+     die einen Spieltag nachhinkte, ohne dass etwas fehlschlug.
+
+     ⚠ `null` heisst NICHT FESTSTELLBAR, nicht „0 Minuten". Ohne einen
+     `ok`-Lauf im Protokoll gibt es nichts, wogegen man halten könnte. */
+  const rueck = d.ranglisten_rueckstand_minuten;
+  if (rueck === undefined) {
+    zeilen.push("Rückstand des Ranglisten-Stands: nicht gemeldet — die Edge "
+      + "Function ist älter als der 14.09.2026.");
+  } else if (rueck === null) {
+    zeilen.push("Rückstand des Ranglisten-Stands: nicht feststellbar — es gibt "
+      + "keinen abgeschlossenen ok-Lauf oder keine Ranglistenzeile.");
+  } else {
+    const m = Number(rueck);
+    /* ⚠ Die Grenze ist eine Zahl, die niemand gemessen hat — deshalb weit
+       und mit Begründung: der Sync läuft stündlich, also ist alles unter
+       zwei Stunden der Normalfall. Enger gezogen wäre sie ein
+       Fehlalarm-Erzeuger, und ein Melder, der grundlos anschlägt, wird
+       abgeschaltet. */
+    zeilen.push(m <= 120
+      ? `Der Ranglisten-Stand ist ${m} Minuten älter als der letzte ok-Lauf — `
+        + "der Block läuft"
+      : `⚠ Der Ranglisten-Stand ist ${m} Minuten älter als der letzte ok-Lauf — `
+        + "der Block wurde übersprungen, nicht bloss nichts geliefert");
+  }
+
   /* ══ VOLLSTÄNDIGKEIT DER LIEFERUNG ══════════════════════════════════
      ⚠ Kommt zu JEDER Mannschaft, die wir kennen, eine Tabellenzeile? Eine
      Gruppe, die der Verband nicht mehr liefert, fällt im Sync heraus — und

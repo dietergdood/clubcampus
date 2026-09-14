@@ -128,3 +128,55 @@ describe("bildeSpiel baut eine feste Schlüsselmenge", () => {
     expect(verstoesse).toEqual([]);
   });
 });
+
+/* ══════════════════════════════════════════════════════════════════════
+   `spiele.sfv_team_id` IST UNSERE MANNSCHAFT — nie der Gegner, nie eine
+   Gruppensumme.
+
+   ⚠ ANLASS, 14.09.2026, Frage des Theme-Chats: zählt
+   `gespielt_laut_spielplan` in der `rangprobe` unsere Mannschaft oder die
+   Gruppe? Die Zahl entsteht aus `count(*) group by spiele.sfv_team_id` —
+   ihre ganze Bedeutung hängt daran, was in dieser Spalte steht.
+
+   `bildeSpiel()` schreibt dort `unserId`, und `unserId` ist über
+   `unsA ? aId : bId` die EIGENE Seite. Der Gegner steht in `gegnerId` und
+   landet in einer anderen Spalte.
+
+   ⚠ Ein Test hält es fest, weil die Zeile sonst eine Behauptung über eine
+   andere Datei wäre — und die Gegenstelle zeigt die Zahl erst an, wenn
+   ihre Bedeutung feststeht. **Auf ein Feld zu bauen, dessen Bedeutung
+   niemand genannt hat, ist Raten mit Quellenangabe.**
+
+   ⚠ Über den Syntaxbaum, weil `sync.ts` von esm.sh importiert und aus
+   vitest nicht ladbar ist — dieselbe Grenze wie beim Fall darüber.
+   ══════════════════════════════════════════════════════════════════════ */
+describe("sfv_team_id an einer Spielzeile", () => {
+  it("bekommt `unserId`, nicht `gegnerId`", () => {
+    const baum = baue("supabase/functions/sfv-sync/sync.ts");
+    const fn = findeFunktion(baum, "bildeSpiel");
+    expect(fn, "bildeSpiel nicht gefunden — umbenannt?").not.toBeNull();
+
+    const zuweisungen: string[] = [];
+    jederKnoten(fn!, (n) => {
+      if (!ts.isPropertyAssignment(n)) return;
+      const name = ts.isIdentifier(n.name) ? n.name.text : "";
+      if (name !== "sfv_team_id") return;
+      zuweisungen.push(n.initializer.getText());
+    });
+
+    /* ⚠ Die leere Menge wäre grün und hätte nichts geprüft — dieselbe
+       Falle, die in `check:plugin` viermal vorkam. Deshalb erst die
+       Existenz, dann der Wert. */
+    expect(zuweisungen, "kein sfv_team_id in bildeSpiel — umgebaut?")
+      .toHaveLength(1);
+    expect(zuweisungen[0]).toBe("unserId");
+  });
+
+  it("`unserId` ist die eigene Seite, nicht die des Gegners", () => {
+    /* Die zweite Hälfte: `unserId` könnte umdefiniert werden, und dann
+       wäre der Fall oben grün und die Bedeutung gedreht. */
+    const quelle = baue("supabase/functions/sfv-sync/sync.ts").getFullText();
+    expect(quelle).toContain("const unserId = unsA ? aId : bId;");
+    expect(quelle).toContain("const gegnerId = unsA ? bId : aId;");
+  });
+});

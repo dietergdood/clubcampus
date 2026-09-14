@@ -4146,15 +4146,57 @@ grün, die Wanduhr sieht mit 78 s gut aus — und 603 Sekunden `environment`
 stehen daneben, wo niemand hinsieht. **Die Zahl, die den Befund trägt, ist
 nicht die, auf die man schaut.**
 
+✅ **Gebaut am 14.09.2026 als `WORKER_DECKEL` in `vite.config.js`:**
+`Math.max(1, Math.min(12, availableParallelism()))`. Gemessen danach:
+**85 Dateien, 1375 Fälle, null Timeouts, 59 s statt 98 s.**
+
 ⚠ **Und es ist kein Widerspruch zur Entscheidung vom 22.08.2026**, die eine
 feste `maxWorkers`-Zahl ablehnte: dort ging es um eine Zahl, die auf einer
 4-Kern-Prüfkette bremsen würde. Eine **Obergrenze** bremst eine kleinere
-Maschine nie — `min(12, verfügbar)` ist auf `ubuntu-latest` wirkungslos und
-hier die ganze Reparatur.
+Maschine nie — auf `ubuntu-latest` (4 Kerne) ist sie wirkungslos, hier ist
+sie die ganze Reparatur. Der Absatz von damals bleibt richtig; er hat einen
+anderen Gegenstand.
+
+⚠ `availableParallelism()` statt `cpus().length`: es berücksichtigt eine
+Container-Begrenzung, und die Prüfkette läuft in einem Container.
 
 ⚠ **Die Messung ist ein Lauf je Einstellung.** Dass die Vorgabe manchmal grün
 ist (zweimal am selben Tag), zeigt, dass sie auf der Kante sitzt — nicht, dass
 sie trägt. Bei 4, 8 und 12 war sie es nie.
+
+### ⚠ `gespielt_laut_spielplan` ZÄHLT UNSERE MANNSCHAFT — am Code entschieden
+
+Frage des Theme-Chats, 14.09.2026, bevor er die Zahl anzeigt: zählt sie
+unsere Mannschaft oder die Gruppensumme?
+
+**Unsere Mannschaft.** Die Zahl entsteht aus `count(*) group by
+spiele.sfv_team_id`, und `bildeSpiel()` schreibt dort `unserId` — über
+`unsA ? aId : bId` die eigene Seite. Der Gegner steht in `gegnerId` und
+landet in einer anderen Spalte. Eine Gruppensumme kommt in `spiele` nirgends
+vor.
+
+⚠ **Zwei Grenzen gehören dazu, und sie stehen in der Antwort** als
+`vergleich_naeherung`, nicht bloss im Kommentar:
+
+| | |
+|---|---|
+| **Derby** | zwei eigene Teams gegeneinander sind EINE Zeile, und sie trägt die Nummer des Heimteams — das Gastteam ist um eins unterzählt. Heute 0 Fälle (gemessen 28.08.2026) |
+| **Zuschnitt** | `matches` zählt die Spiele DIESER Gruppe, unser Filter Spieltyp 1 und Status 2 |
+
+**Eine Abweichung ist deshalb eine Frage, kein Befund.**
+
+⚠ **Die Zusage hängt an einem Fall, nicht an diesem Absatz**
+(`spieleTueren.test.ts`): `sfv_team_id` bekommt `unserId`, und `unserId` ist
+`unsA ? aId : bId`. Beide Hälften sind nötig — würde `unserId` umdefiniert,
+wäre die erste grün und die Bedeutung gedreht. Gegengeprobt mit zwei
+Sabotagen.
+
+⚠ **Über den Syntaxbaum**, weil `sync.ts` von esm.sh importiert und aus
+vitest nicht ladbar ist — dieselbe Grenze wie bei `namenFuersProtokoll`.
+
+> **Auf ein Feld zu bauen, dessen Bedeutung niemand genannt hat, ist Raten
+> mit Quellenangabe.** (Theme-Chat, 14.09.2026) — und deshalb wird die
+> Bedeutung gemessen und festgehalten, bevor die Gegenstelle sie anzeigt.
 
 ### ⚠⚠ ZWEI URSACHEN, DIE VON AUSSEN GLEICH AUSSEHEN — und die Probe hat beide Zahlen in der Hand
 
