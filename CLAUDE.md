@@ -4123,6 +4123,51 @@ Messbar ist er: `ranglisten.stand_vom` gegen den letzten `ok`-Lauf in
 `api_sync_log` (Abfrage 5). Liegt der Stand deutlich davor, war der Block
 übersprungen.
 
+### ⚠⚠ VIER TAGE UNDEPLOYT — und die Zählprobe dafür ist eine Zeitrechnung
+
+Am Sessionabschluss des 14.09.2026 gemessen, nicht vermutet: die letzte
+Änderung je Function gegen ihren letzten Deploy.
+
+| Function | zuletzt geändert | zuletzt deployt | |
+|---|---|---|---|
+| `sfv-sync` | 14.09. 10:27 | 14.09. 10:27 | ✓ |
+| `wp-export` | 14.09. 02:32 | 14.09. 02:33 | ✓ |
+| `invite-user` | 23.08. 14:31 | 23.08. **14:28** | ⚠ drei Minuten davor |
+| **`person-loeschen`** | **10.09. 01:58** | **24.08.** 10:46 | ⚠ **17 Tage** |
+
+**`person-loeschen` trug 40 Zeilen, die nie liefen** — und es ist
+ausgerechnet die DSGVO-Löschkette: ohne sie bleibt `sfv_personen` stehen,
+und **die gelöschte Person erscheint beim nächsten Website-Export wieder, in
+der Schreibweise des Verbands.** Eine Löschung, die den Namen wieder
+sichtbar macht.
+
+⚠ **Heute folgenlos, weil `sfv_zuordnung` leer ist — und das ist eine
+Datenlage, keine Absicherung.** Genau diese Tabelle steht als nächstes zum
+Befüllen an (der Durchgang von Hand bei 308 offenen Spielern). **Die
+Reihenfolge ist damit die Sache: erst deployen, dann zuordnen.** Deployt am
+14.09.2026.
+
+#### ⚠ Und drei Minuten Abstand entscheiden GAR NICHTS
+
+Bei `invite-user` lag der Deploy **vor** dem Commit — der übliche Ablauf ist
+deployen, nachsehen, committen. Die Zeitrechnung kann diesen Fall nicht von
+„undeployt" unterscheiden.
+
+**Entschieden hat eine Verhaltensprobe**, nicht die Uhr: ein `POST` mit dem
+publishable key gegen die laufende Function.
+
+```
+{"error":"Nicht angemeldet"}   HTTP 401     ← die neue Fassung
+```
+
+Die alte hätte `400 {"error":"E-Mail fehlt"}` gesagt — sie prüfte nur, **ob**
+ein Header da ist. **Ein Unterschied im Verhalten ist der einzige Beleg, den
+ein Zeitstempel nicht ersetzen kann.**
+
+> **Der Deploy-Stand gehört gemessen, nicht erinnert** — und die Messung ist
+> zwei Befehle: `git log -1 --format=%ct -- supabase/functions/<name>/` gegen
+> `functions list`. Wo sie nicht entscheidet, entscheidet nur ein Aufruf.
+
 ### ⚠⚠ DER DECKEL WAR RICHTIG, DER LAUF WAR ZU VOLL — und mehr Worker waren LANGSAMER
 
 Gemessen am 14.09.2026, nachdem sieben jsdom-Fälle in den 5000er-Deckel
