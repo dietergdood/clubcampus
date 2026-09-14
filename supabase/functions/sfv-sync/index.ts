@@ -1117,6 +1117,20 @@ Deno.serve(async (req) => {
 
       /* ⚠ Streng seriell mit DEMSELBEN Token: die SFV-API kennt je Anwendung
          genau ein gueltiges — parallel liefe einer dem anderen davon. */
+      /* ⚠ ⚠  WAS DER WEG BEANTWORTEN SOLL — je Weg mitgefuehrt, nicht
+         hinterher erschlossen. Am 14.09.2026 zaehlte `wege_mit_daten` jede
+         Antwort, die kein Fehler war: darunter die UNVERAENDERTE Teamliste
+         (21 Eintraege, der Parameter wurde ignoriert) und ein BILD. Die
+         Schlusszeile meldete „2 Wege antworten mit Daten — das loest das
+         Problem", waehrend jede Zeile darueber das Gegenteil sagte.
+
+         > Eine Zusammenfassung, die dem Detail darunter widerspricht, wird
+         > zuerst gelesen — und sie ist gefaehrlicher als gar keine.
+
+         Die Frage war nie „antwortet der Endpunkt?", sondern **„liefert er
+         Spielplanzeilen fuer DIESE Mannschaft?"**. Dieselbe Form wie
+         `gruppen_ohne_spiele` und `nicht_in_teamliste`: die Zahl misst
+         genau, was sie sagt, und die Frage dahinter war eine andere. */
       const versuche: Array<Record<string, unknown>> = [];
       const pfade: Array<[string, string]> = [
         ["team/list mit TeamId", `/api/team/list?${basis}&TeamId=${nummer}`],
@@ -1137,11 +1151,50 @@ Deno.serve(async (req) => {
         /* ⚠ Und derselbe Typ mit der Nummer zusammen — falls der Filter nur
            in Kombination greift. */
         ["club/schedule Typ 6 + TeamId", `/api/club/schedule?${basis}&MatchType=6&TeamId=${nummer}`],
+        /* ⚠ ⚠  GIBT ES EIN VORGABE-ZEITFENSTER? Die gefaehrlichste der zehn
+           ungenutzten Filter-Fragen, und niemand hat sie gestellt.
+
+           `/api/club/schedule` nimmt dreizehn Parameter; wir setzen drei.
+           Ein Filter, den man NICHT setzt, bedeutet normalerweise „nicht
+           filtern" — aber `DateFrom`/`DateUntil` koennten eine VORGABE
+           haben. Dann faehrt jeder Lauf gegen ein Fenster, das niemand
+           gewaehlt hat, und aeltere oder spaetere Spiele fehlen still.
+
+           Dieser Aufruf spannt das Fenster ueber die ganze Saison. Kommen
+           mehr als die 270 zurueck, gibt es eine Vorgabe — und das waere
+           ein Befund weit ueber die Turnierfrage hinaus. */
+        ["club/schedule ganze Saison (Datumsfenster)",
+          `/api/club/schedule?${basis}&DateFrom=2026-07-01&DateUntil=2027-06-30`],
       ];
+      /* Die Laenge der UNGEFILTERTEN Teamliste — gegen sie wird geprueft,
+         ob ein `TeamId`-Parameter ueberhaupt gewirkt hat. */
+      const listeRoh = await holeTeamsRoh(zugang, token, saison.id);
+      const inListe = listeRoh.some((t) => Number(t.teamId) === nummer);
+
       for (const [name, pfad] of pfade) {
         const r = await versucheRoh(zugang, token, pfad);
+        const liste = Array.isArray(r.roh) ? r.roh as Record<string, unknown>[] : null;
+        /* ⚠ NENNT DIE ANTWORT DIE GESUCHTE NUMMER? Ein Endpunkt, der auf
+           `TeamId=38315` die unveraenderte Liste zurueckgibt, hat den
+           Parameter IGNORIERT — und „21 Eintraege" ist dann keine Auskunft
+           ueber 38315, sondern ueber niemanden. */
+        const nenntNummer = liste !== null && liste.some((o) =>
+          Number(o.teamId) === nummer || Number(o.teamAId) === nummer
+          || Number(o.teamBId) === nummer);
+        /* ⚠ Der Verdacht „Parameter ignoriert" wird BENANNT, nicht
+           stillschweigend als Fehlschlag gewertet. Er ist selbst ein
+           Befund ueber die Schnittstelle. */
+        const ignoriert = liste !== null && liste.length === listeRoh.length
+          && !nenntNummer && pfad.includes("TeamId=");
         versuche.push({
           weg: name, pfad: r.pfad, status: r.status, ausgang: r.ausgang,
+          nennt_gesuchte_nummer: liste === null ? null : nenntNummer,
+          parameter_offenbar_ignoriert: ignoriert,
+          /* ⚠ Nur `Schedule`-Zeilen sind ein Spielplan. Ein Bild ist keiner,
+             eine Teamliste auch nicht — und genau das hat die alte Zahl
+             zusammengeworfen. */
+          traegt_spielplanzeilen: liste !== null && nenntNummer
+            && liste.some((o) => o.matchId !== undefined),
           /* ⚠ Nur Feldnamen, nie Werte — dieselbe Regel wie in
              `rohschluessel`. Eine Antwort mit Daten ist der Befund; WAS
              darin steht, ist die naechste Frage und nicht diese. */
@@ -1154,8 +1207,6 @@ Deno.serve(async (req) => {
          der Befund von heute Abend faellt. Steht sie nicht in der Teamliste
          und nicht im Spielplan, bleibt es ein Quellenproblem — aber die
          gezielte Abfrage oben kann es trotzdem aufloesen. */
-      const listeRoh = await holeTeamsRoh(zugang, token, saison.id);
-      const inListe = listeRoh.some((t) => Number(t.teamId) === nummer);
       const planRoh = await holeSpielplan(zugang, token, saison.id);
       const imPlan = planRoh.filter((r) => {
         const o = r as Record<string, unknown>;
@@ -1186,14 +1237,34 @@ Deno.serve(async (req) => {
         teamliste_gesamt: listeRoh.length,
         zeilen_im_rohen_spielplan: imPlan.length,
         spielplan_gesamt: planRoh.length,
+        /* ⚠ ⚠  Die Gegenprobe zum Zeitfenster: liefert der Aufruf MIT
+           ausdruecklichem Datumsbereich mehr Zeilen als der ohne, hat der
+           Endpunkt eine Vorgabe, die wir nie gewaehlt haben. */
+        spielplan_mit_datumsfenster: (() => {
+          const v = versuche.find((x) => String(x.weg ?? "").includes("Datumsfenster"));
+          const a = String(v?.ausgang ?? "");
+          const m = /^(\d+) Eintrag/.exec(a);
+          return m ? Number(m[1]) : null;
+        })(),
         versuche,
-        /* ⚠ Die eine Zahl, die entscheidet: antwortet IRGENDEIN Weg mit
-           Daten? */
-        wege_mit_daten: versuche.filter((x) =>
-          typeof x.ausgang === "string"
-          && !x.ausgang.startsWith("HTTP")
-          && x.ausgang !== "leere Liste"
-          && !x.ausgang.startsWith("nicht erreichbar")).length,
+        /* ⚠ ⚠  DIE EINE ZAHL, UND SIE ZAEHLT JETZT, WAS SIE MEINT.
+           Vorher hiess sie `wege_mit_daten` und zaehlte jede Antwort, die
+           kein Fehler war — darunter die unveraenderte Teamliste und ein
+           Bild. Die Frage war nie „antwortet der Endpunkt?". */
+        wege_mit_spielplanzeilen: versuche.filter((x) => x.traegt_spielplanzeilen).length,
+        /* ⚠ Getrennt gezaehlt, weil es eine ANDERE Auskunft ist: ein
+           Endpunkt, der die Nummer ueberhaupt kennt, ohne einen Spielplan
+           zu liefern. `team/picture/38315` antwortet mit einem Bild — das
+           belegt, dass die Nummer beim Verband existiert, und sonst
+           nichts. */
+        wege_die_die_nummer_kennen: versuche.filter((x) =>
+          x.nennt_gesuchte_nummer === true
+          || (x.weg === "team/picture" && typeof x.ausgang === "string"
+              && !x.ausgang.startsWith("HTTP"))).length,
+        /* ⚠ Und wie oft ein Filter offenbar wirkungslos blieb — selbst ein
+           Befund ueber die Schnittstelle, nicht bloss ein Fehlschlag. */
+        wege_mit_ignoriertem_parameter: versuche.filter((x) =>
+          x.parameter_offenbar_ignoriert).length,
       });
     } catch (e) {
       return json({ fehler: e instanceof Error ? e.message : String(e) }, 502);

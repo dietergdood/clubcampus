@@ -24,8 +24,32 @@
 > ablehnen** — das sind zwei verschiedene Dinge, und gemessen war bisher
 > nur das erste.
 >
-> Bis das gemessen ist, wird hier nichts umgesetzt. Alles unterhalb dieser
-> Zeile ist der Stand von vorher.
+>
+> ## ✅ Gemessen am 14.09.2026 — der Befund bleibt, zwei Sätze fallen
+>
+> Sieben Wege mit 38315: `team/list` gibt die unveränderte Liste zurück
+> (Parameter ignoriert), `club/schedule` und `club/ranking` antworten leer,
+> auch mit `MatchType=6` und `8`. **Nur `team/picture/38315` liefert etwas:
+> ein Wappen.**
+>
+> **Damit bleibt es ein Quellenproblem** — aber zwei Sätze dieses Papiers
+> sind falsch und werden unten berichtigt:
+>
+> | war | ist |
+> |---|---|
+> | „diese Mannschaften haben keine Nummer" | sie haben eine, sie steht nur nicht in der Liste |
+> | „es gibt keine Teamadresse, deshalb die Vereinsseite" | **es gibt eine**, und sie ist besser |
+>
+> ⚠ **Der Link geht also auf die Teamseite, nicht auf die Vereinsseite** —
+> sobald jemand die Nummern kennt. Und hier klemmt es: **wir** kennen sie
+> nicht. Sie stehen in keiner Antwort der Schnittstelle; Didi hat 38315 von
+> der Website abgelesen.
+>
+> **Was daraus für dich folgt:** der Satz ist unverändert richtig, der Link
+> braucht eine Nummer, die von Hand kommen muss — ein Feld am `fch_team`,
+> das jemand einträgt. Ob sich das lohnt, hängt an der Antwort des Verbands.
+>
+> Bis dahin bleibt dieses Papier angehalten.
 
 
 Stand 14.09.2026. Alle Zahlen an diesem Tag gemessen (`aktion: "teamprobe"`),

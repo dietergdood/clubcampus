@@ -4173,6 +4173,114 @@ Container-Begrenzung, und die Prüfkette läuft in einem Container.
 ist (zweimal am selben Tag), zeigt, dass sie auf der Kante sitzt — nicht, dass
 sie trägt. Bei 4, 8 und 12 war sie es nie.
 
+### ⚠⚠⚠ EINE ZUSAMMENFASSUNG, DIE DEM DETAIL WIDERSPRICHT, WIRD ZUERST GELESEN
+
+14.09.2026, und der Fehler ist meiner. Die Nummernprobe meldete sieben
+Zeilen — und darunter eine Schlusszeile, die das Gegenteil sagte:
+
+```
+team/list mit TeamId      21 Einträge   ← unveränderte Liste, ohne 38315
+club/schedule mit TeamId  leere Liste
+club/ranking mit TeamId   leere Liste
+team/picture              string        ← ein Bild
+MatchType 6 (Turnier)     leere Liste
+MatchType 8 (Mini)        leere Liste
+Typ 6 + TeamId            leere Liste
+
+→ „✓ 2 Weg(e) antworten mit Daten — die Schnittstelle KENNT die
+   Mannschaft. Das löst das Problem."
+```
+
+Die zwei „Wege mit Daten" waren **die unveränderte Teamliste** und **ein
+Wappen**. Der Zähler prüfte „Antwort ist kein Fehler" — und das ist bei
+einem 200 mit ignoriertem Parameter erfüllt.
+
+> **Die Frage war nie „antwortet der Endpunkt?", sondern „liefert er
+> Spielplanzeilen für DIESE Mannschaft?".**
+
+⚠ **Das ist dieselbe Form wie `gruppen_ohne_spiele` und
+`nicht_in_teamliste`** — die Zahl misst genau, was sie sagt, und die Frage
+dahinter war eine andere. **Aber es ist die schlimmste Ausprägung davon:**
+
+| | |
+|---|---|
+| eine Kopfzahl, die **beruhigt** | erstickt das Detail daneben |
+| eine Kopfzahl, die **widerspricht** | ⚠ **überschreibt es** — sie wird zuerst gelesen, und wer sie glaubt, liest nicht weiter |
+
+**Ein 200 mit der unveränderten Liste ist keine Antwort auf die gestellte
+Frage.** Der Zähler heisst seither `wege_mit_spielplanzeilen` und prüft
+dreierlei: ist die Antwort eine Liste, nennt sie die gesuchte Nummer, und
+trägt sie `matchId` — also Spielplanzeilen und keine Mannschaften und kein
+Bild.
+
+⚠ **Daneben zwei weitere Zahlen, weil es drei Fragen sind:**
+`wege_die_die_nummer_kennen` (das Wappen belegt, dass die Nummer beim
+Verband **existiert** — und sonst nichts) und
+`wege_mit_ignoriertem_parameter`. Der ignorierte Filter wird **benannt**,
+nicht stillschweigend als Fehlschlag gewertet: er ist selbst ein Befund über
+die Schnittstelle.
+
+### ⚠ 35 PARAMETER, DREI GESETZT — und die gefährlichste Frage ist das Zeitfenster
+
+Gemessen am 14.09.2026 gegen die Spezifikation:
+
+| Endpunkt | kennt | wir setzen | ungenutzt |
+|---|---|---|---|
+| `/api/club/schedule` | **13** | 3 | OrganisationId, TeamId, LeagueId, CupId, DivisionId, GroupId, RoundNbr, MatchType, **DateFrom, DateUntil** |
+| `/api/team/list` | **13** | 3 | dieselben zehn |
+| `/api/club/ranking` | 9 | 3 | sechs |
+| `/api/common/ids` | 2 | 2 | — |
+
+**Und die drei sind überall dieselben: Saison, Klub, Sprache.**
+
+⚠ **Ein Filter, den man nicht setzt, heisst normalerweise „nicht filtern".**
+Genau deshalb ist die Liste für sich genommen harmlos — mit einer Ausnahme:
+`DateFrom`/`DateUntil`. **Hat der Endpunkt dort eine VORGABE, fährt jeder
+Lauf gegen ein Fenster, das niemand gewählt hat**, und ältere oder spätere
+Spiele fehlen still.
+
+Die Probe fragt seit dem 14.09.2026 denselben Spielplan einmal mit
+ausdrücklichem Bereich über die ganze Saison. Kommen mehr als die 270
+zurück, gibt es eine Vorgabe — **und das wäre ein Befund weit über die
+Turnierfrage hinaus.**
+
+⚠ **Gemessen ist der Zuschnitt, nicht die Wirkung.** Dass wir zehn Filter
+nicht setzen, sagt nichts darüber, ob einer von ihnen etwas ändern würde —
+ausser beim Zeitfenster, wo die Gegenprobe jetzt läuft.
+
+### ⚠⚠ DIE NUMMERN EXISTIEREN, DIE SCHNITTSTELLE GIBT SIE NICHT HERAUS
+
+Der Stand am Ende des 14.09.2026, und er ist eine Verschärfung des Befundes,
+keine Entwarnung.
+
+Didi hat die Teamseite einer Turniermannschaft aufgerufen: `t=38315`,
+dieselbe Vereinskennung 1516, und die Nummer liegt im selben Bereich wie
+unsere (38301–38312). **Kein anderer Nummernkreis — sie steht schlicht nicht
+in der Liste.**
+
+> **Eine Liste, die eine Mannschaft nicht nennt, muss sie nicht ablehnen.**
+> Das sind zwei verschiedene Dinge, und gemessen war bis dahin nur das
+> erste.
+
+Sieben Wege später: `team/list` mit `TeamId` gibt die **unveränderte** Liste
+zurück, `club/schedule` und `club/ranking` antworten leer, auch mit
+`MatchType=6` und `8`. **Nur `team/picture/38315` liefert etwas — ein
+Wappen.**
+
+⚠ **Und genau das ist der stärkste Satz für die Anfrage:** das Wappen zu
+38315 wird ausgeliefert. Die Nummer existiert im System des Verbands; die
+übrigen Endpunkte geben zu ihr nur nichts heraus. Das ist kein „wir finden
+sie nicht", sondern „Sie kennen sie und geben sie nicht heraus".
+
+⚠ **Zwei Sätze der Übergabe sind damit widerlegt** und dort berichtigt:
+„diese Mannschaften haben keine Nummer" (sie haben eine) und „es gibt keine
+Teamadresse" (es gibt eine, und sie ist besser als die Vereinsseite).
+
+⚠ **Der Haken bleibt: WIR kennen die Nummern nicht.** Sie stehen in keiner
+Antwort der Schnittstelle — Didi hat 38315 von der Website abgelesen. Ein
+Link auf die Teamseite braucht also eine Nummer, die von Hand kommt. Ob sich
+das lohnt, hängt an der Antwort des Verbands.
+
 ### ⚠⚠ DIE HÄLFTE DES VEREINS HAT KEINEN SPIELPLAN — und es liegt nicht an unserer Kette
 
 Gemessen am 14.09.2026 mit `aktion: "teamprobe"`, und die Zahlen gehen auf:

@@ -1,7 +1,13 @@
 # Anfrage an den FVRZ — Mannschaften ohne Wettbewerbsteilnahme
 
-Stand 14.09.2026. Zum Abschicken; der Text darunter ist die Anfrage, alles
-darüber ist für uns.
+Stand 14.09.2026, **nach der Messung**. Zum Abschicken; der Text darunter ist
+die Anfrage, alles darüber ist für uns.
+
+⚠ Die erste Fassung sagte nur „wir finden sie nicht". Diese nennt sieben
+Aufrufe mit ihren Antworten und eine Nummer, die auf ihrer eigenen Website
+steht. **Der Unterschied ist der zwischen einer Vermutung und einer
+Messung** — und er entscheidet, ob jemand nachsieht oder zurückschreibt, man
+möge es nochmal versuchen.
 
 **Warum sie so kurz ist:** eine Anfrage, die drei Fragen stellt, bekommt eine
 Antwort auf eine. Hier steht eine Zahl, eine Frage und ein Angebot.
@@ -32,14 +38,31 @@ soweit wir sehen, genau die mit Meisterschaftsbetrieb und Rangliste. Die
 Website (matchcenter.fvrz.ch) sind sie mit Turniernummer, Organisator,
 Zeitfenster und Teamliste vollständig geführt.
 
-Über die Schnittstelle finden wir sie nicht:
+Über die Schnittstelle finden wir sie nicht. Am Beispiel der Mannschaft mit
+der Nummer **38315** — sie ist auf Ihrer Website unter genau dieser Nummer
+erreichbar (`…&t=38315&a=trr`) — haben wir sieben Wege versucht:
 
-- `/api/team/list` liefert sie in keinem Aufruf, auch nicht mit `MatchType`
-  6 oder 8.
-- `/api/club/schedule` enthält keine einzige Zeile, in der eine dieser
-  Mannschaften vorkommt (270 Zeilen geprüft, alle Spieltypen).
-- In den übrigen Endpunkten der Spezifikation finden wir keine
-  Mannschaftskennung, über die wir sie erreichen könnten.
+| Aufruf | Antwort |
+|---|---|
+| `/api/team/list` mit `TeamId=38315` | 21 Einträge, also die unveränderte Liste ohne 38315 |
+| `/api/club/schedule` mit `TeamId=38315` | leere Liste |
+| `/api/club/ranking` mit `TeamId=38315` | leere Liste |
+| `/api/club/schedule` mit `MatchType=6` (Turnier) | leere Liste |
+| `/api/club/schedule` mit `MatchType=8` (Mini-Turniere) | leere Liste |
+| `/api/club/schedule` mit `MatchType=6` **und** `TeamId=38315` | leere Liste |
+| `/api/team/picture/38315` | **ein Bild** |
+
+Der letzte Aufruf ist der aufschlussreichste: das Wappen zu 38315 liefern Sie
+aus. Die Nummer existiert in Ihrem System — die übrigen Endpunkte geben zu
+ihr nur nichts heraus.
+
+Ergänzend haben wir geprüft:
+
+- In den 270 Zeilen, die `/api/club/schedule` für unseren Klub liefert, kommt
+  38315 weder als `teamAId` noch als `teamBId` vor.
+- Die Spezifikation kennt keinen Turnierbegriff: „tournament", „turnier",
+  „junior", „training", „festival" und „mini" kommen in keinem der 19
+  Schemata vor. `matchType` 6 und 8 stehen dagegen in Ihren Stammdaten.
 
 Damit hat die Hälfte unserer Mannschaften auf unserer Website keinen
 Spielplan — und es sind die Juniorenmannschaften, deren Eltern dort am
