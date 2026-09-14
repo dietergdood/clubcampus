@@ -54,7 +54,32 @@ export interface EigeneRangzeile {
       ausgetragen stehen. Die Gegenprobe aus einem ANDEREN Endpunkt
       desselben Absenders. */
   gespielt_laut_spielplan?: unknown;
+  /**
+   * Alle Spiele dieser Mannschaft nach `sfv_status`, roh gezählt.
+   *
+   * ⚠ Sie löst auf, was `gespielt_laut_spielplan` allein offenlässt: der
+   * Zähler nimmt nur Status 2, der Verband führt zwölf, und mehrere zählen
+   * für seine Tabelle mit (3 forfait, 4 Null-zu-Null, 5 abgebrochen, 8/9
+   * nicht gespielt). Ohne diese Aufschlüsselung ist „2 statt 3" nicht von
+   * „uns fehlt ein Spiel" zu unterscheiden.
+   */
+  spielplan_nach_status?: unknown;
 }
+
+/**
+ * Die Status des Verbands im Klartext — aus `sfv_stammdaten.json`, nicht
+ * geraten.
+ *
+ * ⚠ Nur die, die für die Tabelle zählen können, plus 1 zur Abgrenzung.
+ * Eine Zahl allein („3× Status 3") sagt niemandem etwas; der Name macht
+ * aus der Aufschlüsselung eine Auskunft.
+ */
+const STATUS_NAME: Record<string, string> = {
+  1: "noch nicht ausgetragen", 2: "ausgetragen", 3: "forfait",
+  4: "Null zu Null", 5: "abgebrochen", 6: "verschoben", 7: "neu angesetzt",
+  8: "nicht gespielt (SR)", 9: "nicht gespielt (Gegner)",
+  10: "findet nicht statt", 11: "Abbruch der Saison", 12: "ohne Austragung",
+};
 
 /** Wie viele eigene Zeilen namentlich erscheinen, bevor gekürzt wird. */
 const ZEIGE = 8;
@@ -157,6 +182,28 @@ export function deuteRangprobe(d: Record<string, unknown>): string[] {
         ? "?" : `${Number(e.gespielt_laut_spielplan)}`;
       zeilen.push(`   ${String(e.team ?? "")} · ${String(e.liga ?? "")} — `
         + `frisch ${frisch} · bei uns ${best} · Spielplan ${plan}`);
+      /* ⚠ ⚠ NUR BEI ABWEICHUNG, und dann NAMENTLICH. Eine Zahl, die von der
+         Nachbarzahl abweicht, ist ohne die Aufschlüsselung nicht auflösbar —
+         „2 statt 3" kann heissen „ein Forfait, das unser Zähler auslässt"
+         oder „uns fehlt ein Spiel". Das sind zwei verschiedene Befunde, und
+         nur der zweite ist einer. */
+      const n2 = Number(n), p2 = Number(e.gespielt_laut_spielplan);
+      const nachStatus = e.spielplan_nach_status as Record<string, number> | undefined;
+      if (Number.isFinite(n2) && Number.isFinite(p2) && n2 !== p2 && nachStatus) {
+        const teile = Object.entries(nachStatus)
+          .sort((a, b) => Number(a[0]) - Number(b[0]))
+          .map(([st, anz]) => `${anz}× Status ${st}${STATUS_NAME[st] ? ` (${STATUS_NAME[st]})` : ""}`);
+        zeilen.push(`      ⚠ Verband ${n2}, unser Zähler ${p2} — im Spielplan: `
+          + (teile.length ? teile.join(", ") : "kein Spiel"));
+        /* ⚠ Der Satz, der die zwei Befunde trennt. Ohne ihn liest jemand
+           die Aufschlüsselung und schliesst selbst — und die Hälfte der
+           Fehlschlüsse dieser Woche entstand genau so. */
+        const nurZwei = Object.keys(nachStatus).every((k) => k === "2");
+        zeilen.push(nurZwei
+          ? "      ⚠ Nur Status 2 — dann fehlt uns wirklich ein Spiel"
+          : "      Andere Status dabei — sie zählen für die Tabelle des Verbands"
+            + " mit, unser Zähler lässt sie aus. Kein fehlendes Spiel.");
+      }
     }
     /* ⚠ Was weggelassen wird, wird GENANNT. Eine stille Kürzung liest
        sich wie Vollständigkeit. */

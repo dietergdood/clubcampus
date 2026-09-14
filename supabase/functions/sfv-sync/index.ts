@@ -796,13 +796,36 @@ Deno.serve(async (req) => {
          Fehlalarm, der wie ein Befund aussieht. Genau so ist am 10.09.2026
          die Teamprobe danebengegangen. */
       const { data: gespielt, error: sFehler } = await db.from("spiele")
-        .select("sfv_team_id")
-        .eq("verein_id", v.verein_id).eq("sfv_spiel_typ", 1).eq("sfv_status", 2);
+        .select("sfv_team_id, sfv_status")
+        .eq("verein_id", v.verein_id).eq("sfv_spiel_typ", 1);
       if (sFehler) return json({ fehler: `spiele nicht lesbar: ${sFehler.message}` }, 500);
       const gespieltJeTeam = new Map<number, number>();
+      /* ⚠ ⚠  DIE AUFSCHLUESSELUNG NACH STATUS, und sie ist der eigentliche
+         Zusatz. `gespielt_laut_spielplan` zaehlt nur Status 2 — aber der
+         Verband fuehrt ZWOELF, und mehrere davon zaehlen fuer seine Tabelle
+         mit: 3 forfait, 4 „Null zu Null", 5 abgebrochen, 8/9 nicht gespielt.
+
+         **Mein Zaehler unterzaehlt also systematisch**, sobald ein Spiel
+         einen dieser Status traegt — und beim ersten echten Treffer der
+         Gegenprobe (Juniorinnen C, 14.09.2026: Verband 3, Spielplan 2) ist
+         genau das der erste Kandidat.
+
+         ⚠ DER FILTER WIRD NICHT AUF EINE VERMUTUNG GEAENDERT. Ob Status 3
+         fuer die Tabelle zaehlt, ist eine Annahme; die Aufschluesselung
+         MISST es. Steht bei einer abweichenden Zeile `{"2":2,"3":1}`, ist
+         die Frage beantwortet — steht dort `{"2":2}`, fehlt uns wirklich
+         ein Spiel. */
+      const statusJeTeam = new Map<number, Record<string, number>>();
       for (const g of gespielt ?? []) {
         const t = Number(g.sfv_team_id);
-        if (Number.isFinite(t)) gespieltJeTeam.set(t, (gespieltJeTeam.get(t) ?? 0) + 1);
+        if (!Number.isFinite(t)) continue;
+        const st = String(g.sfv_status ?? "null");
+        const bisher = statusJeTeam.get(t) ?? {};
+        bisher[st] = (bisher[st] ?? 0) + 1;
+        statusJeTeam.set(t, bisher);
+        if (Number(g.sfv_status) === 2) {
+          gespieltJeTeam.set(t, (gespieltJeTeam.get(t) ?? 0) + 1);
+        }
       }
 
       const eigene = unsere === null ? [] : roh
@@ -822,6 +845,9 @@ Deno.serve(async (req) => {
           bestand_spiele: bestandJeTeam.get(Number(r.teamId) || -1)?.spiele ?? null,
           bestand_stand_vom: bestandJeTeam.get(Number(r.teamId) || -1)?.stand ?? null,
           gespielt_laut_spielplan: gespieltJeTeam.get(Number(r.teamId) || -1) ?? 0,
+          /* ⚠ Alle Status dieser Mannschaft, nicht nur der gezaehlte —
+             sonst ist „2 statt 3" nicht aufzuloesen. */
+          spielplan_nach_status: statusJeTeam.get(Number(r.teamId) || -1) ?? {},
         }))
         .sort((a, b) => (a.anzahl_spiele ?? -1) - (b.anzahl_spiele ?? -1)
           || a.liga.localeCompare(b.liga));
@@ -887,10 +913,13 @@ Deno.serve(async (req) => {
            Pruefung, die ihren Zuschnitt nennt, kann nicht fuer mehr genommen
            werden, als sie ist. */
         vergleich_naeherung:
-          "`gespielt_laut_spielplan` zählt Spieltyp 1 und Status 2 aus unserem"
-          + " Spielplan, `anzahl_spiele` die Spiele DIESER Gruppe. Ein Derby"
-          + " steht bei uns als eine Zeile und wäre unterzählt. Eine"
-          + " Abweichung ist eine Frage, kein Befund.",
+          "`gespielt_laut_spielplan` zählt NUR Status 2 (ausgetragen) und"
+          + " Spieltyp 1. Der Verband führt zwölf Status, und mehrere zählen"
+          + " für seine Tabelle mit — 3 forfait, 4 Null-zu-Null, 5 abgebrochen,"
+          + " 8/9 nicht gespielt. Steht die Zeile höher als unser Zähler, sagt"
+          + " `spielplan_nach_status`, ob es daran liegt. Dazu: ein Derby steht"
+          + " bei uns als EINE Zeile und wäre unterzählt. Eine Abweichung ist"
+          + " eine Frage, kein Befund.",
         /* ⚠ ⚠  DIE VOLLSTAENDIGKEIT DER LIEFERUNG — die Regel, die Didi dem
            Theme-Chat zugesagt hat.
 

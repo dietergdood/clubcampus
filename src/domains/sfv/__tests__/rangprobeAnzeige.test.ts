@@ -271,3 +271,49 @@ describe("war der Ranglisten-Block uebersprungen?", () => {
       .not.toMatch(/der Block läuft/);
   });
 });
+
+describe("die Aufschluesselung loest eine Abweichung auf", () => {
+  /* ⚠ ⚠ DER ERSTE ECHTE TREFFER DER GEGENPROBE, 14.09.2026: Juniorinnen C,
+     Verband 3, unser Zähler 2. Zwei Befunde sehen gleich aus — ein Forfait,
+     das unser Filter auslässt, oder ein Spiel, das uns fehlt. Nur der zweite
+     ist einer. */
+  const mit = (zeile: Record<string, unknown>) => deuteRangprobe({
+    ...BASIS, eigene_erkennbar: true, eigene_zeilen_gesamt: 1,
+    eigene_ohne_spiele: 0, eigene_ohne_zahl: 0, bestand_hinkt: 0,
+    verband_hinkt: 0, eigene: [{
+      team: "Juniorinnen C b", liga: "Juniorinnen C",
+      anzahl_spiele: 3, bestand_spiele: 3, gespielt_laut_spielplan: 2, ...zeile,
+    }],
+  });
+
+  it("nennt die Status im Klartext, wenn die Zahlen abweichen", () => {
+    const t = zus(mit({ spielplan_nach_status: { "2": 2, "3": 1 } }));
+    expect(t).toMatch(/Verband 3, unser Zähler 2 — im Spielplan:/);
+    expect(t).toMatch(/2× Status 2 \(ausgetragen\)/);
+    expect(t).toMatch(/1× Status 3 \(forfait\)/);
+  });
+
+  it('trennt „unser Filter“ von „uns fehlt ein Spiel“', () => {
+    /* ⚠ Der Satz, der die zwei Befunde trennt. Ohne ihn schliesst der
+       Leser selbst — und die Hälfte der Fehlschlüsse dieser Woche entstand
+       genau so. */
+    expect(zus(mit({ spielplan_nach_status: { "2": 2, "3": 1 } })))
+      .toMatch(/Andere Status dabei — sie zählen für die Tabelle des Verbands/);
+    expect(zus(mit({ spielplan_nach_status: { "2": 2 } })))
+      .toMatch(/Nur Status 2 — dann fehlt uns wirklich ein Spiel/);
+  });
+
+  it("schweigt, wenn die Zahlen uebereinstimmen", () => {
+    /* ⚠ Die Aufschlüsselung ist eine Diagnose, kein Dauerrauschen. Bei 21
+       Mannschaften stünde sie sonst 21-mal da und würde nach dem dritten
+       Mal überlesen. */
+    const t = zus(mit({ gespielt_laut_spielplan: 3, spielplan_nach_status: { "2": 3 } }));
+    expect(t).not.toMatch(/im Spielplan:/);
+  });
+
+  it("schweigt, wenn die aeltere Function sie nicht schickt", () => {
+    /* Ohne Aufschlüsselung keine halbe Auskunft — sonst stünde da eine
+       Abweichung ohne jeden Anhaltspunkt. */
+    expect(zus(mit({}))).not.toMatch(/im Spielplan:/);
+  });
+});
