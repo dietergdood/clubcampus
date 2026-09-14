@@ -449,6 +449,24 @@ export function ApiTab({loading,isMobile,mobileKachel,apiVerbindungen,tab,sb=nul
       giZeilen.push(`/api/common/ids: Antwortform ${String(gi.form ?? "?")} · `
         + `${Number(k?.anzahl ?? 0)} Objekt(e) · ${(k?.alle ?? []).length} Feldnamen`);
       if ((k?.alle ?? []).length) giZeilen.push(`   ${(k?.alle ?? []).join(", ")}`);
+      /* ⚠ ⚠ DIE VERSCHACHTELUNG, UND SIE WAR SCHON GEMESSEN. `schluesselVon`
+         liefert sie seit jeher als `verschachtelt` — gezeigt hat sie
+         niemand. Berechnet, geliefert, nicht gezeigt, in meiner eigenen
+         Anzeige von gestern.
+
+         ⚠ Und `tief` geht darueber hinaus: bei EINEM Feldnamen sagt die
+         oberste Ebene nichts. */
+      const tief = gi.tief as Record<string, string[]> | undefined;
+      if (tief && Object.keys(tief).length > 1) {
+        giZeilen.push("   Struktur darunter:");
+        for (const [pfad, felder] of Object.entries(tief)) {
+          if (pfad === "(Wurzel)") continue;
+          giZeilen.push(`      ${pfad}: ${felder.join(", ")}`);
+        }
+      } else if (!tief) {
+        giZeilen.push("   (Struktur darunter: nicht gemeldet — die Edge Function "
+          + "ist älter als der 14.09.2026)");
+      }
       /* ⚠ Die Frage direkt beantwortet, nicht aus der Feldliste
          erschlossen — sonst schliesst der Leser selbst. */
       giZeilen.push(gi.nennt_teamnummern

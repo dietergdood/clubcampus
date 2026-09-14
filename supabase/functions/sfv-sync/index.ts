@@ -39,7 +39,8 @@ import {
   fasseWechselProbe, deuteWechselProbe, fasseCupProbe, deuteCupProbe,
 } from "../../../src/domains/sfv/wechselProbe.ts";
 import { waehleNachtragSpiele, deuteNachtrag } from "../../../src/domains/sfv/ereignisNachtrag.ts";
-import { schluesselVon, suchtBildfeld } from "../../../src/domains/sfv/rohschluessel.ts";
+import { schluesselVon, schluesselTief, suchtBildfeld }
+  from "../../../src/domains/sfv/rohschluessel.ts";
 import {
   LAUF_LAEUFT, LAUF_FEHLER, AKTION_SYNC, AKTION_NAMEN, AKTION_WECHSELNACHTRAG,
 } from "../../../src/domains/sfv/protokollStatus.ts";
@@ -462,6 +463,12 @@ Deno.serve(async (req) => {
         gemeinsameIds = {
           gefragt: true, form,
           schluessel: schluesselVon(wert),
+          /* ⚠ ⚠  TIEF, UND NUR HIER. `schluesselVon()` sieht eine Ebene —
+             und dieser Endpunkt antwortete mit EINEM Feld namens `sfv_ids`.
+             Ein Endpunkt, der „alle relevanten Ids" verspricht und ein Feld
+             liefert, ist selbst auffaellig: das Feld ist vermutlich die
+             ganze Struktur. Nur Feldnamen, nie Werte. */
+          tief: schluesselTief(wert),
           /* ⚠ Die Frage, um die es geht — direkt beantwortet statt aus der
              Schluesselliste erschlossen. Sie sucht NUR nach Namen, nie nach
              Werten. */

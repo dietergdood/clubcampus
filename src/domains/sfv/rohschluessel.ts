@@ -125,3 +125,63 @@ export function suchtBildfeld(b: SchluesselBefund): string {
   return `Treffer: ${treffer.join(", ")}. Der Wert steht hier NICHT — `
     + "wer ihn sehen will, holt ihn gezielt.";
 }
+
+/**
+ * Die Feldnamen einer unbekannten Struktur — **beliebig tief, als Pfade.**
+ *
+ * ⚠ ⚠  ANLASS, 14.09.2026. `/api/common/ids` antwortete mit **einem** Objekt
+ * und **einem** Feldnamen: `sfv_ids`. Ein Endpunkt, dessen Zusammenfassung
+ * „return json with all relevant ids" lautet und der ein Feld zurückgibt,
+ * ist selbst auffällig — und `schluesselVon()` sieht bewusst nur eine Ebene.
+ *
+ * > Dieselbe Form wie der Unterfeld-Melder, der nur die oberste Ebene
+ * > prüfte: eine Prüfung, die nicht tief genug schaut, meldet „ein Feld"
+ * > und meint „ein Feld, in dem alles steckt".
+ *
+ * ── WARUM DAS HIER ERLAUBT IST UND IN `schluesselVon()` NICHT ──────────
+ *
+ * Dort steht: *„jede weitere Ebene ist eine weitere Stelle, an der aus
+ * Versehen ein Wert mitreist."* Das bleibt richtig — und diese Funktion
+ * gibt **niemals einen Wert** heraus, nur `Object.keys()`. Ein Wert kann
+ * hier gar nicht mitreisen, weil keiner angefasst wird.
+ *
+ * ⚠ Die Tiefe ist trotzdem gedeckelt. Nicht aus Vorsicht vor Werten,
+ * sondern gegen eine Struktur, die sich selbst enthält — und weil eine
+ * Ausgabe, die niemand mehr liest, so nutzlos ist wie keine.
+ *
+ * ⚠ Und ein Feldname KANN etwas verraten (`sfv_person_id` sagt, dass
+ * Personennummern darin stehen). Das ist hier erwünscht: genau danach wird
+ * gesucht. Werte bleiben aussen vor.
+ */
+export function schluesselTief(
+  roh: unknown, maxTiefe = 4,
+): Record<string, string[]> {
+  const raus: Record<string, string[]> = {};
+
+  const gehe = (wert: unknown, pfad: string, tiefe: number): void => {
+    if (tiefe > maxTiefe) {
+      /* ⚠ Der Abbruch wird GEMELDET, nicht verschwiegen. Sonst sähe eine
+         gekappte Struktur aus wie eine flache. */
+      raus[`${pfad} …`] = ["(tiefer nicht gelesen)"];
+      return;
+    }
+    if (Array.isArray(wert)) {
+      /* ⚠ Nur das erste Element: bei tausend Einträgen sind die Feldnamen
+         dieselben, und tausendmal dasselbe ist keine Auskunft. Die LÄNGE
+         steht daneben, weil „eine Liste" und „eine Liste mit 340 Einträgen"
+         zwei verschiedene Auskünfte sind. */
+      raus[`${pfad}[] (${wert.length})`] = wert.length && istObjekt(wert[0])
+        ? Object.keys(wert[0] as Record<string, unknown>)
+        : [`(${wert.length ? typeof wert[0] : "leer"})`];
+      if (wert.length && istObjekt(wert[0])) gehe(wert[0], `${pfad}[]`, tiefe + 1);
+      return;
+    }
+    if (!istObjekt(wert)) return;
+    const o = wert as Record<string, unknown>;
+    raus[pfad || "(Wurzel)"] = Object.keys(o);
+    for (const k of Object.keys(o)) gehe(o[k], pfad ? `${pfad}.${k}` : k, tiefe + 1);
+  };
+
+  gehe(roh, "", 0);
+  return raus;
+}

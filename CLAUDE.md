@@ -1199,6 +1199,9 @@ Ohne Docker (z.B. wenn Docker Desktop nicht läuft) geht ein Dump auch direkt ü
   `TermineModul.tsx:584`), und den Jahrgang liefert der Verband — wir speichern
   ihn nur nicht. ⚠ Der Risikopunkt ist ein neues Feld an einem Objekt mit
   mehreren Ausgängen; siehe „Ein neues Feld erbt JEDEN Ausgang“.
+- `docs/uebergabe_teams_ohne_spielplan.md` — was der Theme-Chat fuer den
+  ehrlichen Satz braucht (fast nichts), und die drei Mengen, die
+  auseinandergehen: 42 Mannschaften, 31 Seiten, 21 mit Nummer.
 - `docs/anfrage_fvrz_teamliste.md` — die Anfrage an den FVRZ zu den 21
   Mannschaften ohne Wettbewerbsteilnahme. **Zum Abschicken**, samt der
   Begründung, warum sie eine Frage stellt und keine drei.
@@ -4226,6 +4229,54 @@ relevant ids"*, und die Spezifikation sagt über den Inhalt **nichts**. Das
 ist der Fall, in dem nur ein Aufruf antwortet — seit dem 14.09.2026 fragt
 `rohschluessel` ihn mit, und zwar wie alles dort: **nur Feldnamen, keine
 Werte.**
+
+### ⚠⚠ ZWEI VERSCHIEDENE ELF — und sie wurden verwechselt
+
+Gemessen am 14.09.2026, als die Übergabe an den Theme-Chat entstand. Die
+Zahlen standen längst nebeneinander und wurden nie gegeneinander gehalten:
+
+| | |
+|---|---|
+| unsere `teams`-Tabelle | **42** Zeilen, davon 21 mit `sfv_team_id` |
+| `fch_team`-Beiträge drüben | **31**, davon 21 mit `sfv_id` |
+
+**42 − 31 = 11 Mannschaften haben drüben gar keine Seite.**
+**31 − 21 = 10 Seiten haben keine Nummer.**
+**42 − 21 = 21 Mannschaften haben keinen Spielplan.**
+
+⚠ **Drei Gruppen, und die „elf", die tagelang durch das Gespräch ging, war
+vermutlich die erste** — nicht die 21 ohne Spielplan, um die es ging. Eine
+Zahl, die niemand gemessen hat, bekam den Platz einer, die es gibt.
+
+> **Zwei Zahlen, die aus demselben Bestand stammen, sind noch keine Aussage
+> übereinander.** Sie gehören voneinander abgezogen, bevor eine von beiden
+> zitiert wird.
+
+⚠ **Und die Folge ist nicht bloss begrifflich:** für die elf ohne Seite kann
+auf der Website nichts stehen — es gibt keinen Ort. Der ehrliche Satz
+erreicht die zehn Seiten ohne Nummer, nicht die elf ohne Seite. Wer die zwei
+verwechselt, baut einen Satz für eine Menge, die ihn nie zu sehen bekommt.
+
+### ⚠ „DER SPIELPLAN IST LEER" IST DIE FALSCHE BEDINGUNG
+
+Festgehalten am 14.09.2026 in der Übergabe, weil es die naheliegende und
+falsche Wahl ist.
+
+Der Satz „diese Mannschaft spielt in Turnierform" gehört an Mannschaften
+**ohne Verbandsnummer** — nicht an solche ohne Spiele.
+
+| Bedingung | trifft |
+|---|---|
+| `sfv_id` fehlt | der Verband führt sie nicht — **dauerhaft** |
+| Spielplan leer | ⚠ auch Saisonpause, noch nicht publiziert, Sync-Ausfall |
+
+**Die zweite ist ein Zustand, die erste eine Eigenschaft.** Wer die
+Eigenschaft am Zustand festmacht, erklärt eine Mannschaft in der Winterpause
+zur Turniermannschaft — und nimmt gleichzeitig einem echten Ausfall die
+Sichtbarkeit.
+
+Dieselbe Familie wie „ein Filter auf einen NAMEN prüft eine Schreibweise":
+das Merkmal ist verfügbar, es wird nur nicht benutzt.
 
 ### ⚠ EIN HALB GEPFLEGTER SPIELPLAN IST SCHLECHTER ALS KEINER
 

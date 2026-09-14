@@ -2,7 +2,7 @@
    Die Rohschlüssel-Probe gibt Namen heraus, keine Werte (10.09.2026)
    ══════════════════════════════════════════════════════════════════════ */
 import { describe, it, expect } from "vitest";
-import { schluesselVon, suchtBildfeld } from "../rohschluessel.ts";
+import { schluesselVon, suchtBildfeld, schluesselTief } from "../rohschluessel.ts";
 
 const TEAM = {
   teamId: 38309, teamName: "Junioren Ca", clubNumber: 11057,
@@ -74,5 +74,59 @@ describe("suchtBildfeld", () => {
        Zahlenreihe gleich aus. Ohne diesen Satz läse jemand den ersten
        Fall als Befund. */
     expect(suchtBildfeld(schluesselVon([]))).toMatch(/sagt nichts/);
+  });
+});
+
+describe("schluesselTief — wenn eine Ebene nicht reicht", () => {
+  /* ⚠ ⚠ ANLASS, 14.09.2026. `/api/common/ids` antwortete mit EINEM
+     Objekt und EINEM Feldnamen: `sfv_ids`. Ein Endpunkt, der „alle
+     relevanten Ids" verspricht und ein Feld liefert, ist selbst
+     auffällig — das Feld ist vermutlich die ganze Struktur.
+
+     Dieselbe Form wie der Unterfeld-Melder, der nur die oberste
+     Ebene prüfte. */
+  it("findet Felder, die eine Ebene tiefer liegen", () => {
+    const r = schluesselTief({ sfv_ids: { seasonId: 1, clubId: 2 } });
+    expect(r["sfv_ids"]).toEqual(["seasonId", "clubId"]);
+  });
+
+  it("steigt durch Listen und nennt ihre Laenge", () => {
+    /* ⚠ „Eine Liste" und „eine Liste mit 340 Einträgen" sind zwei
+       verschiedene Auskünfte. */
+    const r = schluesselTief({ sfv_ids: { teams: [{ teamId: 1, name: "a" },
+                                                   { teamId: 2, name: "b" }] } });
+    expect(r["sfv_ids.teams[] (2)"]).toEqual(["teamId", "name"]);
+  });
+
+  it("gibt NIEMALS einen Wert heraus", () => {
+    /* ⚠ Das ist der Grund, warum die Tiefe hier erlaubt ist und in
+       `schluesselVon` nicht: ein Wert kann gar nicht mitreisen, weil
+       keiner angefasst wird. */
+    const roh = JSON.stringify(schluesselTief({
+      sfv_ids: { geheim: "streng-vertraulich", zahl: 4711,
+                 liste: [{ name: "Anna Beispiel" }] },
+    }));
+    expect(roh).not.toContain("streng-vertraulich");
+    expect(roh).not.toContain("4711");
+    expect(roh).not.toContain("Anna Beispiel");
+    /* Die NAMEN dürfen erscheinen — genau danach wird gesucht. */
+    expect(roh).toContain("geheim");
+  });
+
+  it("meldet den Abbruch, statt ihn zu verschweigen", () => {
+    /* ⚠ Eine gekappte Struktur sähe sonst aus wie eine flache. */
+    const tief = { a: { b: { c: { d: { e: { f: 1 } } } } } };
+    const r = schluesselTief(tief, 2);
+    expect(JSON.stringify(r)).toContain("tiefer nicht gelesen");
+  });
+
+  it("nennt den Typ, wo eine Liste keine Objekte enthaelt", () => {
+    const r = schluesselTief({ sfv_ids: { nummern: [1, 2, 3] } });
+    expect(r["sfv_ids.nummern[] (3)"]).toEqual(["(number)"]);
+  });
+
+  it("kommt mit einer leeren Liste zurecht", () => {
+    const r = schluesselTief({ sfv_ids: { teams: [] } });
+    expect(r["sfv_ids.teams[] (0)"]).toEqual(["(leer)"]);
   });
 });
