@@ -4164,6 +4164,114 @@ Container-Begrenzung, und die Prüfkette läuft in einem Container.
 ist (zweimal am selben Tag), zeigt, dass sie auf der Kante sitzt — nicht, dass
 sie trägt. Bei 4, 8 und 12 war sie es nie.
 
+### ⚠⚠ DER ERSTE TREFFER DER GEGENPROBE WAR MEIN EIGENER ZÄHLER
+
+14.09.2026, Juniorinnen C Gruppe 5, FC Herrliberg b. Die Karte meldete
+Verband **3**, unser Zähler **2** — Verband und Bestand einig, der Spielplan
+nicht. Ein fehlendes Spiel wäre die naheliegende Erklärung gewesen.
+
+**Es war keines.** Die Aufschlüsselung nach Status sagte es in einer Zeile:
+
+```
+1× Status 1 (noch nicht ausgetragen) · 2× Status 2 (ausgetragen)
+1× Status 3 (forfait)                · 3× Status 7 (neu angesetzt)
+```
+
+2 + 1 = 3. Das Forfait zählt für die Tabelle des Verbands mit, unser Zähler
+lässt es aus — er nimmt nur Status 2, und der Verband führt **zwölf**.
+
+> **Ohne die Klartext-Zeile stünde dort eine Abweichung, und jemand hätte
+> ein fehlendes Spiel gesucht.** (Didi, 14.09.2026 — „inklusive mir".)
+
+⚠ **Zwei Befunde, die ohne den Satz gleich aussehen:** „unser Filter lässt
+etwas aus" und „uns fehlt ein Spiel". Nur der zweite ist einer. Die Anzeige
+trennt sie deshalb ausdrücklich statt den Leser schliessen zu lassen — *„nur
+Status 2: dann fehlt uns wirklich ein Spiel"* gegen *„andere Status dabei:
+kein fehlendes Spiel"*.
+
+⚠ **Und sie erscheint nur bei Abweichung.** Bei 21 Mannschaften stünde sie
+sonst 21-mal da und würde nach dem dritten Mal überlesen.
+
+### ⚠⚠ DIE AUFSCHLÜSSELUNG STATT DER KORREKTUR — und warum das der Kern ist
+
+Der Reflex beim Befund oben wäre gewesen, den Filter auf `status IN (2, 3)`
+zu erweitern. **Das wäre eine Annahme gewesen**, und zwar genau die Sorte,
+die in dieser Woche dreimal danebenlag: ein richtig verstandener Mechanismus,
+angewendet auf einen Fall, den niemand gemessen hat.
+
+> **„Ob Status 3 für die Tabelle zählt, ist eine Annahme."** Gemessen war
+> nur, dass 2 + 1 = 3 bei **einer** Mannschaft aufgeht.
+
+⚠ **Und Status 7 steht daneben, von dem niemand weiss, ob er mitzählt.**
+Drei Zeilen „neu angesetzt" in derselben Mannschaft — ein angepasster Filter
+hätte über sie stillschweigend mitentschieden.
+
+| | erklärt |
+|---|---|
+| ein angepasster Filter | **keinen** Fall — er rechnet anders und sagt nicht warum |
+| die Aufschlüsselung | **jeden** Fall, auch die, die noch kommen |
+
+⚠ **Der Verzicht ist trotzdem nicht gratis, und das gehört dazu.**
+`verband_hinkt` feuert, wenn die Tabelle weniger zeigt als unser Spielplan.
+Zählt unser Spielplan systematisch zu wenig, feuert er **zu selten**: eine
+Mannschaft, die wirklich einen Spieltag nachhinkt *und* ein Forfait hat, hebt
+sich auf — keine Abweichung in der Zeile, kein Zähler, nichts zu sehen. **Der
+Unterzähler maskiert genau das, wofür der Zähler gebaut ist.**
+
+**Deshalb weder anpassen noch dabei stehenbleiben:** seit dem 14.09.2026
+laufen **beide Lesarten nebeneinander**, und die Antwort nennt je Lauf,
+welche über alle Mannschaften aufgeht — `treffer_nur_status2` gegen
+`treffer_mit_forfait`, beide mit derselben Bezugsgrösse.
+
+> **Nach einem Lauf ist n=21, nach zehn n=210. Die Frage beantwortet sich,
+> statt entschieden zu werden.**
+
+⚠ Gezählt werden nur Zeilen, bei denen der Verband überhaupt eine Spielzahl
+nennt. Eine fehlende Angabe in einen der beiden Töpfe zu werfen hiesse, sie
+als Beleg zu zählen.
+
+### ⚠ EINE EINSCHRÄNKUNG, DIE DIE ENTSCHEIDENDE GRENZE AUSLÄSST, LIEST SICH WIE EINE VOLLSTÄNDIGE
+
+`vergleich_naeherung` stand seit dem 14.09.2026 in der Antwort und nannte
+zwei Grenzen — den Spieltyp und das Derby. **Den Status nannte es nicht.**
+
+Und der Status war die Grenze, an der es hing: der erste echte Treffer der
+Gegenprobe war ein Forfait, das der Filter auslässt.
+
+> **Eine Einschränkung, die die entscheidende Grenze auslässt, liest sich wie
+> eine vollständige.** (Didi, 14.09.2026)
+
+⚠ Das ist die Familie des Zählers, dessen Name mehr behauptet als er misst —
+eine Stufe abstrakter: hier behauptet nicht der Name zu viel, sondern die
+**Aufzählung der Ausnahmen zu wenig. Wer zwei von drei Grenzen nennt, hat
+gesagt, es seien alle.**
+
+Dieselbe Form wie die „kurze Liste" der sieben Spieltypen, bei der es fünfzehn
+waren, und wie die fünf Spielstatus, bei denen es zwölf sind. **Eine
+unvollständige Aufzählung wird für vollständig gehalten, gerade weil sie
+aufzählt.**
+
+### ⚠ Die Anführungszeichen-Falle, am eigenen Papier vorbeigelaufen
+
+Beim Schreiben eines Testnamens am 14.09.2026:
+
+```ts
+it("trennt „unser Filter" von „uns fehlt ein Spiel"", () => {
+```
+
+Das schliessende Zeichen war ein **ASCII-`"`**, und damit endete der String
+mitten im Titel. `vitest` meldete `[PARSE_ERROR] Expected ',' or ')'` und
+zeigte auf eine Stelle, die mit der Ursache nichts zu tun hatte — genau wie
+im Papier seit dem 25.08.2026 beschrieben.
+
+⚠ **`check:quotes` hätte es gefunden und kam nicht dazu:** der Parser bricht
+vorher ab, und die Prüfkette beginnt mit `npm test`. **Eine Prüfung, die
+hinter dem steht, was sie prüfen soll, läuft nie.**
+
+Behoben mit `'`-Begrenzung. Und die Regel bleibt die aus dem Papier: zerrissen
+wird der String nicht vom deutschen Zeichen, sondern vom ASCII-`"`, das
+jemand als schliessendes tippt.
+
 ### ⚠ `gespielt_laut_spielplan` ZÄHLT UNSERE MANNSCHAFT — am Code entschieden
 
 Frage des Theme-Chats, 14.09.2026, bevor er die Zahl anzeigt: zählt sie

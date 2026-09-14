@@ -317,3 +317,40 @@ describe("die Aufschluesselung loest eine Abweichung auf", () => {
     expect(zus(mit({}))).not.toMatch(/im Spielplan:/);
   });
 });
+
+describe("welche Lesart geht auf — gezaehlt statt entschieden", () => {
+  /* ⚠ ⚠ Beim ersten Treffer ging 2× Status 2 plus ein Forfait genau auf.
+     Bei EINER Mannschaft. Diese Zeile macht aus n=1 ein n=21 je Lauf —
+     die Frage beantwortet sich, statt entschieden zu werden. */
+  const mit = (ueber: Record<string, unknown>) => deuteRangprobe({
+    ...BASIS, eigene_erkennbar: true, eigene_zeilen_gesamt: 21,
+    eigene_ohne_spiele: 0, eigene_ohne_zahl: 0, bestand_hinkt: 0,
+    verband_hinkt: 0, eigene: [], treffer_grundmenge: 21, ...ueber,
+  });
+
+  it("stellt beide Lesarten mit derselben Bezugsgroesse gegenueber", () => {
+    const t = zus(mit({ treffer_nur_status2: 18, treffer_mit_forfait: 21 }));
+    expect(t).toMatch(/18 von 21 Zeilen gehen mit Status 2 allein auf/);
+    expect(t).toMatch(/21 von 21 mit Status 2 und 3 \(forfait\)/);
+  });
+
+  it("deutet, statt den Leser schliessen zu lassen", () => {
+    expect(zus(mit({ treffer_nur_status2: 18, treffer_mit_forfait: 21 })))
+      .toMatch(/weite Lesart geht öfter auf.*Ein Lauf ist noch keine Reihe/s);
+    expect(zus(mit({ treffer_nur_status2: 21, treffer_mit_forfait: 18 })))
+      .toMatch(/⚠ Die enge Lesart geht öfter auf/);
+    expect(zus(mit({ treffer_nur_status2: 20, treffer_mit_forfait: 20 })))
+      .toMatch(/Beide gleich — dieser Lauf entscheidet nichts/);
+  });
+
+  it("schweigt bei einer aelteren Function", () => {
+    /* ⚠ Nicht als „0 von 0" ausgeben — eine nicht gestellte Frage ist
+       keine Messung. */
+    const t = deuteRangprobe({
+      ...BASIS, eigene_erkennbar: true, eigene_zeilen_gesamt: 21,
+      eigene_ohne_spiele: 0, eigene_ohne_zahl: 0, bestand_hinkt: 0,
+      verband_hinkt: 0, eigene: [],
+    });
+    expect(zus(t)).not.toMatch(/Lesart:/);
+  });
+});

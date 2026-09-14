@@ -64,6 +64,9 @@ export interface EigeneRangzeile {
    * „uns fehlt ein Spiel" zu unterscheiden.
    */
   spielplan_nach_status?: unknown;
+  /** Dieselbe Menge, aber Status 2 UND 3 — die zweite Lesart, nicht der
+      Ersatz für die erste. */
+  gespielt_mit_forfait?: unknown;
 }
 
 /**
@@ -220,6 +223,34 @@ export function deuteRangprobe(d: Record<string, unknown>): string[] {
     : `⚠ ${ohneGr} von ${gruppenGes} Gruppen ohne Spiele — dort führt der VERBAND `
       + "keinen Stand. Wir bilden ihn korrekt ab; dieselbe Lage wie bei den "
       + "Spielen ohne Verlauf.");
+
+  /* ══ WELCHE LESART GEHT AUF? ════════════════════════════════════════
+     ⚠ ⚠ NICHT ENTSCHIEDEN, SONDERN GEZÄHLT. Beim ersten Treffer der
+     Gegenprobe (Juniorinnen C, 14.09.2026) ging 2× Status 2 plus ein
+     Forfait genau auf die 3 des Verbands auf — bei EINER Mannschaft. Aus
+     n=1 eine Regel zu machen ist der Fehlschluss, der in dieser Woche
+     dreimal passiert ist.
+
+     Also laufen beide Lesarten nebeneinander, und diese Zeile sagt nach
+     jedem Lauf, welche über alle Mannschaften aufgeht. Nach einem Lauf ist
+     n=21, nach zehn n=210. **Die Frage beantwortet sich, statt entschieden
+     zu werden.** */
+  if (d.treffer_grundmenge !== undefined) {
+    const g = z("treffer_grundmenge");
+    const nur2 = z("treffer_nur_status2");
+    const mitF = z("treffer_mit_forfait");
+    zeilen.push(`Lesart: ${nur2} von ${g} Zeilen gehen mit Status 2 allein auf, `
+      + `${mitF} von ${g} mit Status 2 und 3 (forfait)`);
+    /* ⚠ Der Satz dazu, weil eine nackte Gegenüberstellung den Leser
+       schliessen lässt — und die Hälfte der Fehlschlüsse dieser Woche
+       entstand genau so. */
+    zeilen.push(mitF > nur2
+      ? "   Die weite Lesart geht öfter auf — ein Hinweis, dass das Forfait "
+        + "mitzählt. Ein Lauf ist noch keine Reihe."
+      : mitF < nur2
+      ? "   ⚠ Die enge Lesart geht öfter auf — das Forfait zählt offenbar NICHT mit."
+      : "   Beide gleich — dieser Lauf entscheidet nichts.");
+  }
 
   /* ══ WAR DER RANGLISTEN-BLOCK ÜBERSPRUNGEN? ═════════════════════════
      ⚠ ⚠ Der Befund vom 14.09.2026: der Block lag hinter vier Würfen des

@@ -800,6 +800,8 @@ Deno.serve(async (req) => {
         .eq("verein_id", v.verein_id).eq("sfv_spiel_typ", 1);
       if (sFehler) return json({ fehler: `spiele nicht lesbar: ${sFehler.message}` }, 500);
       const gespieltJeTeam = new Map<number, number>();
+      /* Dieselbe Menge, aber Status 2 UND 3 — siehe unten. */
+      const mitForfaitJeTeam = new Map<number, number>();
       /* ⚠ ⚠  DIE AUFSCHLUESSELUNG NACH STATUS, und sie ist der eigentliche
          Zusatz. `gespielt_laut_spielplan` zaehlt nur Status 2 — aber der
          Verband fuehrt ZWOELF, und mehrere davon zaehlen fuer seine Tabelle
@@ -826,6 +828,20 @@ Deno.serve(async (req) => {
         if (Number(g.sfv_status) === 2) {
           gespieltJeTeam.set(t, (gespieltJeTeam.get(t) ?? 0) + 1);
         }
+        /* ⚠ ⚠  DIE ZWEITE ZAEHLUNG, UND SIE ERSETZT DIE ERSTE NICHT.
+           Beim ersten Treffer der Gegenprobe (Juniorinnen C, 14.09.2026)
+           ging 2× Status 2 + 1× Forfait genau auf die 3 des Verbands auf.
+           **Das ist EINE Mannschaft.** Aus n=1 eine Regel zu machen ist
+           derselbe Fehlschluss, der in dieser Woche dreimal passiert ist.
+
+           Also wird nicht entschieden, sondern gezaehlt: beide Lesarten
+           laufen nebeneinander, und `treffer_*` unten sagt nach JEDEM Lauf,
+           welche ueber alle 21 Mannschaften aufgeht. Nach einem Lauf ist
+           n=21, nach zehn n=210 — und die Frage beantwortet sich, statt
+           entschieden zu werden. */
+        if (Number(g.sfv_status) === 2 || Number(g.sfv_status) === 3) {
+          mitForfaitJeTeam.set(t, (mitForfaitJeTeam.get(t) ?? 0) + 1);
+        }
       }
 
       const eigene = unsere === null ? [] : roh
@@ -848,6 +864,8 @@ Deno.serve(async (req) => {
           /* ⚠ Alle Status dieser Mannschaft, nicht nur der gezaehlte —
              sonst ist „2 statt 3" nicht aufzuloesen. */
           spielplan_nach_status: statusJeTeam.get(Number(r.teamId) || -1) ?? {},
+          /* ⚠ Die zweite Lesart, nicht der Ersatz fuer die erste. */
+          gespielt_mit_forfait: mitForfaitJeTeam.get(Number(r.teamId) || -1) ?? 0,
         }))
         .sort((a, b) => (a.anzahl_spiele ?? -1) - (b.anzahl_spiele ?? -1)
           || a.liga.localeCompare(b.liga));
@@ -907,6 +925,23 @@ Deno.serve(async (req) => {
         bestand_hinkt: eigene.filter((e) =>
           e.bestand_spiele !== null && e.anzahl_spiele !== null
           && e.bestand_spiele < e.anzahl_spiele).length,
+        /* ⚠ ⚠  WELCHE LESART GEHT AUF? Zwei Zaehler ueber DIESELBEN Zeilen,
+           und die Zahl, die naeher an `eigene_zeilen_gesamt` liegt, ist die
+           richtige — ueber alle Mannschaften, nicht ueber eine.
+
+           ⚠ Gezaehlt werden nur Zeilen, bei denen der Verband ueberhaupt eine
+           Spielzahl nennt; `null` ist keine Uebereinstimmung und auch keine
+           Abweichung. Eine Zeile ohne Zahl in eine der beiden Toepfe zu
+           werfen hiesse, eine fehlende Angabe als Beleg zu zaehlen.
+
+           ⚠ UND DER FILTER WIRD DAVON NICHT ANGEFASST. Diese Zahlen sind die
+           Messung, nicht die Entscheidung. Sie gehoert Didi, und sie faellt,
+           wenn die Reihe ueber mehrere Laeufe eindeutig ist. */
+        treffer_nur_status2: eigene.filter((e) =>
+          e.anzahl_spiele !== null && e.anzahl_spiele === e.gespielt_laut_spielplan).length,
+        treffer_mit_forfait: eigene.filter((e) =>
+          e.anzahl_spiele !== null && e.anzahl_spiele === e.gespielt_mit_forfait).length,
+        treffer_grundmenge: eigene.filter((e) => e.anzahl_spiele !== null).length,
         verband_hinkt: eigene.filter((e) =>
           e.anzahl_spiele !== null && e.anzahl_spiele < e.gespielt_laut_spielplan).length,
         /* ⚠ Was der Vergleich NICHT weiss, steht IN der Antwort. Eine
