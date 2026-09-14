@@ -149,6 +149,33 @@ export async function holeSpielplan(z: SfvZugang, token: string, saisonId: numbe
   return roh as SfvSpiel[];
 }
 
+/**
+ * `/api/common/ids` — der einzige Endpunkt, dessen Antwortform die
+ * Spezifikation NICHT beschreibt.
+ *
+ * ⚠ ⚠  ANLASS, 14.09.2026. 21 von 42 Mannschaften haben keinen Spielplan,
+ * weil `/api/team/list` nur Mannschaften MIT Rangliste herausgibt. Gemessen
+ * an der Swagger-Datei fuehrt kein anderer Endpunkt eine Mannschaftsnummer:
+ * `players`, `coaches` und `officials` zaehlen Personen auf, und
+ * `clubOwnerId` ist der Klub.
+ *
+ * Bleibt dieser. Er verlangt **ClubId** als Pflichtparameter, seine
+ * Zusammenfassung lautet „return json with all relevant ids" — und sein
+ * Antwortschema ist `type: "string"`. **Ueber den Inhalt sagt die
+ * Spezifikation nichts.**
+ *
+ * ⚠ Genau deshalb wird er nur ueber `rohschluessel` gefragt: dort kommen
+ * Feldnamen zurueck und keine Werte. Ein Endpunkt, dessen Form niemand
+ * kennt, ist der letzte, dem man blind eine Allowlist schuldig bleibt.
+ *
+ * ⚠ Und die Antwort kann ein JSON-STRING sein (doppelt kodiert). Der
+ * Aufrufer muss beide Formen aushalten und sagen, welche es war — „kein
+ * Objekt" und „ein Objekt in einer Zeichenkette" sehen sonst gleich aus.
+ */
+export async function holeGemeinsameIds(z: SfvZugang, token: string): Promise<unknown> {
+  return await hole(z, token, `/api/common/ids?ClubId=${z.clubId}&Language=1`);
+}
+
 export type SfvRangliste = Record<string, unknown>;
 
 export async function holeRangliste(z: SfvZugang, token: string, saisonId: number): Promise<SfvRangliste[]> {

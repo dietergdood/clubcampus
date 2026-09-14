@@ -46,7 +46,7 @@ import {
 import { bildeEreignis } from "./matchdaten.ts";
 import {
   holeToken, holeSaison, holeTeams, holeTeamsRoh, holeSpielplan, holeEreignisse,
-  holeBank, holeRangliste,
+  holeBank, holeRangliste, holeGemeinsameIds,
 } from "./sfvApi.ts";
 import type { SfvZugang } from "./sfvApi.ts";
 import { laufeSync, bildeSpiel } from "./sync.ts";
@@ -436,6 +436,47 @@ Deno.serve(async (req) => {
       const spielplanRoh = await holeSpielplan(zugang, token, saison.id);
       const spiele = schluesselVon(spielplanRoh);
 
+      /* ⚠ ⚠  `/api/common/ids` — DIE EINE OFFENE FRAGE VOM 14.09.2026.
+         Kein anderer Endpunkt der Spezifikation fuehrt eine
+         Mannschaftsnummer; dieser verlangt ClubId und sagt ueber seine
+         Antwortform nichts. Nur ein Aufruf beantwortet das.
+
+         ⚠ Er steht in EINEM try: scheitert er, ist der Rest der Leseprobe
+         weiterhin brauchbar. Ein Wurf hier naehme mit, was ihn nichts
+         angeht — derselbe Befund wie beim Ranglisten-Block. */
+      let gemeinsameIds: Record<string, unknown>;
+      try {
+        const roh = await holeGemeinsameIds(zugang, token);
+        /* ⚠ Die Spezifikation sagt `type: "string"`. Ist es wirklich eine
+           Zeichenkette, steckt das JSON doppelt kodiert darin — dann einmal
+           auspacken. Und die FORM wird gemeldet: „kein Objekt" und „ein
+           Objekt in einer Zeichenkette" saehen sonst gleich aus. */
+        let form = Array.isArray(roh) ? "Liste"
+          : typeof roh === "string" ? "Zeichenkette"
+          : roh && typeof roh === "object" ? "Objekt" : typeof roh;
+        let wert: unknown = roh;
+        if (typeof roh === "string") {
+          try { wert = JSON.parse(roh); form = "Zeichenkette mit JSON darin"; }
+          catch { form = "Zeichenkette, kein JSON"; }
+        }
+        gemeinsameIds = {
+          gefragt: true, form,
+          schluessel: schluesselVon(wert),
+          /* ⚠ Die Frage, um die es geht — direkt beantwortet statt aus der
+             Schluesselliste erschlossen. Sie sucht NUR nach Namen, nie nach
+             Werten. */
+          nennt_teamnummern: JSON.stringify(schluesselVon(wert))
+            .toLowerCase().includes("team"),
+        };
+      } catch (e) {
+        /* ⚠ Gebunden und benannt. Ein 404 hier ist selbst eine Auskunft:
+           der Endpunkt steht in der Spezifikation und antwortet nicht. */
+        gemeinsameIds = {
+          gefragt: true,
+          gescheitert: e instanceof Error ? e.message : String(e),
+        };
+      }
+
       /* ⚠ ⚠  DRITTER ABRUF: DIE BANK — zweiter Anlauf am 10.09.2026.
 
          Der erste antwortete mit HTTP 406 Not Acceptable. Zwei Ursachen
@@ -503,6 +544,7 @@ Deno.serve(async (req) => {
           ? "Spiel mit protokolliertem Wechsel" : "erstes Spiel des Plans",
         bank: bank,
         bank_versuche: bankVersuche,
+        gemeinsame_ids: gemeinsameIds,
         bildfeld_team: suchtBildfeld(teams),
         bildfeld_spielplan: suchtBildfeld(spiele),
       });

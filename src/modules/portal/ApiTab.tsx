@@ -429,13 +429,43 @@ export function ApiTab({loading,isMobile,mobileKachel,apiVerbindungen,tab,sb=nul
     } else if (versuche.length) {
       bankZeilen.push("   ⚠ Kein Versuch kam durch — der Weg ist zu");
     }
+    /* ⚠ ⚠ `/api/common/ids` — die eine offene Frage vom 14.09.2026: kennt
+       irgendein Endpunkt ALLE Mannschaften des Klubs? 21 von 42 haben
+       keinen Spielplan, weil `/api/team/list` nur die mit Rangliste
+       herausgibt, und kein anderer Endpunkt der Spezifikation führt eine
+       Mannschaftsnummer. Dieser sagt über seine Antwortform nichts — nur
+       ein Aufruf beantwortet es. */
+    const gi = daten.gemeinsame_ids as Record<string, unknown> | undefined;
+    const giZeilen: string[] = [];
+    if (!gi) {
+      giZeilen.push("/api/common/ids: nicht gefragt — die Edge Function ist "
+        + "älter als der 14.09.2026.");
+    } else if (gi.gescheitert) {
+      /* ⚠ Ein Fehlschlag ist hier selbst eine Auskunft: der Endpunkt steht
+         in der Spezifikation und antwortet nicht. */
+      giZeilen.push(`/api/common/ids: gescheitert — ${String(gi.gescheitert)}`);
+    } else {
+      const k = gi.schluessel as { anzahl?: number; alle?: string[] } | undefined;
+      giZeilen.push(`/api/common/ids: Antwortform ${String(gi.form ?? "?")} · `
+        + `${Number(k?.anzahl ?? 0)} Objekt(e) · ${(k?.alle ?? []).length} Feldnamen`);
+      if ((k?.alle ?? []).length) giZeilen.push(`   ${(k?.alle ?? []).join(", ")}`);
+      /* ⚠ Die Frage direkt beantwortet, nicht aus der Feldliste
+         erschlossen — sonst schliesst der Leser selbst. */
+      giZeilen.push(gi.nennt_teamnummern
+        ? "   ✓ Es kommt „team“ in den Feldnamen vor — das ist der erste Weg "
+          + "zu den 21 Mannschaften ohne Nummer, den es geben könnte."
+        : "   ⚠ Kein Feldname enthält „team“ — auch dieser Endpunkt kennt die "
+          + "Mannschaften nicht. Dann bleibt nur die Anfrage beim Verband.");
+    }
+
     setAuskunft({titel:"Rohschlüssel", zeilen:[
       ...teil(daten.team_liste as never, "Teamliste"),
       ...teil(daten.spielplan as never, "Spielplan"),
       ...bankZeilen,
+      ...giZeilen,
       String(daten.bildfeld_team??""),
       String(daten.bildfeld_spielplan??""),
-    ].filter(Boolean)});
+    ].filter(Boolean), roh: daten});
   }
 
   async function syncStarten(){

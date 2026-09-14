@@ -1199,6 +1199,12 @@ Ohne Docker (z.B. wenn Docker Desktop nicht läuft) geht ein Dump auch direkt ü
   `TermineModul.tsx:584`), und den Jahrgang liefert der Verband — wir speichern
   ihn nur nicht. ⚠ Der Risikopunkt ist ein neues Feld an einem Objekt mit
   mehreren Ausgängen; siehe „Ein neues Feld erbt JEDEN Ausgang“.
+- `docs/anfrage_fvrz_teamliste.md` — die Anfrage an den FVRZ zu den 21
+  Mannschaften ohne Wettbewerbsteilnahme. **Zum Abschicken**, samt der
+  Begründung, warum sie eine Frage stellt und keine drei.
+- `supabase/migration_vereine_verbandskennung.sql` — `sfv_club_id` (1516)
+  und `sfv_verband_oid` (11) als Spalten. ⚠ NICHT `sfv_club_nummer`
+  (11057) — zwei Zahlen, die beide nach „Vereinsnummer“ aussehen.
 - `README.md` — Produktüberblick, Rollen, Einrichtung eines neuen Vereins.
 
 ## Bekannte Defekte
@@ -4163,6 +4169,124 @@ Container-Begrenzung, und die Prüfkette läuft in einem Container.
 ⚠ **Die Messung ist ein Lauf je Einstellung.** Dass die Vorgabe manchmal grün
 ist (zweimal am selben Tag), zeigt, dass sie auf der Kante sitzt — nicht, dass
 sie trägt. Bei 4, 8 und 12 war sie es nie.
+
+### ⚠⚠ DIE HÄLFTE DES VEREINS HAT KEINEN SPIELPLAN — und es liegt nicht an unserer Kette
+
+Gemessen am 14.09.2026 mit `aktion: "teamprobe"`, und die Zahlen gehen auf:
+
+```
+teams-Tabelle    42 Zeilen · 41 aktiv · 21 mit SFV-Nummer · 21 ohne
+Teamliste        21 Mannschaften, alle unsere Nummern darin
+Roher Spielplan  270 Zeilen · Typ 1/2/3/9 · 234+23+12+1 = 270
+                 0 beide bekannt · alle „eine" · 0 keine
+```
+
+**`zeilen_ohne_bekannte_mannschaft = 0`.** Der Verband liefert die Spiele
+dieser 21 Mannschaften **gar nicht** — ein Quellenproblem, kein
+Filterproblem. Bei uns ist nichts zu reparieren.
+
+⚠ **Es sind 21, nicht elf.** Die Ausgangszahl war zu niedrig, und die
+Messung hat sie verdoppelt — dieselbe Disziplin wie überall: die Zahl im
+Auftrag ist eine Behauptung, die widerlegt werden darf.
+
+⚠ **Und „alle eine bekannt" bestätigt die Prämisse mit**, auf der der
+Diskriminator ruht: `/api/club/schedule` ist ein Klub-Spielplan, in jeder
+Zeile ist genau eine Seite unsere. Ohne diese Bestätigung wäre
+`keine_bekannt = 0` nicht zu deuten.
+
+#### Der Kreis dahinter — und er ist grösser als die Frage
+
+`bildeSpiel()` verwirft eine Spielplanzeile, wenn keine der beiden
+Mannschaftsnummern in `eigene` steht. Und `eigene` kommt aus
+`/api/team/list` — dem Endpunkt, der nur Mannschaften **mit Rangliste**
+herausgibt.
+
+> **Der Filter verwirft nicht wegen der Spielform, sondern wegen einer
+> Liste, in der diese Mannschaften strukturell nicht vorkommen können.**
+
+⚠ **Kein Regressionsdatum: so ist es, seit es `bildeSpiel()` gibt.** Der
+Kreis wäre auch dann geschlossen, wenn der Verband die Turniere lieferte —
+gemessen hat sich nur gezeigt, dass er es nicht tut, und deshalb ist er
+heute folgenlos. **Er bleibt es nicht, wenn der Verband je nachliefert.**
+
+#### Kein anderer Endpunkt kennt die Mannschaften
+
+Gemessen gegen die Spezifikation, nicht vermutet:
+
+| Endpunkt | Felder | Mannschaftskennung |
+|---|---|---|
+| `/api/club/{clubId}/players` | 21 | **keine** — `clubOwnerId` ist der Klub |
+| `/api/club/{clubId}/coaches` | 12 | keine — nur `functions` |
+| `/api/club/{clubId}/officials` | 12 | keine |
+| **`/api/common/ids`** | ⚠ **Antwortschema `type: "string"`** | **unbekannt** |
+
+⚠ `/api/common/ids` ist der einzige offene Kandidat: er verlangt **ClubId**
+als Pflichtparameter, seine Zusammenfassung lautet *„return json with all
+relevant ids"*, und die Spezifikation sagt über den Inhalt **nichts**. Das
+ist der Fall, in dem nur ein Aufruf antwortet — seit dem 14.09.2026 fragt
+`rohschluessel` ihn mit, und zwar wie alles dort: **nur Feldnamen, keine
+Werte.**
+
+### ⚠ EIN HALB GEPFLEGTER SPIELPLAN IST SCHLECHTER ALS KEINER
+
+Die Antwort auf „dann erfassen wir sie eben von Hand", und sie ist eine
+Kostenrechnung, keine Ablehnung.
+
+**Der Preis ist nicht das Formular.** Der Export ist von Anfang bis Ende auf
+`sfv_team_id` gebaut: er gruppiert je Teamnummer, sendet je Teamnummer, und
+der Empfänger findet den WordPress-Beitrag über das Postmeta `sfv_id` — es
+gibt dort sogar einen Zähler `ohne_teamnummer: heimatlos`. **Eine Mannschaft
+ohne Nummer hat auf beiden Seiten keine Identität.**
+
+⚠ **Und ein leiser Posten, der vor der ersten Zeile geklärt sein muss:** von
+Hand erfasste Spiele stünden in derselben Tabelle wie die gesyncten. Heute
+löscht nichts sie — der Sync zählt `nicht_mehr_geliefert` und löscht nie.
+**Aber jede künftige Aufräumung nähme sie mit, und dann verschwände
+Handarbeit still.** Es braucht ein Merkmal an der Zeile, bevor die erste
+erfasst wird, nicht danach.
+
+Der eigentliche Preis ist wiederkehrend: jede Saison, 21 Mannschaften.
+
+> **Ein halb gepflegter Spielplan ist schlechter als keiner.** Er sieht aus
+> wie eine Auskunft und ist eine Momentaufnahme von letztem Herbst.
+
+**Entschieden (Didi, 14.09.2026): erst, wenn der Verband nein gesagt hat UND
+jemand die wiederkehrende Arbeit zusagt.**
+
+### ⚠ VON DER VERBANDSSEITE LESEN IST RAUS — es wäre keine Quelle, sondern eine Sperre
+
+`matchcenter.fvrz.ch` antwortet auf einen serverseitigen Abruf mit **403**
+(gemessen 25.08.2026). Ein Link aus dem Browser geht, ein Abruf nicht.
+
+Es wäre also nicht „HTML lesen", sondern eine Sperre umgehen — dazu ohne
+jeden Vertrag: eine Layoutänderung bricht es, und zwar **still**. Und es
+wäre eine zweite Quelle für dieselbe Sache, der Fehler, den dieses Papier an
+einem Dutzend Stellen als teuersten führt.
+
+### ⚠⚠ `teams_ohne_spiele` IST ENDGÜLTIG STUMPF — der vierte Fall dieser Woche
+
+Der Zähler sieht ausschliesslich `teams`-Zeilen **mit gesetzter
+`sfv_team_id`**. Die 21 ohne Nummer sind genau die, um die es geht.
+
+> **Er hätte nie angeschlagen.**
+
+Das ist der vierte Zähler dieser Woche, dessen Grundmenge die gesuchte Menge
+nicht enthält oder nicht von einer viel grösseren trennt:
+
+| | die Zahl | warum sie die Frage nicht beantwortet |
+|---|---|---|
+| `gruppen_ohne_spiele` | Gruppen, in denen JEDE Mannschaft auf null steht | unsere eine Zeile geht darin unter |
+| `nicht_in_teamliste` | Nummern im Plan, die die Liste nicht kennt | darunter steht jeder Gegner, hunderte |
+| `treffer_nur_status2` „21 von 21" | alle eigenen Zeilen | die ohne Forfait können nicht unterscheiden |
+| **`teams_ohne_spiele`** | zugeordnete Mannschaften ohne Spiel | **die Fehlenden fehlen in der Menge** |
+
+⚠ **Die Form ist immer dieselbe, und der Name ist nie falsch.** Jede dieser
+Zahlen misst genau, was sie sagt. Falsch ist die Frage, die man ihr stellt —
+und das fällt nicht auf, weil eine Null wie eine Antwort aussieht.
+
+**Die Frage davor lautet: enthält die Grundmenge überhaupt das, wonach ich
+suche — und kann sie es von etwas anderem trennen?** Sie kostet einen
+Gedanken und hätte hier viermal geholfen.
 
 ### ⚠⚠ DER ERSTE TREFFER DER GEGENPROBE WAR MEIN EIGENER ZÄHLER
 
