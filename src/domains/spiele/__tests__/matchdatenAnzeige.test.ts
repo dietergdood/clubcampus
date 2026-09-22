@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   baueStatistik, gruppiereNachTeam, hatVerlauf, mischeEreignisse,
   offeneZuordnungen, TYP_AUSSCHLUSS, TYP_TOR, TYP_VERWARNUNG,
-  beschreibeEreignis, geaenderteFelder, unzugeordnetLabel,
+  beschreibeEreignis, geaenderteFelder, unzugeordnetLabel, SUBTYP_EIGENTOR,
 } from "../matchdatenAnzeige.ts";
 import type { EreignisZeile } from "../matchdatenAnzeige.ts";
 
@@ -167,6 +167,22 @@ describe("baueStatistik", () => {
       { ...e({ id: "4", typ_id: TYP_AUSSCHLUSS, sfv_person_id: 111 }), spiel_id: "s1" },
     ], new Set(["s1"]));
     expect(s[0]).toMatchObject({ tore: 2, verwarnungen: 1, ausschluesse: 1 });
+  });
+
+  it("⚠ ein Eigentor erhöht die Torzahl nicht — das reguläre daneben schon", () => {
+    /* ⚠ Ein Eigentor ist kein persönliches Tor. Dieselbe Regel wie an
+       der Aufstellungszeile (`sammleMarken()`), und über dieselbe
+       Funktion — `torZusatz()` statt `subtyp_id === 2`: sonst stünde sie
+       an zwei Stellen, und der Typ-Guard fiele weg.
+
+       ⚠ Das reguläre Tor steht mit Absicht daneben. Eine Erwartung auf
+       `tore: 0` allein bestünde auch dann, wenn gar nichts mehr gezählt
+       würde. */
+    const s = baueStatistik([auf(111, "s1", 90)], [
+      { ...e({ id: "1", typ_id: TYP_TOR, sfv_person_id: 111 }), spiel_id: "s1" },
+      { ...e({ id: "2", typ_id: TYP_TOR, subtyp_id: SUBTYP_EIGENTOR, sfv_person_id: 111 }), spiel_id: "s1" },
+    ], new Set(["s1"]));
+    expect(s[0]).toMatchObject({ tore: 1, verwarnungen: 0, ausschluesse: 0 });
   });
 
   it("zählt einem Gegner nichts zu", () => {

@@ -293,7 +293,7 @@ async function alleSeiten<T>(
  *    46  12.09.2026  Durchreiche von personen/teams/unterfelder/
  *                    geschwister, nichtDurchgereicht(), diese Angabe
  */
-const FUNCTION_FASSUNG = 53;
+const FUNCTION_FASSUNG = 54;
 
 const AKTIONEN = ["probe", "export", "bestand", "status", "ranglisten"];
 
@@ -1707,6 +1707,22 @@ async function laufeProbe(
     mit_nummer: 0, mit_ein_nummer: 0, mit_zusatz: 0,
     zusatz_eigentor: 0, zusatz_penalty: 0,
   };
+  /* ⚠ ⚠  DER AUFRUFER, DER BIS ZUM 22.09.2026 GEFEHLT HAT — und diesmal
+     für DREI Zahlen auf einmal.
+
+     `MarkenErgebnis` verspricht wörtlich, `ohne_zuordnung` werde
+     *„GEZÄHLT, nicht verschwiegen"*, und ein unbekannter Typ solle
+     *„AUFFALLEN — nicht still durchfallen"*. Gelesen wurde aus dem
+     Ergebnis ausschliesslich `.je_spieler`. **Beide fielen still**, und
+     die Zusage stand in einem Kommentar über der Stelle, die sie nicht
+     einlöst.
+
+     Ein `eigentore`-Zähler ohne Leser wäre der dritte gewesen. Deshalb
+     kommen alle drei hier an — samt `gesetzt` als Bezugsgrösse. */
+  const markenZahlen = {
+    gesetzt: 0, ohne_zuordnung: 0, eigentore: 0,
+    unbekannte_typen: new Set<number>(),
+  };
 
   for (const s of eigene) {
     const roh = proSpiel.get(String(s.id)) ?? [];
@@ -1741,6 +1757,10 @@ async function laufeProbe(
     if (aufZeilen.length) {
       spieleMitAufstellung++;
       const marken = sammleMarken(ereignisse);
+      markenZahlen.gesetzt += marken.gesetzt;
+      markenZahlen.ohne_zuordnung += marken.ohne_zuordnung;
+      markenZahlen.eigentore += marken.eigentore;
+      for (const t of marken.unbekannte_typen) markenZahlen.unbekannte_typen.add(t);
       spiel.aufstellung = baueAufstellung(
         aufZeilen, marken.je_spieler, spiel.heim_auswaerts === "heim",
         namen, aufZahlen,
@@ -1925,6 +1945,19 @@ async function laufeProbe(
       verlauf_zusatz_eigentor: verlaufZahlen.zusatz_eigentor,
       verlauf_zusatz_penalty: verlaufZahlen.zusatz_penalty,
       verlauf_zeilen_gesamt: verlaufZeilen,
+      /* ⚠ Die Symbole an den Aufstellungszeilen — immer da, auch als
+         Null. `marken_gesetzt` ist die Bezugsgrösse: „1 Eigentor
+         ausgelassen" heisst bei zwölf gesetzten Marken etwas anderes
+         als bei null.
+
+         ⚠ `marken_eigentore_ausgelassen` ist KEIN Fehler, sondern die
+         Wirkung einer Regel: ein Eigentor ist kein persönliches Tor.
+         Steht dort dauerhaft 0, während die Datenbank Eigentore führt,
+         ist DAS der Befund. */
+      marken_gesetzt: markenZahlen.gesetzt,
+      marken_ohne_zuordnung: markenZahlen.ohne_zuordnung,
+      marken_eigentore_ausgelassen: markenZahlen.eigentore,
+      marken_unbekannte_typen: [...markenZahlen.unbekannte_typen].sort((a, b) => a - b),
       nicht_zu_veroeffentlichen: zurueckgehalten,
       verlauf_zeilen: verlaufZeilen,
       runde_mit_doppelabstand: rundeMitDoppelabstand,

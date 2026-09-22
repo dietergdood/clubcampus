@@ -236,6 +236,53 @@ export const TYP_TOR = 1;
 export const TYP_VERWARNUNG = 3;
 export const TYP_AUSSCHLUSS = 4;
 
+/**
+ * Torzusatz — `eigentor` · `penalty` · `""`.
+ *
+ * ⚠ ⚠  ÜBER DIE KENNZAHL, NIE ÜBER DEN TEXT. `subtyp` trägt den Klartext
+ * des Verbands und wäre eine Schreibweise; `subtyp_id` ist das Merkmal.
+ * Gemessen in `sfv_stammdaten.json` am 11.09.2026:
+ *
+ *   2  Eigentor      4  Penalty
+ *   1  Kopftor       3  Freistosstor      0  „-"
+ *
+ * ⚠ Die Liste hat **100 Einträge**, nicht vier. Was hier nicht steht,
+ * ergibt bewusst `""` — das Theme kennt genau zwei Werte, und ein
+ * dritter fiele dort in ein `select` mit festen Optionen.
+ *
+ * ⚠ ⚠  UND ER IST NICHT DIE WIEDERHOLUNG EINER ANDEREN ANGABE.
+ * `art` steht beim Eigentor auf `tor` — **dass es eines war, steht
+ * nirgends sonst als im Fliesstext.** Genau deshalb liest die Spielseite
+ * heute das Wort „Eigentor" aus `text`, um den Zwischenstand auf die
+ * andere Mannschaft zu drehen.
+ *
+ * ⚠ Bei `2. Verwarnung` ist es umgekehrt: `art` trägt bereits `gelbrot`,
+ * und das Theme stellt es als eigenes Symbol dar. Ein Zusatz wäre dort
+ * eine Doppelung — deshalb bekommt er **bewusst keinen Eintrag**.
+ *
+ * ⚠ ⚠  UND DER TYP-GUARD IN DER ERSTEN ZEILE IST DER GRUND, WARUM DIESE
+ * FUNKTION AUCH DORT BENUTZT WIRD, WO ES NUR UM EIGENTORE GEHT. Die
+ * Subtyp-Nummern gelten **je Ereignistyp**: `subtyp_id = 2` an einer
+ * Verwarnung ist kein Eigentor. Ein blosser Vergleich auf 2 verschluckte
+ * sie — deshalb fragt niemand den Subtyp selbst ab.
+ *
+ * ⚠ Sie stand bis zum 22.09.2026 in `wpNutzlast.ts` und ist hierher
+ * gewandert, weil `baueStatistik()` dieselbe Regel braucht und die
+ * Importrichtung `wpNutzlast → matchdatenAnzeige` lautet. `wpNutzlast.ts`
+ * re-exportiert sie, damit keine Importzeile bricht.
+ */
+export const SUBTYP_EIGENTOR = 2;
+export const SUBTYP_PENALTY = 4;
+
+export function torZusatz(
+  typId: number, subtypId: number | null,
+): "eigentor" | "penalty" | "" {
+  if (typId !== TYP_TOR) return "";
+  if (subtypId === SUBTYP_EIGENTOR) return "eigentor";
+  if (subtypId === SUBTYP_PENALTY) return "penalty";
+  return "";
+}
+
 export function baueStatistik(
   aufstellung: AufstellungZeile[],
   ereignisse: (EreignisZeile & { spiel_id: string })[],
@@ -260,6 +307,19 @@ export function baueStatistik(
 
   for (const e of ereignisse) {
     if (!e.ist_eigener || e.sfv_person_id === null) continue;
+    /* ⚠ ⚠  EIN EIGENTOR IST KEIN PERSÖNLICHES TOR — und es zählt auch
+       keinem Gegner. Es fällt hier ganz weg, wie an der
+       Aufstellungszeile (`sammleMarken()`).
+
+       ⚠ **Diese Funktion hat heute keinen Aufrufer**, und genau deshalb
+       steht die Zeile hier: eine falsche Regel in totem Code ist still,
+       bis jemand ihn anschliesst — und dann ist sie sein Fehler und
+       nicht mehr unserer. Ihre vier Testfälle halten sie am Leben, ohne
+       dass sie jemand liest.
+
+       ⚠ Über `torZusatz()` und nicht über `subtyp_id === 2`: die Regel
+       steht sonst an zwei Stellen, und der Typ-Guard fiele weg. */
+    if (torZusatz(e.typ_id, e.subtyp_id ?? null) === "eigentor") continue;
     const s = hole(e.sfv_person_id);
     if (e.typ_id === TYP_TOR) s.tore += 1;
     else if (e.typ_id === TYP_VERWARNUNG) s.verwarnungen += 1;

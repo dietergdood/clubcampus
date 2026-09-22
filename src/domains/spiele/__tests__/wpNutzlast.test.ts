@@ -22,8 +22,11 @@ import {
   leererWechselWiderspruch,
   spielerAnzeige, rolleAus, ROLLE_ERSATZ_ID, ROLLE_KEIN_EINSATZ_ID, verlaufSortiert,
   ROLLE_CAPTAIN_ID, baueAufstellung, leereAufstellungZahlen,
+  SUBTYP_EIGENTOR,
 } from "../wpNutzlast.ts";
-import { baueNummernBruecke, beschreibeGewechselten } from "../matchdatenAnzeige.ts";
+import {
+  baueNummernBruecke, beschreibeGewechselten, mischeEreignisse,
+} from "../matchdatenAnzeige.ts";
 import type { SpielQuelle, AufstellungQuelle, AufstellungZaehlung } from "../wpNutzlast.ts";
 import type { AnzeigeEreignis } from "../matchdatenAnzeige.ts";
 import { TYP_TOR, TYP_VERWARNUNG, TYP_AUSSCHLUSS } from "../matchdatenAnzeige.ts";
@@ -707,6 +710,114 @@ describe("sammleMarken", () => {
     const r = sammleMarken([tor({ typ_id: TYP_WECHSEL, ein_rueckennr: 12 })]);
     expect(r.je_spieler.size).toBe(0);
     expect(r.unbekannte_typen).toEqual([]);
+  });
+
+  /* ══════════════════════════════════════════════════════════════════
+     Das Eigentor faellt aus der Torstatistik (22.09.2026)
+
+     ⚠ Ein Eigentor ist kein persoenliches Tor — weder beim Schuetzen
+     noch bei einem Gegner. Es haengt bis heute als Marke `tor` an der
+     Aufstellungszeile und erscheint drueben in der Torzahl.
+     ══════════════════════════════════════════════════════════════════ */
+
+  it("⚠ ein Eigentor bekommt KEINE Marke — das regulaere Tor daneben schon", () => {
+    /* ⚠ Das regulaere Tor steht mit Absicht daneben. Ein Fall, der nur
+       eine leere Map prueft, waere auch dann gruen, wenn sammleMarken()
+       gar nichts mehr zaehlte — er kann „ausgelassen" nicht von
+       „nichts gerechnet" unterscheiden. Erst die 1 daneben trennt die
+       beiden. */
+    const r = sammleMarken([tor(), tor({ subtyp_id: SUBTYP_EIGENTOR, minute: 55 })]);
+    const z = r.je_spieler.get("p:222")!;
+    expect(z).toMatchObject({ tore: 1, gelb: 0, gelbrot: 0, rot: 0 });
+    expect(z.marken.map(m => `${m.art}${m.minute}`)).toEqual(["tor11"]);
+    /* ⚠ Die zwei Zahlen zusammen, nie eine allein: „1 Eigentor
+       ausgelassen" heisst etwas anderes bei zwoelf gesetzten Marken als
+       bei null. Eine Zahl ohne Bezugsgroesse ist keine Auskunft. */
+    expect(r.eigentore).toBe(1);
+    expect(r.gesetzt).toBe(1);
+    /* ⚠ UND NICHT als ohne_zuordnung — der Grund ist ein anderer. */
+    expect(r.ohne_zuordnung).toBe(0);
+  });
+
+  it("⚠ eine Verwarnung mit subtyp_id 2 bleibt eine Verwarnung", () => {
+    /* ⚠ DIE GEGENPROBE ZUM TYP-GUARD. Die Subtyp-Nummern gelten JE
+       EREIGNISTYP: `subtyp_id = 2` ist an einem Tor ein Eigentor und an
+       einer Verwarnung irgendetwas anderes. Ein blosser Vergleich auf 2
+       verschluckte diese Karte — deshalb fragt niemand den Subtyp
+       selbst ab, sondern `torZusatz()` mit seinem `typId !== TYP_TOR`.
+
+       ⚠ Dieser Fall wird NICHT rot, wenn jemand die Auslassung ganz
+       entfernt. Er schuetzt vor einem zu BREITEN Filter, nicht vor
+       einem fehlenden — das ist die andere Richtung, und sie braucht
+       einen eigenen Fall. */
+    const r = sammleMarken([gelb({ subtyp_id: SUBTYP_EIGENTOR })]);
+    const z = r.je_spieler.get("p:222")!;
+    expect(z).toMatchObject({ tore: 0, gelb: 1 });
+    expect(z.marken.map(m => `${m.art}${m.minute}`)).toEqual(["gelb40"]);
+    expect(r.eigentore).toBe(0);
+    expect(r.gesetzt).toBe(1);
+  });
+
+  it("⚠ ein fremdes Eigentor bekommt ebenfalls keine Marke", () => {
+    /* Der Gegner wird ueber die Rueckennummer zugeordnet — er WAERE also
+       zuordenbar. Trotzdem faellt die Marke weg: ein Eigentor zaehlt
+       keinem Gegner als Tor, sonst stuende es in SEINER Statistik. */
+    const g = tor({ ist_eigener: false, sfv_person_id: null, rueckennr: 7, subtyp_id: SUBTYP_EIGENTOR });
+    const r = sammleMarken([g]);
+    expect(r.je_spieler.size).toBe(0);
+    expect(r.eigentore).toBe(1);
+    expect(r.gesetzt).toBe(0);
+    expect(r.ohne_zuordnung).toBe(0);
+  });
+
+  it("⚠ ein eigenes Eigentor OHNE Person zaehlt als eigentore, nicht als ohne_zuordnung", () => {
+    /* ⚠ DIE REIHENFOLGE IM CODE IST DIE AUSSAGE. Die Auslassung steht
+       VOR `markeSchluessel()`, und genau deshalb sind hier zwei Zahlen
+       zu pruefen und nicht eine: beide Faelle enden ohne Marke, und wer
+       sie zusammenwirft, kann spaeter nicht mehr sagen, WARUM eine
+       Zeile weggefallen ist. */
+    const r = sammleMarken([tor({ sfv_person_id: null, subtyp_id: SUBTYP_EIGENTOR })]);
+    expect(r.eigentore).toBe(1);
+    expect(r.ohne_zuordnung).toBe(0);
+    expect(r.je_spieler.size).toBe(0);
+    expect(r.gesetzt).toBe(0);
+  });
+
+  it("⚠ eine Vereinskorrektur auf Eigentor wirkt — durch mischeEreignisse() hindurch", () => {
+    /* ⚠ ⚠  DIESER FALL HAELT EINE REIHENFOLGE FEST, DIE GEMESSEN IST UND
+       BRECHEN KANN. In `supabase/functions/wp-export/index.ts` bildet
+       eine Zeile `const ereignisse = mischeEreignisse(roh)`, und
+       `sammleMarken(ereignisse)` bekommt DIESELBE Variable — nicht
+       `roh`. (Gemessen am 22.09.2026 in Zeile 1727 und 1759; der
+       Auftrag nannte 1713/1743, die Sache stimmt, die Zahlen sind
+       verrutscht.)
+
+       Saehe `sammleMarken()` die rohen Zeilen, ginge es zweifach schief:
+       das nachtraeglich korrigierte Eigentor bekaeme weiterhin eine
+       Marke, UND die verdeckte SFV-Zeile liefe mit — es zaehlte also
+       doppelt. Beides ohne Fehlermeldung.
+
+       Die zweite Erwartung unten ist deshalb keine Doppelung, sondern
+       der Beleg: sie zeigt, was der rohe Weg ergaebe. */
+    const sfv = e({
+      id: "s1", herkunft: "sfv", typ_id: TYP_TOR, subtyp_id: null,
+      ist_eigener: true, sfv_person_id: 222, minute: 11,
+    });
+    const korrektur = e({
+      id: "k1", herkunft: "verein", ersetzt_ereignis_id: "s1",
+      typ_id: TYP_TOR, subtyp_id: SUBTYP_EIGENTOR,
+      ist_eigener: true, sfv_person_id: 222, minute: 11,
+    });
+
+    const r = sammleMarken(mischeEreignisse([sfv, korrektur]));
+    expect(r.je_spieler.size).toBe(0);
+    expect(r.eigentore).toBe(1);
+    expect(r.gesetzt).toBe(0);
+
+    /* ⚠ Der rohe Weg — nur zur Abgrenzung, NICHT der Weg des Exports. */
+    const roh = sammleMarken([sfv, korrektur]);
+    expect(roh.je_spieler.get("p:222")!.tore).toBe(1);
+    expect(roh.gesetzt).toBe(1);
   });
 });
 
