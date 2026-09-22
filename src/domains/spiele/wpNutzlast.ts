@@ -41,25 +41,34 @@ import {
     weil die Statistik ihn nicht zählt — der Verlauf zeigt ihn aber. */
 export const TYP_WECHSEL = 2;
 
-/** SFV-Ereignistyp „Assist". Siehe die Warnung bei `verlaufArt()`. */
+/**
+ * SFV-Ereignistyp „Assist" — eine EIGENE Zeile, nicht ein Feld am Tor.
+ *
+ * ⚠ Der Verband liefert die Vorlage als eigenes Ereignis (Stammdatenliste
+ * `Ereignistyp`, Eintrag „Assist"). Sie trägt keinen Verweis auf das Tor,
+ * zu dem sie gehört — siehe `ordneAssists()`.
+ */
 export const TYP_ASSIST = 9;
 
-/**
- * Typen, die es gibt und die kein Symbol tragen.
- *
- * ⚠ Sie stehen hier, damit `unbekannte_typen` nur meldet, was WIRKLICH
- * neu ist. Ohne diese Liste meldete jeder Assist einen „unbekannten Typ",
- * und ein Melder, der immer dasselbe sagt, wird nicht gelesen.
- */
-export const BEKANNT_OHNE_SYMBOL: number[] = [TYP_ASSIST];
 /** SFV-Ereignissubtyp „2. Verwarnung" — unterscheidet Rot von Gelb-Rot. */
 export const SUBTYP_ZWEITE_VERWARNUNG = 20;
 
 /** Die vier Zustände, die das Theme kennt (`Fields/spiel.php`, `status`). */
 export type WpStatus = "normal" | "verschoben" | "abgesagt" | "forfait";
 
-/** Die fünf Arten, die der Verlauf im Theme kennt. */
-export type WpVerlaufArt = "tor" | "gelb" | "gelbrot" | "rot" | "wechsel";
+/**
+ * Die sechs Arten, die der Verlauf im Theme kennt.
+ *
+ * ⚠ `assist` ist seit dem 23.09.2026 dabei — die ACF-Auswahl `art` führt
+ * drüben `'assist' => 'Vorlage'`, und `einsaetze.php` zählt Assists je
+ * Person über `verlauf[].art === "assist"`. Bis dahin fiel die Zeile hier
+ * weg, und die 22 Assists im Bestand erreichten die Website nie.
+ *
+ * ⚠ **`marken.art` kennt sie NICHT** — dort gibt es weiterhin nur
+ * `tor · gelb · gelbrot · rot`. Ein Assist als Marke bekäme drüben ein
+ * TOR-Symbol und zählte in der Torzahl mit; siehe `sammleMarken()`.
+ */
+export type WpVerlaufArt = "tor" | "gelb" | "gelbrot" | "rot" | "wechsel" | "assist";
 
 /**
  * Die FASSUNG der Nutzlast — hochzuzählen, wenn ein Feld dazukommt,
@@ -532,16 +541,22 @@ export function halbzeitWiderspruch(
 /* ── Verlauf ──────────────────────────────────────────────────────── */
 
 /**
- * Ereignistyp → die fünf Arten des Themes.
+ * Ereignistyp → die sechs Arten des Themes.
  *
- * ⚠ ASSIST HAT KEIN GEGENSTÜCK und wird deshalb übersprungen. Der Verlauf
- * des Themes kennt `tor · gelb · gelbrot · rot · wechsel`, keinen Assist —
- * die Vorlage dafür ist `ereignisse`, wo `vorlage_von` in derselben Zeile
- * wie das Tor steht ("Einen Assist ohne Tor gibt es nicht").
+ * ⚠ ⚠ ASSIST — BIS ZUM 23.09.2026 STAND HIER `null`, UND DIE BEGRÜNDUNG
+ * WAR RICHTIG, SOLANGE SIE GALT: das Theme kannte nur fünf Arten, und ihn
+ * als `art: 'tor'` mitzuschicken hätte ihn in der Torschützenliste
+ * mitgezählt. Die sechste Art zu ergänzen hiess, das Feld des Themes zu
+ * ändern — und das war nicht unsere Seite.
  *
- * Ihn als eigene Zeile mit `art: 'tor'` mitzuschicken wäre schlimmer als
- * ihn wegzulassen: die Torschützenliste zählte ihn mit. Und eine sechste
- * Art zu ergänzen hiesse, das Feld des Themes zu ändern.
+ * **Die Voraussetzung ist weg, nicht die Begründung:** das Theme führt
+ * `'assist' => 'Vorlage'` in der ACF-Auswahl, hat ein eigenes Symbol und
+ * zählt Assists je Person aus dem Verlauf. Damit ist die Zeile lieferbar,
+ * und sie wegzulassen hiesse, 22 gemessene Vorlagen im Bestand liegen zu
+ * lassen.
+ *
+ * ⚠ Die Torschützenliste bleibt unberührt: sie zählt `marken`, nicht den
+ * Verlauf — und `sammleMarken()` überspringt den Assist weiterhin.
  *
  * `null` heisst: diese Zeile gehört nicht in den Verlauf.
  */
@@ -569,6 +584,7 @@ export function verlaufArt(typId: number, subtypId: number | null): WpVerlaufArt
     return subtypId === SUBTYP_ZWEITE_VERWARNUNG ? "gelbrot" : "rot";
   }
   if (typId === TYP_WECHSEL) return "wechsel";
+  if (typId === TYP_ASSIST) return "assist";
   return null;
 }
 
@@ -590,6 +606,11 @@ export function verlaufArt(typId: number, subtypId: number | null): WpVerlaufArt
  * ⚠ Verglichen wird die ZAHL, nicht die Anzeigeangabe. `minute` ist in der
  * Nutzlast eine Zeichenkette (`"90+1"`), und `"8" > "46"` wäre lexikalisch
  * wahr — wer den Ausgabetext vergleicht, misst seine Formatierung mit.
+ *
+ * ⚠ `ordneAssists()` kann diesen Zähler NICHT auslösen: es verschiebt nur
+ * innerhalb eines Laufs gleicher Minute, die Folge der Minuten bleibt
+ * unverändert. Steht hier je eine Zahl über null, liegt es an etwas
+ * anderem — und dann ist es ein Befund.
  */
 export function verlaufSortiert(
   zeilen: { minute: string }[],
@@ -606,6 +627,149 @@ export function verlaufSortiert(
     vorher = wert;
   }
   return true;
+}
+
+/**
+ * Die Zähler, die `bildeVerlauf()` und `bildeSpiel()` hochzählen.
+ *
+ * ⚠ Sie sind PFLICHTFELDER, nicht optional. Ein Zähler, den eine
+ * Aufrufstelle weglassen kann, fehlt irgendwann genau dort, wo er etwas
+ * gemeldet hätte — und niemand sieht es, weil nichts fehlschlägt.
+ */
+export interface VerlaufZaehler {
+  /** Siehe `bildeVerlauf()` — wie oft die Nummern-Brücke getragen hat. */
+  ueber_nummer_aufgeloest: number;
+  /** ⚠ **Die Bezugsgrösse.** Ohne sie sind die zwei darunter Artefakte:
+      „2 ohne eindeutiges Tor" heisst etwas anderes bei 3 Assists als bei
+      300. Eine Zahl ohne Bezugsgrösse ist keine Auskunft. */
+  assists: number;
+  /** Assists, zu deren Minute und Seite **gar kein** Tor steht. */
+  assist_ohne_tor: number;
+  /** Assists, zu deren Minute und Seite **mehrere** Tore stehen. */
+  assist_ohne_eindeutiges_tor: number;
+}
+
+/**
+ * ⚠ ⚠  DER ASSIST GEHÖRT AN SEIN TOR — UND ES GIBT KEINEN VERWEIS DARAUF.
+ *
+ * Das Theme hängt eine Assist-Zeile an das Tor an, das UNMITTELBAR DARÜBER
+ * steht (`inc/verlauf.php`): Art `tor`, **gleiche Seite**, **gleiche
+ * zerlegte Minute**. Trifft eines davon nicht zu, steht der Assist
+ * eigenständig da.
+ *
+ * ⚠ **Die Zuordnung muss also hier entstehen, in der Reihenfolge.** Ein
+ * Verweisfeld gibt es nicht — gemessen gegen die Spezifikation
+ * (`MatchEvent` hat 28 Felder, keines zeigt auf ein anderes Ereignis) und
+ * gegen `spiel_ereignisse`, das keine solche Spalte führt.
+ *
+ * ⚠ **`sfv_event_id` taugt dafür NICHT.** Der Verband vergibt sie bei
+ * jeder Bearbeitung des Matchblatts neu; schon im Probespiel laufen die
+ * Nummern gegen die Minuten. Sie ist die Kennung des EINTRAGS, nicht die
+ * des Vorgangs — siehe „Eine fremde Kennung ist die Kennung ihres
+ * Systems".
+ *
+ * ── DIE REGEL ──────────────────────────────────────────────────────────
+ * Genau EIN Tor derselben Minute und derselben Seite → der Assist steht
+ * unmittelbar dahinter. **Null oder mehrere → er wird VOR alle diese Tore
+ * gestellt.**
+ *
+ * ⚠ Die zweite Hälfte ist die wichtige, und sie ist keine Notlösung: so
+ * ist die Zeile über dem Assist garantiert kein passendes Tor, die Prüfung
+ * des Themes schlägt fehl, und er steht eigenständig da. **Ein Assist
+ * landet damit nie unter einem FREMDEN Tor.** Wer ihn stattdessen
+ * „irgendwo" liegen lässt, riskiert genau das — und eine falsche Vorlage
+ * an einem echten Namen ist auf einer öffentlichen Seite nicht mehr von
+ * einer Auskunft zu unterscheiden.
+ *
+ * ── WAS DIESE FUNKTION NICHT TUT ───────────────────────────────────────
+ * ⚠ **Sie sortiert nicht.** Verschoben wird ausschliesslich innerhalb
+ * eines zusammenhängenden Laufs gleicher `minute`; über eine
+ * Minutengrenze bewegt sich keine Zeile. Damit bleibt die Folge der
+ * Minuten Zeichen für Zeichen dieselbe — `verlaufSortiert()` und der
+ * Zähler `verlauf_unsortiert` können von dieser Funktion nicht ausgelöst
+ * werden.
+ *
+ * ⚠ Ein Block OHNE Assist wird unverändert zurückgegeben. Nicht aus
+ * Sparsamkeit: die Zusage „wir ordnen nicht um" gilt für jede Zeile, die
+ * kein Assist ist, und ein Block, der gar nicht angefasst wird, kann sie
+ * nicht brechen.
+ *
+ * @param zaehler Die drei Assist-Zahlen. **Immer gezählt, auch als Null** —
+ *                was still wegfällt, sieht aus wie etwas, das es nie gab.
+ */
+export function ordneAssists(
+  zeilen: WpVerlaufZeile[],
+  zaehler?: Pick<VerlaufZaehler, "assists" | "assist_ohne_tor" | "assist_ohne_eindeutiges_tor">,
+): WpVerlaufZeile[] {
+  const aus: WpVerlaufZeile[] = [];
+  let i = 0;
+
+  while (i < zeilen.length) {
+    /* Der Block ist ein zusammenhängender Lauf gleicher Minute. Kommt
+       dieselbe Minute später nochmals (unsortierte Eingabe), ist das ein
+       ZWEITER Block — und keine Zeile springt dazwischen. */
+    let j = i;
+    while (j < zeilen.length && zeilen[j].minute === zeilen[i].minute) j++;
+    aus.push(...ordneBlock(zeilen.slice(i, j), zaehler));
+    i = j;
+  }
+  return aus;
+}
+
+function ordneBlock(
+  block: WpVerlaufZeile[],
+  zaehler?: Pick<VerlaufZaehler, "assists" | "assist_ohne_tor" | "assist_ohne_eindeutiges_tor">,
+): WpVerlaufZeile[] {
+  if (!block.some((z) => z.art === "assist")) return block;
+
+  const rest = block.filter((z) => z.art !== "assist");
+  /* Assists, die VOR bzw. NACH `rest[i]` auszugeben sind. */
+  const vor = new Map<number, WpVerlaufZeile[]>();
+  const nach = new Map<number, WpVerlaufZeile[]>();
+  /* ⚠ Kein Tor dieser Seite im ganzen Block: der Assist kann sich an
+     nichts hängen, wo auch immer er steht. Er bleibt am Blockende —
+     innerhalb SEINER Minute, also chronologisch unverändert. */
+  const ohneTor: WpVerlaufZeile[] = [];
+
+  const lege = (m: Map<number, WpVerlaufZeile[]>, k: number, z: WpVerlaufZeile) => {
+    const l = m.get(k);
+    if (l) l.push(z); else m.set(k, [z]);
+  };
+
+  for (const a of block) {
+    if (a.art !== "assist") continue;
+    if (zaehler) zaehler.assists += 1;
+
+    const treffer: number[] = [];
+    rest.forEach((z, k) => { if (z.art === "tor" && z.seite === a.seite) treffer.push(k); });
+
+    if (treffer.length === 1) {
+      /* ⚠ Mehrere Assists zu EINEM Tor hängen sich alle daran — der
+         Verband liefert sie als eigene Zeilen, und das Theme prüft nur
+         die Zeile darüber. Der zweite Assist folgt also dem ersten und
+         nicht dem Tor: er steht dann eigenständig da.
+
+         Das ist die sichere Wahl. Ihn stattdessen ebenfalls direkt hinter
+         das Tor zu stellen hiesse, die Reihenfolge der Quelle umzudrehen —
+         für einen Fall, den niemand gemessen hat. */
+      lege(nach, treffer[0], a);
+    } else if (treffer.length === 0) {
+      if (zaehler) zaehler.assist_ohne_tor += 1;
+      ohneTor.push(a);
+    } else {
+      if (zaehler) zaehler.assist_ohne_eindeutiges_tor += 1;
+      lege(vor, treffer[0], a);
+    }
+  }
+
+  const aus: WpVerlaufZeile[] = [];
+  rest.forEach((z, k) => {
+    aus.push(...(vor.get(k) ?? []));
+    aus.push(z);
+    aus.push(...(nach.get(k) ?? []));
+  });
+  aus.push(...ohneTor);
+  return aus;
 }
 
 /** `34` → `"34"`, `45` mit Zusatz `2` → `"45+2"`. */
@@ -642,7 +806,7 @@ export function bildeVerlauf(
   /** ⚠ Wird hochgezaehlt, wenn die Bruecke traegt. Sie ist ein Rueckfall
       ueber eine Anzeigeangabe, und wie oft er greift, gehoert gezaehlt —
       steigt die Zahl gegen null, loest der Verband wieder auf. */
-  zaehler?: { ueber_nummer_aufgeloest: number },
+  zaehler?: VerlaufZaehler,
 ): WpVerlaufZeile[] {
   const zeilen: WpVerlaufZeile[] = [];
 
@@ -771,7 +935,11 @@ export function bildeVerlauf(
     });
   }
 
-  return zeilen;
+  /* ⚠ ⚠  DIE EINZIGE STELLE, AN DER DIESE FUNKTION UMORDNET — und sie
+     bewegt ausschliesslich Assists, ausschliesslich innerhalb ihrer
+     eigenen Minute. Für jede andere Zeile gilt unverändert: sie steht da,
+     wo sie ankam. Siehe `ordneAssists()`. */
+  return ordneAssists(zeilen, zaehler);
 }
 
 /**
@@ -1144,17 +1312,32 @@ export function sammleMarken(ereignisse: AnzeigeEreignis[]): MarkenErgebnis {
   for (const e of ereignisse) {
     const art = verlaufArt(e.typ_id, e.subtyp_id ?? null);
     if (!art) {
-      /* ⚠ Nur ZAEHLBARE Typen gelten als unbekannt. Assists und
-         Nebenereignisse fallen absichtlich weg — sie haben kein Symbol,
-         und sie als „unbekannt" zu melden waere Rauschen. */
-      if (e.typ_id != null && !BEKANNT_OHNE_SYMBOL.includes(e.typ_id)) {
-        unbekannt.add(e.typ_id);
-      }
+      /* ⚠ Was `verlaufArt()` nicht kennt, ist WIRKLICH unbekannt — und
+         gehoert gemeldet statt still uebersprungen.
+
+         ⚠ Bis zum 23.09.2026 stand hier eine Ausnahmeliste
+         (`BEKANNT_OHNE_SYMBOL`), und ihr einziger Eintrag war der Assist:
+         er hatte keine Art, also waere er hier als „unbekannter Typ"
+         gelandet. Seit er eine hat, kommt er gar nicht mehr in diesen
+         Zweig — die Liste ist damit tot und ersatzlos gefallen. */
+      if (e.typ_id != null) unbekannt.add(e.typ_id);
       continue;
     }
     /* Ein Wechsel bekommt kein Symbol — die Pfeile stehen an
        von_minute/bis_minute der Aufstellungszeile. */
     if (art === "wechsel") continue;
+
+    /* ⚠ ⚠  UND EIN ASSIST AUCH NICHT — aus einem schaerferen Grund als
+       beim Wechsel. `marken.art` kennt drueben nur `tor · gelb · gelbrot
+       · rot`; eine Assist-Marke bekaeme also das TOR-Symbol, und
+       `einsaetze.php` zaehlt genau daraus die Torzahl der Person. **Eine
+       Vorlage stuende dann als Tor in ihrer Statistik.**
+
+       ⚠ Dieselbe Bauart wie beim Eigentor eine Zeile tiefer: die Marke
+       KANN den Unterschied nicht tragen, also faellt sie hier weg statt
+       drueben ein Feld zu fordern. Der Verlauf traegt den Assist sehr
+       wohl — `einsaetze.php` zaehlt Vorlagen von dort. */
+    if (art === "assist") continue;
 
     /* ⚠ ⚠  DAS EIGENTOR FÄLLT HIER WEG — siehe `eigentore` im Ergebnistyp.
        Es steht VOR `markeSchluessel()`, damit es nicht als
@@ -1388,7 +1571,7 @@ export function bildeSpiel(
   /** Siehe baueNummernBruecke(). Fehlt sie, bleibt es bei „Nr. 9". */
   bruecke?: Map<string, string>,
   spielId?: string,
-  zaehler?: { ueber_nummer_aufgeloest: number },
+  zaehler?: VerlaufZaehler,
 ): WpSpiel | null {
   if (q.sfv_match_id == null) return null;
 

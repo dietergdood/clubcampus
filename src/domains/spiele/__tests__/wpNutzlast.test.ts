@@ -27,7 +27,9 @@ import {
 import {
   baueNummernBruecke, beschreibeGewechselten, mischeEreignisse,
 } from "../matchdatenAnzeige.ts";
-import type { SpielQuelle, AufstellungQuelle, AufstellungZaehlung } from "../wpNutzlast.ts";
+import type {
+  SpielQuelle, AufstellungQuelle, AufstellungZaehlung, VerlaufZaehler,
+} from "../wpNutzlast.ts";
 import type { AnzeigeEreignis } from "../matchdatenAnzeige.ts";
 import { TYP_TOR, TYP_VERWARNUNG, TYP_AUSSCHLUSS } from "../matchdatenAnzeige.ts";
 
@@ -144,10 +146,16 @@ describe("Verlauf — Art und Minute", () => {
     expect(verlaufArt(TYP_AUSSCHLUSS, SUBTYP_ZWEITE_VERWARNUNG)).toBe("gelbrot");
   });
 
-  /* ⚠ Der Verlauf des Themes kennt keinen Assist. Ihn als "tor"
-     mitzuschicken hiesse, ihn in der Torschuetzenliste mitzuzaehlen. */
-  it("laesst den Assist weg, statt ihn als Tor auszugeben", () => {
-    expect(verlaufArt(TYP_ASSIST, null)).toBeNull();
+  /* ⚠ ⚠  HIER STAND `toBeNull()`, UND DAS WAR RICHTIG, SOLANGE ES GALT:
+     das Theme kannte fuenf Arten, und den Assist als „tor" zu schicken
+     haette ihn in der Torschuetzenliste mitgezaehlt.
+
+     Seit dem 23.09.2026 fuehrt die ACF-Auswahl `art` drueben
+     `'assist' => 'Vorlage'`. **Die Voraussetzung ist weg, nicht die
+     Begruendung** — und die Torschuetzenliste bleibt unberuehrt, weil sie
+     `marken` zaehlt und nicht den Verlauf. */
+  it("gibt den Assist als eigene Art aus — nicht als Tor", () => {
+    expect(verlaufArt(TYP_ASSIST, null)).toBe("assist");
   });
 
   it("kennt Tor, Gelb und Wechsel", () => {
@@ -194,7 +202,7 @@ describe("⚠ verlaufSortiert — die Zahl, die eine Behauptung ersetzt", () => 
   });
 });
 
-describe("⚠ die Reihenfolge der Verlaufszeilen — chronologisch, und das ist eine Zusage", () => {
+describe("⚠ die Reihenfolge der Verlaufszeilen — chronologisch nach Minute, und innerhalb einer Minute steht ein Assist bei seinem Tor", () => {
   /* ⚠ ⚠ ANLASS, 12.09.2026: auf der Spielseite standen die Wechsel am ENDE
      statt chronologisch, und an der Sortierung war nie etwas beauftragt.
 
@@ -205,7 +213,25 @@ describe("⚠ die Reihenfolge der Verlaufszeilen — chronologisch, und das ist 
      ⚠ Damit lag die Ursache nicht bei uns. **Aber „einmal gemessen" ist
      keine Zusage** — dieser Fall macht daraus eine: er wird rot, sobald
      unsere Seite die Reihenfolge je verliert, und schliesst uns damit
-     dauerhaft aus, statt bei jeder Meldung neu nachzusehen. */
+     dauerhaft aus, statt bei jeder Meldung neu nachzusehen.
+
+     ⚠ ⚠  DIE ZUSAGE IST AM 23.09.2026 VERENGT WORDEN, NICHT GEBROCHEN.
+     Bis dahin hiess sie „bildeVerlauf() ordnet nicht um". Seit der Assist
+     eine eigene Verlaufszeile ist, gilt sie enger:
+
+       · die Folge der MINUTEN ist unveraendert — keine Zeile bewegt sich
+         ueber eine Minutengrenze, und `verlaufSortiert()` kann von
+         `ordneAssists()` nicht ausgeloest werden;
+       · INNERHALB einer Minute wandert ein Assist an sein Tor, weil das
+         Theme ihn an der Zeile DARUEBER erkennt und es keinen Verweis
+         gibt, dem man stattdessen folgen koennte;
+       · jede andere Zeile steht weiterhin da, wo sie ankam.
+
+     **Den Satz stehen zu lassen waere der teurere Weg gewesen**: er haette
+     weiter behauptet, was nicht mehr gilt, und die beiden Faelle darunter
+     haetten ihn gedeckt — sie benutzen ausschliesslich verschiedene
+     Minuten und waeren gruen geblieben. Genau so veraltet eine Zusage,
+     ohne dass etwas rot wird. */
   const namen = new Map<number, string>();
 
   it("gibt die Zeilen in der Reihenfolge heraus, in der sie ankommen", () => {
@@ -217,10 +243,14 @@ describe("⚠ die Reihenfolge der Verlaufszeilen — chronologisch, und das ist 
     expect(z.map((x) => x.minute)).toEqual(["12", "46", "80"]);
   });
 
-  it("⚠ und ordnet NICHT um — ein Wechsel bleibt, wo die Minute ihn hinstellt", () => {
+  it("⚠ und ordnet nicht nach ART um — ein Wechsel bleibt, wo die Minute ihn hinstellt", () => {
     /* Genau der gemeldete Eindruck: Wechsel am Ende. Käme er von uns,
        müsste bildeVerlauf() nach Art sortieren. Es tut es nicht — und
-       dieser Fall hält fest, dass es dabei bleibt. */
+       dieser Fall hält fest, dass es dabei bleibt.
+
+       ⚠ Die Erwartungen sind am 23.09.2026 UNVERÄNDERT geblieben: hier
+       trägt jede Zeile ihre eigene Minute, und `ordneAssists()` fasst
+       einen Block ohne Assist gar nicht erst an. */
     const z = bildeVerlauf([
       e({ minute: 20, typ_id: TYP_WECHSEL, ist_eigener: true }),
       e({ minute: 35, typ_id: 1, ist_eigener: true }),
@@ -237,6 +267,117 @@ describe("⚠ die Reihenfolge der Verlaufszeilen — chronologisch, und das ist 
        prüft, was sie ausschliessen wollte** — dieselbe Familie wie der
        Zähler, der 431 statt 0 meldete. */
     expect(z.map((x) => x.art)).toEqual(["wechsel", "tor", "wechsel", "tor"]);
+  });
+});
+
+/* ══════════════════════════════════════════════════════════════════════
+   Der Assist als eigene Verlaufszeile — und wo sie steht (23.09.2026)
+
+   ⚠ Der Verband liefert die Vorlage als EIGENES Ereignis (Typ 9) ohne
+   jeden Verweis auf das Tor, zu dem sie gehoert. Das Theme stellt die
+   Verknuepfung ueber die POSITION her: es haengt eine Assist-Zeile an das
+   Tor an, das UNMITTELBAR DARUEBER steht, und nur bei gleicher Art,
+   gleicher Seite und gleicher Minute (`inc/verlauf.php:1091`).
+
+   **Damit ist die Reihenfolge die Zuordnung.** Steht der Assist an der
+   falschen Stelle, haengt eine echte Vorlage an einem fremden Tor — und
+   das ist auf einer oeffentlichen Seite nicht mehr von einer Auskunft zu
+   unterscheiden.
+   ══════════════════════════════════════════════════════════════════════ */
+describe("⚠ der Assist im Verlauf", () => {
+  const namen = new Map<number, string>();
+  const leer = (): VerlaufZaehler => ({
+    ueber_nummer_aufgeloest: 0, assists: 0,
+    assist_ohne_tor: 0, assist_ohne_eindeutiges_tor: 0,
+  });
+
+  it("gibt ein Ereignis vom Typ 9 als eigene Zeile mit der Art «assist» aus", () => {
+    /* ⚠ Und mit EIGENER Personennummer. Der Assist ist kein Feld am Tor,
+       sondern eine Zeile mit einem eigenen Menschen dahinter: der
+       Vorlagengeber ist ein anderer als der Torschuetze. Faellt die
+       Nummer weg, kann die Website die Vorlage niemandem zuschreiben —
+       und `einsaetze.php` zaehlt Vorlagen genau von dort. */
+    const z = bildeVerlauf([
+      e({ minute: 34, typ_id: TYP_ASSIST, ist_eigener: true, sfv_person_id: 777 }),
+    ], true, namen, "FC Herrliberg");
+    expect(z.map((x) => x.art)).toEqual(["assist"]);
+    expect(z[0].sfv_person_id).toBe("777");
+    expect(z[0].minute).toBe("34");
+    expect(z[0].seite).toBe("heim");
+  });
+
+  it("stellt den Assist unter sein Tor — auch wenn er zuerst geliefert wird", () => {
+    /* ⚠ ⚠  DER FALL, DER DIE GANZE FUNKTION BEGRUENDET. Der Verband
+       liefert die Reihenfolge innerhalb einer Minute nicht verlaesslich;
+       kaeme der Assist zuerst heraus, stuende er ueber dem Tor und das
+       Theme faende darueber keines — die Vorlage waere verloren, ohne
+       dass etwas fehlschlaegt. */
+    const zaehler = leer();
+    const z = bildeVerlauf([
+      e({ minute: 34, typ_id: TYP_ASSIST, ist_eigener: true, sfv_person_id: 777 }),
+      e({ minute: 34, typ_id: TYP_TOR, ist_eigener: true, sfv_person_id: 222 }),
+    ], true, namen, "FC Herrliberg", undefined, undefined, zaehler);
+    expect(z.map((x) => x.art)).toEqual(["tor", "assist"]);
+    /* ⚠ Und die Minutenfolge bleibt unberuehrt — verschoben wird nur
+       INNERHALB einer Minute, nie darueber hinweg. */
+    expect(z.map((x) => x.minute)).toEqual(["34", "34"]);
+    expect(verlaufSortiert(z)).toBe(true);
+    expect(zaehler).toMatchObject({
+      assists: 1, assist_ohne_tor: 0, assist_ohne_eindeutiges_tor: 0,
+    });
+  });
+
+  it("stellt den Assist VOR beide Tore, wenn zwei in derselben Minute auf derselben Seite stehen", () => {
+    /* ⚠ ⚠  NICHT „irgendwo liegen lassen". Bei zwei Toren ist nicht
+       entscheidbar, zu welchem die Vorlage gehoert — und genau dann darf
+       die Zeile ueber dem Assist KEIN passendes Tor sein, sonst haengt
+       das Theme ihn an eines der beiden. Vor beide gestellt schlaegt
+       seine Pruefung fehl, und der Assist steht eigenstaendig da.
+
+       ⚠ Die Erwartung nennt die VOLLSTAENDIGE Reihenfolge der Arten. Ein
+       Fall, der nur prueft, dass der Assist nicht direkt hinter einem der
+       zwei Tore steht, waere auch dann gruen, wenn er ganz verschwaende —
+       in diesem Projekt hat eine negativ definierte Erwartung schon
+       einmal genau den erlaubten Fall geprueft. */
+    const zaehler = leer();
+    const z = bildeVerlauf([
+      e({ minute: 34, typ_id: TYP_TOR, ist_eigener: true, sfv_person_id: 222 }),
+      e({ minute: 34, typ_id: TYP_ASSIST, ist_eigener: true, sfv_person_id: 777 }),
+      e({ minute: 34, typ_id: TYP_TOR, ist_eigener: true, sfv_person_id: 333 }),
+    ], true, namen, "FC Herrliberg", undefined, undefined, zaehler);
+    expect(z.map((x) => x.art)).toEqual(["assist", "tor", "tor"]);
+    expect(z.map((x) => x.minute)).toEqual(["34", "34", "34"]);
+    /* ⚠ Die Platzierung ohne die Zaehlung waere ein stiller Ausfall: eine
+       Vorlage, die niemand zuordnen kann, sieht dann aus wie eine, die
+       sauber am Tor haengt. `assists` steht als Bezugsgroesse daneben —
+       „1 ohne eindeutiges Tor" heisst etwas anderes bei einem Assist als
+       bei dreihundert. */
+    expect(zaehler).toMatchObject({
+      assists: 1, assist_ohne_tor: 0, assist_ohne_eindeutiges_tor: 1,
+    });
+  });
+
+  it("laesst einen Assist ohne passendes Tor am Ende seiner Minute stehen — und zaehlt ihn", () => {
+    /* ⚠ Zwei Gruende, warum hier kein Tor passt, und beide zaehlen
+       gleich: die Minute traegt gar kein Tor, oder das Tor steht auf der
+       ANDEREN Seite. Der zweite ist der gefaehrlichere — ohne den
+       Seitenvergleich haengte unsere Vorlage an einem Gegnertor.
+
+       ⚠ Die Erwartung nennt wieder die vollstaendige Reihenfolge: das
+       Gegnertor steht davor, der Assist dahinter, und die Zeile ueber ihm
+       ist damit garantiert kein Tor SEINER Seite. */
+    const zaehler = leer();
+    const z = bildeVerlauf([
+      e({ minute: 34, typ_id: TYP_TOR, ist_eigener: false, rueckennr: 9 }),
+      e({ minute: 34, typ_id: TYP_ASSIST, ist_eigener: true, sfv_person_id: 777 }),
+      e({ minute: 60, typ_id: TYP_VERWARNUNG, ist_eigener: true, sfv_person_id: 222 }),
+    ], true, namen, "FC Herrliberg", undefined, undefined, zaehler);
+    expect(z.map((x) => x.art)).toEqual(["tor", "assist", "gelb"]);
+    expect(z.map((x) => x.seite)).toEqual(["gast", "heim", "heim"]);
+    expect(z.map((x) => x.minute)).toEqual(["34", "34", "60"]);
+    expect(zaehler).toMatchObject({
+      assists: 1, assist_ohne_tor: 1, assist_ohne_eindeutiges_tor: 0,
+    });
   });
 });
 
@@ -354,7 +495,11 @@ describe("Klarnamen zaehlen — die Zahl vor dem scharfen Lauf", () => {
   it("die vier Zahlen ergeben zusammen die Zeilen aus bildeVerlauf", () => {
     const alle = [
       gegner, offen, zug,
-      e({ typ_id: TYP_ASSIST }),                    // faellt in beiden weg
+      /* ⚠ Seit dem 23.09.2026 faellt der Assist in KEINEM von beiden mehr
+         weg — er hat eine Art, also zaehlt ihn `zaehleVerlaufNamen` und
+         gibt ihn `bildeVerlauf` aus. Die Gegenprobe traegt gerade deshalb
+         weiter: sie prueft die GLEICHHEIT, nicht die Zahl. */
+      e({ typ_id: TYP_ASSIST }),
       e({ typ_id: TYP_VERWARNUNG, ist_eigener: true, sfv_person_id: 222 }),
     ];
     const z = zaehleVerlaufNamen(alle, namen);
@@ -699,10 +844,29 @@ describe("sammleMarken", () => {
   });
 
   it("⚠ ein Assist ist NICHT unbekannt — er hat nur kein Symbol", () => {
-    /* Ohne diese Unterscheidung meldete jeder Assist einen „unbekannten
-       Typ", und ein Melder, der immer dasselbe sagt, wird nicht gelesen. */
-    const r = sammleMarken([tor({ typ_id: TYP_ASSIST })]);
+    /* Bis zum 23.09.2026 hielt das eine Ausnahmeliste
+       (`BEKANNT_OHNE_SYMBOL`) zusammen; seit der Assist eine Art hat,
+       kommt er gar nicht mehr in den Unbekannt-Zweig. **Die Zusage ist
+       dieselbe geblieben, der Weg dorthin nicht** — und deshalb bleibt
+       dieser Fall stehen: er prueft das Verhalten, nicht die Liste. */
+    /* ⚠ ⚠  DAS REGULAERE TOR DERSELBEN PERSON STEHT MIT ABSICHT DANEBEN
+       — seit dem 23.09.2026. Davor stand hier nur der Assist, und der
+       Fall prueft `je_spieler.size` und `gesetzt` auf null: **beides
+       waere auch dann gruen, wenn sammleMarken() gar nichts mehr
+       zaehlte.** Er konnte „ausgelassen" nicht von „nichts gerechnet"
+       unterscheiden — genau die Luecke, die der Eigentor-Fall weiter
+       unten seit dem 22.09.2026 schliesst. Erst die 1 daneben trennt die
+       beiden. */
+    const r = sammleMarken([tor(), tor({ typ_id: TYP_ASSIST, minute: 34 })]);
     expect(r.unbekannte_typen).toEqual([]);
+    /* ⚠ Und er bekommt KEINE Marke: `marken.art` kennt drueben nur
+       tor/gelb/gelbrot/rot — eine Assist-Marke stuende als Tor in der
+       Torzahl der Person. Der Vorlagengeber steht hier also mit EINEM
+       Tor da, nicht mit zweien. */
+    const z = r.je_spieler.get("p:222")!;
+    expect(z).toMatchObject({ tore: 1, gelb: 0, gelbrot: 0, rot: 0 });
+    expect(z.marken.map((m) => `${m.art}${m.minute}`)).toEqual(["tor11"]);
+    expect(r.gesetzt).toBe(1);
   });
 
   it("ein Wechsel bekommt kein Symbol", () => {

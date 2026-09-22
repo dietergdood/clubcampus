@@ -74,7 +74,7 @@ import type {
   DruebenMerkmal, UnserePerson,
 } from "../../../src/domains/spiele/personenAbgleich.ts";
 import type { BestandZeile } from "../../../src/domains/spiele/wpBestand.ts";
-import type { WpSpiel, SpielQuelle, AufstellungQuelle } from "../../../src/domains/spiele/wpNutzlast.ts";
+import type { WpSpiel, SpielQuelle, AufstellungQuelle, VerlaufZaehler } from "../../../src/domains/spiele/wpNutzlast.ts";
 /* ⚠ Der Zuschnitt des scharfen Laufs — welche Teile hinausgehen, was
    zusammengezaehlt wird, was ins Protokoll darf — liegt aus demselben
    Grund dort und nicht hier. Ab Etappe 5 trifft er die gefaehrlichste
@@ -274,6 +274,20 @@ async function alleSeiten<T>(
  *    Die Frage ist deshalb nicht „habe ich index.ts angefasst?", sondern
  *    **„antwortet sie jetzt anders?"**.
  *
+ *    57  23.09.2026  ASSIST ist die sechste Verlaufsart. Typ 9 kam schon
+ *                    immer an und wurde im Export weggeworfen, weil
+ *                    `WpVerlaufArt` ihn nicht kannte — die Gegenseite
+ *                    fuehrt `'assist' => 'Vorlage'` seit demselben Tag
+ *                    und zaehlt Vorlagen je Person. Dazu drei Zahlen:
+ *                    assists, assist_ohne_tor, assist_ohne_eindeutiges_tor.
+ *                    ⚠ Die Zeile steht bei ihrem Tor (gleiche Minute,
+ *                    gleiche Seite); bei null oder mehreren Toren
+ *                    ausdruecklich NICHT darunter — das Theme haengt an
+ *                    die Zeile unmittelbar darueber an, und ein Assist
+ *                    unter einem fremden Tor waere eine erfundene Vorlage
+ *                    auf einer oeffentlichen Seite.
+ *                    ⚠ Die drei Zahlen stehen in der Antwort und in
+ *                    KEINER Kachel — bewusst, die Kachel ist gesperrt.
  *    56  23.09.2026  ⚠ DIE REGEL IST DIESELBE WIE IN 55 — neu ist der
  *                    UMFANG. Die Halbzeitpruefung laeuft jetzt fuer JEDES
  *                    gebaute Spiel; bis 55 stand sie in
@@ -315,7 +329,7 @@ async function alleSeiten<T>(
  *    46  12.09.2026  Durchreiche von personen/teams/unterfelder/
  *                    geschwister, nichtDurchgereicht(), diese Angabe
  */
-const FUNCTION_FASSUNG = 56;
+const FUNCTION_FASSUNG = 57;
 
 const AKTIONEN = ["probe", "export", "bestand", "status", "ranglisten"];
 
@@ -1600,7 +1614,14 @@ async function laufeProbe(
     aufZeilenAlle as unknown as { spiel_id: string; ist_eigener: boolean;
                                   rueckennr: number | null; name: string | null }[],
   );
-  const brueckeZaehler = { ueber_nummer_aufgeloest: 0 };
+  /* ⚠ Ein Objekt fuer beide Fragen — die Bruecke und die Assists. Zwei
+     Objekte waeren zwei Stellen, die eine Aufrufstelle einzeln vergessen
+     kann; `VerlaufZaehler` fuehrt sie deshalb zusammen und macht die
+     Felder zu Pflicht. */
+  const brueckeZaehler: VerlaufZaehler = {
+    ueber_nummer_aufgeloest: 0,
+    assists: 0, assist_ohne_tor: 0, assist_ohne_eindeutiges_tor: 0,
+  };
 
   /* ── Namen ───────────────────────────────────────────────────────── */
   /* ⚠ Heute leer: sfv_zuordnung hat null Zeilen (29.08.2026). Dann steht
@@ -1956,6 +1977,26 @@ async function laufeProbe(
          das Mass dafuer, wie oft der Verband seine eigene Kennung nicht
          aufloest. Faellt sie gegen null, loest er wieder auf. */
       ueber_nummer_aufgeloest: brueckeZaehler.ueber_nummer_aufgeloest,
+      /* ⚠ ⚠  DIE ASSISTS — DREI ZAHLEN, UND DIE ERSTE IST DIE
+         BEZUGSGROESSE. „2 ohne eindeutiges Tor" heisst etwas anderes bei
+         3 Assists als bei 300; eine Zahl ohne Bezugsgroesse ist keine
+         Auskunft.
+
+         ⚠ Die zwei darunter sind GETRENNT, weil sie Verschiedenes
+         heissen: `assist_ohne_tor` ist „zu dieser Minute und Seite steht
+         gar kein Tor" — der Verband hat den Verlauf unvollstaendig
+         erfasst. `assist_ohne_eindeutiges_tor` ist „es stehen mehrere,
+         und wir koennen nicht sagen welches". **Nicht feststellbar ist
+         nicht dasselbe wie nichts gefunden**, und wer sie zusammenzaehlt,
+         schickt den Leser in die falsche Richtung.
+
+         In beiden Faellen steht der Assist eigenstaendig statt unter
+         einem moeglicherweise fremden Tor — siehe ordneAssists(). Immer
+         da, auch als Null: was still wegfaellt, sieht aus wie etwas, das
+         es nie gab. */
+      assists: brueckeZaehler.assists,
+      assist_ohne_tor: brueckeZaehler.assist_ohne_tor,
+      assist_ohne_eindeutiges_tor: brueckeZaehler.assist_ohne_eindeutiges_tor,
       verlauf_mit_person: verlaufMitPerson,
       /* ⚠ ⚠  WIE VIELE ZEILEN DIE DREI NEUEN FELDER TRAGEN — damit die
          Website-Seite GEZIELT nachsehen kann statt zu suchen.
