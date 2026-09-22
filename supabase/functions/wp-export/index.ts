@@ -274,6 +274,13 @@ async function alleSeiten<T>(
  *    Die Frage ist deshalb nicht „habe ich index.ts angefasst?", sondern
  *    **„antwortet sie jetzt anders?"**.
  *
+ *    55  22.09.2026  halbzeit_widerspruch zaehlt das Eigentor der
+ *                    GEGENSEITE — ht_resultat rechnet so, und die Zahl
+ *                    sinkt dadurch. ⚠ Wer sie ueber den 22.09. hinweg
+ *                    vergleicht, vergleicht zwei Rechnungen
+ *    54  22.09.2026  marken_gesetzt/_ohne_zuordnung/_eigentore_ausgelassen/
+ *                    _unbekannte_typen; Eigentore bekommen kein Symbol
+ *                    mehr (aus wpNutzlast.ts — importierte Datei)
  *    53  14.09.2026  geteilte_adressen (aus personenAbgleich.ts — die
  *                    erste Erhoehung wegen einer IMPORTIERTEN Datei)
  *    52  13.09.2026  verlauf_unsortiert in der Vorschau
@@ -293,7 +300,7 @@ async function alleSeiten<T>(
  *    46  12.09.2026  Durchreiche von personen/teams/unterfelder/
  *                    geschwister, nichtDurchgereicht(), diese Angabe
  */
-const FUNCTION_FASSUNG = 54;
+const FUNCTION_FASSUNG = 55;
 
 const AKTIONEN = ["probe", "export", "bestand", "status", "ranglisten"];
 
