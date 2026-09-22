@@ -1528,8 +1528,11 @@ describe("halbzeitWiderspruch — Doppelmeldungen zaehlen statt glaetten", () =>
      Abruf koennen zwei echte Tore sein (Nr. 9 in der 69., gemessen am
      11.09.2026). Was man nicht entdoppelt, kann man nicht faelschlich
      entdoppeln. */
-  const tor = (minute: number | null, eigen = false) =>
-    ({ typ_id: TYP_TOR, minute, ist_eigener: eigen });
+  /* ⚠ `subtyp_id` ist Pflicht, nicht optional — sonst kann die Funktion
+     ein Eigentor nicht sehen, und ein Test kann eine Unterscheidung nicht
+     pruefen, die sein eigener Eingabetyp nicht kennt (11.09.2026). */
+  const tor = (minute: number | null, eigen = false, subtypId: number | null = null) =>
+    ({ typ_id: TYP_TOR, subtyp_id: subtypId, minute, ist_eigener: eigen });
 
   it("⚠⚠ der Fall 4346574: drei Tore bis zur 45., Halbzeit sagt zwei", () => {
     const r = halbzeitWiderspruch(
@@ -1575,8 +1578,53 @@ describe("halbzeitWiderspruch — Doppelmeldungen zaehlen statt glaetten", () =>
 
   it("Karten und Wechsel zaehlen nicht als Tore", () => {
     expect(halbzeitWiderspruch(
-      [{ typ_id: 3, minute: 20, ist_eigener: false },
-       { typ_id: 2, minute: 30, ist_eigener: true }], "0:0", true,
+      [{ typ_id: 3, subtyp_id: null, minute: 20, ist_eigener: false },
+       { typ_id: 2, subtyp_id: null, minute: 30, ist_eigener: true }], "0:0", true,
+    )).toBe(false);
+  });
+
+  /* ── Eigentor: es zaehlt der ANDEREN Seite ─────────────────────────
+     ⚠ Der Verband schreibt es der Gegenseite gut, im Halbzeitstand wie
+     im Endstand. Ohne die Drehung erzeugt jedes Eigentor vor der Pause
+     einen Widerspruch, den es nicht gibt — in einem Melder, der gegen
+     Doppelmeldungen gebaut ist. */
+
+  /* ⚠ Die 2 steht hier als LITERAL, nicht als importierte Konstante —
+     wie in den `torZusatz`-Faellen darueber. Ein Test, der die Konstante
+     mitliest, folgt einer falschen Umnummerierung stillschweigend. */
+  const EIGENTOR = 2;
+
+  it("⚠⚠ unser Eigentor zaehlt dem Gegner — die Rechnung geht auf", () => {
+    /* Heimspiel, ht_resultat 0:1. Die einzige Torzeile ist UNSERE, aber
+       als Eigentor. Ohne die Drehung stuende sie auf unserer Seite
+       (1:0 erwartet 0:1) und die Funktion meldete einen Widerspruch. */
+    expect(halbzeitWiderspruch(
+      [tor(20, true, EIGENTOR)], "0:1", true,
+    )).toBe(false);
+  });
+
+  it("⚠⚠ das Eigentor des Gegners zaehlt uns — dasselbe andersherum", () => {
+    expect(halbzeitWiderspruch(
+      [tor(20, false, EIGENTOR)], "1:0", true,
+    )).toBe(false);
+  });
+
+  it("⚠ und ein gedrehtes Eigentor meldet weiterhin einen echten Widerspruch", () => {
+    /* Die Gegenprobe zur Drehung: sie darf den Melder nicht stumm
+       machen. Unser Eigentor zaehlt dem Gegner — steht dort 0:0, ist es
+       ein Widerspruch und bleibt einer. */
+    expect(halbzeitWiderspruch(
+      [tor(20, true, EIGENTOR)], "0:0", true,
+    )).toBe(true);
+  });
+
+  it("⚠ eine Verwarnung mit subtyp_id 2 ist kein Eigentor und kein Tor", () => {
+    /* Die Gegenprobe zum Typ-Guard in `torZusatz`: die Kennzahl 2 heisst
+       nur bei einem TOR „Eigentor". Ein Vergleich, der den Typ nicht
+       mitfragt, wuerde eine Verwarnung mitdrehen. */
+    expect(halbzeitWiderspruch(
+      [{ typ_id: TYP_VERWARNUNG, subtyp_id: EIGENTOR, minute: 20, ist_eigener: true },
+       tor(30, true)], "1:0", true,
     )).toBe(false);
   });
 });

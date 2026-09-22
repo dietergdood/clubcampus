@@ -34,6 +34,7 @@
 import type { AnzeigeEreignis } from "./matchdatenAnzeige.ts";
 import {
   beschreibeWer, beschreibeGewechselten, TYP_TOR, TYP_VERWARNUNG, TYP_AUSSCHLUSS,
+  torZusatz,
 } from "./matchdatenAnzeige.ts";
 
 /** SFV-Ereignistyp „Aus-/Einwechslung". Steht nicht in matchdatenAnzeige,
@@ -390,10 +391,38 @@ export function bildeStatus(sfvStatus: number | null): StatusEntscheid {
  * `ht_resultat` gibt es nichts, wogegen man halten koennte. Wer beides
  * zusammenzaehlt, meldet fehlende Halbzeitstaende als Widersprueche.
  *
+ * ⚠ ⚠  UND EIN EIGENTOR ZAEHLT DER ANDEREN SEITE — auch hier.
+ *
+ * Der Verband schreibt es der Gegenseite gut, im Endstand wie im
+ * Halbzeitstand. Wer es dem Schuetzen gutschreibt, erzeugt mit jedem
+ * Eigentor vor der Pause einen Widerspruch, den es nicht gibt —
+ * **in einem Melder, der gegen Doppelmeldungen gebaut ist.** Ein
+ * Fehlalarm ist hier teurer als anderswo: wer ihm einmal nachgeht und
+ * nichts findet, sieht beim naechsten Mal nicht mehr hin.
+ *
+ * ⚠ Bis zum 22.09.2026 konnte die Funktion es GAR NICHT SEHEN: ihr
+ * Parametertyp fuehrte `subtyp_id` nicht. Dieselbe Form wie
+ * `beschreibeGewechselten()` ohne `ist_eigener` am 11.09.2026 — eine
+ * Grenze, die eine Funktion nicht sehen kann, kann sie nicht ziehen,
+ * und ein zu schmaler Parametertyp ist fuer `tsc` kein Fehler, sondern
+ * eine Absicht. Deshalb ist das Feld **Pflicht und nicht optional**:
+ * nur so nennt der Compiler jede Aufrufstelle, die es nicht liefert.
+ *
+ * ⚠ Gefragt wird ueber `torZusatz()`, nicht ueber einen eigenen
+ * Vergleich `subtyp_id === SUBTYP_EIGENTOR`. Sonst stuende dieselbe
+ * Regel an zwei Stellen, und die zweite veraltete still, sobald der
+ * Verband eine weitere Subtyp-Kennzahl fuer ein Eigentor fuehrt.
+ *
  * @param heimspiel  Wir sind daheim — dann ist unsere Seite die linke.
  */
 export function halbzeitWiderspruch(
-  ereignisse: { typ_id: number; minute: number | null; ist_eigener: boolean }[],
+  ereignisse: {
+    typ_id: number;
+    /** ⚠ Pflichtfeld: siehe oben — optional waere es vergessbar. */
+    subtyp_id: number | null;
+    minute: number | null;
+    ist_eigener: boolean;
+  }[],
   htResultat: string | null,
   heimspiel: boolean,
 ): boolean | null {
@@ -411,7 +440,12 @@ export function halbzeitWiderspruch(
     if (e.typ_id !== TYP_TOR) continue;
     if (e.minute === null) { ohneMinute = true; continue; }
     if (e.minute > 45) continue;
-    if (e.ist_eigener) eigen += 1; else fremd += 1;
+    /* ⚠ Ein Eigentor zaehlt der ANDEREN Seite — so rechnet der Verband
+       seinen Halbzeitstand, und gegen den wird hier gehalten. `!==` ist
+       das exklusive Oder: eigene Zeile + Eigentor ergibt `fremd`,
+       fremde Zeile + Eigentor ergibt `eigen`. */
+    const gegenteil = e.subtyp_id === SUBTYP_EIGENTOR;
+    if (e.ist_eigener !== gegenteil) eigen += 1; else fremd += 1;
   }
   if (ohneMinute) return null;
 
@@ -437,40 +471,21 @@ export function halbzeitWiderspruch(
  * `null` heisst: diese Zeile gehört nicht in den Verlauf.
  */
 /**
- * Torzusatz — `eigentor` · `penalty` · `""`.
+ * ⚠ ⚠  `torZusatz`, `SUBTYP_EIGENTOR` und `SUBTYP_PENALTY` sind am
+ * 22.09.2026 nach `matchdatenAnzeige.ts` gewandert — dorthin, wo
+ * `TYP_TOR` und die übrigen SFV-Kennzahlen schon standen.
  *
- * ⚠ ⚠  ÜBER DIE KENNZAHL, NIE ÜBER DEN TEXT. `subtyp` trägt den Klartext
- * des Verbands und wäre eine Schreibweise; `subtyp_id` ist das Merkmal.
- * Gemessen in `sfv_stammdaten.json` am 11.09.2026:
+ * **Der Anlass war eine Fessel, keine Ordnungsliebe.** `baueStatistik()`
+ * dort drüben muss dieselbe Regel anwenden, und die Importrichtung ist
+ * `wpNutzlast → matchdatenAnzeige`. Ein Import zurück wäre ein Zyklus;
+ * die Regel zweimal zu schreiben wäre der Fehler, vor dem die Regel
+ * selbst warnt.
  *
- *   2  Eigentor      4  Penalty
- *   1  Kopftor       3  Freistosstor      0  „-"
- *
- * ⚠ Die Liste hat **100 Einträge**, nicht vier. Was hier nicht steht,
- * ergibt bewusst `""` — das Theme kennt genau zwei Werte, und ein
- * dritter fiele dort in ein `select` mit festen Optionen.
- *
- * ⚠ ⚠  UND ER IST NICHT DIE WIEDERHOLUNG EINER ANDEREN ANGABE.
- * `art` steht beim Eigentor auf `tor` — **dass es eines war, steht
- * nirgends sonst als im Fliesstext.** Genau deshalb liest die Spielseite
- * heute das Wort „Eigentor" aus `text`, um den Zwischenstand auf die
- * andere Mannschaft zu drehen.
- *
- * ⚠ Bei `2. Verwarnung` ist es umgekehrt: `art` trägt bereits `gelbrot`,
- * und das Theme stellt es als eigenes Symbol dar. Ein Zusatz wäre dort
- * eine Doppelung — deshalb bekommt er **bewusst keinen Eintrag**.
+ * ⚠ Sie werden hier **re-exportiert**, damit keine bestehende
+ * Importzeile bricht. Ein Re-Export kann nicht auseinanderlaufen — im
+ * Gegensatz zu einer zweiten Fassung.
  */
-export const SUBTYP_EIGENTOR = 2;
-export const SUBTYP_PENALTY = 4;
-
-export function torZusatz(
-  typId: number, subtypId: number | null,
-): "eigentor" | "penalty" | "" {
-  if (typId !== TYP_TOR) return "";
-  if (subtypId === SUBTYP_EIGENTOR) return "eigentor";
-  if (subtypId === SUBTYP_PENALTY) return "penalty";
-  return "";
-}
+export { SUBTYP_EIGENTOR, SUBTYP_PENALTY, torZusatz } from "./matchdatenAnzeige.ts";
 
 export function verlaufArt(typId: number, subtypId: number | null): WpVerlaufArt | null {
   if (typId === TYP_TOR) return "tor";
@@ -1005,12 +1020,51 @@ export interface MarkenErgebnis {
    * durchfallen, wie es eine blosse `continue`-Zeile täte.
    */
   unbekannte_typen: number[];
+  /**
+   * ⚠ ⚠  EIGENTORE — AUSGELASSEN UND GEZÄHLT.
+   *
+   * **Ein Eigentor ist kein persönliches Tor.** Es gehört in keine
+   * Torstatistik — weder beim Schützen noch bei einem Gegner. Bis zum
+   * 22.09.2026 hing es als Marke `tor` an seiner Aufstellungszeile und
+   * erschien drüben in seiner Torzahl (`einsaetze.php:345` zählt aus
+   * `marken`, `single-fch_person.php:388` zeigt die Summe).
+   *
+   * ⚠ **Die Marke KONNTE den Unterschied nicht tragen.**
+   * `WpAufstellungMarke` hat zwei Felder, `art` und `minute`, und `art`
+   * kennt vier Werte. Das Theme sagt es von seiner Seite genauso:
+   * *„`marken.art` kennt nur `tor`, `gelb`, `gelbrot`, `rot`"*. Es
+   * verwirft die Unterscheidung also nicht — es bekommt sie nie.
+   * Deshalb fällt die Marke hier weg, statt drüben ein Feld zu fordern.
+   *
+   * ⚠ **Und deshalb steht diese Zahl hier.** Was still wegfällt, sieht
+   * aus wie etwas, das es nie gab — dieselbe Begründung wie bei
+   * `ohne_zuordnung` eine Zeile höher. Ein Eigentor OHNE Schlüssel zählt
+   * hier und **nicht** dort: es fällt aus einem anderen Grund weg.
+   *
+   * ⚠ Der Verlauf ist davon unberührt. Dort trägt die Zeile den Schützen,
+   * `ereignis_zusatz` trägt `eigentor`, und `seite` bleibt die Seite des
+   * Schützen — **die Drehung auf die Gegenmannschaft macht das Theme**
+   * (`verlauf.php:480`, `front-page.php:567`, beide über
+   * `fch_theme_verlauf_zusatz()`, Feld vor Text). Wer hier dreht, dreht
+   * zum zweiten Mal.
+   */
+  eigentore: number;
+  /**
+   * Wie viele Marken tatsächlich gesetzt wurden — **die Bezugsgrösse.**
+   *
+   * ⚠ Ohne sie sind die drei Zahlen darüber Artefakte: „1 Eigentor
+   * ausgelassen" heisst etwas anderes bei zwölf gesetzten Marken als bei
+   * null. Eine Zahl ohne Bezugsgrösse ist keine Auskunft.
+   */
+  gesetzt: number;
 }
 
 export function sammleMarken(ereignisse: AnzeigeEreignis[]): MarkenErgebnis {
   const je_spieler = new Map<string, AufstellungZaehlung>();
   const unbekannt = new Set<number>();
   let ohne = 0;
+  let eigentore = 0;
+  let gesetzt = 0;
 
   for (const e of ereignisse) {
     const art = verlaufArt(e.typ_id, e.subtyp_id ?? null);
@@ -1027,6 +1081,23 @@ export function sammleMarken(ereignisse: AnzeigeEreignis[]): MarkenErgebnis {
        von_minute/bis_minute der Aufstellungszeile. */
     if (art === "wechsel") continue;
 
+    /* ⚠ ⚠  DAS EIGENTOR FÄLLT HIER WEG — siehe `eigentore` im Ergebnistyp.
+       Es steht VOR `markeSchluessel()`, damit es nicht als
+       `ohne_zuordnung` zählt: der Grund ist ein anderer.
+
+       ⚠ **Über `torZusatz()`, nicht über `subtyp_id === 2`.** Zwei
+       Gründe, und der zweite ist der härtere:
+
+         1. Die Regel stünde sonst an zwei Stellen — der Verlauf erkennt
+            das Eigentor mit derselben Funktion. Das Theme hat genau
+            diesen Fehler am 14.09.2026 bezahlt und daraus den Satz
+            gemacht: *„Wer eine Regel an zwei Stellen schreibt, pflegt
+            zwei Regeln."*
+         2. `torZusatz()` trägt den TYP-GUARD mit (`typId !== TYP_TOR`
+            ergibt `""`). Die Subtyp-Nummern gelten je Ereignistyp — ein
+            blosser Vergleich auf 2 verschluckte eine Verwarnung. */
+    if (torZusatz(e.typ_id, e.subtyp_id ?? null) === "eigentor") { eigentore++; continue; }
+
     const k = markeSchluessel(e);
     if (k === null) { ohne++; continue; }
 
@@ -1037,9 +1108,13 @@ export function sammleMarken(ereignisse: AnzeigeEreignis[]): MarkenErgebnis {
     else if (art === "gelbrot") z.gelbrot++;
     else if (art === "rot") z.rot++;
     z.marken.push({ art, minute: verlaufMinute(e.minute, e.zusatzminute) });
+    gesetzt++;
   }
 
-  return { je_spieler, ohne_zuordnung: ohne, unbekannte_typen: [...unbekannt].sort((a, b) => a - b) };
+  return {
+    je_spieler, ohne_zuordnung: ohne, eigentore, gesetzt,
+    unbekannte_typen: [...unbekannt].sort((a, b) => a - b),
+  };
 }
 
 /* ── Zählen, wer beim Namen genannt wird ──────────────────────────── */
