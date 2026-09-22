@@ -201,6 +201,36 @@ export function ApiTab({loading,isMobile,mobileKachel,apiVerbindungen,tab,sb=nul
       +`${n("aufstellung_ohne_minuten")} Zeilen ohne Minutenangabe`);
     zeilen.push(`Minuten unplausibel: ${n("aufstellung_unplausibel")} · `
       +`davon getauscht: ${n("aufstellung_korrigiert")}`);
+    /* ⚠ ⚠  DIE SYMBOLE AN DEN AUFSTELLUNGSZEILEN — und die Zahl, die
+       beim Bauen fast wieder nur berechnet worden waere.
+
+       `verlauf_zusatz_eigentor` und `verlauf_zeilen_gesamt` stehen seit
+       dem 11.09.2026 in der Antwort und wurden hier nie gezeigt. Beim
+       Schreiben der Anleitung fuer Didi ist es aufgefallen: der Schritt
+       „druecke Vorschau und lies die zwei Zahlen ab" war nicht
+       ausfuehrbar. **Der letzte Meter ist der, den keine Pruefkette
+       bewacht** — tsc, Tests und jede check:*-Regel sind gruen, wenn ein
+       Wert richtig berechnet und niemandem gezeigt wird.
+
+       ⚠ Und der Vorschau-Knopf reicht als EINZIGER keine Rohantwort
+       durch (`setAuskunft` ohne `roh`), es gibt hier also keinen
+       Rueckfall. Was nicht in dieser Funktion steht, ist unsichtbar. */
+    zeilen.push(`Torzusatz im Verlauf: ${n("verlauf_zusatz_eigentor")} Eigentore · `
+      +`${n("verlauf_zusatz_penalty")} Penaltys · von ${n("verlauf_zeilen_gesamt")} Zeilen`);
+    /* ⚠ `marken_eigentore_ausgelassen` ist KEIN Fehler, sondern die
+       Wirkung einer Regel: ein Eigentor ist kein persoenliches Tor und
+       bekommt kein Symbol. Steht dort 0, waehrend die Zeile darueber
+       Eigentore meldet, ist DAS der Befund — dann greift die Auslassung
+       nicht. Die zwei Zahlen gehoeren deshalb nebeneinander gelesen. */
+    zeilen.push(`Symbole: ${n("marken_gesetzt")} gesetzt · `
+      +`${n("marken_eigentore_ausgelassen")} Eigentore ausgelassen · `
+      +`${n("marken_ohne_zuordnung")} ohne Zuordnung`);
+    const unbekannteTypen = Array.isArray(z.marken_unbekannte_typen)
+      ? z.marken_unbekannte_typen as number[] : [];
+    if(unbekannteTypen.length){
+      zeilen.push(`⚠ Ereignistypen ohne Symbol-Regel: ${unbekannteTypen.join(", ")} — `
+        +`gemessen ist bisher nur Typ 1 an einer echten Antwort`);
+    }
     const rollen = Array.isArray(z.aufstellung_unbekannte_rollen)
       ? z.aufstellung_unbekannte_rollen as number[] : [];
     if(rollen.length){
