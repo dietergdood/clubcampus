@@ -274,6 +274,21 @@ async function alleSeiten<T>(
  *    Die Frage ist deshalb nicht „habe ich index.ts angefasst?", sondern
  *    **„antwortet sie jetzt anders?"**.
  *
+ *    56  23.09.2026  ⚠ DIE REGEL IST DIESELBE WIE IN 55 — neu ist der
+ *                    UMFANG. Die Halbzeitpruefung laeuft jetzt fuer JEDES
+ *                    gebaute Spiel; bis 55 stand sie in
+ *                    `if (aufZeilen.length)`, und Spiele ohne Aufstellung
+ *                    fielen aus ALLEN DREI Zaehlern heraus — von aussen
+ *                    nicht von `nicht_pruefbar` zu unterscheiden.
+ *                    ⚠ **halbzeit_widerspruch kann dadurch STEIGEN,
+ *                    nicht sinken** — es werden mehr Spiele geprueft, die
+ *                    Rechnung ist unveraendert. Dazu
+ *                    halbzeit_aufteilung_stimmt, das nachrechnet, ob die
+ *                    drei Zaehler die Spielzahl ergeben.
+ *                    ⚠ Eine Obergrenzen-Regel war an diesem Tag gebaut
+ *                    und ist verworfen worden — sie haette 4346574
+ *                    verloren, den einzigen belegten Fang. Begruendung
+ *                    an HALBZEIT_GRENZE in wpNutzlast.ts
  *    55  22.09.2026  halbzeit_widerspruch zaehlt das Eigentor der
  *                    GEGENSEITE — ht_resultat rechnet so, und die Zahl
  *                    sinkt dadurch. ⚠ Wer sie ueber den 22.09. hinweg
@@ -300,7 +315,7 @@ async function alleSeiten<T>(
  *    46  12.09.2026  Durchreiche von personen/teams/unterfelder/
  *                    geschwister, nichtDurchgereicht(), diese Angabe
  */
-const FUNCTION_FASSUNG = 55;
+const FUNCTION_FASSUNG = 56;
 
 const AKTIONEN = ["probe", "export", "bestand", "status", "ranglisten"];
 
@@ -1760,6 +1775,27 @@ async function laufeProbe(
        `sammleMarken`, `markeSchluessel` und `spielerAnzeige` waren
        gebaut, geprueft und tot — deshalb hat den vierten Rollenwert eine
        SQL-Abfrage gefunden und nicht die Meldung, die dafuer gebaut war. */
+    /* ⚠ ⚠  STEHT AUSSERHALB DER AUFSTELLUNGS-VERZWEIGUNG — seit dem
+       23.09.2026. Sie braucht die Aufstellung nicht: sie bekommt
+       `ereignisse`, `ht_resultat` und `heimspiel`.
+
+       Bis dahin stand sie in `if (aufZeilen.length)`, und damit liefen
+       Spiele OHNE Aufstellungszeilen gar nicht durch die Prüfung. Sie
+       standen in keinem der drei Zähler — **etwas anderes als
+       `nicht_pruefbar`, und von aussen nicht davon zu unterscheiden.**
+       Die drei Zahlen ergaben deshalb nicht die Spielzahl.
+
+       Jetzt gilt: widerspruch + stimmt + nicht_pruefbar === spiele_gebaut.
+       Eine Aufteilung, die aufgehen MUSS, prüft sich selbst — gehalten
+       von `halbzeitAufteilung.test.ts`. */
+    const hw = halbzeitWiderspruch(
+      ereignisse, (s.ht_resultat as string | null) ?? null,
+      spiel.heim_auswaerts === "heim",
+    );
+    if (hw === null) halbzeit.nicht_pruefbar += 1;
+    else if (hw) halbzeit.widerspruch += 1;
+    else halbzeit.stimmt += 1;
+
     const aufZeilen = aufProSpiel.get(String(s.id)) ?? [];
     if (aufZeilen.length) {
       spieleMitAufstellung++;
@@ -1772,13 +1808,6 @@ async function laufeProbe(
         aufZeilen, marken.je_spieler, spiel.heim_auswaerts === "heim",
         namen, aufZahlen,
       );
-      const hw = halbzeitWiderspruch(
-        ereignisse, (s.ht_resultat as string | null) ?? null,
-        spiel.heim_auswaerts === "heim",
-      );
-      if (hw === null) halbzeit.nicht_pruefbar += 1;
-      else if (hw) halbzeit.widerspruch += 1;
-      else halbzeit.stimmt += 1;
       const ww = zaehleWechselWiderspruch(ereignisse, aufZeilen);
       for (const k of Object.keys(wechselWiderspruch) as (keyof typeof wechselWiderspruch)[]) {
         wechselWiderspruch[k] += ww[k];
@@ -1946,6 +1975,20 @@ async function laufeProbe(
       halbzeit_widerspruch: halbzeit.widerspruch,
       halbzeit_stimmt: halbzeit.stimmt,
       halbzeit_nicht_pruefbar: halbzeit.nicht_pruefbar,
+      /* ⚠ ⚠  DIE AUFTEILUNG MUSS AUFGEHEN — und sie rechnet es selbst
+         nach, statt es zu behaupten.
+
+         Jedes gebaute Spiel durchläuft die Prüfung und landet in genau
+         einem der drei Zähler. Steht hier `false`, ist eine der drei
+         Zahlen unbrauchbar, und zwar ohne dass eine davon auffällig
+         aussähe. Dieselbe Bauart wie `zaehlung_stimmt`.
+
+         ⚠ Bis zum 23.09.2026 konnte sie gar nicht aufgehen: die Prüfung
+         stand in `if (aufZeilen.length)`, und Spiele ohne Aufstellung
+         fielen aus allen drei Zählern heraus. */
+      halbzeit_aufteilung_stimmt:
+        halbzeit.widerspruch + halbzeit.stimmt + halbzeit.nicht_pruefbar
+          === gebaut.length,
       verlauf_mit_nummer: verlaufZahlen.mit_nummer,
       verlauf_mit_ein_nummer: verlaufZahlen.mit_ein_nummer,
       verlauf_mit_zusatz: verlaufZahlen.mit_zusatz,

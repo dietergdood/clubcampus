@@ -215,6 +215,28 @@ export function ApiTab({loading,isMobile,mobileKachel,apiVerbindungen,tab,sb=nul
        ⚠ Und der Vorschau-Knopf reicht als EINZIGER keine Rohantwort
        durch (`setAuskunft` ohne `roh`), es gibt hier also keinen
        Rueckfall. Was nicht in dieser Funktion steht, ist unsichtbar. */
+    /* ⚠ ⚠  DIE HALBZEITPRÜFUNG — und sie stand in KEINER Kachel, seit es
+       sie gibt. Aufgefallen am 23.09.2026, als eine vierte Zahl
+       dazukommen sollte: `halbzeit_aufteilung_stimmt`. Beinahe wäre sie
+       zu drei unsichtbaren als vierte unsichtbare gelegt worden.
+
+       ⚠ `aufteilung_stimmt` ist die wichtigste der vier: geht sie nicht
+       auf, ist eine der drei Zahlen unbrauchbar, ohne dass eine davon
+       auffällig aussähe. Deshalb steht sie VOR ihnen. */
+    zeilen.push(`Halbzeitprüfung: Aufteilung ${z.halbzeit_aufteilung_stimmt===true?"stimmt"
+      :z.halbzeit_aufteilung_stimmt===false?"GEHT NICHT AUF":"unbekannt"} · `
+      +`${n("halbzeit_widerspruch")} Widersprüche · ${n("halbzeit_stimmt")} stimmig · `
+      +`${n("halbzeit_nicht_pruefbar")} nicht prüfbar · von ${n("spiele_gebaut")} Spielen`);
+    if(z.halbzeit_aufteilung_stimmt===false){
+      zeilen.push("⚠ Die drei Halbzeit-Zahlen ergeben nicht die Spielzahl — "
+        +"eine davon ist unbrauchbar, und welche sagt diese Zeile nicht.");
+    }
+    /* ⚠ „nicht prüfbar" heisst OHNE Halbzeitstand — nicht „in Ordnung".
+       Ohne diesen Satz zählt jemand sie zu den stimmigen. */
+    if(n("halbzeit_nicht_pruefbar")>0){
+      zeilen.push(`→ ${n("halbzeit_nicht_pruefbar")} ohne zerlegbaren Halbzeitstand `
+        +`oder mit einem Tor ohne Minute — dagegen lässt sich nichts halten`);
+    }
     zeilen.push(`Torzusatz im Verlauf: ${n("verlauf_zusatz_eigentor")} Eigentore · `
       +`${n("verlauf_zusatz_penalty")} Penaltys · von ${n("verlauf_zeilen_gesamt")} Zeilen`);
     /* ⚠ `marken_eigentore_ausgelassen` ist KEIN Fehler, sondern die

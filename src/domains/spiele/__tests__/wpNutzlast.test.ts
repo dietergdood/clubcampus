@@ -1717,6 +1717,105 @@ describe("halbzeitWiderspruch — Doppelmeldungen zaehlen statt glaetten", () =>
     )).toBe(false);
   });
 
+  /* ═══════════════════════════════════════════════════════════════════
+     DIE 45 IST EINE FESTE GRENZE — die Obergrenze ist verworfen
+     ═══════════════════════════════════════════════════════════════════
+
+     ⚠ ⚠  ALLE DREI FAELLE STEHEN AUF `heimspiel: true`. Damit — und
+     NUR damit — ist `ht_resultat` als `uns:sie` zu lesen.
+
+     Der Wert selbst steht IMMER als `heim:gast`; die Drehung macht der
+     dritte Parameter. Ohne diesen Satz liest es beim naechsten Mal
+     jemand als heim:gast, und dann wirken die Faelle falsch statt die
+     Erwartung.
+
+     ── Was hier am 23.09.2026 stand und wieder gefallen ist ───────────
+
+     Eine Obergrenze statt einer Grenze: Tore der Reihe nach durchgehen,
+     laufenden Stand mitzaehlen, schweigen sobald der Stand erreicht ist.
+     Dann braeuchten kuerzere Haelften, Drittel und Viertel keine eigene
+     Regel.
+
+     ⚠ Messung 5 (22.09.2026) hat sie erledigt: die feste 45 stimmt bei
+     ALLEN 8 pruefbaren Spielen, darunter fuenf B- und C-Juniorenspiele
+     mit vier bis sechs Toren nach der Pause. Die Fehlalarme, gegen die
+     die Obergrenze gebaut war, gibt es im Bestand nicht — und sie haette
+     4346574 gekostet, den einen belegten Fang: `if (erreicht()) return
+     false` steht vor allem anderen, also waere jedes Tor nach dem
+     Erreichen des Stands unsichtbar gewesen.
+
+     > **Belegter Fang schlaegt unbelegten Fehlalarm.** (Entscheid Didi,
+     > 23.09.2026.)
+
+     ⚠ MIT IHR GEFALLEN IST EIN TESTFALL: *zwei Tore vor der 45.,
+     Halbzeit sagt eins — KEIN Widerspruch: kurze Haelfte*. Er hielt die
+     verworfene Annahme fest und waere unter der festen Regel rot. Ein
+     Test, der einen verworfenen Entscheid bewacht, faellt genau dann
+     um, wenn ihn jemand zuruecknimmt.
+
+     ⚠ Die drei verbliebenen Faelle sind FUER die Obergrenze entworfen
+     worden und bestehen unter der festen Regel weiter — sie pruefen
+     seither aber etwas anderes. Ihre Titel sind deshalb am 23.09.2026
+     nachgezogen: *ein Titel, der mehr oder anderes behauptet als der
+     Fall haelt*, ist die Falle, die dieses Projekt an einem Dutzend
+     Stellen fuehrt. */
+
+  it("⚠ ein Eigentor vor der Pause — die gedrehte Rechnung geht auf", () => {
+    /* Heimspiel, `1:1` heisst also: eins fuer uns, eins fuer sie.
+
+       Wir treffen in der 10., in der 25. trifft unser Spieler ins eigene
+       Tor. Der Verband schreibt das Eigentor dem Gegner gut, und
+       `ht_resultat` ist genau seine Rechnung — also 1:1.
+
+       ⚠ Wer hier nach `ist_eigener` zaehlte, kaeme auf 2:0 und meldete
+       einen Widerspruch, den es nicht gibt.
+
+       ⚠ Der Titel nannte bis zum 23.09.2026 auch den laufenden Stand.
+       Den gibt es nicht mehr; beide Tore liegen vor der 45. und zaehlen
+       schlicht beide. Was der Fall haelt, ist allein die Drehung. */
+    expect(halbzeitWiderspruch(
+      [tor(10, true), tor(25, true, SUBTYP_EIGENTOR)], "1:1", true,
+    )).toBe(false);
+  });
+
+  it("⚠⚠ zwei Gegnertore vor der Pause, der Halbzeitstand nennt sie unsere", () => {
+    /* Heimspiel, `2:0` heisst: zwei fuer uns, keins fuer sie. Gefallen
+       sind vor der Pause aber zwei GEGNERTORE (10., 20.).
+
+       Gezaehlt wird `eigen 0 / fremd 2` gegen `erwartet 2 / 0`. Die ZAHL
+       stimmt, die SEITE nicht — und genau das ist ein Widerspruch.
+
+       ⚠ Die zwei eigenen Tore in der 60. und 70. stehen nur dafuer da,
+       dass sie NICHT mitzaehlen: wuerde die zweite Haelfte mitgerechnet,
+       kaeme `2:2` heraus und der Fall waere `false`. Er prueft damit
+       beide Haelften der Regel auf einmal.
+
+       ⚠ Bis zum 23.09.2026 hiess der Titel *dann greift die Obergrenze*.
+       Die gibt es nicht mehr; ausgeloest wird der Befund von den zwei
+       Toren VOR der Grenze, nicht von denen dahinter. */
+    expect(halbzeitWiderspruch(
+      [tor(10, false), tor(20, false), tor(60, true), tor(70, true)], "2:0", true,
+    )).toBe(true);
+  });
+
+  it("⚠⚠ ein Tor in der 50. zaehlt nicht mit — und laesst 1:0 unerklaert", () => {
+    /* Heimspiel, `1:0`, und das Tor ist unseres — nur faellt es in der
+       50., also nach der Grenze.
+
+       Gezaehlt wird `eigen 0 / fremd 0` gegen `erwartet 1 / 0`: der
+       Verband meldet ein Tor bis zur Pause, die Ereignisliste hat keins.
+
+       ⚠ ⚠  DAS IST DIE ANDERE RICHTUNG ZU *die zweite Halbzeit zaehlt
+       nicht mit*. Dort verhindert die Grenze einen Fehlalarm, hier
+       ERZEUGT sie einen Befund — beides folgt aus derselben Zeile
+       (`minute > HALBZEIT_GRENZE`), und nur zusammen ist sie gehalten.
+
+       ⚠ Faellt die Grenze weg, zaehlt das Tor zur ersten Haelfte, der
+       Stand geht auf, und der Widerspruch verschwindet. Gegengeprobt am
+       23.09.2026 durch Entfernen der Zeile — dann wird dieser Fall rot. */
+    expect(halbzeitWiderspruch([tor(50, true)], "1:0", true)).toBe(true);
+  });
+
   /* ⚠ ⚠  DIESER FALL HAELT NICHT, WAS ER ZUERST HALTEN SOLLTE — gemessen
      am 22.09.2026, und der Befund gehoert hierher statt weggeraeumt.
 
@@ -1738,7 +1837,13 @@ describe("halbzeitWiderspruch — Doppelmeldungen zaehlen statt glaetten", () =>
 
      ⚠ WAS ER TATSAECHLICH HAELT, ist das `continue` der Schleife:
      gegengeprobt durch Entfernen — dann wird er rot. Deshalb der
-     Titel, den er jetzt traegt. */
+     Titel, den er jetzt traegt.
+
+     ⚠ Der Kommentar stand bis zum 23.09.2026 rund hundert Zeilen weiter
+     oben: der Obergrenzen-Block war zwischen ihn und seinen Fall
+     geschoben worden. Ein Kommentar, der von seinem Gegenstand getrennt
+     ist, wird auf den naechsten Fall gelesen — und dieser hier
+     widerspricht dem naechsten Fall. */
   it("⚠ eine Verwarnung zaehlt nicht als Tor, auch nicht mit subtyp_id 2", () => {
     expect(halbzeitWiderspruch(
       [tor(20, true), { typ_id: TYP_VERWARNUNG, minute: 25, ist_eigener: true, subtyp_id: SUBTYP_EIGENTOR }],

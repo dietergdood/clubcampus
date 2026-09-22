@@ -436,6 +436,49 @@ export function bildeStatus(sfvStatus: number | null): StatusEntscheid {
  *
  * @param heimspiel  Wir sind daheim — dann ist unsere Seite die linke.
  */
+/**
+ * „Bis zur Pause" heisst Minute <= 45.
+ *
+ * ⚠ ⚠  EINE OBERGRENZE STATT EINER GRENZE IST AM 23.09.2026 GEBAUT UND
+ * WIEDER VERWORFEN WORDEN. Der Versuch steht hier, damit ihn niemand ein
+ * zweites Mal unternimmt.
+ *
+ * **Der Gedanke war gut und die Messung hat ihn erledigt.** Er lautete:
+ * Tore der Reihe nach durchgehen, laufenden Stand mitzählen, und
+ * schweigen, sobald der Stand den Halbzeitstand erreicht — dann bräuchten
+ * kürzere Halbzeiten, Drittel und Viertel keine eigene Regel.
+ *
+ * | | |
+ * |---|---|
+ * | **belegt** | 4346574: `ht_resultat` 0:2, drei Tore bis zur 45. Eine Doppelmeldung, an zwei Quellen des Verbands gemessen |
+ * | **nicht belegt** | dass die feste 45 je einen Fehlalarm erzeugt hat |
+ *
+ * Messung 5 (22.09.2026): die feste 45 stimmt bei **allen 8 prüfbaren
+ * Spielen**, darunter fünf B- und C-Juniorenspiele mit vier bis sechs
+ * Toren nach der Pause. Die Fehlalarme, gegen die die Obergrenze gebaut
+ * war, gibt es im Bestand nicht.
+ *
+ * ⚠ **Und die Obergrenze kostete genau den Fall, für den der Melder
+ * gebaut ist.** `if (erreicht()) return false` steht vor allem anderen —
+ * **jedes Tor nach dem Erreichen des Stands wäre unsichtbar**, gleich in
+ * welcher Minute. Der Melder fände weiterhin zu wenige Tore und falsche
+ * Seiten, aber **nie wieder ein Tor zu viel**. 4346574 ist ein Tor zu
+ * viel.
+ *
+ * ⚠ **Ein zweiter Zähler daneben rettet es nicht** — durchgerechnet: „Tor
+ * nach dem Erreichen, noch vor der 45." steht bei 4346574 auf 1 **und bei
+ * jedem Juniorenspiel mit kurzer Halbzeit ebenso.** Was die zwei trennen
+ * würde, ist die Minute der Pause, und die steht in keinem Feld: keine
+ * Spalte, kein Pausen-Ereignistyp (30 Werte, keiner davon),
+ * `intermediateResults` trägt den Halbzeit*stand* ohne Minute. Eine
+ * Trennung nach Liga-Namen wäre ein Filter auf eine Schreibweise.
+ *
+ * **Also: belegter Fang schlägt unbelegten Fehlalarm.** (Entscheid Didi,
+ * 23.09.2026.) Kommt je ein Fehlalarm im Bestand vor, ist die Lage neu zu
+ * bewerten — dann mit einer Zahl, nicht mit einer Überlegung.
+ */
+export const HALBZEIT_GRENZE = 45;
+
 export function halbzeitWiderspruch(
   ereignisse: {
     typ_id: number; minute: number | null; ist_eigener: boolean;
@@ -447,27 +490,33 @@ export function halbzeitWiderspruch(
   const ht = zerlegeResultat(htResultat);
   if (ht.tore_heim === null || ht.tore_gast === null) return null;
 
-  /* ⚠ „Bis zur Pause" heisst Minute <= 45 — Nachspielzeit der ersten
-     Haelfte zaehlt mit, sie steht als `45` mit `zusatzminute`. Ein Tor
-     ohne Minute laesst sich keiner Haelfte zuordnen und macht die
-     Pruefung gegenstandslos. */
+  /* ⚠ Nachspielzeit der ersten Hälfte zählt mit: sie steht als `45` mit
+     `zusatzminute`, die Minute selbst bleibt 45. Deshalb braucht diese
+     Regel `zusatzminute` NICHT — sie sortiert nicht, sie filtert. Das
+     Feld war ein Pflichtfeld der verworfenen Obergrenze und ist mit ihr
+     gefallen.
+
+     ⚠ Ein Tor ohne Minute lässt sich keiner Hälfte zuordnen und macht
+     die Prüfung gegenstandslos — `null` heisst „nicht prüfbar", nicht
+     „in Ordnung". */
   let ohneMinute = false;
   let eigen = 0;
   let fremd = 0;
   for (const e of ereignisse) {
     if (e.typ_id !== TYP_TOR) continue;
     if (e.minute === null) { ohneMinute = true; continue; }
-    if (e.minute > 45) continue;
+    if (e.minute > HALBZEIT_GRENZE) continue;
     /* ⚠ ⚠  DAS EIGENTOR ZÄHLT DER ANDEREN SEITE. Der Verband schreibt es
        so gut, und `ht_resultat` ist genau seine Rechnung — wer hier nach
        `ist_eigener` zählte, hielte zwei verschiedene Rechnungen
        gegeneinander und meldete jedes Eigentor vor der Pause als
-       Widerspruch.
+       Widerspruch. Gemessen am 22.09.2026: 13 von 13 Spielen mit
+       Eigentor gehen gedreht auf, 0 ungedreht.
 
        ⚠ Über `torZusatz()`, nicht über `subtyp_id === SUBTYP_EIGENTOR`:
        die Regel stünde sonst an zwei Stellen, und `torZusatz()` trägt
        den Typ-Guard mit — `subtyp_id = 2` an einer Verwarnung ist kein
-       Eigentor. */
+       Eigentor. Gehalten von `eigentorRegelEinOrt.test.ts`. */
     const unsereSeite = torZusatz(e.typ_id, e.subtyp_id) === "eigentor"
       ? !e.ist_eigener
       : e.ist_eigener;
