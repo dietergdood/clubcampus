@@ -391,31 +391,56 @@ export function bildeStatus(sfvStatus: number | null): StatusEntscheid {
  * `ht_resultat` gibt es nichts, wogegen man halten koennte. Wer beides
  * zusammenzaehlt, meldet fehlende Halbzeitstaende als Widersprueche.
  *
- * ⚠ ⚠  UND SIE ZÄHLT DAS EIGENTOR DEM SCHÜTZEN ZU — offen, nicht
- * behoben (22.09.2026).
+ * ⚠ ⚠  UND SIE ZÄHLT DAS EIGENTOR DER GEGENSEITE ZU — seit dem
+ * 22.09.2026.
  *
  * Der Verband schreibt ein Eigentor der Gegenseite gut, im Endstand wie
- * im Halbzeitstand. Diese Funktion zählt nach `ist_eigener` und erzeugt
- * damit für jedes Eigentor vor der Pause einen Widerspruch, den es nicht
- * gibt — **in einem Melder, der gegen Doppelmeldungen gebaut ist.**
+ * im Halbzeitstand. Bis dahin zählte diese Funktion nach `ist_eigener`
+ * und erzeugte damit für **jedes** Eigentor vor der Pause einen
+ * Widerspruch, den es nicht gibt — **in einem Melder, der gegen
+ * Doppelmeldungen gebaut ist.** Ein Fehlalarm ist hier teurer als
+ * anderswo: wer ihm einmal nachgeht und nichts findet, sieht beim
+ * nächsten Mal nicht mehr hin.
  *
- * ⚠ Und sie kann es nicht sehen: `subtyp_id` steht nicht in ihrem
+ * ⚠ Und sie konnte es nicht sehen: `subtyp_id` stand nicht in ihrem
  * Parametertyp. Dieselbe Form wie `beschreibeGewechselten()` ohne
  * `ist_eigener` am 11.09.2026 — eine Grenze, die eine Funktion nicht
  * sehen kann, kann sie nicht ziehen, und ein zu schmaler Parametertyp
- * ist für `tsc` kein Fehler, sondern eine Absicht.
+ * ist für `tsc` kein Fehler, sondern eine Absicht. Es steht deshalb als
+ * **Pflichtfeld** darin und nicht als optionales: der Unterschied ist
+ * die Prüfung — der Compiler nennt jede Aufrufstelle, die es nicht
+ * liefert.
  *
- * ⚠ ⚠  **NICHT ANFASSEN, BIS MESSUNG 5 DA IST.** Die Änderung liegt
- * vorbereitet auf `vorbereitung/halbzeit-eigentor` und wird
- * zusammengeführt, sobald gemessen ist, dass die gedrehte Lesart
- * aufgeht. *„Wir drehen nicht"* gilt für die Nutzlast, nicht für diese
- * interne Prüfung — aber gebaut wird sie gegen eine Messung, nicht
- * gegen eine Überlegung.
+ * ⚠ ⚠  DIE ERKENNUNG LÄUFT ÜBER `torZusatz()`, NICHT ÜBER
+ * `subtyp_id === SUBTYP_EIGENTOR`. Zwei Gründe, und der zweite ist der
+ * härtere:
+ *
+ *   1. Die Regel stünde sonst an zwei Stellen — `sammleMarken()` und
+ *      `baueStatistik()` erkennen das Eigentor mit derselben Funktion.
+ *      *„Wer eine Regel an zwei Stellen schreibt, pflegt zwei Regeln."*
+ *   2. `torZusatz()` trägt den TYP-GUARD mit (`typId !== TYP_TOR` ergibt
+ *      `""`). Die Subtyp-Nummern gelten **je Ereignistyp** — `subtyp_id
+ *      = 2` an einer Verwarnung ist kein Eigentor, und ein blosser
+ *      Vergleich auf 2 verschluckte sie.
+ *
+ * ⚠ *„Wir drehen nicht"* gilt für die **Nutzlast**, nicht für diese
+ * interne Prüfung: dort steht `ereignis_zusatz` als eigenes Feld, und
+ * das Theme entscheidet selbst. Hier wird gegen `ht_resultat` gerechnet,
+ * und `ht_resultat` zählt das Eigentor bereits der Gegenseite zu — wer
+ * es hier nicht dreht, vergleicht zwei verschiedene Rechnungen.
+ *
+ * ⚠ ⚠  **NICHT ZUSAMMENFÜHREN, BIS MESSUNG 5 DA IST.** Die Änderung
+ * liegt auf `vorbereitung/halbzeit-eigentor` und wird zusammengeführt,
+ * sobald gemessen ist, dass die gedrehte Lesart aufgeht — gebaut wird
+ * sie gegen eine Messung, nicht gegen eine Überlegung.
  *
  * @param heimspiel  Wir sind daheim — dann ist unsere Seite die linke.
  */
 export function halbzeitWiderspruch(
-  ereignisse: { typ_id: number; minute: number | null; ist_eigener: boolean }[],
+  ereignisse: {
+    typ_id: number; minute: number | null; ist_eigener: boolean;
+    subtyp_id: number | null;
+  }[],
   htResultat: string | null,
   heimspiel: boolean,
 ): boolean | null {
@@ -433,7 +458,20 @@ export function halbzeitWiderspruch(
     if (e.typ_id !== TYP_TOR) continue;
     if (e.minute === null) { ohneMinute = true; continue; }
     if (e.minute > 45) continue;
-    if (e.ist_eigener) eigen += 1; else fremd += 1;
+    /* ⚠ ⚠  DAS EIGENTOR ZÄHLT DER ANDEREN SEITE. Der Verband schreibt es
+       so gut, und `ht_resultat` ist genau seine Rechnung — wer hier nach
+       `ist_eigener` zählte, hielte zwei verschiedene Rechnungen
+       gegeneinander und meldete jedes Eigentor vor der Pause als
+       Widerspruch.
+
+       ⚠ Über `torZusatz()`, nicht über `subtyp_id === SUBTYP_EIGENTOR`:
+       die Regel stünde sonst an zwei Stellen, und `torZusatz()` trägt
+       den Typ-Guard mit — `subtyp_id = 2` an einer Verwarnung ist kein
+       Eigentor. */
+    const unsereSeite = torZusatz(e.typ_id, e.subtyp_id) === "eigentor"
+      ? !e.ist_eigener
+      : e.ist_eigener;
+    if (unsereSeite) eigen += 1; else fremd += 1;
   }
   if (ohneMinute) return null;
 

@@ -1639,8 +1639,11 @@ describe("halbzeitWiderspruch — Doppelmeldungen zaehlen statt glaetten", () =>
      Abruf koennen zwei echte Tore sein (Nr. 9 in der 69., gemessen am
      11.09.2026). Was man nicht entdoppelt, kann man nicht faelschlich
      entdoppeln. */
-  const tor = (minute: number | null, eigen = false) =>
-    ({ typ_id: TYP_TOR, minute, ist_eigener: eigen });
+  /* ⚠ `subtyp_id` ist PFLICHTFELD, nicht optional — der Compiler nennt
+     dadurch jede Aufrufstelle, die es nicht liefert. Die Attrappe setzt
+     es auf `null`; wer ein Eigentor braucht, gibt es ausdruecklich. */
+  const tor = (minute: number | null, eigen = false, subtyp_id: number | null = null) =>
+    ({ typ_id: TYP_TOR, minute, ist_eigener: eigen, subtyp_id });
 
   it("⚠⚠ der Fall 4346574: drei Tore bis zur 45., Halbzeit sagt zwei", () => {
     const r = halbzeitWiderspruch(
@@ -1686,8 +1689,60 @@ describe("halbzeitWiderspruch — Doppelmeldungen zaehlen statt glaetten", () =>
 
   it("Karten und Wechsel zaehlen nicht als Tore", () => {
     expect(halbzeitWiderspruch(
-      [{ typ_id: 3, minute: 20, ist_eigener: false },
-       { typ_id: 2, minute: 30, ist_eigener: true }], "0:0", true,
+      [{ typ_id: 3, minute: 20, ist_eigener: false, subtyp_id: null },
+       { typ_id: 2, minute: 30, ist_eigener: true, subtyp_id: null }], "0:0", true,
+    )).toBe(false);
+  });
+
+  /* ⚠ ⚠  DAS EIGENTOR ZAEHLT DER ANDEREN SEITE — der Verband schreibt es
+     so gut, und `ht_resultat` ist seine Rechnung. Wer hier nach
+     `ist_eigener` zaehlt, haelt zwei verschiedene Rechnungen
+     gegeneinander und meldet JEDES Eigentor vor der Pause als
+     Widerspruch — in einem Melder, der gegen Doppelmeldungen gebaut
+     ist. */
+  it("⚠⚠ ein eigenes Eigentor zaehlt dem Gegner — die Rechnung geht auf", () => {
+    /* Heimspiel, unser Spieler trifft ins eigene Tor in der 20. Der
+       Verband meldet 0:1. Ohne die Drehung zaehlte es als `eigen` und
+       ergaebe 1:0 — also einen Widerspruch, den es nicht gibt. */
+    expect(halbzeitWiderspruch(
+      [tor(20, true, SUBTYP_EIGENTOR)], "0:1", true,
+    )).toBe(false);
+  });
+
+  it("⚠⚠ ein fremdes Eigentor zaehlt uns — dasselbe, andersherum", () => {
+    /* Heimspiel, ein Gegner trifft ins eigene Tor. Der Verband meldet
+       1:0. Ohne die Drehung zaehlte es als `fremd` und ergaebe 0:1. */
+    expect(halbzeitWiderspruch(
+      [tor(20, false, SUBTYP_EIGENTOR)], "1:0", true,
+    )).toBe(false);
+  });
+
+  /* ⚠ ⚠  DIESER FALL HAELT NICHT, WAS ER ZUERST HALTEN SOLLTE — gemessen
+     am 22.09.2026, und der Befund gehoert hierher statt weggeraeumt.
+
+     Er war als Gegenprobe zum TYP-GUARD IN `torZusatz()` gedacht. Das
+     kann er nicht sein: die Schleife wirft jede Nicht-Tor-Zeile schon
+     eine Zeile frueher mit `typ_id !== TYP_TOR` hinaus, also erreicht
+     eine Verwarnung die Drehung nie. Gegengeprobt — mit
+     `subtyp_id === 2` statt `torZusatz()` bleibt er GRUEN.
+
+     > Eine Pruefung hinter dem Filter, den sie pruefen soll, kann nur
+     > „in Ordnung" sagen.
+
+     ⚠ Der Typ-Guard von `torZusatz()` ist an DIESER Aufrufstelle also
+     Deckung und nicht tragend; ueber die oeffentliche Funktion ist er
+     nicht zu zeigen. Er steht trotzdem dort, weil die Regel sonst an
+     zwei Stellen stuende — und weil er traegt, sobald jemand das
+     `continue` verschiebt. Geprueft ist er in `matchdatenAnzeige.test.ts`
+     an `torZusatz()` selbst.
+
+     ⚠ WAS ER TATSAECHLICH HAELT, ist das `continue` der Schleife:
+     gegengeprobt durch Entfernen — dann wird er rot. Deshalb der
+     Titel, den er jetzt traegt. */
+  it("⚠ eine Verwarnung zaehlt nicht als Tor, auch nicht mit subtyp_id 2", () => {
+    expect(halbzeitWiderspruch(
+      [tor(20, true), { typ_id: TYP_VERWARNUNG, minute: 25, ist_eigener: true, subtyp_id: SUBTYP_EIGENTOR }],
+      "1:0", true,
     )).toBe(false);
   });
 });
