@@ -284,6 +284,19 @@ async function alleSeiten<T>(
  *    Die Frage ist deshalb nicht „habe ich index.ts angefasst?", sondern
  *    **„antwortet sie jetzt anders?"**.
  *
+ *    61  23.09.2026  DIE NAMENSKARTE WIRD GEPAGT — und das war der
+ *                    sichtbare Schaden. `sfv_personen` und
+ *                    `sfv_zuordnung` wurden ungepagt gelesen; PostgREST
+ *                    gibt hoechstens 1000 Zeilen heraus und meldet das
+ *                    nicht. Jenseits davon stuende auf der Website
+ *                    dauerhaft „Nr. 13" statt eines Namens, **ohne dass
+ *                    etwas fehlschlaegt.**
+ *                    ⚠ Gemeldet wurden vier Spielerinnen, die fehlten.
+ *                    Vermutet wurde ein Filter auf Kader oder Lizenz —
+ *                    es gibt keinen. Sie sind nie angekommen.
+ *                    ⚠ Dieselbe Ursache an vier Stellen; die anderen
+ *                    zwei liegen in sfv-sync (namenLauf) und im Portal
+ *                    (matchdatenService).
  *    60  23.09.2026  GIF IST ZUGELASSEN — beide Seiten ziehen nach.
  *                    Der Eintrag zu 59 darunter beschreibt einen
  *                    Vertrag mit DREI Typen; entschieden wurde nicht,
@@ -407,7 +420,7 @@ async function alleSeiten<T>(
  *    46  12.09.2026  Durchreiche von personen/teams/unterfelder/
  *                    geschwister, nichtDurchgereicht(), diese Angabe
  */
-const FUNCTION_FASSUNG = 60;
+const FUNCTION_FASSUNG = 61;
 
 const AKTIONEN = ["probe", "export", "bestand", "status", "ranglisten"];
 
