@@ -49,6 +49,15 @@ export interface MockSb {
  *     "kader.upsert":      { error: pgError } }
  *   Fehlt ein Key, gilt der Default { data: null, error: null, count: 0 }.
  */
+/**
+ * Die stille Obergrenze von PostgREST.
+ *
+ * ⚠ Sie meldet sich nicht: `error` bleibt `null`, `data` hat genau so
+ * viele Eintraege. Am 23.09.2026 hat sie vier Spielerinnen verschluckt,
+ * weil `spiel_aufstellung` bei ueber 2282 Zeilen steht.
+ */
+const POSTGREST_GRENZE = 1000;
+
 export function makeSb(results: Record<string, OpResult | OpResult[]> = {}): MockSb {
   const calls: CallRecord[] = [];
   const def: OpResult = { data: null, error: null, count: 0 };
@@ -133,6 +142,27 @@ export function makeSb(results: Record<string, OpResult | OpResult[]> = {}): Moc
       if (r && Array.isArray(erg.data) && !kopf) {
         const [von, bis] = r.args as [number, number];
         erg.data = (erg.data as any[]).slice(von, bis + 1);
+      } else if (!r && Array.isArray(erg.data) && !kopf
+                 && (erg.data as any[]).length > POSTGREST_GRENZE) {
+        /* ⚠ ⚠  OHNE `range()` KUERZT POSTGREST BEI 1000 — seit dem
+           23.09.2026 tut die Attrappe das auch.
+
+           Vorher lieferte sie ungefragt alles, und **damit blieb ein Test
+           gruen, der die Paginierung pruefen sollte**: nimmt man das Pagen
+           heraus, kam die volle Liste trotzdem an. Gemessen am selben Tag
+           als Gegenprobe — der 1200-Zeilen-Fall in
+           `zuordnungVollstaendig.test.ts` fiel nicht um.
+
+           ⚠ Das ist dieselbe Familie wie der `count`-Vorgabewert und wie
+           das ignorierte `range()`: **eine Attrappe, die einen Teil der
+           Wirklichkeit auslaesst, prueft etwas anderes als das, was
+           laeuft** — und hier in der STILLEN Richtung, denn ein Test, der
+           gruen bleibt, meldet nichts.
+
+           ⚠ Sie meldet dabei KEINEN Fehler, genau wie PostgREST: `error`
+           bleibt null, es kommen schlicht 1000 Zeilen. Wer hier einen
+           Fehler erzeugte, pruefte einen Fall, den es nicht gibt. */
+        erg.data = (erg.data as any[]).slice(0, POSTGREST_GRENZE);
       }
       return Promise.resolve(erg);
     };

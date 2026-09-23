@@ -180,9 +180,23 @@ export async function verwerfeKorrektur(sb: Sb, id: string): Promise<string | nu
     den Hinweis und für die Statistik-Spalte „Spiele mit Verlauf". */
 export async function fetchSpieleMitVerlauf(sb: Sb, vereinId: string | null): Promise<Set<string>> {
   if (!sb || !vereinId) return new Set();
-  const { data } = await sb.from("spiel_ereignisse")
-    .select("spiel_id").eq("verein_id", vereinId).eq("herkunft", "sfv");
-  return new Set((data ?? []).map(z => z.spiel_id as string));
+  /* ⚠ ⚠  GEPAGT, SEIT DEM 23.09.2026 — und hier ist es KEINE Vorsorge.
+     `spiel_ereignisse` stand am 11.09.2026 bei 1051 Zeilen, also bereits
+     ueber der stillen Grenze. Ungepagt kaeme jede 1001. Zeile nie an, und
+     was daraus entsteht, ist eine Menge von Spielen mit Verlauf, der ein
+     paar fehlen — ohne dass etwas fehlschlaegt.
+
+     ⚠ `herkunft` begrenzt NICHT: "sfv" ist die Mehrheit der Zeilen, die
+     Korrekturen sind die Ausnahme. */
+  const zeilen = await alleSeiten<{ spiel_id: string }>(
+    (von, bis) => sb.from("spiel_ereignisse")
+      .select("spiel_id").eq("verein_id", vereinId).eq("herkunft", "sfv")
+      .order("id").range(von, bis),
+    () => sb.from("spiel_ereignisse").select("id", { count: "exact", head: true })
+      .eq("verein_id", vereinId).eq("herkunft", "sfv"),
+    "Spiele mit Verlauf",
+  );
+  return new Set(zeilen.map(z => z.spiel_id));
 }
 
 /**

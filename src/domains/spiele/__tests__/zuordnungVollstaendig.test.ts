@@ -37,6 +37,8 @@ import { describe, it, expect } from "vitest";
 import { makeSb } from "../../members/__tests__/_mockSb.ts";
 import { fetchAlleAufstellungen, fetchZuordnungen } from "../matchdatenService.ts";
 import { offeneZuordnungen, gruppiereNachTeam, OHNE_MANNSCHAFT } from "../matchdatenAnzeige.ts";
+import ts from "typescript";
+import { suche, jederKnoten, zeileVon } from "../../../test-helpers/quelltext.ts";
 
 const VEREIN = "v-1";
 
@@ -58,15 +60,19 @@ describe("fetchAlleAufstellungen — es kommt alles an", () => {
     /* Die Zahl ist mit Absicht grösser als eine Seite: bei 1000 genau
        wäre nicht zu sehen, ob eine zweite Seite geholt wird.
 
-       ⚠ ⚠  UND DIESER FALL ALLEIN BEWACHT DIE PAGINIERUNG NICHT — gemessen
-       bei der Gegenprobe am 23.09.2026: nimmt man das Pagen heraus, bleibt
-       er GRÜN. Die Attrappe kürzt nicht bei 1000, sie liefert einfach
-       alles; die echte Grenze von PostgREST kann sie nicht nachstellen.
+       ⚠ ⚠  ER BEWACHT SIE JETZT — UND TAT ES AM MORGEN DESSELBEN TAGES
+       NOCH NICHT. Hier stand: *„nimmt man das Pagen heraus, bleibt er
+       GRÜN. Die Attrappe kürzt nicht bei 1000."* Das war richtig gemessen
+       und ist seit dem Nachmittag falsch: `makeSb` kürzt seither wie
+       PostgREST, ohne `range()` bei 1000 Zeilen — **und zwar ohne
+       Fehlermeldung, genau wie das Original.**
 
-       Rot wird dann der Fall darunter — die Zählprobe. **Der Wächter ist
-       also die Zählprobe, nicht die Seitenzahl**, und wer diesen Fall
-       hier für den Schutz hält, sucht beim nächsten Umbau an der falschen
-       Stelle. */
+       Gegengeprobt nach der Änderung: Pagen entfernt → dieser Fall rot,
+       zusammen mit der Zählprobe. Vorher fiel nur die Zählprobe um.
+
+       ⚠ Der Satz steht hier als Verlauf und nicht als Warnung, weil er
+       sonst beim nächsten Lesen eine Lücke behauptet, die es nicht mehr
+       gibt — eine Messung von damals, im Präsens zitiert. */
     const alle = zeilen(1200);
     const sb = makeSb({
       "spiel_aufstellung.select": { data: alle, count: alle.length },
@@ -131,5 +137,75 @@ describe("⚠ Kein Kaderfilter — die bestellte Zusage", () => {
   it("nur eine bereits zugeordnete Person fällt heraus — und sonst nichts", () => {
     const offen = offeneZuordnungen([OHNE_KADER] as never, new Set([1132270]));
     expect(offen.length).toBe(0);
+  });
+});
+
+/* ══════════════════════════════════════════════════════════════════════
+   ⚠ ⚠  DIE SORTIERUNG IST TEIL DER PAGINIERUNG, NICHT ZIERRAT
+
+   „Ohne feste Reihenfolge kann auch das Blättern Zeilen doppelt liefern
+   oder überspringen." (Didi, 23.09.2026)
+
+   Der Punkt ist schärfer, als er klingt: eine Stelle mit `range()` und
+   OHNE `order()` gilt für jede Prüfung als „gepagt" — und ist trotzdem
+   kaputt. Postgres darf zwei Seiten verschieden anordnen, wenn nichts
+   die Reihenfolge festlegt; dann fehlt Zeile 999 und Zeile 1001 kommt
+   zweimal.
+
+   ⚠ Und ein nicht-EINDEUTIGER Sortierwert genügt nicht. `order("date")`
+   über zwölf Spiele desselben Tages legt innerhalb dieses Tages gar
+   nichts fest.
+
+   ── WARUM DAS HIER EINE STRUKTURPRÜFUNG IST ──────────────────────────
+
+   Eine Attrappe kann den Fall nicht ehrlich nachstellen: sie schneidet
+   mit `slice` aus einem festen Array, und daraus kann nichts verloren
+   gehen. Man müsste sie absichtlich mischen lassen — dann prüfte der
+   Fall die Mischung und nicht den Code.
+
+   Deshalb wird gefragt, was DASTEHT: jede `range()`-Kette trägt ein
+   `order()`. Das ist am Syntaxbaum entscheidbar und altert nicht mit
+   einer erfundenen Datenlage.
+   ══════════════════════════════════════════════════════════════════════ */
+
+describe("⚠ jede gepagte Abfrage sortiert", () => {
+  it("keine range()-Kette ohne order()", () => {
+    const treffer = suche<{ zeile: number; text: string }>({
+      frage: "gibt es eine range()-Kette ohne order()?",
+      dateien: [
+        "src/domains/spiele/matchdatenService.ts",
+        "src/domains/db/alleSeiten.ts",
+      ],
+      /* ⚠ Die kaputte Form in genau der Gestalt, in der sie gefunden
+         werden MUSS. Fände die Abfrage hier nichts, wäre jedes
+         «bestanden» wertlos. */
+      positivkontrolle: `
+        const x = sb.from("t").select("*").eq("a", 1).range(0, 999);`,
+      finde: (baum) => {
+        const raus: { zeile: number; text: string }[] = [];
+        jederKnoten(baum, (n) => {
+          if (!ts.isCallExpression(n)) return;
+          if (!ts.isPropertyAccessExpression(n.expression)) return;
+          if (n.expression.name.text !== "range") return;
+          /* Die ganze Kette links von `.range(…)` einsammeln und nach
+             `order` fragen. */
+          let k: ts.Node = n.expression.expression;
+          let hatOrder = false;
+          while (ts.isCallExpression(k) || ts.isPropertyAccessExpression(k)) {
+            if (ts.isPropertyAccessExpression(k) && k.name.text === "order") hatOrder = true;
+            k = ts.isCallExpression(k) ? k.expression : k.expression;
+          }
+          if (!hatOrder) raus.push({ zeile: zeileVon(n), text: n.getText().slice(0, 60) });
+        });
+        return raus;
+      },
+    });
+
+    expect(
+      treffer.map((t) => `${t.datei}:${t.fund.zeile}  ${t.fund.text}`),
+      "Eine range()-Kette ohne order() ist nicht gepagt, sondern zufällig: "
+      + "Postgres darf zwei Seiten verschieden anordnen, dann fehlt eine "
+      + "Zeile und eine andere kommt doppelt.",
+    ).toEqual([]);
   });
 });
