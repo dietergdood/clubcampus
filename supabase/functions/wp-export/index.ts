@@ -87,7 +87,17 @@ import type { TeilErgebnis, WpAntwort } from "../../../src/domains/spiele/wpLauf
    entscheidet, gehoert dorthin, wo tsc und vitest es lesen. */
 import { baueGruppen, wiegeGruppen, beurteileBestand } from "../../../src/domains/spiele/wpRangliste.ts";
 import type { RanglisteZeile, WpRangGruppe } from "../../../src/domains/spiele/wpRangliste.ts";
-import { protokoll, protokollFehler } from "../sfv-sync/protokoll.ts";
+import {
+  WAPPEN_PRO_PAKET, leseWappenBestand, waehleWappen, bildePakete, nachBase64,
+  fasseWappenAntworten,
+} from "../../../src/domains/spiele/wpWappen.ts";
+import type { WappenZeile, WappenNutzlast, WappenAntwort } from "../../../src/domains/spiele/wpWappen.ts";
+import { protokoll, protokollFehler, schwaerze } from "../sfv-sync/protokoll.ts";
+/* ⚠ Der Eimername aus der Stelle, die ihn befuellt — nicht als zweite
+   Zeichenkette daneben. Zwei Orte fuer eine Aussage laufen auseinander,
+   und ein falscher Eimername ergaebe hier keinen Fehler, sondern eine
+   leere Liste: wieder ein Ausfall in der Verkleidung einer Datenlage. */
+import { LOGO_BUCKET } from "../sfv-sync/logos.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -274,6 +284,28 @@ async function alleSeiten<T>(
  *    Die Frage ist deshalb nicht „habe ich index.ts angefasst?", sondern
  *    **„antwortet sie jetzt anders?"**.
  *
+ *    58  23.09.2026  WAPPEN: die Antwort traegt `wappen`, und der Export
+ *                    schickt die Bilder aus dem Bucket an die Mediathek —
+ *                    Pakete zu 20, `sfv_team_id` als Text, `daten` als
+ *                    base64. Dazu `sfv_gegner_team_id` je Spiel und die
+ *                    Ranglisten-Teamnummer als Text.
+ *                    ⚠ DER VERSAND SCHALTET SICH SELBST EIN. Kein Flag:
+ *                    fuehrt der `bestand` der Gegenstelle das Wappen-Feld
+ *                    nicht, ist sie alt und es geht nichts hinaus. Vier
+ *                    Lagen, nicht zwei — `feld_fehlt` (alt),
+ *                    `leer` (bereit), `gefuellt` (abgleichen),
+ *                    `unlesbar` (Antwort nicht deutbar). Eine Null darf
+ *                    nicht fuer „nicht gefragt" stehen.
+ *                    ⚠ „Geaendert" kann der Abgleich NICHT sehen: was die
+ *                    Gegenstelle kennt, wird uebersprungen, ohne die
+ *                    Bytes zu laden. Tragfaehig nur, solange
+ *                    `offeneLogos()` ein abgelegtes Wappen nie wieder
+ *                    holt — festgenagelt in `wpWappen.test.ts`. Ein
+ *                    `ersetzt > 0` drueben waere ein BEFUND.
+ *                    ⚠ Der Wappenblock kann den Lauf nicht rot faerben:
+ *                    die Protokollzeile ist dann geschrieben. Er hat
+ *                    einen eigenen try und nimmt Spielplan und
+ *                    Ranglisten nicht mit; mehr nicht.
  *    57  23.09.2026  ASSIST ist die sechste Verlaufsart. Typ 9 kam schon
  *                    immer an und wurde im Export weggeworfen, weil
  *                    `WpVerlaufArt` ihn nicht kannte — die Gegenseite
@@ -329,7 +361,7 @@ async function alleSeiten<T>(
  *    46  12.09.2026  Durchreiche von personen/teams/unterfelder/
  *                    geschwister, nichtDurchgereicht(), diese Angabe
  */
-const FUNCTION_FASSUNG = 57;
+const FUNCTION_FASSUNG = 58;
 
 const AKTIONEN = ["probe", "export", "bestand", "status", "ranglisten"];
 
@@ -548,7 +580,43 @@ Deno.serve(async (req) => {
       ? await sendeRanglisten(db, vereinId, nurTeam, gesendeteTeams)
       : { uebersprungen: "Keine Mannschaft gesendet — ohne Spiele keine Rangliste." };
 
-    return json({ ...lauf, ranglisten: rang });
+    /* ⚠ ⚠  EIGENER BLOCK, UND DAS IST DER GANZE PUNKT.
+
+       Gleiche Bauart wie der Ranglisten-Block im SFV-Sync (sync.ts): der
+       Wurf wird GEBUNDEN, BENANNT, GESCHWAERZT und steht als eigenes Feld
+       in der Antwort. Was sich aendert, ist nur die REICHWEITE — ein
+       Fehler beim Wappenversand nimmt weder den Spielplan noch die
+       Ranglisten mit.
+
+       ⚠ Am 14.09.2026 hat genau diese Reichweite im SFV-Sync 21 Gruppen
+       gekostet: vier Wuerfe vor dem Ranglisten-Block haben ihn
+       stillschweigend mitgenommen, und auf der Website stand eine
+       Tabelle, die einen Spieltag nachhinkte — **ein Ausfall in der
+       Verkleidung einer Datenlage**, an Daten, die mit der Ursache nichts
+       zu tun hatten. Wappen sind derselbe Fall: bleibt eines aus, steht
+       drueben ein Platzhalter, und nichts sagt warum.
+
+       ⚠ ⚠  WAS HIER ANDERS IST ALS IM SFV-SYNC, und es gehoert gesagt:
+       dort hebt `erg.blockfehler` den LAUF auf `fehler`. Das geht hier
+       nicht — die Protokollzeile des Spiele-Laufs ist zu diesem
+       Zeitpunkt geschrieben und abgeschlossen (siehe sendeAnWordpress).
+       Der Wappenblock kann sie nicht mehr rot faerben; sein Ergebnis
+       steht DANEBEN, nicht darin. Dieselbe Grenze gilt fuer die
+       Ranglisten und steht dort ebenso. */
+    let wappen: unknown;
+    try {
+      wappen = await sendeWappen(db, vereinId);
+    } catch (e) {
+      wappen = {
+        gesendet: false,
+        /* ⚠ Nicht verschluckt und nicht gezaehlt. Ein leerer catch machte
+           aus dem Ausfall eine Datenlage: „drueben liegt kein Wappen"
+           saehe dann aus wie „der Versand ist gescheitert". */
+        fehler: schwaerze(meldung(e)),
+      };
+    }
+
+    return json({ ...lauf, ranglisten: rang, wappen });
   } catch (e) {
     const meldung = protokollFehler(`wp-export/${aktion}/${vereinId}`, e);
     return json({ fehler: meldung }, 502);
@@ -952,6 +1020,227 @@ async function sendeTeil(
 }
 
 
+/* ═══════════════════════════════════════════════════════════════════════
+   DIE WAPPEN
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* ⚠ `DbLeser` kennt nur `from`. Der Bucket braucht `storage`, und den
+   gemeinsamen Typ dafuer zu erweitern hiesse, ihn an dreizehn Stellen zu
+   versprechen, die ihn nicht benutzen. Deshalb ein eigener, schmaler Typ
+   daneben — verlangt wird er nur dort, wo er gebraucht wird. */
+type DbSpeicher = { storage: { from: (eimer: string) => any } };
+
+/**
+ * Die Vereinswappen der Gegner an WordPress.
+ *
+ * ⚠ ⚠  SELBSTERKENNUNG STATT SCHALTER. Ob gesendet wird, entscheidet die
+ * Gegenstelle, indem sie in ihrem `bestand` ein Wappen-Feld fuehrt oder
+ * nicht. Ein Flag im Code muesste umgelegt UND deployt werden, und **eine
+ * Regel, an die jemand denken muss, ist die schwaechste Loesung** — hier
+ * kaeme dazu, dass der Schalter an einer anderen Stelle steht als die
+ * Sache, ueber die er entscheidet.
+ *
+ * Die vier Lagen und ihre Bedeutung stehen bei `WappenLage`; sie werden
+ * hier ausdruecklich NICHT zu „bereit / nicht bereit" verkuerzt.
+ *
+ * ⚠ ⚠  WAS SIE NICHT LAEDT: jedes Wappen, dessen Nummer drueben schon
+ * steht. Das ist die ganze Ersparnis (219 Storage-Abrufe je Lauf, viermal
+ * die Stunde) und zugleich die eine Stelle, an der dieser Lauf sich auf
+ * FREMDEN Code verlaesst — `offeneLogos()` holt ein abgelegtes Wappen nie
+ * wieder, also kann es sich nicht aendern. Die Herleitung steht im Kopf
+ * von `wpWappen.ts`; gehalten wird sie von einem Fall, nicht von diesem
+ * Kommentar.
+ *
+ * ⚠ SIE PROTOKOLLIERT NICHT nach `api_sync_log`. Der Spiele-Lauf hat
+ * seine Zeile zu diesem Zeitpunkt geschrieben und abgeschlossen; eine
+ * zweite waere ein zweiter Lauf, und ein `letzter_sync` mehr verschoebe
+ * die Kachel um einen Export, den es nicht gab. Ihr Ergebnis steht
+ * DANEBEN in der Antwort — dieselbe Trennung wie bei den Ranglisten.
+ */
+async function sendeWappen(db: DbLeser & DbSpeicher, vereinId: string) {
+  const basis = (Deno.env.get("WP_BASIS_URL") ?? "").replace(/\/+$/, "");
+  const schluessel = Deno.env.get("WP_SCHLUESSEL") ?? "";
+  if (!basis || !schluessel) {
+    throw new Error("WP_BASIS_URL oder WP_SCHLUESSEL nicht gesetzt");
+  }
+  const host = new URL(basis).host;
+
+  /* ── Was bei uns liegt ──────────────────────────────────────────────
+     ⚠ Nur Zeilen MIT Pfad. Eine Zeile ohne ist kein leeres Wappen,
+     sondern „der Verband hat keines" (`fehlt_seit`) — und die hat auf
+     der Website nichts zu suchen.
+
+     ⚠ Seitenweise mit Zaehlprobe, obwohl es heute rund 219 Zeilen sind.
+     Die Zahl waechst mit jedem Gegner jeder Saison, und `spiel_aufstellung`
+     hat am 11.09.2026 genau so die Tausendergrenze ueberschritten —
+     still, ohne dass etwas fehlschlug. */
+  const unsere = await alleSeiten<WappenZeile>(
+    1,
+    (von, bis) => db.from("sfv_team_logos").select("sfv_team_id, pfad, mime")
+      .eq("verein_id", vereinId).not("pfad", "is", null).order("sfv_team_id").range(von, bis),
+    () => db.from("sfv_team_logos").select("sfv_team_id", { count: "exact", head: true })
+      .eq("verein_id", vereinId).not("pfad", "is", null),
+    "sfv_team_logos",
+  );
+
+  /* ── Was drueben liegt ──────────────────────────────────────────── */
+  const antwortBestand = await fetch(`${basis}/clubcampus/v1/bestand`, {
+    headers: { "X-FCH-Schluessel": schluessel },
+  });
+  const textBestand = await antwortBestand.text();
+  let wpBestand: Record<string, unknown>;
+  try {
+    wpBestand = JSON.parse(textBestand);
+  } catch {
+    throw new Error(`WordPress antwortete kein JSON (${antwortBestand.status}): ${textBestand.slice(0, 200)}`);
+  }
+  if (!antwortBestand.ok) {
+    throw new Error(`WordPress ${antwortBestand.status}: ${JSON.stringify(wpBestand).slice(0, 300)}`);
+  }
+
+  const bestand = leseWappenBestand(wpBestand);
+  const wahl = waehleWappen(unsere, bestand);
+
+  /* ⚠ Die Zahlen stehen IMMER da, auch als Null, und jede mit ihrer
+     Bezugsgroesse. Eine Null, die nur im guten Fall erscheint, heisst
+     auch „nicht gemessen", „Feld umbenannt", „Abfrage gescheitert" —
+     achtmal an einem Tag hat das in diesem Projekt eine Rueckfrage
+     gekostet. */
+  const grund = {
+    ziel: host,
+    /* Woher die Auskunft ueber drueben kommt, und wie sie zu lesen ist. */
+    bestand_lage: bestand.lage,
+    bestand_quelle: bestand.quelle,
+    drueben_eintraege: bestand.eintraege,
+    drueben_mit_pruefsumme: bestand.bekannt.size,
+    drueben_ohne_pruefsumme: bestand.ohne_pruefsumme,
+    /* ⚠ Die Bezugsgroesse zu allem darunter. */
+    bei_uns: unsere.length,
+    uebersprungen_bekannt: wahl.uebersprungen_bekannt,
+  };
+
+  if (wahl.uebersprungen !== null) {
+    return {
+      ...grund, gesendet: false, uebersprungen: wahl.uebersprungen,
+      geladen: 0, nicht_ladbar: [] as string[], zu_senden: 0, pakete: 0,
+    };
+  }
+
+  /* ── Laden, hashen, verpacken ───────────────────────────────────── */
+  const nutzlast: WappenNutzlast[] = [];
+  /* ⚠ Gebunden und BENANNT, nicht gezaehlt. Eine Zahl allein saehe aus
+     wie „ein Fehler", und gesucht wuerde ueberall — hier steht die
+     Teamnummer mit ihrem Grund daneben. */
+  const nichtLadbar: string[] = [];
+
+  for (const z of wahl.zu_senden) {
+    if (!z.mime) {
+      /* ⚠ KEIN geratener Typ. Ein Wappen mit Pfad und ohne mime ist ein
+         Befund ueber `logos.ts` (dort werden beide zusammen geschrieben);
+         eine erfundene Angabe waere auf einer oeffentlichen Seite von
+         einer echten nicht zu unterscheiden. */
+      nichtLadbar.push(`${z.sfv_team_id}: Pfad ohne mime — logos.ts schreibt beide zusammen`);
+      continue;
+    }
+    const { data: blob, error: ladeFehler } = await db.storage
+      .from(LOGO_BUCKET).download(z.pfad);
+    /* ⚠ Zwei Faelle, zwei Saetze. `meldung()` ist nie leer — ein
+       `meldung(null) || "keine Daten"` waere ein toter Zweig gewesen und
+       haette „null" in die Liste geschrieben. „Eine Zeile steht da und
+       im Eimer liegt nichts" ist eine ANDERE Aussage als ein Lesefehler,
+       und beide gehoeren benannt. */
+    if (ladeFehler) {
+      nichtLadbar.push(`${z.sfv_team_id}: ${meldung(ladeFehler)}`);
+      continue;
+    }
+    if (!blob) {
+      nichtLadbar.push(`${z.sfv_team_id}: kein Fehler und keine Daten unter ${z.pfad} `
+        + `— die Zeile in sfv_team_logos zeigt auf nichts`);
+      continue;
+    }
+    const bytes = new Uint8Array(await (blob as Blob).arrayBuffer());
+    if (!bytes.length) {
+      nichtLadbar.push(`${z.sfv_team_id}: leere Datei unter ${z.pfad}`);
+      continue;
+    }
+    nutzlast.push({
+      sfv_team_id: String(z.sfv_team_id),
+      /* ⚠ ÜBER DIE BYTES, nicht ueber den base64-Text. Die Gegenstelle
+         hasht, was sie ablegt — also das Bild. Ueber den Text gehasht
+         traefe kein einziger Vergleich, und zwar fuer immer. */
+      sha256: await sha256Bytes(bytes),
+      mime: z.mime,
+      daten: nachBase64(bytes),
+    });
+  }
+
+  const pakete = bildePakete(nutzlast, WAPPEN_PRO_PAKET);
+  const antworten: WappenAntwort[] = [];
+  const paketFehler: string[] = [];
+
+  /* ⚠ Gesendet ist, was in einem ANGEKOMMENEN Paket stand — nicht, was
+     gebaut wurde. Sonst ginge die Aufteilung schon bei einem
+     fehlgeschlagenen Paket nicht auf, und `aufteilung_stimmt` meldete
+     einen Befund, wo ein Fehler daneben steht. */
+  let angekommen = 0;
+
+  /* ⚠ SERIELL und mit gebundenem Fehler je Paket — dieselbe Bauart wie
+     ein POST je Mannschaft: ein Abbruch bei Paket 3 liesse die Pakete 4
+     bis 11 ungesendet, ohne dass jemand erfuehre, welche. */
+  for (let i = 0; i < pakete.length; i++) {
+    try {
+      antworten.push(await sendeWappenPaket(basis, schluessel, pakete[i]));
+      angekommen += pakete[i].length;
+    } catch (e) {
+      paketFehler.push(`Paket ${i + 1}/${pakete.length}: ${schwaerze(meldung(e))}`);
+    }
+  }
+
+  const bilanz = fasseWappenAntworten(antworten, angekommen);
+
+  return {
+    ...grund,
+    gesendet: true,
+    uebersprungen: null,
+    zu_senden: wahl.zu_senden.length,
+    geladen: nutzlast.length,
+    /* ⚠ Immer da, auch als leere Liste — eine nicht gestellte Frage und
+       ein leerer Befund duerfen nicht gleich aussehen. */
+    nicht_ladbar: nichtLadbar,
+    pakete: pakete.length,
+    pakete_gescheitert: paketFehler,
+    /* Was die Gegenstelle gemeldet hat. `ersetzt > 0` waere ein BEFUND:
+       wir senden nichts, dessen Nummer sie kennt — sie kann also nichts
+       ersetzen. Steht dort eine Zahl, widersprechen ihr Bestand und ihr
+       Ablageort einander. */
+    ...bilanz,
+  };
+}
+
+/** Ein Paket an die Gegenstelle. ⚠ Hoechstens WAPPEN_PRO_PAKET Eintraege
+    — die Grenze steht drueben und wird hier eingehalten, nicht geraten. */
+async function sendeWappenPaket(
+  basis: string, schluessel: string, eintraege: WappenNutzlast[],
+): Promise<WappenAntwort> {
+  const antwort = await fetch(`${basis}/clubcampus/v1/wappen`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "X-FCH-Schluessel": schluessel },
+    body: JSON.stringify({ wappen: eintraege }),
+  });
+  const text = await antwort.text();
+  let wp: WappenAntwort;
+  try {
+    wp = JSON.parse(text);
+  } catch {
+    throw new Error(`WordPress antwortete kein JSON (${antwort.status}): ${text.slice(0, 200)}`);
+  }
+  if (!antwort.ok) {
+    throw new Error(`WordPress ${antwort.status}: ${JSON.stringify(wp).slice(0, 300)}`);
+  }
+  return wp;
+}
+
+
 /* ═══════════════════════════════════════════════════════════════════
    DER BESTAND — ZEIGEN, NICHT LOESCHEN
    ═══════════════════════════════════════════════════════════════════ */
@@ -979,7 +1268,25 @@ async function sendeTeil(
  *   zwei Orten stehen muss.
  */
 async function sha256(text: string): Promise<string> {
-  const roh = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
+  return sha256Bytes(new TextEncoder().encode(text));
+}
+
+/**
+ * Dasselbe ueber rohe Bytes — fuer die Wappen.
+ *
+ * ⚠ EINE Rechnung fuer beide Faelle, nicht zwei. Zwei Hex-Schleifen
+ * nebeneinander liefen auseinander, und dann waere nicht zu sagen,
+ * welche stimmt — derselbe Grund, aus dem `MATCHDATEN_PRO_LAUF` an einen
+ * Ort gewandert ist.
+ */
+async function sha256Bytes(bytes: Uint8Array): Promise<string> {
+  /* ⚠ `new Uint8Array(bytes)` statt `bytes`, und das ist kein Zierrat:
+     `Uint8Array` ist seit TS 5.7 ueber seinen Puffer generisch, und ein
+     `Uint8Array<ArrayBufferLike>` ist kein `BufferSource` — Deno hat es
+     abgelehnt. Die Kopie ist ein paar Kilobyte gross und dafuer in
+     beiden Welten typisiert; ein `as unknown as` haette die Meldung
+     weggeraeumt statt den Grund. */
+  const roh = await crypto.subtle.digest("SHA-256", new Uint8Array(bytes));
   return [...new Uint8Array(roh)].map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
@@ -1454,15 +1761,19 @@ type DbLeser = { from: (tabelle: string) => any };
 
 interface VereinZeile { name: string | null; slug: string | null }
 interface TeamZeile { id: number; name: string; sfv_team_id: number | null }
-/* ⚠ `sfv_gegner_team_id` steht hier und nicht in `SpielQuelle`: es geht in
-   keine Nutzlast, es wird nur GEZAEHLT (wie viele fremde Wappen ein
-   Bestand waeren). Was die Nutzlast traegt, gehoert in SpielQuelle — die
-   zwei Mengen auseinanderzuhalten ist der Grund, warum hier ueberhaupt
-   ein eigener Typ steht. */
+/* ⚠ ⚠  `sfv_gegner_team_id` IST AM 23.09.2026 NACH `SpielQuelle` GEWANDERT.
+   Hier stand: „es geht in keine Nutzlast, es wird nur GEZAEHLT (wie viele
+   fremde Wappen ein Bestand waeren)". Das galt, solange niemand die Wappen
+   zuordnen wollte — und die Zuordnung braucht genau diese Nummer, weil ein
+   Vereinsname eine Schreibweise ist und keine Kennung.
+
+   Der Satz daneben gilt weiter: was die Nutzlast traegt, gehoert in
+   SpielQuelle; was nur gezaehlt wird, hierher. Die zwei Mengen
+   auseinanderzuhalten ist der Grund, warum hier ueberhaupt ein eigener
+   Typ steht — `matchdaten_geholt_am` ist so ein Fall geblieben. */
 type SpielZeile = SpielQuelle & {
   id: string;
   sfv_team_id: number | null;
-  sfv_gegner_team_id: number | null;
   /** Wurden die Matchdaten je geholt? Unterscheidet "keine Aufstellung"
       von "noch nicht nachgesehen" — siehe die leere Liste unten. */
   matchdaten_geholt_am: string | null;
@@ -1690,6 +2001,17 @@ async function laufeProbe(
      die Zahl der Vereine ist deutlich kleiner. Wer sie verwechselt,
      schaetzt den Pflegeaufwand zu hoch. */
   const gegnerTeams = new Set<number>();
+  /* ⚠ DIE GEGENZAHL ZU `gegner_teams_verschieden`, und sie beantwortet
+     eine andere Frage: nicht „wie viele Wappen waeren zu pflegen", sondern
+     „bei wie vielen Spielen fehlt die Nummer, ueber die das Wappen
+     ueberhaupt zuzuordnen waere". Genau diese Spiele tragen
+     `sfv_gegner_team_id` NICHT in der Nutzlast (das Feld fehlt dann ganz).
+
+     ⚠ Sie steht hier, weil sie sonst nirgends zu messen ist: das Papier
+     kennt den Bestand nicht, und eine Zahl im Bericht ist eine Behauptung
+     mit Datum — eine Zahl in der Antwort ist ein Beleg, den jeder selbst
+     nachsieht. */
+  let ohneGegnerTeamnummer = 0;
   let cupOhneRunde = 0;
   /* ⚠ SIEBEN ZAHLEN, JEDE IMMER — auch als Null. Eine Zahl, die nur im
      schlechten Fall erscheint, verlangt vom Leser eine Deutung, und die
@@ -1785,7 +2107,7 @@ async function laufeProbe(
        haengt, ob das leere `sfv_liga_name` drueben die kleinere Sorge ist. */
     if (!String(s.liga ?? "").trim()) ohneLiga++;
     const gid = Number(s.sfv_gegner_team_id);
-    if (Number.isFinite(gid) && gid > 0) gegnerTeams.add(gid);
+    if (Number.isFinite(gid) && gid > 0) gegnerTeams.add(gid); else ohneGegnerTeamnummer++;
     /* ⚠ Cupspiele tragen keinen Gruppennamen — gemeldet 10.09.2026,
        13 von 13. Gezaehlt, nicht behoben: der Wert entsteht beim Verband,
        und was dort stattdessen steht, ist noch nicht gemessen. */
@@ -2083,6 +2405,10 @@ async function laufeProbe(
       wechsel_ohne_ersatzname: namensZaehlung.zeilen_ohne_ersatzname,
       /* ⚠ TEAMS, nicht Vereine — siehe oben. */
       gegner_teams_verschieden: gegnerTeams.size,
+      /* ⚠ Die Bezugsgroesse ist `spiele_gebaut` weiter oben — gezaehlt
+         wird in derselben Schleife und hinter demselben `continue`.
+         „3 von 270" ist eine Auskunft, „3" ein Schluss daraus. */
+      spiele_ohne_gegner_teamnummer: ohneGegnerTeamnummer,
       zaehlung_stimmt: summe === verlaufZeilen,
     },
     teams: teamListe,

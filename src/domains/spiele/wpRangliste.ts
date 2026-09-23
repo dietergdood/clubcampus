@@ -61,8 +61,22 @@ export interface WpRangZeile {
   tore_minus: number;
   punkte: number;
   ist_wir: boolean;
-  /** Nicht zur Anzeige — der Empfänger findet damit die Gruppe. */
-  sfv_team_id: number;
+  /**
+   * Nicht zur Anzeige — der Empfänger findet damit die Gruppe.
+   *
+   * ⚠ ZEICHENKETTE SEIT DEM 23.09.2026, vorher `number`. Damit heisst
+   * `sfv_team_id` in beiden Nutzlasten dasselbe: am Spiel stand schon
+   * immer Text, in der Ranglistenzeile eine Zahl — **derselbe Name für
+   * denselben Wert in zwei Typen** ist die Sorte Abweichung, die
+   * niemandem auffällt, bis jemand die zwei vergleicht.
+   *
+   * ⚠ DRÜBEN FOLGENLOS, UND ZWAR GEMESSEN, NICHT ANGENOMMEN: der
+   * Empfänger castet selbst — `(string) ( $z['sfv_team_id'] ?? '' )` in
+   * `wp-export-empfaenger.php:3150` und `:3439`, `trim((string) …)` in
+   * `:2743`. Eine Zahl wird dort ohnehin zur Zeichenkette; es gibt keine
+   * Stelle, die auf `is_int()` oder `===` prüft.
+   */
+  sfv_team_id: string;
 }
 
 /** Eine Gruppe, wie sie in der Ablage `fch_cc_ranglisten` landet. */
@@ -188,7 +202,12 @@ export function baueGruppen(
         tore_minus: z(r.gegentore),
         punkte: z(r.punkte),
         ist_wir: unsereTeams.has(String(r.sfv_team_id)),
-        sfv_team_id: r.sfv_team_id,
+        /* ⚠ EINMAL `String(...)`, NICHT ZWEIMAL: `unsereTeams` ist eine
+           Menge von Zeichenketten, und der Vergleich eine Zeile höher
+           wandelt dafür schon um. Die Zeile hier wandelt für die
+           NUTZLAST um — zwei verschiedene Gründe, dieselbe Quelle
+           `r.sfv_team_id` (eine Zahl aus `ranglisten`). */
+        sfv_team_id: String(r.sfv_team_id),
       })),
     });
   }

@@ -60,10 +60,23 @@ describe("baueGruppen — der Vertrag mit der Vorlage", () => {
 
   it("trägt sfv_team_id — sonst findet der Empfänger die Gruppe nicht", () => {
     /* `fch_cc_rangliste_fuer_team()` vergleicht genau diesen Schlüssel
-       (wp-export-empfaenger.php:1217). Ohne ihn liegt die Rangliste in der
-       Ablage und die Seite bleibt leer — ohne Fehler. */
+       (wp-export-empfaenger.php:3432, nachgemessen am 23.09.2026 — hier
+       stand :1217, und die Zeile ist mitgewandert). Ohne ihn liegt die
+       Rangliste in der Ablage und die Seite bleibt leer — ohne Fehler. */
     const [g] = baueGruppen([zeile({ sfv_team_id: 38309 })], UNSERE);
-    expect(g.zeilen[0].sfv_team_id).toBe(38309);
+    /* ⚠ ⚠  ZEICHENKETTE SEIT DEM 23.09.2026, und `toBe` prüft beides —
+       Wert UND Typ. Ein `toEqual` wäre hier zu weich: es macht keinen
+       Unterschied zwischen 38309 und "38309", und genau der ist die
+       Änderung.
+
+       Grund: am Spiel heisst `sfv_team_id` seit jeher Text. Derselbe
+       Name für denselben Wert in zwei Typen ist die Sorte Abweichung,
+       die niemandem auffällt, bis jemand die zwei vergleicht.
+
+       ⚠ Drüben folgenlos — gemessen, nicht angenommen: der Empfänger
+       castet selbst (`(string) ( $z['sfv_team_id'] ?? '' )`,
+       wp-export-empfaenger.php:3150 und :3439). */
+    expect(g.zeilen[0].sfv_team_id).toBe("38309");
   });
 
   it("markiert genau die eigene Zeile", () => {

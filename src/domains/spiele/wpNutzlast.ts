@@ -104,7 +104,7 @@ export type WpVerlaufArt = "tor" | "gelb" | "gelbrot" | "rot" | "wechsel" | "ass
  * einem SQL-Block. Gehalten wird es von `nutzlastFassung.test.ts`: ändert
  * sich ein Feldname, ist der Fall rot, und er nennt beide Stellen.
  */
-export const NUTZLAST_FASSUNG = 4;
+export const NUTZLAST_FASSUNG = 5;
 
 export interface WpVerlaufZeile {
   /** Text, nicht Zahl — damit „45+2" hineinpasst. */
@@ -232,6 +232,38 @@ export interface WpSpiel {
       das spart einen Abruf und eine Preisgabe zugleich. */
   sfv_team_id: string;
   gegner: string;
+  /**
+   * Die SFV-Teamnummer des GEGNERS — dieselbe Zahl, die
+   * `/api/team/picture/{teamId}` das Wappen liefert.
+   *
+   * ⚠ ⚠  DER NAME IST DER DER SPALTE, UND ZWAR MIT ABSICHT.
+   *   `spiele.sfv_gegner_team_id` heisst drüben genauso. Ein eigener
+   *   Nutzlastname wäre ein zweiter Name für dieselbe Sache — genau die
+   *   Falle, die am 14.09.2026 eine Suche ins Leere geschickt hat
+   *   (`ranglisten.anzahl_spiele` heisst in der Nutzlast `spiele`, und
+   *   wer nach dem Spaltennamen sucht, findet 0 Treffer).
+   *
+   * ⚠ UND ES IST EINE **teamId**, KEINE VEREINSNUMMER. Drei Zahlen
+   *   sehen in diesem Projekt nach „Vereinsnummer" aus und werden
+   *   verwechselt: 1516 (ClubId), 11057 (clubNumber), 11 (die `oid` des
+   *   Regionalverbands). Keine davon steht hier. Das Wappen gehört zwar
+   *   dem VEREIN — alle Mannschaften eines Vereins liefern dasselbe Bild
+   *   —, abrufbar ist es aber nur über die teamId, und nur die steht am
+   *   Spiel (`sfv_team_logos` ist aus genau diesem Grund danach
+   *   geschlüsselt, siehe migration_sfv_logos.sql).
+   *
+   * ⚠ ZEICHENKETTE, wie `sfv_team_id` daneben. Beide sind Kennungen und
+   *   keine Messwerte; eine Zahl lüde dazu ein, mit ihr zu rechnen oder
+   *   sie typgleich zu vergleichen (`"38309" === 38309` ist falsch).
+   *
+   * ⚠ ⚠  OPTIONAL — FEHLT, WENN DIE SPALTE `null` IST, statt leer zu sein.
+   *   *Ein weggelassenes Feld sagt: wir wissen nichts. Ein leeres Feld
+   *   sagt: wir wissen, dass nichts ist.* (Didi, 12.09.2026.) Eine
+   *   fehlende Nummer heisst hier das Erste — der Spielplan hat sie
+   *   nicht mitgeliefert —, nicht, dass der Gegner keine hätte. Dieselbe
+   *   Entscheidung und derselbe Grund wie bei `aufstellung`.
+   */
+  sfv_gegner_team_id?: string;
   heim_auswaerts: "heim" | "auswaerts";
   ort: string;
   /** Spieltyp: „Meisterschaft", „Cup", „Turnier". NICHT die Liga. */
@@ -1551,6 +1583,15 @@ export interface SpielQuelle {
   sfv_status: number | null;
   resultat: string | null;
   ht_resultat: string | null;
+  /**
+   * Die SFV-Teamnummer des GEGNERS — `spiele.sfv_gegner_team_id`.
+   *
+   * ⚠ Sie stand bis zum 23.09.2026 nur im Leser der Probe und ging in
+   *   keine Nutzlast: die Gegnerseite war ein NAME und sonst nichts.
+   *   Damit war ein Gegnerwappen nicht zuzuordnen — ein Vereinsname ist
+   *   eine Schreibweise, keine Kennung.
+   */
+  sfv_gegner_team_id: number | null;
 }
 
 /**
@@ -1580,6 +1621,16 @@ export function bildeSpiel(
   const tore = zerlegeResultat(q.resultat);
   const halb = zerlegeResultat(q.ht_resultat);
 
+  /* ⚠ Die Gegnernummer nur, wenn es sie GIBT — das Feld fehlt sonst
+     ganz, statt leer zu sein. Warum, steht an `WpSpiel`.
+
+     ⚠ Und `0` ist keine Nummer, sondern ein Platzhalter: die Spalte ist
+     `bigint` ohne Default, eine gelieferte Null bezeichnet keine
+     Mannschaft. Dieselbe Grenze wie im Zähler der Probe. */
+  const gegnerNr = q.sfv_gegner_team_id;
+  const hatGegnerNr = typeof gegnerNr === "number"
+    && Number.isFinite(gegnerNr) && gegnerNr > 0;
+
   return {
     sfv_match_id: String(q.sfv_match_id),
     sfv_spiel_nr: q.sfv_spiel_nr ?? "",
@@ -1587,6 +1638,7 @@ export function bildeSpiel(
     zeit: wpZeit(q.zeit),
     sfv_team_id: sfvTeamId,
     gegner: q.gegner ?? "",
+    ...(hatGegnerNr ? { sfv_gegner_team_id: String(gegnerNr) } : {}),
     heim_auswaerts: heimspiel ? "heim" : "auswaerts",
     ort: q.venue ?? "",
     wettbewerb: q.wettbewerb ?? "",

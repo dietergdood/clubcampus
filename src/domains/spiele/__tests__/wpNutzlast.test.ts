@@ -57,6 +57,7 @@ const quelle = (f: Partial<SpielQuelle> = {}): SpielQuelle => ({
   venue: "Langacker", wettbewerb: "Meisterschaft",
   liga: "Junioren C Promotion", sfv_gruppe: "Gruppe 3",
   sfv_status: 2, resultat: "3:3", ht_resultat: null,
+  sfv_gegner_team_id: 38401,
   ...f,
 });
 
@@ -530,6 +531,50 @@ describe("Das ganze Spiel", () => {
   it("traegt die SFV-Teamnummer, nicht die WordPress-Beitrags-Id", () => {
     const s = bildeSpiel(quelle(), "38309", [], new Map(), "FC Herrliberg");
     expect(s!.sfv_team_id).toBe("38309");
+  });
+
+  /* ══════════════════════════════════════════════════════════════════
+     Die Teamnummer des GEGNERS (23.09.2026)
+
+     ⚠ Anlass ist die Wappen-Zuordnung drueben: sie laeuft ueber die
+     Nummer, nicht ueber den Vereinsnamen. Ein Name ist eine
+     Schreibweise — „Junioren D (Futsal) a" und „Dd-Junioren" sind
+     dieselbe Mannschaft, und ein Vergleich ueber den Namen hat am
+     10.09.2026 acht fehlende Teams zu dreizehn gemacht.
+     ══════════════════════════════════════════════════════════════════ */
+
+  it("traegt die Teamnummer des Gegners als Zeichenkette", () => {
+    const s = bildeSpiel(quelle(), "38309", [], new Map(), "FC Herrliberg");
+    /* ⚠ Der WERT, nicht die Anwesenheit: ein `toBeDefined()` waere auch
+       dann gruen, wenn hier die eigene Nummer stuende. */
+    expect(s!.sfv_gegner_team_id).toBe("38401");
+    /* Und die Gegenprobe daneben — die zwei duerfen nie dieselbe sein. */
+    expect(s!.sfv_team_id).toBe("38309");
+  });
+
+  /* ⚠ ⚠  DER LEERE FALL — und er ist eine ENTSCHEIDUNG, keine Formsache.
+     „Ein weggelassenes Feld sagt: wir wissen nichts. Ein leeres Feld
+     sagt: wir wissen, dass nichts ist." (Didi, 12.09.2026.) Eine
+     fehlende Nummer heisst hier das Erste.
+
+     ⚠ Und drueben ist der Unterschied nicht bloss begrifflich:
+     `cc_schreibe_felder()` ueberspringt, was nicht in der Nutzlast
+     steht — ein leerer Text UEBERSCHRIEBE dagegen eine Nummer, die
+     ein frueherer Lauf schon geschrieben hat. */
+  it("laesst das Feld GANZ weg, wenn der Gegner keine Nummer hat", () => {
+    const s = bildeSpiel(quelle({ sfv_gegner_team_id: null }), "38309",
+      [], new Map(), "FC Herrliberg");
+    expect("sfv_gegner_team_id" in s!).toBe(false);
+    expect(s!.sfv_gegner_team_id).toBeUndefined();
+  });
+
+  /* ⚠ `0` ist keine Mannschaft, sondern ein Platzhalter — dieselbe
+     Grenze wie im Zaehler der Probe. Ohne diesen Fall waere „0" eine
+     Zeichenkette, die drueben nach einer gueltigen Nummer aussieht. */
+  it("behandelt die Null wie eine fehlende Nummer", () => {
+    const s = bildeSpiel(quelle({ sfv_gegner_team_id: 0 }), "38309",
+      [], new Map(), "FC Herrliberg");
+    expect("sfv_gegner_team_id" in s!).toBe(false);
   });
 
   /* ⚠ Ohne Schluessel gaebe es beim naechsten Lauf einen zweiten Beitrag. */
