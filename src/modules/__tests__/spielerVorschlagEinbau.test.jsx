@@ -138,3 +138,56 @@ describe('Der Vorschlag erreicht die Maske', () => {
     await waitFor(() => expect(screen.getByText(/von 1 Spielern haben einen/)).toBeTruthy());
   });
 });
+
+/* ══════════════════════════════════════════════════════════════════════
+   ⚠ ⚠  DER SATZ, DER VOM FALSCHEN WEG ABHÄLT (24.09.2026)
+
+   Vier Profile drüben trugen Nummern, die in keiner Aufstellung
+   vorkommen — unter anderem 1905405 und 1122655. Sie sind nicht
+   erfunden: die vier standen wegen eines Lesefehlers nicht in dieser
+   Liste, also hat jemand die Zahl dort geholt, wo sie sichtbar war —
+   beim Verband.
+
+   ⚠ Und dessen Datensatz führt mehrere Nummern nebeneinander.
+   `passportNumber` steht neben `personId`, ist ebenfalls eine sechs-
+   bis siebenstellige Zahl und heisst auf dem Matchblatt „Passnummer".
+   Man sieht es ihr nicht an, welche die richtige ist.
+
+   Der Lesefehler ist behoben. Dieser Satz ist die zweite Hälfte — und
+   er steht in der Maske, weil ihn genau der braucht, der gerade
+   überträgt, nicht der, der den Quelltext liest.
+
+   ⚠ ⚠  DIE ZWEITE ERWARTUNG IST DIE WICHTIGERE. Dass der Satz DA ist,
+   hält ihn nicht am Leben — dass die falsche Zahl NICHT als gültige
+   Quelle dasteht, schon. Dieselbe Bauart wie beim „Kontakt-Tab", den es
+   nie gab: die zweite Zeile hält fest, dass der falsche Weg nicht
+   zurückkommt.
+   ══════════════════════════════════════════════════════════════════════ */
+
+describe('⚠ Die Maske sagt, WELCHE Nummer gilt', () => {
+  it('nennt personId als Quelle und warnt vor der Passnummer', async () => {
+    zeichne([MITGLIED()]);
+    await namenHolen();
+
+    /* Die Ausgabe erscheint erst, wenn Namen geholt sind — sie hängt an
+       der Namensmeldung, nicht an einer eigenen Stelle. */
+    const hinweis = screen.getByText(/Diese Nummern und keine anderen/)
+      .closest('div');
+    /* ⚠ Im Hinweis gesucht, nicht im ganzen Dokument: `personId` steht
+       auch in der Spaltenüberschrift der Liste. `getByText` wirft bei
+       mehreren Treffern — und das ist richtig so, es zwingt zur Frage,
+       WELCHE Stelle gemeint ist. */
+    expect(hinweis.textContent).toMatch(/personId/);
+    expect(hinweis.textContent).toMatch(/Passnummer/);
+  });
+
+  it('⚠ und sagt, was NICHT zu tun ist, wenn jemand fehlt', async () => {
+    /* Der Satz muss den Umkehrschluss mitliefern. Sonst sucht, wer eine
+       Person vermisst, die Nummer anderswo — und genau so ist der Fehler
+       entstanden. */
+    zeichne([MITGLIED()]);
+    await namenHolen();
+    expect(screen.getByText(/noch keinen Einsatz/)).toBeTruthy();
+    expect(screen.getByText(/keine Nummer ins Profil/)).toBeTruthy();
+  });
+});

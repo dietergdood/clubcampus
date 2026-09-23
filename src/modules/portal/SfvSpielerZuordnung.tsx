@@ -423,6 +423,31 @@ export function SfvSpielerZuordnung({ sb, vereinId, benutzerId, dbMitglieder, db
               {" "}⚠ Jetzt ziehen, nicht später: die Liste zeigt nur die noch nicht
               zugeordneten Spieler und schrumpft mit jeder Zuordnung.
             </div>
+            {/* ⚠ ⚠  DER SATZ, DER DEN FEHLER VOM 24.09.2026 VERHINDERT HÄTTE.
+
+                Vier Profile trugen Nummern, die in keiner Aufstellung
+                vorkommen. Sie sind nicht erfunden: die vier standen wegen
+                eines Lesefehlers nicht in dieser Liste, also hat jemand
+                die Zahl dort geholt, wo sie sichtbar war — beim Verband.
+
+                ⚠ Und dessen Seite führt mehrere Nummern nebeneinander.
+                `passportNumber` steht im selben Datensatz wie `personId`,
+                ist ebenfalls eine sechs- bis siebenstellige Zahl und heisst
+                auf dem Matchblatt „Passnummer". Eine davon ist die
+                richtige, und man sieht es ihr nicht an.
+
+                Der Lesefehler ist behoben; dieser Satz ist die zweite
+                Hälfte. Er steht hier und nicht in einem Kommentar, weil
+                ihn genau der braucht, der gerade überträgt. */}
+            <div className="cc-inline-hint cc-mt-8">
+              ⚠ <strong>Diese Nummern und keine anderen.</strong> Sie stammen aus
+              der Aufstellung des Verbands (<code>personId</code>). Auf der
+              Verbandswebsite und auf dem Matchblatt stehen weitere Zahlen
+              daneben — unter anderem die <em>Passnummer</em>, die genauso
+              aussieht. Wer eine Person hier vermisst, hat sie nicht falsch
+              eingetragen, sondern <strong>noch keinen Einsatz von ihr</strong>:
+              dann gehört keine Nummer ins Profil.
+            </div>
             {ausgabeMeldung && (
               <div className="cc-text-sm cc-mt-8">{ausgabeMeldung}</div>
             )}
