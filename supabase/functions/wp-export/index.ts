@@ -284,6 +284,31 @@ async function alleSeiten<T>(
  *    Die Frage ist deshalb nicht „habe ich index.ts angefasst?", sondern
  *    **„antwortet sie jetzt anders?"**.
  *
+ *    60  23.09.2026  GIF IST ZUGELASSEN — beide Seiten ziehen nach.
+ *                    Der Eintrag zu 59 darunter beschreibt einen
+ *                    Vertrag mit DREI Typen; entschieden wurde nicht,
+ *                    besser zu filtern, sondern ihn zu erweitern. Vier
+ *                    Typen, und es sind genau die, die `erkenneBild()`
+ *                    in sfv-sync/logos.ts schreiben kann.
+ *                    ⚠ Das ist die eigentliche Regel und sie ist jetzt
+ *                    festgenagelt: **was bei uns abgelegt werden KANN,
+ *                    muss drueben ankommen duerfen.** Ein Fall in
+ *                    wpWappen.test.ts haelt `ERLAUBTE_MIME` gegen die
+ *                    mime-Literale von `erkenneBild()` — in BEIDE
+ *                    Richtungen, und er faellt um, wenn die Funktion
+ *                    umbenannt wird.
+ *                    ⚠ ⚠  UEBERGANGSLAGE, und sie traegt nur unter einer
+ *                    Bedingung, die DRUEBEN liegt: bis die Gegenstelle
+ *                    nachzieht, weist sie GIFs mit Grund ab. Harmlos,
+ *                    solange sie fuer ein abgelehntes Bild KEINE Nummer
+ *                    mit Pruefsumme anlegt — eine Nummer ohne `sha256`
+ *                    zaehlt in `leseWappenBestand()` nicht als bekannt,
+ *                    also geht dasselbe Wappen im naechsten Lauf erneut
+ *                    hinaus. Legt sie eine MIT Pruefsumme an,
+ *                    ueberspringt `waehleWappen()` es fuer immer und es
+ *                    erschiene nie — ohne dass etwas fehlschlaegt.
+ *                    Sichtbar macht das `ohne_pruefsumme` in ihrer
+ *                    Bestandsauskunft.
  *    59  23.09.2026  WAPPEN, ZWEITE HAELFTE: was die Gegenstelle gar
  *                    nicht annimmt, geht nicht mehr hinaus. Geprueft
  *                    wird vor dem Versand, mit Teamnummer und Grund je
@@ -382,7 +407,7 @@ async function alleSeiten<T>(
  *    46  12.09.2026  Durchreiche von personen/teams/unterfelder/
  *                    geschwister, nichtDurchgereicht(), diese Angabe
  */
-const FUNCTION_FASSUNG = 59;
+const FUNCTION_FASSUNG = 60;
 
 const AKTIONEN = ["probe", "export", "bestand", "status", "ranglisten"];
 

@@ -333,22 +333,37 @@ export function fasseWappenAntworten(
 /* ═══════════════════════════════════════════════════════════════
    WAS DIE GEGENSTELLE ÜBERHAUPT ANNIMMT
 
-   ⚠ ⚠  EINE ALLOWLIST MIT DREI EINTRÄGEN LÄSST EINEN VIERTEN NICHT
-   DURCH — und der vierte ist hier der häufige Fall, nicht der
-   Randfall.
+   **png · jpeg · webp · gif** — beide Seiten, seit dem 23.09.2026.
 
-   Der Vertrag nennt `png`, `jpeg`, `webp`. Unser Bucket kennt vier
-   Typen: `sfv-sync/logos.ts` → `erkenneBild()` schreibt png, jpeg,
-   **gif** und webp, aus den Magic Bytes. Der Verband gibt durch, was
-   der Verein hochgeladen hat — und `migration_sfv_logos.sql` hält als
-   Messung vom 20.08.2026 fest: **das Wappen des FCH selbst ist ein
-   GIF.**
+   ── WIE ES DAZU KAM, UND WARUM DAS HIER STEHT ───────────────────
 
-   ⚠ Gefiltert wird deshalb HIER und nicht drüben. Beides wäre
-   sichtbar — die Gegenstelle meldet `fehler` je Eintrag —, aber der
-   Unterschied ist, WANN man es erfährt: hier steht die Zahl vor dem
-   Versand in unserer eigenen Antwort, drüben erst danach und nur,
-   wenn jemand die Fehlerliste liest.
+   Der Vertrag nannte zuerst DREI Typen. `erkenneBild()` in
+   `sfv-sync/logos.ts` schreibt aber VIER, aus den Magic Bytes — der
+   Verband gibt durch, was der Verein hochgeladen hat, und
+   `migration_sfv_logos.sql` hält als Messung vom 20.08.2026 fest:
+   **das Wappen des FCH selbst ist ein GIF.** Eine Allowlist mit drei
+   Einträgen hätte den vierten nicht durchgelassen, und der vierte war
+   der häufige Fall.
+
+   Entschieden am 23.09.2026: **GIF wird zugelassen, beide Seiten
+   ziehen nach.** Nicht gefiltert, weil ein Wappen, das der Verein
+   hochgeladen hat, auf die Seite gehört — und nicht daran scheitern
+   soll, in welchem Format es vorliegt.
+
+   ⚠ ⚠  ÜBERGANGSLAGE, UND SIE IST GEMESSEN STATT ANGENOMMEN. Bis die
+   Gegenstelle nachzieht, weist sie GIFs mit Grund ab. Das ist
+   harmlos — **aber nur, solange sie für ein abgelehntes Bild KEINE
+   Nummer mit Prüfsumme anlegt.** Der Grund steht in
+   `leseWappenBestand()`: eine Nummer ohne `sha256` zählt dort nicht
+   als bekannt, also geht dasselbe Wappen im nächsten Lauf erneut
+   hinaus. Legt sie dagegen eine Nummer MIT Prüfsumme an, führt sie
+   das Wappen als vorhanden, `waehleWappen()` überspringt es für
+   immer, und es erschiene nie — **ohne dass etwas fehlschlägt.**
+
+   Die Bedingung liegt drüben und ist von hier aus nicht prüfbar. Was
+   sie sichtbar macht, ist `ohne_pruefsumme` in der Bestandsauskunft:
+   steht dort nach dem Umstellen eine Null und fehlen trotzdem Wappen,
+   ist genau das eingetreten.
 
    ⚠ ⚠  `image/svg+xml` KANN HEUTE NICHT VORKOMMEN, und das gehört
    dazu, damit niemand den Zweig für den eigentlichen Zweck hält:
@@ -357,22 +372,26 @@ export function fasseWappenAntworten(
    trotzdem — er kostet nichts und trägt, sobald jemand die Erkennung
    erweitert. Er ist eine Vorsorge, keine Beobachtung.
 
-   ⚠ Und er ist eine ALLOWLIST, keine Liste verbotener Typen: ein
-   fünfter Typ, den jemand morgen in `erkenneBild()` ergänzt, fällt
-   damit auf, statt still hinauszugehen und drüben abgewiesen zu
-   werden.
+   ⚠ Und die Liste bleibt eine ALLOWLIST, keine Liste verbotener
+   Typen — daran ändert die Aufnahme von GIF nichts. Ein fünfter Typ,
+   den jemand morgen in `erkenneBild()` ergänzt, fällt damit auf,
+   statt still hinauszugehen und drüben abgewiesen zu werden. **Die
+   Lehre war nicht „die Liste war zu kurz", sondern „eine Allowlist
+   und ihre Quelle müssen zusammen gepflegt werden".**
    ═══════════════════════════════════════════════════════════════ */
 
 /**
  * Die Typen, die die Gegenstelle annimmt — ihr Vertrag, nicht unsere
  * Wahl.
  *
- * ⚠ `image/gif` steht mit Absicht NICHT darin. Wer es ergänzt, ohne
- * dass die Gegenstelle es annimmt, verschiebt die Ablehnung nur
- * dorthin, wo sie später auffällt.
+ * ⚠ **Die vier sind genau die, die `erkenneBild()` schreiben kann**
+ * (`sfv-sync/logos.ts`). Das ist kein Zufall und die eigentliche
+ * Regel: was bei uns abgelegt werden KANN, muss drüben ankommen
+ * dürfen. Wer hier etwas wegnimmt, filtert ab sofort echte Wappen;
+ * wer dort einen Typ ergänzt, muss hier nachziehen.
  */
 export const ERLAUBTE_MIME: ReadonlySet<string> = new Set([
-  "image/png", "image/jpeg", "image/webp",
+  "image/png", "image/jpeg", "image/webp", "image/gif",
 ]);
 
 /**
@@ -390,8 +409,14 @@ export const WAPPEN_HOECHSTENS_BYTES = 512 * 1024;
  *
  * ⚠ Der Grund kommt als Satz zurück, nicht als Wahrheitswert. Eine
  * Zahl „3 abgelehnt" schickt den Leser auf die Suche; „38301:
- * image/gif nimmt die Gegenstelle nicht an" nennt Team und Ursache in
- * derselben Zeile.
+ * image/avif nimmt die Gegenstelle nicht an (erlaubt: …)" nennt Team,
+ * Ursache und die gültige Antwort in derselben Zeile.
+ *
+ * ⚠ Das Beispiel ist mit Absicht ein Typ, den es hier nicht gibt:
+ * seit dem 23.09.2026 nimmt die Gegenstelle alle vier an, die
+ * `erkenneBild()` schreiben kann. Wer diesen Zweig auslöst, hat
+ * einen Typ vor sich, den eine der beiden Seiten noch nicht kennt —
+ * und genau das soll er sagen.
  */
 export function pruefeWappen(
   mime: string, bytes: number,

@@ -463,46 +463,56 @@ describe("⚠ Ein Fehler beim Wappenversand nimmt Spielplan und Ranglisten nicht
 });
 
 /* ══════════════════════════════════════════════════════════════════════
-   WAS DIE GEGENSTELLE GAR NICHT ANNIMMT
+   WAS DIE GEGENSTELLE ANNIMMT — UND WAS NICHT
 
-   ⚠ ⚠  BESTELLT WAREN SVG UND 512 KiB. DER HÄUFIGE FALL IST WEDER DAS
-   EINE NOCH DAS ANDERE — ER IST GIF.
+   ⚠ ⚠  DIESER BLOCK HAT AM 23.09.2026 SEINE AUSSAGE GEWECHSELT, UND DAS
+   IST DER LEHRREICHE TEIL.
 
-   Der Vertrag nennt drei Typen: png, jpeg, webp. `erkenneBild()` in
-   `supabase/functions/sfv-sync/logos.ts` schreibt **vier**, und der
-   vierte ist `image/gif`. `migration_sfv_logos.sql` hält als Messung
-   vom 20.08.2026 fest: *„FC Herrliberg → R0lGODlhUABQ… → GIF89a"* —
-   das Wappen des eigenen Vereins ist ein GIF.
+   Seine erste Fassung hielt fest: *„image/gif wird abgewiesen — der
+   häufige Fall, nicht SVG"*. Das war richtig gemessen und beschrieb
+   einen Vertrag, der drei Typen nannte, während `erkenneBild()` in
+   `supabase/functions/sfv-sync/logos.ts` vier schreibt —
+   `migration_sfv_logos.sql` hält vom 20.08.2026 fest: *„FC Herrliberg →
+   R0lGODlhUABQ… → GIF89a"*.
 
-   ⚠ Eine Allowlist mit drei Einträgen lässt einen vierten nicht durch.
-   Das ist kein Randfall, den man nebenbei mitnimmt, sondern
-   möglicherweise die Mehrheit des Bestands. **Wie viele es trifft, ist
-   ungemessen** — die Tabelle ist von hier aus nicht lesbar (RLS), und
-   der erste Lauf sagt es, Team für Team.
+   **Entschieden wurde nicht, besser zu filtern, sondern den Vertrag zu
+   erweitern.** Beide Seiten nehmen jetzt vier Typen. Der Fall steht
+   deshalb umgedreht hier — **nicht gelöscht**: ein Fall, der eine
+   Zusage über das Produkt trug, verschwindet nicht mit der Zusage, er
+   hält die neue.
 
-   ⚠ ⚠  UND SVG KANN HEUTE NICHT VORKOMMEN. `erkenneBild()` hat keinen
-   Zweig dafür; ein unerkanntes Bild ergibt `null` und wird gar nicht
-   erst abgelegt. Der Fall steht hier trotzdem — aber als **Vorsorge**
-   benannt, nicht als Beobachtung. Wer ihn für den eigentlichen Zweck
-   hält, sucht beim nächsten Mal an der falschen Stelle.
+   ⚠ Und er ist strenger geworden, nicht schwächer. Vorher prüfte er
+   eine Zahl in einer Liste; jetzt prüft er, dass **`ERLAUBTE_MIME` und
+   `erkenneBild()` dieselbe Menge führen.** Das ist die Regel, an der es
+   gescheitert war — eine Allowlist und ihre Quelle müssen zusammen
+   gepflegt werden —, und sie war vorher an keiner Stelle festgehalten.
+
+   ⚠ ⚠  SVG KANN NACH WIE VOR NICHT VORKOMMEN. `erkenneBild()` hat
+   keinen Zweig dafür; ein unerkanntes Bild ergibt `null` und wird gar
+   nicht erst abgelegt. Der Fall steht als **Vorsorge** hier, nicht als
+   Beobachtung. Wer ihn für den eigentlichen Zweck hält, sucht beim
+   nächsten Mal an der falschen Stelle.
    ══════════════════════════════════════════════════════════════════ */
 
-describe("pruefeWappen — was gar nicht erst hinausgeht", () => {
-  it("⚠ image/gif wird abgewiesen — der häufige Fall, nicht SVG", () => {
-    const u = pruefeWappen("image/gif", 6859);
-    expect(u.ok).toBe(false);
-    /* ⚠ Der Grund nennt den Typ UND die erlaubten. Eine Meldung, die die
-       gültige Antwort kennt und nicht nennt, kostet eine Rückfrage. */
-    expect(u.ok === false && u.grund).toContain("image/gif");
-    expect(u.ok === false && u.grund).toContain("image/png");
+describe("pruefeWappen — was hinausgeht und was nicht", () => {
+  it("⚠ image/gif GEHT HINAUS — seit dem 23.09.2026 ziehen beide Seiten nach", () => {
+    /* Das Wappen des FCH selbst ist ein GIF (migration_sfv_logos.sql,
+       20.08.2026). Es zu filtern hiesse, ein Wappen am Format scheitern
+       zu lassen, das der Verein hochgeladen hat. */
+    expect(pruefeWappen("image/gif", 6859).ok).toBe(true);
   });
 
   it("image/svg+xml wird abgewiesen — Vorsorge, heute unerreichbar", () => {
-    expect(pruefeWappen("image/svg+xml", 1024).ok).toBe(false);
+    const u = pruefeWappen("image/svg+xml", 1024);
+    expect(u.ok).toBe(false);
+    /* ⚠ Der Grund nennt den Typ UND die erlaubten. Eine Meldung, die die
+       gültige Antwort kennt und nicht nennt, kostet eine Rückfrage. */
+    expect(u.ok === false && u.grund).toContain("image/svg+xml");
+    expect(u.ok === false && u.grund).toContain("image/png");
   });
 
-  it("die drei erlaubten gehen durch", () => {
-    for (const m of ["image/png", "image/jpeg", "image/webp"]) {
+  it("alle vier erlaubten gehen durch", () => {
+    for (const m of ["image/png", "image/jpeg", "image/webp", "image/gif"]) {
       expect(pruefeWappen(m, 6859).ok).toBe(true);
     }
   });
@@ -522,8 +532,65 @@ describe("pruefeWappen — was gar nicht erst hinausgeht", () => {
   });
 
   it("⚠ ERLAUBTE_MIME ist eine Allowlist — ein neuer Typ fällt auf, statt still hinauszugehen", () => {
-    expect(ERLAUBTE_MIME.size).toBe(3);
+    expect(ERLAUBTE_MIME.size).toBe(4);
     expect(pruefeWappen("image/avif", 100).ok).toBe(false);
+  });
+
+  /* ⚠ ⚠  DER FALL, DER DEN 23.09.2026 VERHINDERT HÄTTE.
+
+     Gescheitert war es nicht an einer zu kurzen Liste, sondern daran,
+     dass die Liste und ihre QUELLE getrennt gepflegt wurden:
+     `erkenneBild()` schrieb vier Typen, `ERLAUBTE_MIME` nannte drei, und
+     nichts hielt die beiden gegeneinander. Ein Wappen, das bei uns
+     abgelegt werden KANN, muss drüben ankommen dürfen.
+
+     ⚠ Über den Syntaxbaum, nicht über Text: die Datei nennt `image/png`
+     auch im Kommentar, und eine Textsuche träfe ihn mit. */
+  it("⚠ ERLAUBTE_MIME führt genau die Typen, die erkenneBild() schreiben kann", () => {
+    const LOGOS = "supabase/functions/sfv-sync/logos.ts";
+
+    const treffer = suche<string>({
+      frage: "welche MIME-Typen kann erkenneBild() zurückgeben?",
+      dateien: [LOGOS],
+      /* ⚠ Die Form, in der sie gefunden werden MÜSSEN. Fände die Abfrage
+         hier nichts, wäre jedes «bestanden» wertlos — und ein
+         umbenanntes `erkenneBild` liefe still leer. */
+      positivkontrolle: `
+        function erkenneBild(bytes) {
+          if (hat(1)) return { mime: "image/png", endung: "png" };
+          return null;
+        }`,
+      finde: (baum) => {
+        const fn = findeFunktion(baum, "erkenneBild");
+        if (!fn) return [];
+        const raus: string[] = [];
+        jederKnoten(fn, (n) => {
+          if (!ts.isPropertyAssignment(n)) return;
+          if (!ts.isIdentifier(n.name) || n.name.text !== "mime") return;
+          if (ts.isStringLiteral(n.initializer)) raus.push(n.initializer.text);
+        });
+        return raus;
+      },
+    });
+
+    if (treffer.length === 0) {
+      throw new Error(
+        `In ${LOGOS} gibt es keine Funktion «erkenneBild» mehr, die einen `
+        + "mime zurückgibt. Damit ist nicht mehr zu prüfen, ob unsere "
+        + "Allowlist zu dem passt, was überhaupt abgelegt werden kann — "
+        + "und genau dieses Auseinanderlaufen hat am 23.09.2026 dazu "
+        + "geführt, dass GIF-Wappen gefiltert wurden.",
+      );
+    }
+
+    const ausDerQuelle = [...new Set(treffer.map((t) => t.fund))].sort();
+    expect(
+      ausDerQuelle,
+      "Was erkenneBild() schreiben kann, muss ERLAUBTE_MIME führen — und "
+      + "umgekehrt. Weicht es ab, wird entweder ein echtes Wappen "
+      + "gefiltert (zu kurz) oder ein Typ gesendet, den die Gegenstelle "
+      + "nicht kennt (zu lang).",
+    ).toEqual([...ERLAUBTE_MIME].sort());
   });
 });
 
