@@ -300,6 +300,16 @@ function ketten(datei, quelle) {
             /* `head: true` steht als Objekteigenschaft im zweiten Argument
                von `select` — eine Zaehlabfrage liest keine Zeilen. */
             || glieder.some((g) => g.argumente.some((a) => /\bhead\s*:\s*true\b/.test(a))),
+          /* ⚠ ⚠  EINE `range()`-KETTE OHNE `order()` IST NICHT GEPAGT,
+             SONDERN ZUFAELLIG. Postgres darf zwei Seiten verschieden
+             anordnen, wenn nichts die Reihenfolge festlegt — dann fehlt
+             eine Zeile und eine andere kommt doppelt.
+
+             Bis zum 24.09.2026 sah diese Pruefung das nicht: `range`
+             genuegte, und die Stelle galt als erledigt. Der Befund kam
+             von Didi, nachdem 22 Stellen umgebaut waren. */
+          blaettert: namen.includes("range"),
+          sortiert: namen.includes("order"),
           einzelId: filterSpalten.find(istEinzelId) ?? null,
           filterSpalten: filterSpalten.filter((x) => typeof x === "string"),
           kette: namen.join("."),
@@ -315,6 +325,26 @@ function istBefund(k) {
   if (k.istStorage || k.schreibt || k.begrenzt) return false;
   if (k.einzelId) return false;
   return !Object.prototype.hasOwnProperty.call(DARF_UNGEPAGT, k.tabelle);
+}
+
+/**
+ * Blaettert die Kette, ohne zu sortieren?
+ *
+ * ⚠ Das ist ein ANDERER Befund als „ungepagt", und er braucht einen
+ * eigenen Zweig: die Stelle hat `range()`, gilt also fuer `istBefund()`
+ * als begrenzt — und ist trotzdem kaputt. Wer beide Faelle in eine Zahl
+ * faltet, kann sie nicht auseinanderhalten, und die Meldung naennte dann
+ * die falsche Reparatur.
+ *
+ * ⚠ Geprueft wird NICHT, ob der Sortierschluessel eindeutig IST. Das
+ * weiss nur das Schema — `order("nachname")` sieht hier aus wie
+ * `order("id")`. Was die Pruefung sagen kann, ist: es wird ueberhaupt
+ * sortiert. Den Rest sagt der Kommentar an der Stelle, und dieser Satz
+ * steht in der Ausgabe, damit niemand sie fuer mehr haelt.
+ */
+function blaettertOhneOrdnung(k) {
+  if (k.istStorage || k.schreibt) return false;
+  return k.blaettert && !k.sortiert;
 }
 
 /* ══════════════════════════════════════════════════════════════════════
@@ -347,7 +377,12 @@ const KONTROLLE_FINDET = `
 `;
 const KONTROLLE_SCHWEIGT = `
   const a = await sb.from("personen").select("*").limit(10);
-  const b = await sb.from("personen").select("*").range(0, 999);
+  /* ⚠ MIT order() — seit dem 24.09.2026. Ohne sie waere die Kette ein
+     Befund des ZWEITEN Typs (blaettert ohne Ordnung), und diese Liste
+     ist die, in der NICHTS gefunden werden darf.
+     ⚠ Keine Backticks in diesem Kommentar: er steht INNERHALB eines
+     Template-Literals und wuerde es zerreissen. */
+  const b = await sb.from("personen").select("*").order("id").range(0, 999);
   const c = await sb.from("personen").select("id", { count: "exact", head: true });
   const d = await sb.from("personen").select("*").maybeSingle();
   const e = await sb.storage.from("mitglieder-fotos").list();
@@ -356,10 +391,26 @@ const KONTROLLE_SCHWEIGT = `
   const h = await sb.from("spiel_aufstellung").select("*").eq("spiel_id", s);
 `;
 
+/* ⚠ Die Positivkontrolle des ZWEITEN Befundtyps. Zwei Ketten, die
+   blaettern und nicht sortieren — die zweite mit einem Filter davor,
+   damit nicht nur die einfachste Form getroffen wird. */
+const KONTROLLE_UNSORTIERT = `
+  const a = await sb.from("personen").select("*").range(0, 999);
+  const b = await sb.from("spiele").select("*").eq("verein_id", v).range(0, 99);
+`;
+
 function befunde(quellen) {
   const raus = [];
   for (const [datei, text] of quellen) for (const k of ketten(datei, text)) {
     if (istBefund(k)) raus.push(k);
+  }
+  return raus;
+}
+
+function unsortierte(quellen) {
+  const raus = [];
+  for (const [datei, text] of quellen) for (const k of ketten(datei, text)) {
+    if (blaettertOhneOrdnung(k)) raus.push(k);
   }
   return raus;
 }
@@ -382,6 +433,16 @@ if (schweigt.length !== 0) {
   process.exit(1);
 }
 
+/* ⚠ Der zweite Befundtyp bekommt seine EIGENE Positivkontrolle. Eine
+   Regel, die nie rot war, ist keine Regel, sondern eine Behauptung — und
+   das gilt fuer jede einzeln, nicht fuer die Datei als ganze. */
+const unsortiertProbe = unsortierte([["kontrolle-unsortiert.ts", KONTROLLE_UNSORTIERT]]);
+if (unsortiertProbe.length !== 2) {
+  console.error("check-paging: ⚠ Die Sortier-Pruefung greift nicht in ihrer eigenen "
+    + `Positivkontrolle (${unsortiertProbe.length} statt 2).`);
+  process.exit(1);
+}
+
 /* ── Der Durchgang ─────────────────────────────────────────────────── */
 const quellen = [];
 for (const o of ORDNER) for (const d of dateien(o)) quellen.push([d, readFileSync(d, "utf8")]);
@@ -389,6 +450,7 @@ for (const o of ORDNER) for (const d of dateien(o)) quellen.push([d, readFileSyn
 const alle = quellen.flatMap(([d, t]) => ketten(d, t));
 const lesen = alle.filter((k) => !k.schreibt && !k.istStorage);
 const funde = befunde(quellen);
+const ohneOrdnung = unsortierte(quellen);
 
 /* `--liste` zeigt ALLE Lesestellen, auch die erlaubten — fuer den
    naechsten Durchgang, wenn eine Tabelle doch zu wachsen beginnt. */
@@ -439,9 +501,40 @@ if (funde.length) {
   process.exit(1);
 }
 
+/* ══════════════════════════════════════════════════════════════════════
+   DER ZWEITE BEFUND: blaettert, ohne zu sortieren
+
+   ⚠ Eine eigene Ausgabe und kein Anhaengsel an die erste. Die beiden
+   verlangen GEGENTEILIGES vom Leser: dort fehlt die Begrenzung, hier
+   fehlt die Ordnung — und wer sie zusammenfasst, liest die falsche
+   Reparatur ab.
+   ══════════════════════════════════════════════════════════════════════ */
+if (ohneOrdnung.length) {
+  console.error(`
+check-paging: ${ohneOrdnung.length} Lesestelle(n) blaettern, ohne zu sortieren
+`);
+  for (const k of ohneOrdnung) {
+    console.error(`  · ${k.datei}:${k.zeile}  ${k.tabelle}  ${k.kette}`);
+  }
+  console.error(`
+⚠ Eine range()-Kette ohne order() ist nicht gepagt, sondern zufaellig.`);
+  console.error(`  Postgres darf zwei Seiten verschieden anordnen, wenn nichts die`);
+  console.error(`  Reihenfolge festlegt — dann fehlt eine Zeile und eine andere kommt`);
+  console.error(`  doppelt. Der Fehler haengt an der Ausfuehrungsreihenfolge, tritt`);
+  console.error(`  also sporadisch auf und wird nicht gesucht.
+`);
+  console.error(`  ⚠ UND DER SCHLUESSEL MUSS EINDEUTIG SEIN. Diese Pruefung sieht das`);
+  console.error(`    NICHT — order("nachname") sieht hier aus wie order("id"). Wo die`);
+  console.error(`    fachliche Ordnung nicht eindeutig ist, gehoert der Primaerschluessel`);
+  console.error(`    als zweite Ebene dazu: .order("nachname").order("id")
+`);
+  process.exit(1);
+}
+
 console.log(`check-paging: ${lesen.length} Lesestellen ueber ${tabellen.size} Tabellen `
   + `geprueft — keine ungepagte`);
-console.log(`              auf einer Tabelle, die wachsen kann.`);
+console.log(`              auf einer Tabelle, die wachsen kann, und keine, die`);
+console.log(`              blaettert ohne zu sortieren.`);
 console.log(`              ⚠ Das heisst: der Code pagt oder filtert. NICHT: die Tabelle`);
 console.log(`                ist klein — das weiss nur die Datenbank (Teil B, im`);
 console.log(`                Sync-Waechter).`);

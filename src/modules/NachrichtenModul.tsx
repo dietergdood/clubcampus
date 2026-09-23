@@ -7,6 +7,7 @@ import type { CSSProperties } from "react";
 import { FONT, ACCENT, ACCENT2, R } from "../constants.ts";
 import { TI } from "../icons.tsx";
 import { ModalOrSheet, ModalTitle, useIsMobile, Btn } from "../theme.ts";
+import { alleSeiten } from "../domains/db/alleSeiten.ts";
 import type { Sb } from "../types.ts";
 
 const S_LABEL: CSSProperties={fontSize:12,fontWeight:600,color:"var(--sub)",display:"block",marginBottom:6,textTransform:"uppercase",letterSpacing:0.5};
@@ -65,6 +66,11 @@ function NachrichtenModul({sb,role,account,dbTeams=[],gruppen=[],teamFilter=null
   const [antworten,setAntworten]=useState<Antwort[]>([]);
   const [dateien,setDateien]=useState<Datei[]>([]);
   const [loading,setLoading]=useState(true);
+  /* ⚠ EIGENER ZUSTAND. Ein Ladefehler darf nicht als „Keine Nachrichten"
+     erscheinen — das waere eine Auskunft ueber den Posteingang statt einer
+     ueber die Leitung dorthin, und genau diese Ununterscheidbarkeit ist der
+     Grund fuer das Pagen. */
+  const [ladefehler,setLadefehler]=useState<string|null>(null);
   const [antwortText,setAntwortText]=useState("");
   const [sending,setSending]=useState(false);
   const [showNeu,setShowNeu]=useState(false);
@@ -98,13 +104,45 @@ function NachrichtenModul({sb,role,account,dbTeams=[],gruppen=[],teamFilter=null
     if(!sb){setLoading(false);return;}
     setLoading(true);
     try{
-      let q=sb.from("nachrichten").select("*").order("erstellt_am",{ascending:false});
-      if(teamFilter) q=q.eq("empfaenger_team",teamFilter);
-      const{data}=await q;
-      if(data) setNachrichten(data);
+      /* ⚠ ⚠  SEITENWEISE SEIT DEM 23.09.2026 — Vorsorge, aber mit der
+         kuerzesten Zuendschnur von allen hier: `nachrichten` waechst mit
+         jeder Mitteilung, die jemand schreibt, und nichts raeumt sie auf.
+         Es ist eine reine Frage der Zeit, nicht der Datenlage.
+
+         ⚠ `order("erstellt_am")` ist NICHT eindeutig — zwei Mitteilungen
+         derselben Sekunde gibt es, sobald jemand einen Serienversand
+         ausloest. `id` als zweite Ebene macht die Ordnung total; ohne sie
+         verschwaende an der Seitengrenze eine Mitteilung, waehrend eine
+         andere doppelt erschiene.
+
+         ⚠ OFFEN, und hier absichtlich NICHT miterledigt: die Liste holt
+         ALLE Mitteilungen und zeigt sie ungekuerzt. Richtig waere ein
+         Ausschnitt mit „aeltere laden" — aber das ist eine Aenderung an
+         der Bedienung und gehoert in einen eigenen Schritt. Bis dahin ist
+         gepagt besser als gekuerzt: langsam ist sichtbar, unvollstaendig
+         nicht. */
+      const data=await alleSeiten<Nachricht>(
+        (von,bis)=>{
+          const q=sb.from("nachrichten").select("*")
+            .order("erstellt_am",{ascending:false}).order("id").range(von,bis);
+          return teamFilter?q.eq("empfaenger_team",teamFilter):q;
+        },
+        ()=>{
+          const q=sb.from("nachrichten").select("id",{count:"exact",head:true});
+          return teamFilter?q.eq("empfaenger_team",teamFilter):q;
+        },
+        "Nachrichten",
+      );
+      setNachrichten(data);setLadefehler(null);
       const{data:gel}=await sb.from("nachrichten_gelesen").select("nachricht_id").eq("user_id",account?.id||"");
       if(gel){const g: Record<string, boolean>={};gel.forEach(r=>{g[r.nachricht_id]=true;});setUngelesen(g);}
-    }catch(e){console.warn(e);}
+    }catch(e){
+      /* ⚠ Die bisherige Liste bleibt stehen, statt auf `[]` zu fallen.
+         Eine geleerte Liste behauptete etwas; eine stehengebliebene mit
+         einem roten Satz darueber sagt, was los ist. */
+      console.warn(e);
+      setLadefehler(e instanceof Error?e.message:String(e));
+    }
     setLoading(false);
   }
 
@@ -335,6 +373,16 @@ function NachrichtenModul({sb,role,account,dbTeams=[],gruppen=[],teamFilter=null
         <div style={{flex:1,overflowY:"auto"}}>
           {loading?(
             <div style={{padding:40,textAlign:"center",color:"var(--sub)",fontSize:14}}>Wird geladen…</div>
+          ):ladefehler?(
+            /* ⚠ ⚠  VOR DER LEERMELDUNG, UND ZWINGEND. Schlaegt das Laden
+               fehl, ist die Liste leer — und „Keine Nachrichten" darunter
+               waere die Falschaussage, gegen die das Pagen gebaut ist:
+               eine leere Liste sieht aus wie eine vollstaendige. */
+            <div style={{padding:40,textAlign:"center",fontSize:14,color:"var(--danger, #c00)"}}>
+              Die Nachrichten konnten nicht vollständig geladen werden: {ladefehler}
+              {" "}— es wird nichts angezeigt, weil eine unvollständige Liste
+              aussieht wie eine vollständige.
+            </div>
           ):filtered.length===0?(
             <div style={{padding:40,textAlign:"center"}}>
               <div style={{width:48,height:48,borderRadius:14,background:"var(--surface2)",display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 12px"}}>

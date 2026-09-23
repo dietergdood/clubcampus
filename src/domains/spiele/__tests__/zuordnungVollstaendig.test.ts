@@ -166,6 +166,18 @@ describe("⚠ Kein Kaderfilter — die bestellte Zusage", () => {
    Deshalb wird gefragt, was DASTEHT: jede `range()`-Kette trägt ein
    `order()`. Das ist am Syntaxbaum entscheidbar und altert nicht mit
    einer erfundenen Datenlage.
+
+   ⚠ **Der umfassende Ort dafür ist `check:paging`**, seit dem
+   24.09.2026 — es prüft alle 237 Lesestellen über 45 Tabellen und läuft
+   in der Prüfkette. Dieser Fall hier sieht nur zwei Dateien und bleibt
+   trotzdem stehen: er steht dort, wo der Zusammenhang erklärt ist, und
+   trägt nichts nach, was das Skript nicht auch fände.
+
+   ⚠ ⚠  UND BEIDE SEHEN NICHT, OB DER SCHLÜSSEL EINDEUTIG IST.
+   `order("nachname")` sieht für den Syntaxbaum aus wie `order("id")` —
+   das weiss nur das Schema. Dieser Verein hat nachweislich zwei Adrian
+   Schmid; wo die fachliche Ordnung nicht eindeutig ist, gehört der
+   Primärschlüssel als zweite Ebene dazu.
    ══════════════════════════════════════════════════════════════════════ */
 
 describe("⚠ jede gepagte Abfrage sortiert", () => {

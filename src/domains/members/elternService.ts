@@ -237,9 +237,46 @@ export async function fetchAlleElternkontakte(sb: SbClient, vereinId: string) {
      `benutzer_id` bleibt daneben stehen: es wird fuer AKTIONEN gebraucht
      (entkoppleKind setzt die Benutzerrolle), und wer die ausfuehren darf,
      sieht die Tabelle ohnehin. */
-  const { data: zugaenge } = await sb.from("portal_zugang").select("person_id, hat_zugang");
+  /* ⚠ ⚠  SEITENWEISE SEIT DEM 23.09.2026 — Vorsorge, und die Sicht waechst
+     mit `benutzer`: heute fuenf Zeilen, nach dem Ausrollen ueber 900.
+
+     ⚠ ⚠  UND HIER IST EIN BEFUND, DER NICHT IM CODE ZU BEHEBEN IST:
+     `portal_zugang` hat KEINEN eindeutigen Schluessel. Die Sicht liefert
+     genau zwei Spalten (`person_id`, `hat_zugang`), und `benutzer.person_id`
+     traegt nur einen gewoehnlichen Index — **kein UNIQUE**. Zwei Konten
+     derselben Person sind damit erlaubt, und die Sicht gaebe sie zweimal
+     aus.
+
+     Gepagt wird deshalb ueber BEIDE Spalten. Das ist kein Ersatz fuer einen
+     Schluessel, sondern das Beste, was ohne einen geht — und es genuegt
+     hier aus einem nachpruefbaren Grund: die Sortierung umfasst ALLE
+     gelesenen Spalten. Zwei Zeilen, die gleich sortieren, sind damit
+     zeichengleich, und eine an der Seitengrenze vertauschte Kopie aendert
+     die gebaute Karte nicht. Ein Sortierschluessel, der die Zeile nicht
+     vollstaendig beschreibt, koennte das nicht zusagen.
+
+     ⚠ Waechst die Sicht je um eine Spalte, faellt diese Zusage — dann
+     braucht `benutzer` ein UNIQUE auf `person_id`, und das ist ohnehin
+     die richtige Reparatur. */
+  /* ⚠ DER WURF WIRD GEBUNDEN UND ZU `null`, NICHT ZU EINER LEEREN KARTE.
+     Eine leere Karte hiesse „niemand hat einen Zugang" — und die Spalte
+     zeigte fuer ALLE „Kein Zugang", ohne dass etwas fehlschlaegt. Genau
+     der Defekt, gegen den die Sicht ueberhaupt gebaut wurde, nur diesmal
+     aus einer Kuerzung statt aus einer Policy. */
+  let zugaenge: { person_id: string; hat_zugang: boolean | null }[];
+  try {
+    zugaenge = await alleSeiten<{ person_id: string; hat_zugang: boolean | null }>(
+      (von, bis) => sb.from("portal_zugang").select("person_id, hat_zugang")
+        .order("person_id").order("hat_zugang").range(von, bis),
+      () => sb.from("portal_zugang").select("person_id", { count: "exact", head: true }),
+      "Portal-Zugang",
+    );
+  } catch (e) {
+    console.error("fetchAlleElternkontakte (portal_zugang) error:", e);
+    return null;
+  }
   const zugangMap = new Map<string, boolean>(
-    (zugaenge || []).map(z => [z.person_id as string, z.hat_zugang !== false]),
+    zugaenge.map(z => [z.person_id, z.hat_zugang !== false]),
   );
 
   /* ⚠ Die ARTEN in EINER Abfrage, nicht eine je Zeile — bei 395 Personen
@@ -361,6 +398,12 @@ export async function fetchKinderVollstaendigFuerElternteil(
    vorhandene Kinder: wer heute Aktivmitglied ist und morgen als Vater
    eines Juniors dazukommt, ist dieselbe Person und soll gefunden werden.
    Genau dafuer wurden die Personen in Etappe 2a zusammengefuehrt. */
+/** Wie viele Treffer eine Personensuche hoechstens zeigt. Eine Zahl, kein
+    Gefuehl — und sie steht als Konstante da, damit sie in der Kette und in
+    einer spaeteren Meldung („mehr als 20 Treffer, bitte praeziser") NICHT
+    zweimal geschrieben werden muss. */
+const SUCHE_HOECHSTENS = 20;
+
 export async function sucheElternkontakte(
   sb: SbClient,
   vereinId: string,
@@ -378,16 +421,30 @@ export async function sucheElternkontakte(
      innerhalb eines Aufrufs gilt ODER. */
   const woerter = q.split(/\s+/).filter(Boolean).slice(0, 4);
 
+  /* ⚠ ⚠  `.limit()` STEHT AM ANFANG DER KETTE, NICHT AM ENDE — und das ist
+     kein Geschmack, sondern die Bedingung dafuer, dass `check:paging` diese
+     Stelle sehen kann. Die Pruefung liest den Syntaxbaum und damit, was
+     DASTEHT: eine Kette, die ueber eine Variable fortgesetzt wird
+     (`abfrage = abfrage.or(…)`), zerfaellt fuer sie in zwei Stuecke, und
+     das erste traegt keinen Begrenzer. Sie meldete diese Zeile deshalb als
+     ungepagt, obwohl die Abfrage seit jeher begrenzt ist.
+
+     ⚠ Der Fehlalarm ist die eigentliche Gefahr: ein Melder, der grundlos
+     anschlaegt, wird nach dem dritten Mal abgeschaltet — und dann fehlt
+     auch die Meldung, die er haette sein koennen.
+
+     Eine Suche wird bewusst NICHT gepagt: sie soll die ersten Treffer
+     zeigen, nicht alle. Wer mehr braucht, tippt weiter. */
   let abfrage = sb.from("personen")
     .select("id, vorname, nachname, email, eltern_kinder(mitglied_id, beziehung, mitglieder:mitglied_id(id, personen(vorname, nachname)))")
-    .eq("verein_id", vereinId);
+    .eq("verein_id", vereinId)
+    .limit(SUCHE_HOECHSTENS);
   for (const w of woerter) {
     abfrage = abfrage.or(`vorname.ilike.%${w}%,nachname.ilike.%${w}%,email.ilike.%${w}%`);
   }
 
   const { data, error } = await abfrage
-    .order("nachname", { ascending: true })
-    .limit(20);
+    .order("nachname", { ascending: true });
   if (error) console.error("sucheElternkontakte error:", error);
 
   /* Zwei Ausschluesse, und nur diese zwei:

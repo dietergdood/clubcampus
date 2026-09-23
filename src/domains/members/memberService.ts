@@ -4,6 +4,7 @@
    Kader, Benutzer (Portal-Zugang), Ansichten
    ═══════════════════════════════════════════════════════════════ */
 import type { PostgrestError } from "@supabase/supabase-js";
+import { alleSeiten } from "../db/alleSeiten.ts";
 import { flacheZeile, flacheZeilen, verteileFelder, updatePerson } from "../person/personService.ts";
 import type { Ansicht, AnsichtSortDef, MitgliedInsert, MitgliedUpdate, SbClient, TablesInsert, TablesUpdate } from "../../types.ts";
 
@@ -388,10 +389,33 @@ export interface ArchivZeile {
  * dieses Projekt schon mehrfach Stunden gekostet hat.
  */
 export async function fetchArchiv(sb: SbClient): Promise<ArchivZeile[] | null> {
-  const { data, error } = await sb.from("personen")
-    .select("id,vorname,nachname,offene_punkte,mitglieder(id,mitgliedtyp,aktiv,deaktiviert_am,deaktiviert_von)")
-    .not("offene_punkte", "is", null)
-    .order("nachname", { ascending: true });
+  /* ⚠ ⚠  SEITENWEISE SEIT DEM 23.09.2026 — und hier ist es die Tabelle,
+     die bereits nah an der Grenze steht: `personen` hatte am 23.08.2026
+     912 Zeilen. `offene_punkte` begrenzt heute (nur Ausgetretene tragen
+     einen Vermerk) und waechst mit jedem Jahrgang, der geht — das Archiv
+     ist die Liste, die NUR waechst.
+
+     ⚠ `order("nachname")` ist die ANZEIGE-Ordnung und NICHT eindeutig:
+     dieser Verein hat nachweislich zwei Personen namens Adrian Schmid
+     (gemessen 23.08.2026). Deshalb `id` als zweite Ebene — ohne eine
+     eindeutige Ordnung darf Postgres zwei Seiten verschieden anordnen,
+     und an der Grenze faellt eine Zeile heraus, waehrend eine andere
+     doppelt kommt. */
+  let data: ArchivRoh[] | null = null;
+  let error: unknown = null;
+  try {
+    data = await alleSeiten<ArchivRoh>(
+      (von, bis) => sb.from("personen")
+        .select("id,vorname,nachname,offene_punkte,mitglieder(id,mitgliedtyp,aktiv,deaktiviert_am,deaktiviert_von)")
+        .not("offene_punkte", "is", null)
+        .order("nachname", { ascending: true }).order("id").range(von, bis),
+      () => sb.from("personen").select("id", { count: "exact", head: true })
+        .not("offene_punkte", "is", null),
+      "Archiv",
+    );
+  } catch (e) {
+    error = e;
+  }
 
   /* ⚠ `null` BEI EINEM LESEFEHLER, NICHT `[]`. Der Unterschied ist der ganze
      Punkt: `[]` heisst „nachgesehen, nichts da", `null` heisst „nicht
@@ -436,6 +460,19 @@ export async function fetchArchiv(sb: SbClient): Promise<ArchivZeile[] | null> {
       deaktiviert_von: beendet ? (beendet.deaktiviert_von ?? null) : null,
     };
   });
+}
+
+/** Die ROHE Zeile aus `fetchArchiv` — vor dem Zusammenfalten auf
+    `ArchivZeile`. Sie steht hier als eigener Typ, weil `alleSeiten()` die
+    Zeilen durch ein Generic reicht und damit die Inferenz aus dem
+    select-String verliert; ein `any` naehme dem Compiler zusaetzlich die
+    Pruefung der Verwendung, und der Preis waere doppelt. */
+interface ArchivRoh {
+  id: string;
+  vorname: string | null;
+  nachname: string | null;
+  offene_punkte: string | null;
+  mitglieder: MitgliedRoh[] | null;
 }
 
 /** Die eingebettete Mitgliedschaftszeile aus `fetchArchiv`. */

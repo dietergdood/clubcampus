@@ -54,6 +54,7 @@ import { laufeSync, bildeSpiel } from "./sync.ts";
 import { schneideAufFeldhoheit } from "../../../src/domains/sfv/feldhoheit.ts";
 import { fuersProtokoll, fuerZeitplanAntwort, namenFuersProtokoll } from "./ergebnisTypen.ts";
 import { laufeNamen } from "./namenLauf.ts";
+import { alleSeiten } from "../../../src/domains/db/alleSeiten.ts";
 import { protokoll, protokollFehler } from "./protokoll.ts";
 
 const corsHeaders = {
@@ -849,10 +850,36 @@ Deno.serve(async (req) => {
          ausgetragen" und meldete jede Mannschaft als nachhinkend — ein
          Fehlalarm, der wie ein Befund aussieht. Genau so ist am 10.09.2026
          die Teamprobe danebengegangen. */
-      const { data: gespielt, error: sFehler } = await db.from("spiele")
-        .select("sfv_team_id, sfv_status")
-        .eq("verein_id", v.verein_id).eq("sfv_spiel_typ", 1);
-      if (sFehler) return json({ fehler: `spiele nicht lesbar: ${sFehler.message}` }, 500);
+      /* ⚠ ⚠  SEITENWEISE SEIT DEM 23.09.2026. `spiele` stand am 25.08.2026
+         bei 269 Zeilen fuer eine Saison; `sfv_spiel_typ = 1` sind davon
+         234, also die grosse Mehrheit — der Filter begrenzt nicht. Bei
+         vier Saisons im Bestand kuerzt PostgREST hier still.
+
+         ⚠ Und die Kuerzung traefe genau die Zahl, um die es in dieser
+         Probe geht: `gespielt_laut_spielplan` waere dann kleiner als der
+         Spielplan — und die Probe meldete „der Verband hinkt nach", wo in
+         Wahrheit unsere Leseseite gekuerzt hat. Ein Fehlalarm, der wie ein
+         Befund aussieht, und zwar in einem Werkzeug, das einen Befund
+         aufklaeren soll. */
+      let gespielt: { sfv_team_id: number | null; sfv_status: number | null }[];
+      try {
+        gespielt = await alleSeiten<{ sfv_team_id: number | null; sfv_status: number | null }>(
+          (von, bis) => db.from("spiele")
+            .select("sfv_team_id, sfv_status")
+            .eq("verein_id", v.verein_id).eq("sfv_spiel_typ", 1)
+            .order("id").range(von, bis),
+          () => db.from("spiele").select("id", { count: "exact", head: true })
+            .eq("verein_id", v.verein_id).eq("sfv_spiel_typ", 1),
+          "Spiele",
+        );
+      } catch (e) {
+        /* ⚠ 500 STATT EINER LEEREN LISTE — derselbe Weg wie beim
+           `error`-Zweig, den das hier ersetzt. Eine leere Liste saehe aus
+           wie „keine Spiele ausgetragen" und meldete jede Mannschaft als
+           nachhinkend; genau so ist am 10.09.2026 die Teamprobe
+           danebengegangen. */
+        return json({ fehler: `spiele nicht lesbar: ${e instanceof Error ? e.message : String(e)}` }, 500);
+      }
       const gespieltJeTeam = new Map<number, number>();
       /* Dieselbe Menge, aber Status 2 UND 3 — siehe unten. */
       const mitForfaitJeTeam = new Map<number, number>();
@@ -872,7 +899,7 @@ Deno.serve(async (req) => {
          die Frage beantwortet — steht dort `{"2":2}`, fehlt uns wirklich
          ein Spiel. */
       const statusJeTeam = new Map<number, Record<string, number>>();
-      for (const g of gespielt ?? []) {
+      for (const g of gespielt) {
         const t = Number(g.sfv_team_id);
         if (!Number.isFinite(t)) continue;
         const st = String(g.sfv_status ?? "null");

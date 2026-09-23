@@ -1,6 +1,7 @@
 /* ═══════════════════════════════════════════════════════════════
    ClubCampus KaderModul — Supabase-Version
    ═══════════════════════════════════════════════════════════════ */
+import { alleSeiten } from "../domains/db/alleSeiten.ts";
 import { flacheZeile, flacheZeilen } from "../domains/person/personService.ts";
 import { useState, useEffect } from "react";
 import { BL } from "../constants.ts";
@@ -163,8 +164,30 @@ function KaderModul({role, team, sb=null, onSelectMember=null, vereinId=null}: K
     if(showAdd&&sb&&allMitglieder.length===0){
       /* Namen kommen seit Etappe 2b aus personen — direkt aus mitglieder
          gelesen wären sie der Stand vor dem Umbau. */
-      sb.from("mitglieder").select("id,mitgliedtyp,personen(vorname,nachname)").eq("aktiv",true)
-        .then(({data})=>setAllMitglieder(flacheZeilen(data as never) as never));
+      /* ⚠ ⚠  SEITENWEISE SEIT DEM 23.09.2026 — und `mitglieder` stand am
+         11.09.2026 bei 515 aktiven Zeilen, also auf halbem Weg zur Grenze.
+         `aktiv` begrenzt dabei nicht: es trifft die Mehrheit.
+
+         ⚠ Was ein Ausfall hier anrichtet: aus dieser Liste waehlt man,
+         WEN man ins Kader aufnimmt. Fehlte jemand, saehe es aus, als gebe
+         es ihn nicht — und der naechste Griff waere, ihn ein zweites Mal
+         anzulegen. Eine Kuerzung erzeugt hier also eine Dublette in den
+         Stammdaten, nicht nur eine luecke in einer Anzeige. */
+      alleSeiten<unknown>(
+        (von,bis)=>sb.from("mitglieder")
+          .select("id,mitgliedtyp,personen(vorname,nachname)")
+          .eq("aktiv",true).order("id").range(von,bis),
+        ()=>sb.from("mitglieder").select("id",{count:"exact",head:true}).eq("aktiv",true),
+        "Mitglieder",
+      ).then(
+        data=>setAllMitglieder(flacheZeilen(data as never) as never),
+        /* ⚠ NICHT `[]` setzen. Eine leere Auswahlliste hiesse „es gibt
+           niemanden mehr, den man hinzufuegen koennte" — die Falschaussage
+           von oben in ihrer schaerfsten Form. Die Liste bleibt leer, weil
+           sie es vorher war, und der Fehler steht in der Konsole; sie wird
+           beim naechsten Oeffnen erneut versucht. */
+        (e:unknown)=>console.warn("[FCH] Mitgliederauswahl nicht geladen:",e),
+      );
     }
   },[showAdd]);
 

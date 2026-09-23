@@ -410,8 +410,27 @@ export async function laufeSync(
       `Rangliste: ${e instanceof Error ? e.message : String(e)}`));
   }
 
-  /* ── Matchdaten ── */
-  if (nur !== "rangliste" && nur !== "spielplan") {
+  /* ── Matchdaten ──────────────────────────────────────────────────────
+     ⚠ ⚠  EIGENES `try`, SEIT DEM 24.09.2026 — aus demselben Grund wie
+     beim Ranglisten-Block darueber, und ausgeloest durch eine Aenderung
+     am Tag zuvor.
+
+     `laufeMatchdaten` las seine Kandidaten bis dahin mit `?? []` und
+     ohne `error`: ein Lesefehler ergab null Kandidaten, der Lauf meldete
+     „0 Spiele geholt" und lief still weiter — ein Ausfall in der
+     Verkleidung einer Datenlage. Seit der Umstellung auf `alleSeiten()`
+     WIRFT er, und das ist richtig.
+
+     ⚠ Nur haengt hinter diesem Block der Wappen-Abruf, und den geht ein
+     Matchdaten-Fehler nichts an. Ohne dieses `try` nimmt ein Wurf ihn
+     mit — genau die Bauart, die am 14.09.2026 die Rangliste vier Wuerfe
+     lang mitgerissen hat, ohne dass es jemand sah.
+
+     **Wer die Wurfwahrscheinlichkeit erhoeht, prueft die Reichweite.**
+     Der Fehler bleibt laut: gebunden, benannt, in `erg.blockfehler`, und
+     der Lauf endet auf `fehler`. Was sich nicht mehr aendert, ist, WAS
+     er mitnimmt. */
+  if (nur !== "rangliste" && nur !== "spielplan") try {
     const { data: verein } = await db
       .from("vereine").select("sfv_club_nummer").eq("id", v.verein_id).single();
 
@@ -420,11 +439,33 @@ export async function laufeSync(
       (verein?.sfv_club_nummer as number | null) ?? null,
       MATCHDATEN_PRO_LAUF,
     );
+  } catch (e) {
+    /* ⚠ GEBUNDEN UND BENANNT, nie leer — dieselbe Form wie beim
+       Ranglisten-Block. Ein leerer catch machte aus dem Ausfall eine
+       Datenlage: „0 Spiele geholt" saehe aus wie „es gab nichts zu tun". */
+    erg.blockfehler.push(schwaerze(
+      `Matchdaten: ${e instanceof Error ? e.message : String(e)}`,
+    ));
+  }
 
-    /* Wappen der Gegner: einmal holen, danach nie wieder. Kostet nach dem
-       ersten Lauf null Aufrufe — geholt wird nur, was fehlt, und was der
-       Verband nicht hat, wird erst nach dreissig Tagen neu gefragt. */
+  /* ⚠ ⚠  DIE WAPPEN STEHEN AUSSERHALB DES `try` — und das ist der ganze
+     Zweck der Trennung. Sie standen bis zum 24.09.2026 IM selben Block:
+     ein Matchdaten-Fehler nahm sie mit, obwohl er sie nichts angeht.
+
+     Wappen der Gegner: einmal holen, danach nie wieder. Kostet nach dem
+     ersten Lauf null Aufrufe — geholt wird nur, was fehlt, und was der
+     Verband nicht hat, wird erst nach dreissig Tagen neu gefragt.
+
+     ⚠ Eigenes `try`, aus demselben Grund: ein Wappen, das der Verband
+     nicht liefert, darf den Lauf nicht roeten, und ein Ausfall hier darf
+     nicht die Matchdaten-Zahlen verschlucken, die eben geschrieben
+     wurden. */
+  if (nur !== "rangliste" && nur !== "spielplan") try {
     erg.logos = await laufeLogos(db, v.verein_id, zugang, token);
+  } catch (e) {
+    erg.blockfehler.push(schwaerze(
+      `Wappen: ${e instanceof Error ? e.message : String(e)}`,
+    ));
   }
 
   const teile = [

@@ -18,6 +18,7 @@
 //     Die Feldhoheit ist mit migration_ht_resultat_sfv.sql zurueckgestellt.
 
 import type { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { alleSeiten } from "../../../src/domains/db/alleSeiten.ts";
 import { holeMatch, holeAufstellung, holeEreignisse, holeSchiedsrichter, holeTeamBild, SfvFehler } from "./sfvApi.ts";
 import type { SfvZugang } from "./sfvApi.ts";
 import { schreibeSfvPersonen } from "./sfvPersonenSchreiben.ts";
@@ -77,19 +78,39 @@ export async function laufeMatchdaten(
     throw new SfvFehler("vereine.sfv_club_nummer fehlt — ohne sie ist eigen/fremd nicht zu trennen");
   }
 
-  const { data: kandidatenRoh } = await db
-    .from("spiele")
-    .select("id,date,matchdaten_geholt_am,sfv_match_id")
-    .eq("verein_id", v.verein_id)
-    /* ⚠ Aus MATCHDATEN_STATUS, nicht als Zahl hier: die vollstaendige
-       Liste der zwoelf Status steht daneben, und wer die Auswahl aendern
-       will, sieht dort zuerst, wovon er auswaehlt. Am 11.09.2026 hat eine
-       unvollstaendige Aufzaehlung (fuenf statt zwoelf) mich glauben
-       lassen, „3 forfait" gebe es nicht. */
-    .in("sfv_status", MATCHDATEN_STATUS);
+  /* ⚠ ⚠  SEITENWEISE SEIT DEM 23.09.2026. `spiele` stand am 25.08.2026 bei
+     269 Zeilen — eine Saison. Die 1000 liegt damit bei knapp vier Saisons,
+     und `sfv_status` begrenzt nicht: die zwei geholten Status sind die
+     haeufigsten von zwoelf.
 
-  const alleKandidaten = (kandidatenRoh ?? []) as unknown as SpielKandidat[];
-  const wahl = waehleKandidaten(alleKandidaten, new Date(), hoechstens);
+     ⚠ UND DIE KUERZUNG WAERE HIER BESONDERS TUECKISCH: `waehleKandidaten()`
+     waehlt aus dieser Liste, was als naechstes geholt wird. Was gar nicht
+     erst ankommt, wird nie Kandidat — ein Spiel, das dauerhaft ausserhalb
+     der ersten 1000 liegt, bekaeme NIE Matchdaten. Das saehe aus wie „der
+     Verband fuehrt dazu nichts", und genau diese Verwechslung hat am
+     11.09.2026 eine halbe Untersuchung gekostet. */
+  const kandidatenRoh = await alleSeiten<SpielKandidat>(
+    (von, bis) => db
+      .from("spiele")
+      .select("id,date,matchdaten_geholt_am,sfv_match_id")
+      .eq("verein_id", v.verein_id)
+      /* ⚠ Aus MATCHDATEN_STATUS, nicht als Zahl hier: die vollstaendige
+         Liste der zwoelf Status steht daneben, und wer die Auswahl aendern
+         will, sieht dort zuerst, wovon er auswaehlt. Am 11.09.2026 hat eine
+         unvollstaendige Aufzaehlung (fuenf statt zwoelf) mich glauben
+         lassen, „3 forfait" gebe es nicht.
+         ⚠ UND DERSELBE FILTER STEHT IN DER ZAEHLABFRAGE. Fehlte er dort,
+         meldete die Zaehlprobe einen Verlust, den es nicht gibt — und ein
+         Melder, der grundlos anschlaegt, wird abgeschaltet. */
+      .in("sfv_status", MATCHDATEN_STATUS)
+      .order("id").range(von, bis),
+    () => db.from("spiele").select("id", { count: "exact", head: true })
+      .eq("verein_id", v.verein_id)
+      .in("sfv_status", MATCHDATEN_STATUS),
+    "Spielkandidaten",
+  );
+
+  const wahl = waehleKandidaten(kandidatenRoh, new Date(), hoechstens);
   const kandidaten = wahl.spiele;
 
   /* ⚠ ⚠  DREI ZAHLEN, DIE AUFGEHEN MUESSEN — sonst ist der Nachlauf
@@ -111,11 +132,11 @@ export async function laufeMatchdaten(
      sie um die Durchgangsdauer; waechst sie stetig, steht er. Sie wird
      ueber ALLE Kandidaten gerechnet, nicht ueber die gewaehlten — sonst
      maesse sie den Lauf statt den Rueckstand. */
-  erg.aelteste_holung_stunden = aeltesteHolungStunden(alleKandidaten, new Date());
+  erg.aelteste_holung_stunden = aeltesteHolungStunden(kandidatenRoh, new Date());
   /* Die Bezugsgroesse fuer die gerechnete Schwelle: wie viele Laeufe ein
      voller Durchgang braucht. Ohne sie muesste der Waechter eine Zahl
      raten, und eine geratene Schwelle ist nie durch einen Test gedeckt. */
-  erg.kandidaten_gesamt = alleKandidaten.length;
+  erg.kandidaten_gesamt = kandidatenRoh.length;
 
   const jetzt = new Date().toISOString();
   /* Die rohen Aufstellungen aller Spiele dieses Laufs — fuer die Paesse
@@ -601,14 +622,35 @@ async function zaehleUnzugeordnet(
      dieselbe Familie wie ein Zaehler, dessen Name mehr behauptet als er
      misst. Und er verschiebt nur um eins, was ihn schwerer auffindbar
      macht als einen groben Fehler. */
-  const { data: aufstellung } = await db
-    .from("spiel_aufstellung").select("sfv_person_id")
-    .eq("verein_id", vereinId).eq("ist_eigener", true);
-  const { data: zuordnung } = await db
-    .from("sfv_zuordnung").select("sfv_person_id").eq("verein_id", vereinId);
+  /* ⚠ ⚠  SEITENWEISE SEIT DEM 23.09.2026 — und fuer `spiel_aufstellung` ist
+     es KEINE Vorsorge, sondern eine Reparatur: 2282 Zeilen am 11.09.2026,
+     also mehr als das Doppelte der Grenze. `ist_eigener` halbiert das
+     ungefaehr und reicht nicht.
 
-  const bekannt = new Set((zuordnung ?? []).map((z) => Number(z.sfv_person_id)));
-  const alle = new Set((aufstellung ?? []).map((a) => Number(a.sfv_person_id)));
+     ⚠ Was der Fruehwarner damit gemeldet hat, war eine Zahl ueber die
+     ersten 1000 Zeilen — und der Warner misst einen ANTEIL: er soll
+     anschlagen, wenn der Verband zum 1. Juli die personId tauscht und die
+     Quote auf eine ganze Mannschaft springt. Eine Quote ueber einen
+     willkuerlichen Ausschnitt kann das nicht leisten, und sie sieht dabei
+     aus wie eine Quote ueber alles. */
+  const aufstellung = await alleSeiten<{ sfv_person_id: number }>(
+    (von, bis) => db.from("spiel_aufstellung").select("sfv_person_id")
+      .eq("verein_id", vereinId).eq("ist_eigener", true)
+      .order("id").range(von, bis),
+    () => db.from("spiel_aufstellung").select("id", { count: "exact", head: true })
+      .eq("verein_id", vereinId).eq("ist_eigener", true),
+    "Aufstellung",
+  );
+  const zuordnung = await alleSeiten<{ sfv_person_id: number }>(
+    (von, bis) => db.from("sfv_zuordnung").select("sfv_person_id")
+      .eq("verein_id", vereinId).order("id").range(von, bis),
+    () => db.from("sfv_zuordnung").select("id", { count: "exact", head: true })
+      .eq("verein_id", vereinId),
+    "Zuordnungen",
+  );
+
+  const bekannt = new Set(zuordnung.map((z) => Number(z.sfv_person_id)));
+  const alle = new Set(aufstellung.map((a) => Number(a.sfv_person_id)));
   let offen = 0;
   for (const p of alle) if (!bekannt.has(p)) offen += 1;
   return { offen, bekannt: bekannt.size };
@@ -694,14 +736,33 @@ async function schreibePaesse(
 ): Promise<{ geschrieben: number; konflikte: string[] }> {
   if (!alleRoh.length || unsere === null) return { geschrieben: 0, konflikte: [] };
 
-  const { data: zuordnungRoh, error: zuordnungErr } = await db
-    .from("sfv_zuordnung").select("sfv_person_id,mitglied_id").eq("verein_id", vereinId);
-  /* error lesen, nicht nur auf data pruefen: sb.from().select() wirft nicht.
-     Ohne das saehe ein 42501 aus wie „es gibt keine Zuordnungen". */
-  if (zuordnungErr) {
-    return { geschrieben: 0, konflikte: [`Zuordnungen nicht lesbar: ${zuordnungErr.message}`] };
+  /* ⚠ SEITENWEISE SEIT DEM 23.09.2026 — Vorsorge. `sfv_zuordnung` ist heute
+     leer und waechst auf ueber 300 zu, sobald der Durchgang von Hand
+     laeuft. Ein Spieler, der aus einer gekuerzten Liste fiele, bekaeme
+     seinen Spielerpass nie abgeschrieben — und das saehe aus wie „der
+     Verband fuehrt fuer ihn keinen Pass".
+
+     ⚠ `error` wird weiterhin gelesen, nur heisst es jetzt „wirft":
+     `alleSeiten()` unterscheidet nicht zwischen einem 42501 und einer
+     Kuerzung, und beides ist hier dasselbe — nicht gelesen. */
+  let zuordnungRoh: { sfv_person_id: number; mitglied_id: number }[];
+  try {
+    zuordnungRoh = await alleSeiten<{ sfv_person_id: number; mitglied_id: number }>(
+      (von, bis) => db.from("sfv_zuordnung").select("sfv_person_id,mitglied_id")
+        .eq("verein_id", vereinId).order("id").range(von, bis),
+      () => db.from("sfv_zuordnung").select("id", { count: "exact", head: true })
+        .eq("verein_id", vereinId),
+      "Zuordnungen",
+    );
+  } catch (e) {
+    /* ⚠ GEBUNDEN UND ALS KONFLIKT GEMELDET, nicht geworfen. Die Paesse sind
+       ein Anbau am Matchdaten-Lauf; ein Wurf naehme den ganzen Lauf mit,
+       und dann fehlten auch Aufstellung und Verlauf. Der bestehende Vertrag
+       dieser Funktion ist genau dieser: melden statt abbrechen. */
+    return { geschrieben: 0,
+      konflikte: [`Zuordnungen nicht lesbar: ${e instanceof Error ? e.message : String(e)}`] };
   }
-  if (!zuordnungRoh?.length) return { geschrieben: 0, konflikte: [] };
+  if (!zuordnungRoh.length) return { geschrieben: 0, konflikte: [] };
   const zuordnung = new Map(
     zuordnungRoh.map((z) => [Number(z.sfv_person_id), Number(z.mitglied_id)]));
 

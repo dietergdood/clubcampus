@@ -581,7 +581,15 @@ function SpielplanModul({role,team,initialSelected,sb=null,vereinId=null,kannSch
   const [sfvNamen,setSfvNamen]=useState<Map<number,string>>(new Map());
   const [gegnerWappen,setGegnerWappen]=useState<Map<number,string>>(new Map());
   useEffect(()=>{
-    fetchSfvNamen(sb,vereinId).then(setSfvNamen);
+    /* ⚠ GEBUNDEN, SEIT `fetchSfvNamen` PAGT (23.09.2026). `alleSeiten()`
+       wirft bei einer Abweichung — ohne `catch` waere das eine unbehandelte
+       Rejection, die nur in der Konsole steht.
+       Was der Nutzer dann sieht, ist derselbe Zustand wie vor jeder
+       Zuordnung: im Verlauf steht „Nr. 13" statt eines Namens. Das ist
+       keine Falschaussage, sondern weniger Auskunft — deshalb bleibt die
+       Karte stehen und es gibt keinen roten Kasten. */
+    fetchSfvNamen(sb,vereinId).then(setSfvNamen,
+      e=>console.warn("[FCH] SFV-Namen nicht geladen — Verlauf zeigt Rückennummern:",e));
     fetchGegnerWappen(sb,vereinId).then(setGegnerWappen);
   },[sb,vereinId]);
   /* Das eigene Wappen steht im Verein, nicht beim Verband. */

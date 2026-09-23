@@ -218,7 +218,22 @@ export function useAppData({ sb, slug, setAppTheme, setModuleAktiv, setModuleRec
             .eq("aktiv", true),
           "Kader",
         ).then(data => ({ data, error: null }), error => ({ data: null, error })),
-        sb.from("benutzer").select("person_id,aktiv"),
+        /* ⚠ ⚠  SEITENWEISE SEIT DEM 23.09.2026 — Vorsorge, kein behobener
+           Ausfall. `benutzer` hatte am 23.08.2026 FÜNF Zeilen; nach dem
+           Ausrollen der Konten sind es über 900, und dann steht diese
+           Abfrage unmittelbar unter der Grenze.
+
+           ⚠ Und der Ausfall wäre still und heimtückisch: aus dieser Liste
+           entsteht `hat_benutzer`. Fehlte eine Zeile, meldete die
+           Mitgliederliste „kein Portal-Zugang" für jemanden, der sich
+           anmelden kann — eine Auskunft, die falsch ist statt zu fehlen,
+           und niemand hinterfragt sie. */
+        alleSeiten(
+          (von, bis) => sb.from("benutzer").select("person_id,aktiv")
+            .order("id").range(von, bis),
+          () => sb.from("benutzer").select("id", { count: "exact", head: true }),
+          "Benutzer",
+        ).then(data => ({ data, error: null }), error => ({ data: null, error })),
       ]);
       /* ⚠ `error` LESEN, nicht nur `data`. Bis zum 11.09.2026 stand hier
          nur `mitgliederRes.data` — ein Lesefehler wäre als leere Liste
@@ -227,6 +242,12 @@ export function useAppData({ sb, slug, setAppTheme, setModuleAktiv, setModuleRec
          gekürzten Antwort, und der `catch` unten fängt beides. */
       if (mitgliederRes.error) throw mitgliederRes.error;
       if (kaderRes.error) throw kaderRes.error;
+      /* ⚠ AUCH DIESER. Bis zum 23.09.2026 fiel ein Lesefehler auf `benutzer`
+         durch das `|| []` unten — und dann trüge JEDES Mitglied
+         `hat_benutzer: false`. Das ist schlimmer als eine leere Liste: die
+         Liste erscheint vollständig und behauptet über 900 Leute etwas
+         Falsches. Lieber der Fehler-Screen als eine Auskunft ohne Deckung. */
+      if (benutzerRes.error) throw benutzerRes.error;
       const mitgliederFlach = flacheZeilen(mitgliederRes.data);
       /* ⚠ UEBER `person_id`, NICHT `mitglied_id` (F2, behoben am 22.08.2026).
          Das Konto haengt seit Etappe 4 an der PERSON. Der Schluessel hier war

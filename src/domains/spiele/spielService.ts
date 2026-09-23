@@ -4,6 +4,7 @@
    ═══════════════════════════════════════════════════════════════ */
 import type { Sb } from "../../types.ts";
 import { aktuelleSfvSaison, saisonZeitraum } from "./spielMapper.ts";
+import { alleSeiten } from "../db/alleSeiten.ts";
 import type { SpielZeile, RanglisteZeile } from "./spielMapper.ts";
 
 /** Spiele der laufenden Saison.
@@ -17,14 +18,53 @@ export async function fetchSpiele(
 ): Promise<SpielZeile[]> {
   if (!sb || !vereinId) return [];
   const { von, bis } = saisonZeitraum(aktuelleSfvSaison());
-  let frage = sb.from("spiele").select("*")
-    .eq("verein_id", vereinId)
-    .gte("date", von).lte("date", bis)
-    .order("date").order("zeit");
-  if (team) frage = frage.eq("team", team);
-  const { data, error } = await frage;
-  if (error) return [];
-  return (data ?? []) as SpielZeile[];
+  /* ⚠ ⚠  SEITENWEISE SEIT DEM 23.09.2026 — Vorsorge mit kurzem Weg zur
+     Grenze. Der Saison-Zeitraum begrenzt auf rund 270 Spiele (gemessen
+     25.08.2026); die 1000 liegt damit bei knapp vier Saisons — und sie
+     rueckt naeher, sobald die 21 Mannschaften ohne Spielplan dazukommen.
+
+     ⚠ `order("date").order("zeit")` ist die ANZEIGE-Ordnung und nicht
+     eindeutig: an einem Samstag stehen zwanzig Spiele mit derselben
+     Anstosszeit. `id` als dritte Ebene macht daraus eine totale Ordnung —
+     ohne sie darf Postgres zwei Seiten verschieden anordnen, und dann
+     faellt an der Seitengrenze ein Spiel aus dem Spielplan, waehrend ein
+     anderes doppelt darin steht. */
+  /* ⚠ DER TEAM-FILTER KOMMT ZULETZT, und zwar auf beiden Seiten gleich.
+     Die supabase-Kette ist reihenfolgeunabhaengig — `.eq()` haengt einen
+     Suchparameter an, `.range()` setzt einen anderen. Was der Filter
+     einschraenkt, schraenkt er in der Seiten- UND in der Zaehlabfrage ein;
+     genau das verlangt `alleSeiten()`, und ein hier vergessener Filter
+     machte aus der Zaehlprobe einen Fehlalarm. */
+  try {
+    return await alleSeiten<SpielZeile>(
+      (a, b) => {
+        const q = sb.from("spiele").select("*")
+          .eq("verein_id", vereinId)
+          .gte("date", von).lte("date", bis)
+          .order("date").order("zeit").order("id").range(a, b);
+        return team ? q.eq("team", team) : q;
+      },
+      () => {
+        const q = sb.from("spiele").select("id", { count: "exact", head: true })
+          .eq("verein_id", vereinId)
+          .gte("date", von).lte("date", bis);
+        return team ? q.eq("team", team) : q;
+      },
+      "Spiele",
+    );
+  } catch (e) {
+    /* ⚠ `[]` IST HIER DER BESTEHENDE VERTRAG, und er bleibt — die Funktion
+       gab schon vorher bei einem Fehler eine leere Liste zurueck.
+       Was der Nutzer sieht, ist ein leerer Spielplan; `useSpiele` zeigt
+       daneben „Lädt…" nicht mehr an. Das ist ehrlicher als eine gekuerzte
+       Liste, aber nicht ehrlich: es sieht aus wie „keine Spiele".
+       ⚠ OFFEN und ausdruecklich hier vermerkt statt stillschweigend
+       hingenommen: `useSpiele` braucht einen Fehlerzustand, damit der
+       Spielplan sagen kann, dass er nicht gelesen wurde. Das ist eine
+       Aenderung an der Oberflaeche und gehoert in einen eigenen Schritt. */
+    console.error("fetchSpiele error:", e);
+    return [];
+  }
 }
 
 /** Alle Ranglistenzeilen der laufenden Saison — 232 bei FCH, also nichts.

@@ -211,12 +211,35 @@ export async function fetchSupporter(
 
   let mitArt = new Set<string>();
   if (austrittArtId) {
-    const { data: zuw, error: zFehler } = await sb.from("personenart_pro_person")
-      .select("person_id").eq("verein_id", vereinId).eq("art_id", austrittArtId);
-    /* error lesen: ohne das saehe ein 42501 aus wie „niemand traegt die Art",
-       und die Ausgetretenen verschwaenden lautlos aus der Liste. */
-    if (zFehler) console.error("fetchSupporter (arten) error:", zFehler);
-    mitArt = new Set((zuw || []).map(z => z.person_id as string));
+    /* ⚠ ⚠  SEITENWEISE SEIT DEM 23.09.2026 — Vorsorge. `art_id` begrenzt
+       NICHT: die Austritts-Art traegt jeder Ausgetretene, und das ist bei
+       914 Personen ueber die Jahre die grosse Menge, nicht die kleine.
+
+       ⚠ Und es ist die Liste, die bei einer Kuerzung SCHWEIGT statt zu
+       fehlen: wer aus der gekuerzten Menge fiele, stuende nicht unter den
+       Supportern — also dort, wo man ihn sucht, wenn man ihn vermisst. Der
+       Tab rendert bei 0 gar nicht; ein ganzer Bereich der Oberflaeche kann
+       so verschwinden. */
+    let zuw: { person_id: string }[];
+    try {
+      zuw = await alleSeiten<{ person_id: string }>(
+        (von, bis) => sb.from("personenart_pro_person").select("person_id")
+          .eq("verein_id", vereinId).eq("art_id", austrittArtId)
+          .order("id").range(von, bis),
+        () => sb.from("personenart_pro_person")
+          .select("id", { count: "exact", head: true })
+          .eq("verein_id", vereinId).eq("art_id", austrittArtId),
+        "Personenarten",
+      );
+    } catch (e) {
+      /* ⚠ `null`, NICHT eine Liste ohne die Ausgetretenen. Die Arten
+         entscheiden, WER in dieser Liste steht — eine unvollstaendige
+         Antwort ergaebe eine plausible Supporter-Liste, in der Leute
+         fehlen, und die sieht aus wie eine vollstaendige. */
+      console.error("fetchSupporter (arten) error:", e);
+      return null;
+    }
+    mitArt = new Set(zuw.map(z => z.person_id));
   }
 
   /* ⚠ Die ARTEN in EINER Abfrage — dieselbe Quelle wie der Chip im Profil.
@@ -738,6 +761,9 @@ export interface SucheErgebnis {
   verfuegbar: boolean;
 }
 
+/** Wie viele Treffer eine Personensuche hoechstens zeigt. */
+const SUCHE_HOECHSTENS = 20;
+
 export async function suchePersonen(
   sb: SbClient | null | undefined, vereinId: string | null | undefined, query: string,
 ): Promise<SucheErgebnis> {
@@ -753,15 +779,28 @@ export async function suchePersonen(
   if (q.length < 2) return { treffer: [], verfuegbar: true };
 
   const woerter = q.split(/\s+/).filter(Boolean).slice(0, 4);
+  /* ⚠ ⚠  `.limit()` GEHOERT AN DEN ANFANG DER KETTE. Die Abfrage war seit
+     jeher auf 20 begrenzt — nur stand der Begrenzer HINTER der Variablen,
+     und damit sieht ihn `check:paging` nicht: es liest den Syntaxbaum, und
+     der zerfaellt bei `abfrage = abfrage.or(…)` in zwei Stuecke.
+
+     Die Pruefung meldete diese Zeile deshalb als ungepagt. **Ein
+     Fehlalarm ist hier das Teuerste, was passieren kann** — nach dem
+     dritten schaltet jemand den Melder ab, und dann fehlt auch die
+     Meldung, die er haette sein koennen.
+
+     Eine Suche wird bewusst NICHT gepagt: sie zeigt die ersten Treffer,
+     nicht alle. Wer mehr braucht, tippt weiter. */
   let abfrage = sb.from("personen")
     .select("id, vorname, nachname, email, mitglieder(id, aktiv, mitgliedtyp), eltern_kinder(mitglied_id)")
-    .eq("verein_id", vereinId);
+    .eq("verein_id", vereinId)
+    .limit(SUCHE_HOECHSTENS);
   /* Mehrere .or()-Aufrufe verknüpft PostgREST mit UND, innerhalb eines mit ODER. */
   for (const w of woerter) {
     abfrage = abfrage.or(`vorname.ilike.%${w}%,nachname.ilike.%${w}%,email.ilike.%${w}%`);
   }
 
-  const { data, error } = await abfrage.order("nachname", { ascending: true }).limit(20);
+  const { data, error } = await abfrage.order("nachname", { ascending: true });
   /* Ein Datenbankfehler ist ebenfalls „konnte nicht suchen" und nicht
      „nichts gefunden" — sb.from().select() wirft nicht, es liefert error. */
   if (error) { console.error("suchePersonen error:", error); return { treffer: [], verfuegbar: false }; }

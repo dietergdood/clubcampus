@@ -215,9 +215,25 @@ export async function fetchSfvNamen(sb: Sb, vereinId: string | null): Promise<Ma
   const raus = new Map<number, string>();
   if (!sb || !vereinId) return raus;
 
-  const { data: zuordnung } = await sb.from("sfv_zuordnung")
-    .select("sfv_person_id, mitglied_id").eq("verein_id", vereinId);
-  if (!zuordnung?.length) return raus;
+  /* ⚠ ⚠  GEPAGT, SEIT DEM 23.09.2026. `sfv_zuordnung` ist heute leer und
+     waechst auf 308 offene Spieler zu — noch weit unter der Grenze, und
+     genau deshalb steht sie hier: **eine stille Grenze ist eine Bombe mit
+     Wasserstand, nicht mit Zuender.** Wer die Zuordnung von Hand
+     abarbeitet, giesst hinein.
+
+     ⚠ Und der Ausfall waere hier nicht zu sehen: fehlen Zeilen, stehen im
+     Spielbericht ein paar Spieler als „Nr. 13" — also genau so, wie ein
+     noch nicht zugeordneter Spieler aussieht. Ein Ausfall in der
+     Verkleidung einer Datenlage. */
+  const zuordnung = await alleSeiten<{ sfv_person_id: number; mitglied_id: number }>(
+    (von, bis) => sb.from("sfv_zuordnung")
+      .select("sfv_person_id, mitglied_id").eq("verein_id", vereinId)
+      .order("id").range(von, bis),
+    () => sb.from("sfv_zuordnung").select("id", { count: "exact", head: true })
+      .eq("verein_id", vereinId),
+    "Zuordnungen",
+  );
+  if (!zuordnung.length) return raus;
 
   const { data: mitglieder } = await sb.from("mitglieder")
     .select("id, personen(vorname, nachname)")

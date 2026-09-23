@@ -19,6 +19,7 @@ import type { BenutzerZeile, BenutzerFunktion } from "./portal/UsersTab.tsx";
 import { MitgliederKonfigTab } from "./portal/MitgliederKonfigTab.tsx";
 import type { MitgliedtypZeile, MitgliedtypFormular } from "./portal/MitgliederKonfigTab.tsx";
 import { fetchFeldkonfig } from "../domains/members/feldkonfigService.ts";
+import { alleSeiten } from "../domains/db/alleSeiten.ts";
 import type { FeldkonfigZeile } from "../domains/members/feldkonfig.ts";
 import { RollenTab } from "./portal/RollenTab.tsx";
 import type { RollenFormular } from "./portal/RollenTab.tsx";
@@ -370,7 +371,29 @@ function PortalverwaltungView(props: PortalverwaltungViewProps){
                las ein Feld, das nie geladen wurde, und stand daher immer
                auf "Aktiv". Die App pflegt aktiv (siehe updatePortalZugang),
                die gleichnamige Spalte active ist Altlast. */
-            supabase.from("benutzer").select("id,name,email,role,aktiv,ist_admin").order("name"),
+            /* ⚠ ⚠  SEITENWEISE SEIT DEM 23.09.2026 — Vorsorge. Heute fünf
+               Konten, nach dem Ausrollen über 900, und dann kürzt PostgREST
+               bei 1000 STILL: `error` bleibt null, `data` hat genau 1000.
+               Im Benutzer-Tab sähe das aus wie eine vollständige Liste, in
+               der ein paar Konten schlicht nicht vorkommen — und wer sein
+               Konto dort sucht, würde es anlegen statt reparieren.
+
+               ⚠ `order("name")` ist die ANZEIGE-Ordnung und NICHT eindeutig
+               (Namensgleiche gibt es in diesem Verein nachweislich — zwei
+               Adrian Schmid, gemessen 23.08.2026). Deshalb `id` als zweite
+               Ebene: ohne sie darf Postgres zwei Seiten verschieden
+               anordnen, und an der Grenze fehlt eine Zeile, während eine
+               andere doppelt kommt. */
+            alleSeiten<BenutzerZeile>(
+              (von,bis)=>supabase.from("benutzer").select("id,name,email,role,aktiv,ist_admin")
+                .order("name").order("id").range(von,bis),
+              ()=>supabase.from("benutzer").select("id",{count:"exact",head:true}),
+              "Benutzer",
+            ).then(
+              data=>({data:data as BenutzerZeile[]|null,error:null as {message:string}|null}),
+              (e:unknown)=>({data:null as BenutzerZeile[]|null,
+                error:{message:e instanceof Error?e.message:String(e)}}),
+            ),
             supabase.from("portal_gruppen").select("*").order("name"),
             supabase.from("portal_funktionen").select("*, portal_gruppen(name,farbe,module,modul_stufen), stufe_override").order("name"),
             supabase.from("module_config").select("*"),
@@ -383,8 +406,34 @@ function PortalverwaltungView(props: PortalverwaltungViewProps){
           if(zielR.data) setZielLogs(zielR.data as unknown as SyncLogZeile[]);
           if(benuR.data&&benuR.data.length>0){
             /* Funktionen separat laden */
-            const{data:bfData}=await supabase.from("benutzer_funktionen")
-              .select("benutzer_id, portal_funktionen(id,name,portal_gruppen(name,farbe))");
+            /* ⚠ ⚠  SEITENWEISE SEIT DEM 23.09.2026 — Vorsorge, und hier ist
+               es ein KREUZPRODUKT: Konto x Amt. Bei 900 Konten genügen
+               anderthalb Ämter im Schnitt, um die 1000 zu reissen, und
+               dann fehlten einzelnen Leuten ihre Funktionen in der Liste —
+               was aussieht, als hätte sie jemand nicht eingetragen.
+
+               ⚠ `benutzer_funktionen` hat KEINE `id`. Der Primärschlüssel
+               ist `(benutzer_id, funktion_id)`, also wird über beide
+               sortiert: eine Ebene allein wäre nicht eindeutig, und ohne
+               eindeutige Ordnung darf Postgres zwei Seiten verschieden
+               anordnen. */
+            const bfData=await alleSeiten<{benutzer_id:string;portal_funktionen:BenutzerFunktion|null}>(
+              (von,bis)=>supabase.from("benutzer_funktionen")
+                .select("benutzer_id, portal_funktionen(id,name,portal_gruppen(name,farbe))")
+                .order("benutzer_id").order("funktion_id").range(von,bis),
+              ()=>supabase.from("benutzer_funktionen")
+                .select("benutzer_id",{count:"exact",head:true}),
+              "Benutzer-Funktionen",
+            ).catch((e:unknown)=>{
+              /* ⚠ Gebunden, nicht geschluckt: ohne `catch` risse der Wurf
+                 den ganzen Ladeblock ab, und die Portalverwaltung bliebe
+                 leer — also viel mehr, als der Fehler betrifft. Mit `null`
+                 bleibt die Benutzerliste stehen, nur ohne Funktionsspalte.
+                 ⚠ NICHT `[]`: das hiesse „nachgesehen, niemand hat ein
+                 Amt", und das ist eine Behauptung statt einer Lücke. */
+              console.warn("[FCH] benutzer_funktionen laden:",e);
+              return null;
+            });
             const bfMap: Record<string, BenutzerFunktion[]>={};
             (bfData||[]).forEach(bf=>{
               if(!bfMap[bf.benutzer_id]) bfMap[bf.benutzer_id]=[];

@@ -1501,18 +1501,39 @@ async function holeKandidaten(
      Mitgliedschaft → Zuordnung. */
   const zuordnung = new Map<string, number>();
   {
-    const zRes = await db.from("sfv_zuordnung")
-      .select("sfv_person_id, mitglieder!inner(person_id)")
-      .eq("verein_id", vereinId);
-    /* ⚠ `error` lesen, nicht nur `data`: eine gescheiterte Abfrage saehe
-       sonst aus wie „es gibt keine Zuordnung" — also genau wie der
-       Zustand, den sie beheben soll. Aus einem Ausfall wuerde eine
-       Datenlage. */
-    if (zRes.error) {
-      throw new Error(`SFV-Zuordnung nicht lesbar: ${meldung(zRes.error)}`);
-    }
-    for (const z of (zRes.data ?? []) as unknown as
-         { sfv_person_id: number; mitglieder: { person_id: string } | null }[]) {
+    /* ⚠ ⚠  SEITENWEISE SEIT DEM 23.09.2026 — Vorsorge. `sfv_zuordnung` ist
+       heute leer und waechst auf ueber 300 zu; `verein_id` begrenzt bei
+       einem Mandanten auf 100 %.
+
+       ⚠ EINE KUERZUNG WAERE HIER NICHT ZU SEHEN: fehlte eine Zeile, ginge
+       die Person ohne `sfv_person_id` hinaus — und das sieht auf der
+       Gegenseite genauso aus wie „diese Person hat keine Verbandsnummer".
+       Die Bruecke, die es seit dem 13.09.2026 ueberhaupt gibt, waere dann
+       wieder zur Haelfte still.
+
+       ⚠ DER `!inner`-EMBED GEHOERT IN DIE ZAEHLABFRAGE. Ohne ihn zaehlte
+       sie auch Zuordnungen auf geloeschte Mitgliedschaften und meldete
+       einen Verlust, den es nicht gibt — derselbe Fehlgriff wie bei den
+       Kandidaten weiter oben, und der hat dort die ganze Vorschau
+       abgerissen.
+
+       ⚠ `alleSeiten()` WIRFT statt `error` zu liefern. Der Wurf bleibt
+       ungefangen und ist hier richtig: er trifft dieselbe Stelle wie der
+       `throw` davor, und der Aufrufer gibt daraus einen Fehler an die
+       Kachel zurueck. Eine gekuerzte Zuordnung waere ein Ausfall in der
+       Verkleidung einer Datenlage. */
+    const zZeilen = await alleSeiten<{ sfv_person_id: number; mitglieder: { person_id: string } | null }>(
+      1,
+      (von, bis) => db.from("sfv_zuordnung")
+        .select("sfv_person_id, mitglieder!inner(person_id)")
+        .eq("verein_id", vereinId).order("id").range(von, bis),
+      () => db.from("sfv_zuordnung")
+        .select("sfv_person_id, mitglieder!inner(person_id)",
+          { count: "exact", head: true })
+        .eq("verein_id", vereinId),
+      "SFV-Zuordnung",
+    );
+    for (const z of zZeilen) {
       const pid = z.mitglieder?.person_id;
       /* ⚠ Die ERSTE gewinnt, und das ist eine Entscheidung: zwei Nummern
          fuer eine Person waeren ein Widerspruch in der Zuordnung, kein

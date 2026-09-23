@@ -89,10 +89,29 @@ function renderModal(props = {}) {
        `suchePersonen` prueft inzwischen selbst auf `sb.from`; die Attrappe
        liefert trotzdem eine leere Antwort, damit der Suchpfad wirklich
        durchlaeuft statt am Guard abzubiegen. */
+    /* ⚠ ⚠  `limit` IST EIN KETTENGLIED, KEIN ABSCHLUSS — und diese Attrappe
+       behauptete bis zum 23.09.2026 das Gegenteil.
+
+       In supabase-js gibt `limit()` wie jeder Filter `this` zurueck; was
+       die Kette beendet, ist das `await` — der Builder ist selbst
+       thenable. Die Attrappe modellierte `limit` als letztes Glied, weil
+       es im damaligen Aufruf zufaellig das letzte WAR.
+
+       Aufgefallen ist es, als `suchePersonen()` den Begrenzer an den
+       Anfang der Kette zog (damit `check:paging` ihn sieht): danach lief
+       `.or()` auf ein Promise, und der Fehler kam als „Unhandled
+       Rejection" NACH dem Testfall — also gruen im Bericht.
+
+       ⚠ Das ist genau die Familie „eine Attrappe kennt kein Schema": sie
+       prueft dann etwas anderes als das, was laeuft. Deshalb bildet sie
+       jetzt die Form nach statt eine Reihenfolge: jedes Glied gibt `this`,
+       und `then` schliesst ab. */
     sb: { from: () => ({
       select: function(){ return this; }, eq: function(){ return this; },
       or: function(){ return this; }, order: function(){ return this; },
-      limit: () => Promise.resolve({ data: [], error: null }),
+      limit: function(){ return this; }, range: function(){ return this; },
+      not: function(){ return this; },
+      then: (aufloesen) => Promise.resolve({ data: [], error: null }).then(aufloesen),
     }) },
     dbMitgliedtypen: DB_MITGLIEDTYPEN,
     dbPortalRollen: DB_PORTAL_ROLLEN,
