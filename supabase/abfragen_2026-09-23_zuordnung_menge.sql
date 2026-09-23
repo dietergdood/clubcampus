@@ -88,3 +88,56 @@ select count(*) as offen_erwartet
           where z.sfv_person_id = a.sfv_person_id
             and z.verein_id = a.verein_id)
   ) q;
+
+
+-- ═══════════════════════════════════════════════════════════════════════════
+-- ⚠ ⚠  WAS NOCH NICHT ERKLAERT IST: DAS FEHLEN IM EXPORT
+--
+-- Fuer die ZUORDNUNGSLISTE ist die Ursache belegt: `spiel_aufstellung` hat
+-- ueber 2282 Zeilen, die Abfrage las ungepagt, PostgREST kuerzt bei 1000.
+--
+-- ⚠ Fuer den EXPORT gilt das so NICHT. Dort haengt der Name an
+-- `sfv_personen`, und die Tabelle stand am 29.08.2026 bei 308 Eintraegen —
+-- also UNTER der Grenze. Die Paginierung dort ist Vorsorge, nicht die
+-- nachgewiesene Ursache.
+--
+-- Und `baueAufstellung()` laesst keine Zeile fallen: fehlt der Name in der
+-- Karte, greift `?? z.name` aus `spiel_aufstellung` — und der ist gefuellt.
+-- Die vier muessten also im Export mit Namen stehen.
+--
+-- **Diese drei Abfragen sagen, woran es wirklich liegt.**
+-- ═══════════════════════════════════════════════════════════════════════════
+
+
+-- ─── 5) Stehen die vier in sfv_personen? ───────────────────────────────────
+-- ⚠ Stehen sie da, kam der Name im Export an, und das Fehlen hat eine
+--    ANDERE Ursache — dann ist zuerst zu klaeren, WO genau sie fehlen:
+--    in der Spielaufstellung auf der Spielseite, auf einer Spielerseite,
+--    oder in einer Statistik.
+select p.sfv_person_id, p.name, p.sfv_team_id, p.rueckennr,
+       p.erstmals_gesehen at time zone 'Europe/Zurich' as erstmals
+  from public.sfv_personen p
+ where p.sfv_person_id in (1132270, 1352416, 1230939, 1143744)
+ order by p.sfv_person_id;
+
+
+-- ─── 6) Wie gross ist sfv_personen wirklich? ───────────────────────────────
+-- Ueber 1000 hiesse: die Namenskarte im Export war sehr wohl gekuerzt, und
+-- die Paginierung von heute ist die Reparatur und nicht Vorsorge.
+select count(*) as eintraege,
+       case when count(*) > 1000
+            then 'ueber der Grenze — die Karte WAR gekuerzt'
+            else 'unter der Grenze — die Karte war vollstaendig' end as lage
+  from public.sfv_personen;
+
+
+-- ─── 7) Und dasselbe fuer die Tabelle, die der Namenslauf liest ────────────
+-- ⚠ `namenLauf.ts:87` las `spiel_aufstellung` ungepagt, um die Spiele mit
+--    offenen Spielern zu waehlen. Ueber 1000 Zeilen fielen Spiele aus
+--    dieser Auswahl — und deren Spieler bekamen nie einen Namen geholt.
+--    Das ist der Weg, ueber den der Export DOCH betroffen sein kann.
+select count(*) as zeilen_gesamt,
+       count(*) filter (where ist_eigener) as eigen,
+       count(distinct sfv_person_id) filter (where ist_eigener) as eigene_personen,
+       (select count(*) from public.sfv_personen) as davon_mit_namen
+  from public.spiel_aufstellung;
