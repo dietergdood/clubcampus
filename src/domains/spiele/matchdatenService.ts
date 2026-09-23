@@ -6,6 +6,7 @@
    ═══════════════════════════════════════════════════════════════ */
 import type { Sb } from "../../types.ts";
 import type { AufstellungZeile, EreignisZeile } from "./matchdatenAnzeige.ts";
+import { alleSeiten } from "../db/alleSeiten.ts";
 
 export interface AufstellungMitZeit extends AufstellungZeile {
   position_name: string | null;
@@ -27,12 +28,41 @@ export async function fetchSpielMatchdaten(sb: Sb, spielId: string) {
   };
 }
 
-/** Alle Aufstellungszeilen des Vereins — Grundlage für Warteschlange
-    und Statistik. */
+/**
+ * Alle Aufstellungszeilen des Vereins — Grundlage für Warteschlange
+ * und Statistik.
+ *
+ * ⚠ ⚠  SIE LAS BIS ZUM 23.09.2026 UNGEPAGT, UND DAS HAT VIER
+ * SPIELERINNEN VERSCHLUCKT.
+ *
+ * `spiel_aufstellung` stand am 11.09.2026 bei 2282 Zeilen und ist
+ * seither um die Gegnerzeilen gewachsen. PostgREST gibt höchstens 1000
+ * heraus, **ohne das zu melden**: `error` bleibt `null`, `data` hat
+ * genau 1000 Einträge.
+ *
+ * ⚠ Und ohne `order()` ist NICHT DEFINIERT, welche 1000 kommen. Genau
+ * daran ist es aufgefallen: von sechzehn Spielerinnen eines Spiels
+ * kamen zwölf an und vier nicht — sie waren nicht gefiltert, sie sind
+ * nie im Browser angekommen. Ein Fehler, der von der
+ * Ausführungsreihenfolge abhängt, lässt sich nicht reproduzieren und
+ * wird deshalb nicht gesucht.
+ *
+ * ⚠ `alleSeiten()` WIRFT bei einer Abweichung, statt still zu kürzen.
+ * Das ist die ganze Absicht: eine unvollständige Liste sieht aus wie
+ * eine vollständige. Der Aufrufer fängt es und zeigt es an.
+ */
 export async function fetchAlleAufstellungen(sb: Sb, vereinId: string | null) {
   if (!sb || !vereinId) return [];
-  const { data } = await sb.from("spiel_aufstellung").select("*").eq("verein_id", vereinId);
-  return (data ?? []) as unknown as AufstellungMitZeit[];
+  return await alleSeiten<AufstellungMitZeit>(
+    (von, bis) => sb.from("spiel_aufstellung").select("*")
+      .eq("verein_id", vereinId).order("id").range(von, bis),
+    /* ⚠ Die Zählabfrage trägt JEDEN Filter der Seitenabfrage — hier nur
+       `verein_id`. Fehlt einer, meldet sie einen Verlust, den es nicht
+       gibt, und ein Melder, der grundlos anschlägt, wird abgeschaltet. */
+    () => sb.from("spiel_aufstellung").select("id", { count: "exact", head: true })
+      .eq("verein_id", vereinId),
+    "Aufstellungen",
+  );
 }
 
 export interface ZuordnungZeile {
@@ -42,10 +72,22 @@ export interface ZuordnungZeile {
   zugeordnet_am: string | null;
 }
 
+/**
+ * ⚠ Gepagt aus demselben Grund wie die Aufstellung. Sie ist heute leer
+ * und wächst mit jeder Zuordnung von Hand — bei 308 offenen Spielern
+ * also auf eine Grösse, bei der die Grenze greift. Eine Tabelle, die
+ * erst wächst, ist der Normalfall dieses Ausfalls: er tritt ein, wenn
+ * jemand etwas in Ordnung bringt.
+ */
 export async function fetchZuordnungen(sb: Sb, vereinId: string | null): Promise<ZuordnungZeile[]> {
   if (!sb || !vereinId) return [];
-  const { data } = await sb.from("sfv_zuordnung").select("*").eq("verein_id", vereinId);
-  return (data ?? []) as unknown as ZuordnungZeile[];
+  return await alleSeiten<ZuordnungZeile>(
+    (von, bis) => sb.from("sfv_zuordnung").select("*")
+      .eq("verein_id", vereinId).order("id").range(von, bis),
+    () => sb.from("sfv_zuordnung").select("id", { count: "exact", head: true })
+      .eq("verein_id", vereinId),
+    "Zuordnungen",
+  );
 }
 
 /**

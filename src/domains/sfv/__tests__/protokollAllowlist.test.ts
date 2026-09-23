@@ -18,7 +18,7 @@
 import { describe, it, expect } from "vitest";
 import {
   fuersProtokoll, fuerZeitplanAntwort, zaehleOhneZuordnung, zaehleOhneZuordnungGetrennt,
-  findeTeamsOhneSpiele, saisonWechsel, namenFuersProtokoll,
+  findeTeamsOhneSpiele, saisonWechsel, namenFuersProtokoll, aufteilungAufstellung,
 } from "../../../../supabase/functions/sfv-sync/ergebnisTypen.ts";
 import type { LaufErgebnis, NamenErgebnis }
   from "../../../../supabase/functions/sfv-sync/ergebnisTypen.ts";
@@ -40,11 +40,25 @@ const LAUF: LaufErgebnis = {
     spiele_geholt: 10, aufstellung_zeilen: 156, ereignisse_zeilen: 42,
     eigene_unzugeordnet: 177, zuordnungen_gesamt: 0,
     namen_geschrieben: 42,
-    aufstellung_fremd: 11, gegner_doppel: 0, paesse_geschrieben: 0,
-    /* ⚠ Die Aufteilung geht auf: 156 + 11 + 2 + 0 + 0 = 169. Sie ist
-       hier mit Absicht STIMMIG gesetzt — ein Testwert, der nicht aufgeht,
-       macht aus der Selbstprobe eine Behauptung. */
-    aufstellung_geliefert: 169, eigen_ohne_person: 2, fremd_ohne_nummer: 0,
+    aufstellung_fremd: 11, gegner_doppel: 0, eigen_doppel: 0, paesse_geschrieben: 0,
+    /* ⚠ ⚠  BERICHTIGT AM 23.09.2026 — UND DIESE ZEILEN SIND DER BELEG
+       FUER EINEN ZWEI WOCHEN ALTEN FEHLER.
+
+       Hier stand `aufstellung_geliefert: 169` mit dem Kommentar „die
+       Aufteilung geht auf: 156 + 11 + 2 + 0 + 0 = 169“. Sie ging auf —
+       gegen die FALSCHE Formel. `fremd_unveraendert: 11` steht zwei
+       Zeilen tiefer und wurde nicht mitgezaehlt.
+
+       **Der Testfall hat damit die falsche Formel zementiert.** Er war
+       gruen, waehrend die Aufteilung in JEDEM echten Lauf nicht aufging
+       (25 von 25 gemessen) — weil die Attrappe zu ihr passte. Genau die
+       Familie „eine Attrappe, die die Form abschreibt, prueft die
+       Abschrift“, und die Regel darueber: ein Test, der den Ist-Zustand
+       festhaelt, obwohl der falsch ist, faellt ausgerechnet dann um, wenn
+       jemand ihn behebt.
+
+       Jetzt: 156 + 11 + 11 + 2 + 0 + 0 + 0 = 180. */
+    aufstellung_geliefert: 180, eigen_ohne_person: 2, fremd_ohne_nummer: 0,
     verband_hat_korrigiert: 5, fremd_unveraendert: 11,
     verlauf_unveraendert: 22,
     kandidaten_neu: 0, kandidaten_fenster: 8, kandidaten_alt: 2,
@@ -65,8 +79,9 @@ describe("fuersProtokoll", () => {
     const md = fuersProtokoll(LAUF).matchdaten as Record<string, unknown>;
     expect(Object.keys(md).sort()).toEqual([
       "aelteste_holung_stunden",
+      "aufstellung_aufteilung_stimmt",
       "aufstellung_fremd", "aufstellung_geliefert", "aufstellung_zeilen",
-      "eigen_ohne_person", "eigene_unzugeordnet", "ereignisse_zeilen",
+      "eigen_doppel", "eigen_ohne_person", "eigene_unzugeordnet", "ereignisse_zeilen",
       "fehler", "fehlermeldungen", "fremd_ohne_nummer", "fremd_unveraendert",
       "gegner_doppel", "halbzeit",
       "kandidaten_alt", "kandidaten_fenster", "kandidaten_gesamt", "kandidaten_neu",
@@ -86,10 +101,23 @@ describe("fuersProtokoll", () => {
 
        Gehen die Zahlen auseinander, misst eine der Stellen etwas anderes
        als die andere. Eine einzelne Zahl kann das nicht melden. */
-    const md = fuersProtokoll(LAUF).matchdaten as Record<string, number>;
-    const summe = md.aufstellung_zeilen + md.aufstellung_fremd
-      + md.eigen_ohne_person + md.fremd_ohne_nummer + md.gegner_doppel;
-    expect(summe).toBe(md.aufstellung_geliefert);
+    /* ⚠ ⚠  DIE FUNKTION, NICHT DIE FORMEL ABGESCHRIEBEN — und genau
+       daran ist es gescheitert. Hier stand die Summe als Ausdruck, ohne
+       `fremd_unveraendert`. Eine abgeschriebene Formel prueft die
+       Abschrift; sie kann nicht auffallen, wenn das Original sich
+       aendert.
+
+       `aufteilungAufstellung()` ist dieselbe Rechnung, die auch ins
+       Protokoll geht. Weicht sie ab, ist dieser Fall rot. */
+    const md = fuersProtokoll(LAUF).matchdaten as Record<string, unknown>;
+    const a = aufteilungAufstellung(md);
+    expect(
+      a.stimmt,
+      `geliefert ${a.geliefert}, Summe ${a.summe}, Differenz ${a.fehlend}`,
+    ).toBe(true);
+    /* ⚠ Und die Zahl, die im Protokoll steht, muss dieselbe sein — sonst
+       rechnet die Antwort etwas anderes als dieser Fall. */
+    expect(md.aufstellung_aufteilung_stimmt).toBe(true);
   });
 
   it("behaelt die Zahlen, die das Protokoll braucht", () => {

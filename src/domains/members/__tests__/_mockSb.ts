@@ -111,6 +111,29 @@ export function makeSb(results: Record<string, OpResult | OpResult[]> = {}): Moc
         erg.count = Array.isArray(erg.data) ? erg.data.length : 0;
         erg.data = null;
       }
+
+      /* ⚠ ⚠  `range()` SCHNEIDET — seit dem 23.09.2026.
+
+         Bis dahin wurde es nur aufgezeichnet und nicht angewendet: die
+         Attrappe gab auf JEDE Seite dieselbe volle Liste zurueck. Damit
+         lief `alleSeiten()` gegen sie in die Seitengrenze und summierte
+         200 Seiten à n Zeilen — **Paginierung war mit dieser Attrappe
+         schlicht nicht pruefbar.**
+
+         ⚠ Und das ist nicht bloss unbequem, sondern dieselbe Familie wie
+         der `count`-Vorgabewert darueber: **eine Attrappe, die einen Teil
+         der Abfrage ignoriert, prueft etwas anderes als das, was laeuft.**
+         Hier in der lauten Richtung. Die stille waere gewesen, dass ein
+         Test die Paginierung fuer geprueft haelt, weil er gruen ist.
+
+         Gemessen hat es der Ausfall vom 23.09.2026: vier Spielerinnen
+         fehlten, weil `spiel_aufstellung` ungepagt gelesen wurde — und
+         kein Testfall konnte das zeigen. */
+      const r = rec.filters.find((f: any) => f.method === "range");
+      if (r && Array.isArray(erg.data) && !kopf) {
+        const [von, bis] = r.args as [number, number];
+        erg.data = (erg.data as any[]).slice(von, bis + 1);
+      }
       return Promise.resolve(erg);
     };
 

@@ -48,6 +48,7 @@
 //   `POST /api/token` unser Token mitten in den Abrufen entwerten wuerde.
 //   Dagegen steht die Laufsperre in index.ts, nicht etwas hier.
 
+import { alleSeiten } from "../../../src/domains/db/alleSeiten.ts";
 import type { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { holeAufstellung, SfvFehler } from "./sfvApi.ts";
 import type { SfvZugang } from "./sfvApi.ts";
@@ -79,15 +80,28 @@ export async function laufeNamen(
     throw new SfvFehler("vereine.sfv_club_nummer fehlt — ohne sie ist eigen/fremd nicht zu trennen");
   }
 
-  const { data: zuordnungRoh, error: zErr } = await db
-    .from("sfv_zuordnung").select("sfv_person_id").eq("verein_id", v.verein_id);
-  if (zErr) throw new SfvFehler(`Zuordnungen nicht lesbar: ${zErr.message}`);
-  const zugeordnet = new Set((zuordnungRoh ?? []).map((z) => Number(z.sfv_person_id)));
+  const zuordnungRoh = await alleSeiten<{ sfv_person_id: number }>(
+    (von, bis) => db.from("sfv_zuordnung").select("sfv_person_id")
+      .eq("verein_id", v.verein_id).order("sfv_person_id").range(von, bis),
+    () => db.from("sfv_zuordnung").select("sfv_person_id", { count: "exact", head: true })
+      .eq("verein_id", v.verein_id),
+    "Zuordnungen",
+  );
+  const zugeordnet = new Set(zuordnungRoh.map((z) => Number(z.sfv_person_id)));
 
-  const { data: zeilen, error: aErr } = await db
-    .from("spiel_aufstellung")
-    .select("sfv_person_id, spiele(sfv_match_id)").eq("verein_id", v.verein_id);
-  if (aErr) throw new SfvFehler(`Aufstellung nicht lesbar: ${aErr.message}`);
+  /* ⚠ ⚠  GEPAGT seit dem 23.09.2026. Ungepagt kuerzte PostgREST bei
+     1000 Zeilen — still, und ohne `order()` in unbestimmter Reihenfolge.
+     Wer aus der gekuerzten Menge fiel, bekam nie einen Namen geholt und
+     stand danach im Export als „Nr. 13". Zweiter, unabhaengiger Ausfall
+     derselben Ursache wie in der Zuordnungsmaske. */
+  const zeilen = await alleSeiten<{ sfv_person_id: number; spiele: unknown }>(
+    (von, bis) => db.from("spiel_aufstellung")
+      .select("sfv_person_id, spiele(sfv_match_id)").eq("verein_id", v.verein_id)
+      .order("id").range(von, bis),
+    () => db.from("spiel_aufstellung").select("id", { count: "exact", head: true })
+      .eq("verein_id", v.verein_id),
+    "Aufstellung",
+  );
 
   /* Genau die Spiele, in denen ein UNZUGEORDNETER eigener Spieler vorkommt.
      Nicht alle: wer zugeordnet ist, braucht keinen Namen mehr, und jedes

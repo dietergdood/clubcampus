@@ -2014,10 +2014,21 @@ async function laufeProbe(
      Zustand, in dem der erste scharfe Lauf stattfinden wuerde. Die Zahl
      steht deshalb in der Zusammenfassung: sie ist die Antwort auf die
      Frage, ob auf der Website Klarnamen erscheinen. */
-  const zRes = await db.from("sfv_zuordnung")
-    .select("sfv_person_id, mitglieder(personen(vorname, nachname))")
-    .eq("verein_id", vereinId);
-  if (zRes.error) throw new Error(`Zuordnung nicht lesbar: ${zRes.error.message}`);
+  /* ⚠ GEPAGT seit dem 23.09.2026. Die Tabelle ist heute leer und
+     waechst mit jeder Zuordnung von Hand — bei 308 offenen Spielern also
+     auf eine Groesse, bei der die 1000er-Grenze greift. Genau dieser
+     Ausfall tritt ein, wenn jemand etwas in Ordnung bringt. */
+  const zuordnungRoh = await alleSeiten<
+    { sfv_person_id: number; mitglieder: unknown }
+  >(1,
+    (von, bis) => db.from("sfv_zuordnung")
+      .select("sfv_person_id, mitglieder(personen(vorname, nachname))")
+      .eq("verein_id", vereinId).order("sfv_person_id").range(von, bis),
+    () => db.from("sfv_zuordnung").select("sfv_person_id", { count: "exact", head: true })
+      .eq("verein_id", vereinId),
+    "Zuordnung",
+  );
+  const zRes = { data: zuordnungRoh, error: null as { message: string } | null };
 
   /* ══════════════════════════════════════════════════════════════════
      DIE RUECKFALLKETTE: zugeordnet → SFV-Name → Rueckennummer
@@ -2034,13 +2045,24 @@ async function laufeProbe(
      wie ein Erfolg der Zuordnungsarbeit, die nicht stattgefunden hat.
      ══════════════════════════════════════════════════════════════════ */
   const sfvNamen = new Map<number, string>();
-  const nRes = await db.from("sfv_personen")
-    .select("sfv_person_id, name").eq("verein_id", vereinId);
-  /* ⚠ `error` lesen, nicht nur `data`: eine gescheiterte Abfrage saehe
-     sonst aus wie „es gibt keine Namen" — und auf der Website stuende
-     ueberall „Nr. 13", ohne dass etwas fehlschlaegt. */
-  if (nRes.error) throw new Error(`SFV-Namen nicht lesbar: ${nRes.error.message}`);
-  for (const z of (nRes.data ?? []) as { sfv_person_id: number; name: string }[]) {
+  /* ⚠ ⚠  GEPAGT seit dem 23.09.2026 — und hier hing der sichtbare
+     Schaden. `sfv_personen` stand am 29.08.2026 bei 308 Eintraegen und
+     waechst mit jedem Spiel; jenseits der 1000 haetten die
+     ueberzaehligen Spieler auf der Website dauerhaft „Nr. 13" statt
+     ihres Namens getragen, **ohne dass etwas fehlschlaegt**.
+
+     ⚠ `error` wird weiterhin gelesen — `alleSeiten()` wirft bei einem
+     Lesefehler UND bei einer Zaehlprobe, die nicht aufgeht. Eine
+     gescheiterte Abfrage saehe sonst aus wie „es gibt keine Namen". */
+  const namenRoh = await alleSeiten<{ sfv_person_id: number; name: string }>(1,
+    (von, bis) => db.from("sfv_personen")
+      .select("sfv_person_id, name").eq("verein_id", vereinId)
+      .order("sfv_person_id").range(von, bis),
+    () => db.from("sfv_personen").select("sfv_person_id", { count: "exact", head: true })
+      .eq("verein_id", vereinId),
+    "SFV-Namen",
+  );
+  for (const z of namenRoh) {
     const n = String(z.name ?? "").trim();
     if (n) sfvNamen.set(Number(z.sfv_person_id), n);
   }

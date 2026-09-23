@@ -101,15 +101,34 @@ export function SfvSpielerZuordnung({ sb, vereinId, benutzerId, dbMitglieder, db
   const [zuordnungen, setZuordnungen] = useState<ZuordnungZeile[]>([]);
   const [laedt, setLaedt] = useState(true);
   const [fehler, setFehler] = useState<string | null>(null);
+  /* ⚠ EIGENER ZUSTAND, NICHT `fehler`. Der dort wird als „Nicht
+     gespeichert: …" angezeigt — ein Ladefehler darunter hiesse „Nicht
+     gespeichert: 1000 von 2400 gelesen", und das nennt das falsche Glied
+     der Kette. Zwei Aussagen, zwei Orte. */
+  const [ladefehler, setLadefehler] = useState<string | null>(null);
   const [offenesTeam, setOffenesTeam] = useState<string | null>(null);
 
   async function laden() {
     setLaedt(true);
-    const [a, z] = await Promise.all([
-      fetchAlleAufstellungen(sb, vereinId),
-      fetchZuordnungen(sb, vereinId),
-    ]);
-    setAufstellung(a); setZuordnungen(z); setLaedt(false);
+    /* ⚠ ⚠  GEBUNDEN, SEIT DIE DIENSTE PAGEN (23.09.2026).
+       `alleSeiten()` wirft, wenn die Zählprobe nicht aufgeht — statt
+       still eine gekürzte Liste zu liefern. Ohne dieses `catch` bliebe
+       `laedt` dann auf `true` und die Maske hängt: aus einem Fehler
+       würde ein Ladebalken, und das ist dieselbe Ununterscheidbarkeit
+       wie vorher, nur an anderer Stelle. */
+    try {
+      const [a, z] = await Promise.all([
+        fetchAlleAufstellungen(sb, vereinId),
+        fetchZuordnungen(sb, vereinId),
+      ]);
+      setAufstellung(a); setZuordnungen(z); setLadefehler(null);
+    } catch (e) {
+      /* ⚠ Nicht `[]` setzen. Eine leere Liste hiesse „nichts offen" —
+         genau die Falschaussage, gegen die das Pagen gebaut ist. */
+      setLadefehler(e instanceof Error ? e.message : String(e));
+    } finally {
+      setLaedt(false);
+    }
   }
   useEffect(() => { laden(); }, [vereinId]);
 
@@ -419,12 +438,28 @@ export function SfvSpielerZuordnung({ sb, vereinId, benutzerId, dbMitglieder, db
 
         {fehler && <div className="cc-text-sm cc-text-danger cc-mt-8">Nicht gespeichert: {fehler}</div>}
 
-        <div className="cc-text-sm cc-mt-8">
-          {laedt ? "Lädt…"
-            : offenGesamt === 0
-              ? `Alle zugeordnet — ${zuordnungen.length} Spieler bekannt.`
-              : `${offenGesamt} offen, ${zuordnungen.length} bereits zugeordnet.`}
-        </div>
+        {/* ⚠ ⚠  DER LADEFEHLER STEHT VOR DER ZAHL, UND ZWAR ZWINGEND.
+            Schlägt das Laden fehl, sind beide Listen leer — und die Zeile
+            darunter meldete dann „Alle zugeordnet — 0 Spieler bekannt."
+            Das ist die Falschaussage, gegen die das Pagen ueberhaupt
+            gebaut ist: eine leere Liste sieht aus wie eine vollständige.
+            Deshalb wird die Zahl bei einem Ladefehler NICHT gezeigt. */}
+        {ladefehler
+          ? (
+            <div className="cc-text-sm cc-text-danger cc-mt-8">
+              Die Liste konnte nicht vollständig geladen werden: {ladefehler}
+              {" "}— es wird nichts angezeigt, weil eine unvollständige Liste
+              aussieht wie eine vollständige.
+            </div>
+          )
+          : (
+            <div className="cc-text-sm cc-mt-8">
+              {laedt ? "Lädt…"
+                : offenGesamt === 0
+                  ? `Alle zugeordnet — ${zuordnungen.length} Spieler bekannt.`
+                  : `${offenGesamt} offen, ${zuordnungen.length} bereits zugeordnet.`}
+            </div>
+          )}
       </Card>
 
       {gruppen.map(g => {

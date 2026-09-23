@@ -65,6 +65,7 @@ export async function laufeMatchdaten(
     kandidaten_neu: 0, kandidaten_fenster: 0, kandidaten_alt: 0,
     kandidaten_gesamt: 0, aelteste_holung_stunden: null,
     eigene_unzugeordnet: 0, zuordnungen_gesamt: 0, namen_geschrieben: 0, aufstellung_fremd: 0, gegner_doppel: 0,
+    eigen_doppel: 0,
     halbzeit: { da: 0, fehlt: 0, leer: 0, ohne_halbzeit: 0 }, paesse_geschrieben: 0, pass_konflikte: [], nachzug_meldungen: 0, fehler: 0, fehlermeldungen: [],
   };
 
@@ -176,6 +177,7 @@ export async function laufeMatchdaten(
           .map((p) => bildeAufstellung(p, unsereClubNummer, v.verein_id, spiel.id, jetzt, verworfen)),
       ].filter((z): z is NonNullable<typeof z> => z !== null);
       const rohFremd = rohZeilen.filter((z) => !z.ist_eigener).length;
+      const rohEigen = rohZeilen.filter((z) => z.ist_eigener).length;
 
       erg.aufstellung_geliefert += rohAufstellung.length;
       for (const grund of verworfen) {
@@ -206,6 +208,13 @@ export async function laufeMatchdaten(
          Nummer. Das ist ein Befund ueber die QUELLE, und stillschweigend
          zu verschmelzen hiesse, ihn zuzudecken. */
       erg.gegner_doppel += rohFremd - fremdeZeilen.length;
+      /* ⚠ ⚠  DASSELBE FUER DIE EIGENE SEITE — seit dem 23.09.2026.
+         An `verschmelzeAufstellung` steht, der eigene Zweig koenne „nicht
+         mehr treffen", seit /bench ausgebaut ist. Das ist eine Zusicherung
+         ueber eine FREMDE Quelle: liefert der Verband dieselbe personId
+         zweimal, trifft er doch — und die Zeile verschwaende still.
+         Erwartung 0; jede andere Zahl ist ein Befund ueber die Quelle. */
+      erg.eigen_doppel += rohEigen - eigeneZeilen.length;
 
       if (eigeneZeilen.length) {
         const { error } = await db.from("spiel_aufstellung")

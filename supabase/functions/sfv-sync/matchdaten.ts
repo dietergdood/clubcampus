@@ -287,10 +287,17 @@ export function verschmelzeAufstellung(zeilen: AufstellungZeile[]): AufstellungZ
     if (!da) { nach.set(k, z); continue; }
 
     /* ⚠ Seit dem Ausbau von /bench gibt es nur noch EINE Quelle, und der
-       eigene Zweig kann nicht mehr treffen — er bleibt trotzdem stehen:
-       es ist die Stelle, an der eine zweite Quelle wieder andocken
-       wuerde, und sie hat einen halben Tag gefehlt. Der FREMDE Zweig
-       arbeitet weiter (siehe unten). */
+       eigene Zweig trifft deshalb VORAUSSICHTLICH nicht mehr — er bleibt
+       trotzdem stehen: es ist die Stelle, an der eine zweite Quelle wieder
+       andocken wuerde, und sie hat einen halben Tag gefehlt. Der FREMDE
+       Zweig arbeitet weiter (siehe unten).
+
+       ⚠ ⚠  HIER STAND „KANN NICHT MEHR TREFFEN", UND DAS WAR EINE
+       ZUSICHERUNG UEBER EINE FREMDE QUELLE. Liefert der Verband dieselbe
+       personId zweimal, trifft er sehr wohl — und die zweite Zeile
+       verschwaende still. Seit dem 23.09.2026 zaehlt `eigen_doppel` sie,
+       genau wie `gegner_doppel` die andere Seite. **Eine Erwartung ist
+       kein Riegel; gezaehlt ist gezaehlt.** */
     nach.set(k, da);
   }
   return [...nach.values()];

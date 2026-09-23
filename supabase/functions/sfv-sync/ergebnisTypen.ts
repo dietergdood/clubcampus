@@ -50,9 +50,22 @@ export interface MatchdatenErgebnis {
    * aber ob der Verband weniger lieferte oder `bildeAufstellung` sie
    * verwarf, war nicht zu trennen, weil das Verwerfen niemand zaehlte.
    *
-   * `geliefert = zeilen + fremd + eigen_ohne_person + fremd_ohne_nummer
-   *  + gegner_doppel` muss aufgehen. Eine Aufteilung, die aufgehen MUSS,
-   * prueft sich selbst; eine einzelne Zahl kann nur behauptet werden.
+   * ⚠ ⚠  DIE FORMEL WAR BIS ZUM 23.09.2026 FALSCH, UND ZWAR GENAU HIER.
+   * Sie lautete `zeilen + fremd + eigen_ohne_person + fremd_ohne_nummer
+   * + gegner_doppel` und liess `fremd_unveraendert` aus — also den
+   * Zaehler, der die Gegnerzeilen im NORMALFALL aufnimmt: geschrieben
+   * werden sie nur, wenn sie sich geaendert haben (matchdatenLauf.ts:274).
+   * Das ist rund die Haelfte von `geliefert`.
+   *
+   * ⚠ Sie ging damit in JEDEM Lauf nicht auf, ueber zwei Wochen, und
+   * niemand hat es gemerkt — weil sie nirgends ausgerechnet wurde. **Eine
+   * Aufteilung, die sich selbst pruefen soll, tut das nur, wenn jemand sie
+   * rechnet.** Seither tut es `aufteilungAufstellung()` unten, und ihr
+   * Ergebnis steht im Protokoll.
+   *
+   * Die Formel steht deshalb nicht mehr als Satz hier, sondern als Code
+   * dort: ein Kommentar kann veralten, eine Funktion mit einem Fall
+   * daneben nicht.
    */
   aufstellung_geliefert: number;
   /** Eigene Spieler, die der Verband ohne `personId` schickt. Sie werden
@@ -132,6 +145,23 @@ export interface MatchdatenErgebnis {
       und keine Eigenschaft unserer Kette. Sie wird gezaehlt, damit das
       Verschmelzen sie nicht zudeckt. */
   gegner_doppel: number;
+  /**
+   * EIGENE Zeilen, die sich dieselbe `sfv_person_id` teilten und
+   * verschmolzen wurden.
+   *
+   * ⚠ ⚠  ER ENTSTAND AM 23.09.2026, WEIL DIE AUFTEILUNG IHN BRAUCHT —
+   * nicht, weil der Fall aufgetreten waere. An `verschmelzeAufstellung`
+   * steht: *„Seit dem Ausbau von /bench gibt es nur noch EINE Quelle, und
+   * der eigene Zweig kann nicht mehr treffen"*. Das ist eine Zusicherung
+   * ueber eine FREMDE Quelle — liefert der Verband dieselbe Person
+   * zweimal, trifft er doch, und die Zeile verschwaende **still**.
+   *
+   * ⚠ Erwartung 0. Jede andere Zahl ist ein Befund ueber die QUELLE,
+   * genau wie bei `gegner_doppel` — und ohne diesen Zaehler waere sie
+   * nur daran zu erkennen, dass die Aufteilung nicht aufgeht, ohne zu
+   * sagen warum.
+   */
+  eigen_doppel: number;
   /**
    * Der Halbzeitstand, in VIER Zustaenden statt zwei.
    *
@@ -475,6 +505,11 @@ export function fuersProtokoll(erg: LaufErgebnis): Record<string, unknown> {
       kandidaten_gesamt: md.kandidaten_gesamt,
       aelteste_holung_stunden: md.aelteste_holung_stunden,
       gegner_doppel: md.gegner_doppel,
+      eigen_doppel: md.eigen_doppel,
+      /* ⚠ Das Ergebnis der Aufteilung, nicht nur ihre Summanden. Ohne
+         diese Zeile muesste sie jeder Leser selbst ausrechnen — und genau
+         das hat zwei Wochen lang niemand getan. */
+      aufstellung_aufteilung_stimmt: aufteilungAufstellung(md).stimmt,
       halbzeit: md.halbzeit,
       paesse_geschrieben: md.paesse_geschrieben,
       pass_konflikte: md.pass_konflikte,
@@ -565,4 +600,105 @@ export function namenFuersProtokoll(erg: NamenErgebnis): Record<string, unknown>
     fehler: erg.fehler,
     jahrgang_unlesbar: erg.jahrgang_unlesbar,
   };
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   DIE AUFTEILUNG DER AUFSTELLUNG
+
+   ⚠ ⚠  WARUM ALS FUNKTION UND NICHT ALS KOMMENTAR — das ist der ganze
+   Grund, aus dem es sie gibt.
+
+   Die Formel stand bis zum 23.09.2026 als Satz an `aufstellung_geliefert`
+   und war falsch: `fremd_unveraendert` fehlte darin, also rund die Hälfte
+   der gelieferten Zeilen. Sie ging in JEDEM Lauf nicht auf, über zwei
+   Wochen — und niemand hat es gemerkt, weil **sie nirgends ausgerechnet
+   wurde**. Aufgefallen ist es erst, als jemand sie von Hand in eine
+   SQL-Abfrage schrieb.
+
+   > Eine Aufteilung, die sich selbst prüfen soll, tut das nur, wenn
+   > jemand sie rechnet.
+
+   Dieselbe Familie wie „ein Kommentar, der eine ANDERE Stelle zusichert":
+   die Formel stand hier, gezählt wurde in `matchdatenLauf.ts`, und nichts
+   hielt die beiden gegeneinander. Jetzt schon — über `aufteilung.test.ts`.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/** Was von einer gelieferten Aufstellungszeile werden kann. */
+export interface Aufteilung {
+  /** Was der Verband roh geliefert hat. */
+  geliefert: number;
+  /** Was unsere Zähler zusammen ausmachen. */
+  summe: number;
+  /** ⚠ Die eigentliche Aussage. */
+  stimmt: boolean;
+  /**
+   * `geliefert - summe`. Positiv heisst: Zeilen sind verschwunden, ohne
+   * dass ein Zähler sie aufgenommen hat.
+   *
+   * ⚠ Negativ heisst etwas ANDERES und ist kein kleinerer Fehler: dann
+   * zählt ein Zähler doppelt. Beides als eine Zahl auszugeben wäre
+   * bequem und falsch — deshalb steht das Vorzeichen hier und wird
+   * nirgends in einen Betrag gefaltet.
+   */
+  fehlend: number;
+}
+
+/**
+ * Die Summanden, einzeln benannt.
+ *
+ * ⚠ Eine Allowlist, kein `Object.values()`: was hier nicht steht, zählt
+ * nicht mit — und ein neues Feld am Ergebnis reist damit nicht
+ * stillschweigend in die Rechnung. Wer einen Zähler ergänzt, der Zeilen
+ * aufnimmt, trägt ihn hier ein; wer es vergisst, bekommt ein `stimmt:
+ * false` und kein falsches `true`.
+ */
+const SUMMANDEN = [
+  /* Geschrieben. */
+  "aufstellung_zeilen",
+  "aufstellung_fremd",
+  /* ⚠ Nicht geschrieben, weil unverändert — der Normalfall, und der
+     Zähler, der bis zum 23.09.2026 in der Formel fehlte. */
+  "fremd_unveraendert",
+  /* Verschmolzen. */
+  "gegner_doppel",
+  "eigen_doppel",
+  /* Verworfen. */
+  "eigen_ohne_person",
+  "fremd_ohne_nummer",
+] as const;
+
+/**
+ * Woraus die Aufteilung gerechnet wird.
+ *
+ * ⚠ Alles optional und `unknown`, mit Absicht: dieselbe Funktion muss
+ * ein frisches `MatchdatenErgebnis` (lauter `number`) UND eine Zeile aus
+ * `api_sync_log.details` (JSON, alles möglich) annehmen. Ein enger Typ
+ * zwänge den einen Aufrufer zu einem Cast — und ein Cast ist genau die
+ * Stelle, an der später etwas durchrutscht.
+ */
+export type AufteilungQuelle = {
+  [K in (typeof SUMMANDEN)[number] | "aufstellung_geliefert"]?: unknown;
+};
+
+/**
+ * Geht die Aufteilung auf?
+ *
+ * @param md Das Matchdaten-Ergebnis eines Laufs, oder die entsprechende
+ *           Zeile aus dem Protokoll.
+ *
+ * ⚠ Fehlt ein Feld, zählt es als 0 statt als `NaN`: ein `NaN` in einer
+ * Summe macht jede Zahl daneben unbrauchbar, und die Antwort wäre dann
+ * „stimmt nicht" aus dem falschen Grund.
+ */
+export function aufteilungAufstellung(
+  md: AufteilungQuelle,
+): Aufteilung {
+  const zahl = (x: unknown): number => {
+    const n = Number(x);
+    return Number.isFinite(n) ? n : 0;
+  };
+  const geliefert = zahl(md.aufstellung_geliefert);
+  let summe = 0;
+  for (const k of SUMMANDEN) summe += zahl(md[k]);
+  return { geliefert, summe, stimmt: summe === geliefert, fehlend: geliefert - summe };
 }
