@@ -89,7 +89,7 @@ import { baueGruppen, wiegeGruppen, beurteileBestand } from "../../../src/domain
 import type { RanglisteZeile, WpRangGruppe } from "../../../src/domains/spiele/wpRangliste.ts";
 import {
   WAPPEN_PRO_PAKET, leseWappenBestand, waehleWappen, bildePakete, nachBase64,
-  fasseWappenAntworten,
+  fasseWappenAntworten, pruefeWappen,
 } from "../../../src/domains/spiele/wpWappen.ts";
 import type { WappenZeile, WappenNutzlast, WappenAntwort } from "../../../src/domains/spiele/wpWappen.ts";
 import { protokoll, protokollFehler, schwaerze } from "../sfv-sync/protokoll.ts";
@@ -284,6 +284,27 @@ async function alleSeiten<T>(
  *    Die Frage ist deshalb nicht „habe ich index.ts angefasst?", sondern
  *    **„antwortet sie jetzt anders?"**.
  *
+ *    59  23.09.2026  WAPPEN, ZWEITE HAELFTE: was die Gegenstelle gar
+ *                    nicht annimmt, geht nicht mehr hinaus. Geprueft
+ *                    wird vor dem Versand, mit Teamnummer und Grund je
+ *                    Fall.
+ *                    ⚠ ⚠  DER HAEUFIGE FALL IST GIF, NICHT SVG. Ihr
+ *                    Vertrag nennt png, jpeg, webp; `erkenneBild()` in
+ *                    sfv-sync/logos.ts schreibt vier Typen, und der
+ *                    vierte ist `image/gif`. migration_sfv_logos.sql
+ *                    haelt als Messung vom 20.08.2026 fest: **das Wappen
+ *                    des FCH selbst ist ein GIF.** Wie viele der
+ *                    abgelegten Wappen es trifft, ist UNGEMESSEN — der
+ *                    erste Lauf sagt es, Team fuer Team.
+ *                    ⚠ SVG kann heute gar nicht vorkommen:
+ *                    `erkenneBild()` hat keinen Zweig dafuer, ein
+ *                    unerkanntes Bild wird nicht abgelegt. Der Riegel
+ *                    steht als Vorsorge, nicht als Beobachtung.
+ *                    ⚠ `abgelehnt` ist eine EIGENE Liste neben
+ *                    `nicht_ladbar`: ein Ladefehler ist ein Ausfall, eine
+ *                    Ablehnung eine Entscheidung. Beide immer da, auch
+ *                    leer — „geprueft, nichts abgewiesen" und „nicht
+ *                    geprueft" duerfen nicht gleich aussehen.
  *    58  23.09.2026  WAPPEN: die Antwort traegt `wappen`, und der Export
  *                    schickt die Bilder aus dem Bucket an die Mediathek —
  *                    Pakete zu 20, `sfv_team_id` als Text, `daten` als
@@ -361,7 +382,7 @@ async function alleSeiten<T>(
  *    46  12.09.2026  Durchreiche von personen/teams/unterfelder/
  *                    geschwister, nichtDurchgereicht(), diese Angabe
  */
-const FUNCTION_FASSUNG = 58;
+const FUNCTION_FASSUNG = 59;
 
 const AKTIONEN = ["probe", "export", "bestand", "status", "ranglisten"];
 
@@ -1122,7 +1143,8 @@ async function sendeWappen(db: DbLeser & DbSpeicher, vereinId: string) {
   if (wahl.uebersprungen !== null) {
     return {
       ...grund, gesendet: false, uebersprungen: wahl.uebersprungen,
-      geladen: 0, nicht_ladbar: [] as string[], zu_senden: 0, pakete: 0,
+      geladen: 0, nicht_ladbar: [] as string[], abgelehnt: [] as string[],
+      zu_senden: 0, pakete: 0,
     };
   }
 
@@ -1132,6 +1154,14 @@ async function sendeWappen(db: DbLeser & DbSpeicher, vereinId: string) {
      wie „ein Fehler", und gesucht wuerde ueberall — hier steht die
      Teamnummer mit ihrem Grund daneben. */
   const nichtLadbar: string[] = [];
+  /* ⚠ ⚠  EINE ZWEITE LISTE, UND ZWAR MIT ABSICHT. Ein Ladefehler ist
+     ein AUSFALL, eine Ablehnung ist eine ENTSCHEIDUNG — „unter dem Pfad
+     liegt nichts" und „ein GIF nimmt die Gegenstelle nicht an" verlangen
+     Gegenteiliges vom Leser: das eine ist zu suchen, das andere ist die
+     Lage. Zusammengeworfen waere die Zahl eine Auskunft, die beides
+     bedeuten kann — genau die Ununterscheidbarkeit, die dieses Projekt
+     an einem Dutzend Stellen bezahlt hat. */
+  const abgelehnt: string[] = [];
 
   for (const z of wahl.zu_senden) {
     if (!z.mime) {
@@ -1161,6 +1191,20 @@ async function sendeWappen(db: DbLeser & DbSpeicher, vereinId: string) {
     const bytes = new Uint8Array(await (blob as Blob).arrayBuffer());
     if (!bytes.length) {
       nichtLadbar.push(`${z.sfv_team_id}: leere Datei unter ${z.pfad}`);
+      continue;
+    }
+    /* ── Nimmt die Gegenstelle das ueberhaupt an? ───────────────
+       ⚠ HIER und nicht drueben. Beides waere sichtbar — sie meldet
+       `fehler` je Eintrag —, aber der Unterschied ist, WANN man es
+       erfaehrt: hier steht die Zahl vor dem Versand in unserer eigenen
+       Antwort, drueben erst danach und nur, wenn jemand ihre Fehlerliste
+       liest.
+
+       ⚠ Gemessen wird an `bytes.length`, also am BILD — nicht am
+       base64-Text, der ein Drittel laenger ist. */
+    const urteil = pruefeWappen(z.mime, bytes.length);
+    if (!urteil.ok) {
+      abgelehnt.push(`${z.sfv_team_id}: ${urteil.grund}`);
       continue;
     }
     nutzlast.push({
@@ -1207,6 +1251,11 @@ async function sendeWappen(db: DbLeser & DbSpeicher, vereinId: string) {
     /* ⚠ Immer da, auch als leere Liste — eine nicht gestellte Frage und
        ein leerer Befund duerfen nicht gleich aussehen. */
     nicht_ladbar: nichtLadbar,
+    /* ⚠ Getrennt von `nicht_ladbar` und IMMER da, auch leer. Eine leere
+       Liste heisst „geprueft, nichts abgewiesen"; ein fehlendes Feld
+       hiesse „nicht geprueft", und die beiden duerfen nicht gleich
+       aussehen. */
+    abgelehnt,
     pakete: pakete.length,
     pakete_gescheitert: paketFehler,
     /* Was die Gegenstelle gemeldet hat. `ersetzt > 0` waere ein BEFUND:

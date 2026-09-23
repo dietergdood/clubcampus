@@ -329,3 +329,86 @@ export function fasseWappenAntworten(
     aufteilung_stimmt: angelegt + ersetzt + unveraendert + fehler === gesendet,
   };
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   WAS DIE GEGENSTELLE ÜBERHAUPT ANNIMMT
+
+   ⚠ ⚠  EINE ALLOWLIST MIT DREI EINTRÄGEN LÄSST EINEN VIERTEN NICHT
+   DURCH — und der vierte ist hier der häufige Fall, nicht der
+   Randfall.
+
+   Der Vertrag nennt `png`, `jpeg`, `webp`. Unser Bucket kennt vier
+   Typen: `sfv-sync/logos.ts` → `erkenneBild()` schreibt png, jpeg,
+   **gif** und webp, aus den Magic Bytes. Der Verband gibt durch, was
+   der Verein hochgeladen hat — und `migration_sfv_logos.sql` hält als
+   Messung vom 20.08.2026 fest: **das Wappen des FCH selbst ist ein
+   GIF.**
+
+   ⚠ Gefiltert wird deshalb HIER und nicht drüben. Beides wäre
+   sichtbar — die Gegenstelle meldet `fehler` je Eintrag —, aber der
+   Unterschied ist, WANN man es erfährt: hier steht die Zahl vor dem
+   Versand in unserer eigenen Antwort, drüben erst danach und nur,
+   wenn jemand die Fehlerliste liest.
+
+   ⚠ ⚠  `image/svg+xml` KANN HEUTE NICHT VORKOMMEN, und das gehört
+   dazu, damit niemand den Zweig für den eigentlichen Zweck hält:
+   `erkenneBild()` hat für SVG keinen Zweig, ein unerkanntes Bild
+   ergibt `null` und wird gar nicht erst abgelegt. Der Riegel steht
+   trotzdem — er kostet nichts und trägt, sobald jemand die Erkennung
+   erweitert. Er ist eine Vorsorge, keine Beobachtung.
+
+   ⚠ Und er ist eine ALLOWLIST, keine Liste verbotener Typen: ein
+   fünfter Typ, den jemand morgen in `erkenneBild()` ergänzt, fällt
+   damit auf, statt still hinauszugehen und drüben abgewiesen zu
+   werden.
+   ═══════════════════════════════════════════════════════════════ */
+
+/**
+ * Die Typen, die die Gegenstelle annimmt — ihr Vertrag, nicht unsere
+ * Wahl.
+ *
+ * ⚠ `image/gif` steht mit Absicht NICHT darin. Wer es ergänzt, ohne
+ * dass die Gegenstelle es annimmt, verschiebt die Ablehnung nur
+ * dorthin, wo sie später auffällt.
+ */
+export const ERLAUBTE_MIME: ReadonlySet<string> = new Set([
+  "image/png", "image/jpeg", "image/webp",
+]);
+
+/**
+ * Die Obergrenze der Gegenstelle, gemessen an den **dekodierten**
+ * Bytes — nicht an der Länge des base64-Textes.
+ *
+ * ⚠ Der Unterschied ist ein Drittel: base64 ist 4/3 so lang wie das
+ * Bild. Wer den Text misst, weist Bilder ab 384 KiB ab und hält das
+ * für die Grenze der Gegenstelle.
+ */
+export const WAPPEN_HOECHSTENS_BYTES = 512 * 1024;
+
+/**
+ * Darf dieses Bild hinaus?
+ *
+ * ⚠ Der Grund kommt als Satz zurück, nicht als Wahrheitswert. Eine
+ * Zahl „3 abgelehnt" schickt den Leser auf die Suche; „38301:
+ * image/gif nimmt die Gegenstelle nicht an" nennt Team und Ursache in
+ * derselben Zeile.
+ */
+export function pruefeWappen(
+  mime: string, bytes: number,
+): { ok: true } | { ok: false; grund: string } {
+  if (!ERLAUBTE_MIME.has(mime)) {
+    return {
+      ok: false,
+      grund: `${mime} nimmt die Gegenstelle nicht an `
+        + `(erlaubt: ${[...ERLAUBTE_MIME].join(", ")})`,
+    };
+  }
+  if (bytes > WAPPEN_HOECHSTENS_BYTES) {
+    return {
+      ok: false,
+      grund: `${bytes} Bytes über der Grenze von ${WAPPEN_HOECHSTENS_BYTES} `
+        + `(gemessen am Bild, nicht am base64-Text)`,
+    };
+  }
+  return { ok: true };
+}

@@ -61,6 +61,7 @@ import { describe, it, expect } from "vitest";
 import ts from "typescript";
 import {
   WAPPEN_PRO_PAKET, leseWappenBestand, waehleWappen, bildePakete,
+  pruefeWappen, ERLAUBTE_MIME, WAPPEN_HOECHSTENS_BYTES,
 } from "../wpWappen.ts";
 import type { WappenZeile } from "../wpWappen.ts";
 import {
@@ -458,5 +459,191 @@ describe("⚠ Ein Fehler beim Wappenversand nimmt Spielplan und Ranglisten nicht
     }
 
     expect(befunde).toEqual([]);
+  });
+});
+
+/* ══════════════════════════════════════════════════════════════════════
+   WAS DIE GEGENSTELLE GAR NICHT ANNIMMT
+
+   ⚠ ⚠  BESTELLT WAREN SVG UND 512 KiB. DER HÄUFIGE FALL IST WEDER DAS
+   EINE NOCH DAS ANDERE — ER IST GIF.
+
+   Der Vertrag nennt drei Typen: png, jpeg, webp. `erkenneBild()` in
+   `supabase/functions/sfv-sync/logos.ts` schreibt **vier**, und der
+   vierte ist `image/gif`. `migration_sfv_logos.sql` hält als Messung
+   vom 20.08.2026 fest: *„FC Herrliberg → R0lGODlhUABQ… → GIF89a"* —
+   das Wappen des eigenen Vereins ist ein GIF.
+
+   ⚠ Eine Allowlist mit drei Einträgen lässt einen vierten nicht durch.
+   Das ist kein Randfall, den man nebenbei mitnimmt, sondern
+   möglicherweise die Mehrheit des Bestands. **Wie viele es trifft, ist
+   ungemessen** — die Tabelle ist von hier aus nicht lesbar (RLS), und
+   der erste Lauf sagt es, Team für Team.
+
+   ⚠ ⚠  UND SVG KANN HEUTE NICHT VORKOMMEN. `erkenneBild()` hat keinen
+   Zweig dafür; ein unerkanntes Bild ergibt `null` und wird gar nicht
+   erst abgelegt. Der Fall steht hier trotzdem — aber als **Vorsorge**
+   benannt, nicht als Beobachtung. Wer ihn für den eigentlichen Zweck
+   hält, sucht beim nächsten Mal an der falschen Stelle.
+   ══════════════════════════════════════════════════════════════════ */
+
+describe("pruefeWappen — was gar nicht erst hinausgeht", () => {
+  it("⚠ image/gif wird abgewiesen — der häufige Fall, nicht SVG", () => {
+    const u = pruefeWappen("image/gif", 6859);
+    expect(u.ok).toBe(false);
+    /* ⚠ Der Grund nennt den Typ UND die erlaubten. Eine Meldung, die die
+       gültige Antwort kennt und nicht nennt, kostet eine Rückfrage. */
+    expect(u.ok === false && u.grund).toContain("image/gif");
+    expect(u.ok === false && u.grund).toContain("image/png");
+  });
+
+  it("image/svg+xml wird abgewiesen — Vorsorge, heute unerreichbar", () => {
+    expect(pruefeWappen("image/svg+xml", 1024).ok).toBe(false);
+  });
+
+  it("die drei erlaubten gehen durch", () => {
+    for (const m of ["image/png", "image/jpeg", "image/webp"]) {
+      expect(pruefeWappen(m, 6859).ok).toBe(true);
+    }
+  });
+
+  it("⚠ genau 512 KiB geht durch, ein Byte mehr nicht — die Grenze liegt auf dem Wert", () => {
+    expect(pruefeWappen("image/png", WAPPEN_HOECHSTENS_BYTES).ok).toBe(true);
+    expect(pruefeWappen("image/png", WAPPEN_HOECHSTENS_BYTES + 1).ok).toBe(false);
+  });
+
+  it("⚠ die Grenze ist am BILD gemessen, nicht am base64-Text", () => {
+    /* base64 ist 4/3 so lang. Wer den Text misst, weist ab 384 KiB ab
+       und hält das für die Grenze der Gegenstelle. 400 KiB Bild sind
+       533 KiB Text — hier muss es durchgehen. */
+    const bild = 400 * 1024;
+    expect(Math.ceil(bild * 4 / 3)).toBeGreaterThan(WAPPEN_HOECHSTENS_BYTES);
+    expect(pruefeWappen("image/png", bild).ok).toBe(true);
+  });
+
+  it("⚠ ERLAUBTE_MIME ist eine Allowlist — ein neuer Typ fällt auf, statt still hinauszugehen", () => {
+    expect(ERLAUBTE_MIME.size).toBe(3);
+    expect(pruefeWappen("image/avif", 100).ok).toBe(false);
+  });
+});
+
+describe("⚠ Der Filter steht VOR dem Verpacken — sonst ist er wirkungslos", () => {
+  /* ⚠ ⚠  DIESER FALL IST DER WICHTIGSTE DER DATEI, UND ZWAR AUS EINEM
+     GRUND, DEN DIESES PROJEKT TEUER GELERNT HAT: **eine Prüfung hinter
+     dem Filter, den sie prüfen soll, kann nur „in Ordnung" sagen.** Hier
+     ist es die Umkehrung — ein Filter HINTER dem `push` wäre ein Filter,
+     der nichts filtert, und `pruefeWappen()` wäre vollständig getestet,
+     vollständig grün und vollständig folgenlos.
+
+     Die sechs Fälle oben prüfen die Funktion. **Keiner von ihnen prüft,
+     dass sie je aufgerufen wird** — dieselbe Lücke wie „ein
+     Komponententest prüft die Komponente, nicht ihren Einbau". */
+  const EXPORT = "supabase/functions/wp-export/index.ts";
+  /* ⚠ DER NAME AUS EINER KONSTANTE, NICHT ABGESCHRIEBEN. Zwei Gründe,
+     und der zweite ist der wichtigere:
+       1. `check:quotes` sieht einen ASCII-Bezeichner in einem Literal
+          nicht von Prosa unterscheiden — ein bekannter Fehlalarm, den
+          das Skript selbst benennt.
+       2. Steht der Name einmal statt viermal da, kann eine Umbenennung
+          die Stelle nicht mehr still aushöhlen: der Fall fällt dann
+          ganz um, statt an drei von vier Stellen weiterzusuchen. */
+  const PRUEFE = "pruefeWappen";
+
+  it("in sendeWappen() kommt der Aufruf vor dem nutzlast.push", () => {
+    const treffer = suche<{ pruefung: number; push: number }>({
+      frage: `steht ${PRUEFE}() vor dem push in die Nutzlast?`,
+      dateien: [EXPORT],
+      /* ⚠ Die Reihenfolge in genau der Form, in der sie gefunden werden
+         MUSS. Fände die Abfrage hier nichts, wäre jedes «bestanden»
+         wertlos — und ein umbenanntes `sendeWappen` liefe still leer. */
+      positivkontrolle: `
+        async function sendeWappen(db, vereinId) {
+          for (const z of wahl.zu_senden) {
+            const urteil = ${PRUEFE}(z.mime, bytes.length);
+            if (!urteil.ok) { abgelehnt.push("x"); continue; }
+            nutzlast.push({ sfv_team_id: String(z.sfv_team_id) });
+          }
+        }`,
+      finde: (baum) => {
+        const fn = findeFunktion(baum, "sendeWappen");
+        if (!fn) return [];
+        let pruefung = 0, push = 0;
+        jederKnoten(fn, (n) => {
+          if (!ts.isCallExpression(n)) return;
+          /* ⚠ Der VOLLE Ausdruck, nicht der letzte Bezeichner:
+             `aufrufNamen()` kürzt `nutzlast.push` auf `push`, und so
+             heissen auch `abgelehnt.push` und `nichtLadbar.push`. Eine
+             Abfrage auf «push» träfe den erstbesten — und der steht in
+             der Ablehnung, also VOR dem Verpacken. Sie wäre immer
+             grün. */
+          const wen = n.expression.getText();
+          if (wen === PRUEFE && pruefung === 0) pruefung = zeileVon(n);
+          if (wen === "nutzlast.push" && push === 0) push = zeileVon(n);
+        });
+        return pruefung > 0 && push > 0 ? [{ pruefung, push }] : [];
+      },
+    });
+
+    if (treffer.length === 0) {
+      throw new Error(
+        `In ${EXPORT} findet sich in «sendeWappen» kein Paar aus `
+        + `${PRUEFE}() und nutzlast.push(). Entweder ist der Filter `
+        + "entfernt — dann gehen GIF und übergrosse Bilder wieder hinaus, "
+        + "und die Gegenstelle weist sie ab — oder die Funktion heisst "
+        + "anders und dieser Fall gehört nachgezogen.",
+      );
+    }
+    for (const { datei, fund } of treffer) {
+      expect(
+        fund.pruefung < fund.push,
+        `${datei}: ${PRUEFE}() steht in Zeile ${fund.pruefung}, `
+        + `nutzlast.push() in ${fund.push}. Der Filter läuft NACH dem `
+        + "Verpacken und ist damit wirkungslos.",
+      ).toBe(true);
+    }
+  });
+
+  it("⚠ `abgelehnt` ist eine eigene Liste, nicht `nicht_ladbar` mit anderem Inhalt", () => {
+    /* Ein Ladefehler ist ein AUSFALL, eine Ablehnung eine ENTSCHEIDUNG.
+       „Unter dem Pfad liegt nichts" schickt jemanden suchen; „ein GIF
+       nimmt sie nicht an" ist die Lage. Zusammengeworfen wäre die Zahl
+       eine Auskunft, die beides bedeuten kann. */
+    const treffer = suche<string>({
+      frage: "gibt es in sendeWappen() zwei getrennte Listen?",
+      dateien: [EXPORT],
+      positivkontrolle: `
+        async function sendeWappen() {
+          const nichtLadbar = [];
+          const abgelehnt = [];
+        }`,
+      finde: (baum) => {
+        const fn = findeFunktion(baum, "sendeWappen");
+        if (!fn) return [];
+        const raus: string[] = [];
+        jederKnoten(fn, (n) => {
+          if (!ts.isVariableDeclaration(n) || !ts.isIdentifier(n.name)) return;
+          if (n.name.text !== "nichtLadbar" && n.name.text !== "abgelehnt") return;
+          /* ⚠ ⚠  DIE EIGENE LISTE, NICHT DER EIGENE NAME. Eine Abfrage
+             auf den Bezeichner ist bei `const abgelehnt = nichtLadbar;`
+             zufrieden — beide heissen dann noch so, und es ist EINE
+             Liste. Gemessen hat es diese Datei selbst: die erste Fassung
+             dieses Falls blieb bei genau dieser Sabotage grün.
+             Verlangt wird ein eigenes `[]`. */
+          const start = n.initializer;
+          const eigenesArray = start !== undefined
+            && (ts.isArrayLiteralExpression(start)
+              || (ts.isAsExpression(start) && ts.isArrayLiteralExpression(start.expression)));
+          if (eigenesArray) raus.push(n.name.text);
+        });
+        return raus;
+      },
+    });
+    const gefunden = new Set(treffer.map((t) => t.fund));
+    expect(
+      [...gefunden].sort(),
+      "Beide Listen müssen ihr eigenes [] bekommen. Steht dort eine "
+      + "Zuweisung aus der anderen, ist es EINE Liste — und ein Ausfall "
+      + "wäre von einer Entscheidung nicht mehr zu unterscheiden.",
+    ).toEqual(["abgelehnt", "nichtLadbar"]);
   });
 });
