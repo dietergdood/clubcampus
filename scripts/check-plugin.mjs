@@ -168,6 +168,36 @@ const SCHREIBT = [
 ];
 
 const REGELN = [
+  /* ── Personen gehoeren der Redaktion (24.09.2026) ───────────────────
+     ⚠ ⚠  ANLASS: der Auftrag lautete, vier Profile auf ihre richtige
+     SFV-Nummer zu korrigieren — und er ist an dieser Grenze gescheitert.
+     Der Empfaenger schreibt NIE an einen `fch_person`-Beitrag; im
+     Dateikopf steht es unter NIE, und `cc_personen_lage()` liest nur.
+
+     **Die Zusage stand als Kommentar und war nirgends geprueft.** Genau
+     die Bauart, die dieses Projekt ein Dutzend Mal bezahlt hat: ein Satz
+     ueber Code, den der Leser nicht vor sich hat, und er klingt geprueft,
+     weil jemand ihn aufgeschrieben hat.
+
+     ⚠ Sie ist gerade jetzt faellig: wer die Korrektur doch bauen will,
+     hebt die Grenze versehentlich auf, und nichts meldet es. Eine
+     Aenderung daran soll moeglich sein — aber als ENTSCHEIDUNG, nicht
+     als Nebeneffekt.
+
+     ⚠ Geprueft wird der VORGANG, nicht ein Bezeichner: jede Funktion,
+     die einen Schreibaufruf UND `CC_TYP_PERSON` fuehrt. Ein Verbot des
+     blossen Wortes traefe `cc_personen_lage()`, die zu Recht liest. */
+  {
+    frage: "keine Funktion schreibt an einen fch_person-Beitrag",
+    pruefe: (b) => Object.entries(b.funktionen)
+      .filter(([, f]) => f.bezeichner.includes("CC_TYP_PERSON")
+        && f.rufe.some((r) => SCHREIBT.includes(r)))
+      .map(([name]) => name),
+    kontrolle: "<?php const CC_TYP_PERSON = 'fch_person'; "
+      + "function cc_schreibe_person() { update_field('x', 1, CC_TYP_PERSON); }",
+    erwarteImKontrollfall: 1,
+  },
+
   /* ── Keine doppelten Feldnamen (11.09.2026) ────────────────────────
      ⚠ ANLASS: ich habe „liga und aufstellung stehen doppelt" GEMELDET,
      und es stimmte nicht — meine Regex traf die Namen in den
