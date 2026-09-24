@@ -89,7 +89,7 @@ import { baueGruppen, wiegeGruppen, beurteileBestand } from "../../../src/domain
 import type { RanglisteZeile, WpRangGruppe } from "../../../src/domains/spiele/wpRangliste.ts";
 import {
   WAPPEN_PRO_PAKET, leseWappenBestand, waehleWappen, bildePakete, nachBase64,
-  fasseWappenAntworten, pruefeWappen,
+  fasseWappenAntworten, pruefeWappen, nochZeit, WAPPEN_BUDGET_MS,
 } from "../../../src/domains/spiele/wpWappen.ts";
 import type { WappenZeile, WappenNutzlast, WappenAntwort } from "../../../src/domains/spiele/wpWappen.ts";
 import { protokoll, protokollFehler, schwaerze } from "../sfv-sync/protokoll.ts";
@@ -437,6 +437,17 @@ const AKTIONEN = ["probe", "export", "bestand", "status", "ranglisten"];
 const SPERRE_MINUTEN = 30;
 
 Deno.serve(async (req) => {
+  /* ⚠ ⚠  AB DER ANFRAGE, nicht ab dem Wappen-Block und nicht ab
+     `sendeAnWordpress`. Das Gateway von Supabase bricht nach 150 Sekunden
+     ab (`IDLE_TIMEOUT`), und es zaehlt ab hier — jede Rechnung, die
+     spaeter anfaengt, ist um die Zeit davor zu grosszuegig. Gemessen am
+     24.09.2026: der erste Lauf mit 223 Wappen ist so abgebrochen, und der
+     Browser bekam keine Antwort.
+
+     ⚠ Und ERSTE Zeile, vor der Methodenpruefung: ein `OPTIONS` kostet
+     nichts, aber die Zahl soll nicht davon abhaengen, welcher Zweig sie
+     setzt. */
+  const anfrageBeginnMs = Date.now();
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (req.method !== "POST") return json({ fehler: "Nur POST" }, 405);
 
@@ -664,7 +675,7 @@ Deno.serve(async (req) => {
        Ranglisten und steht dort ebenso. */
     let wappen: unknown;
     try {
-      wappen = await sendeWappen(db, vereinId);
+      wappen = await sendeWappen(db, vereinId, anfrageBeginnMs);
     } catch (e) {
       wappen = {
         gesendet: false,
@@ -675,7 +686,74 @@ Deno.serve(async (req) => {
       };
     }
 
-    return json({ ...lauf, ranglisten: rang, wappen });
+    /* ⚠ ⚠  DAS ERGEBNIS VON RANGLISTEN UND WAPPEN INS PROTOKOLL — und
+       das ist der eigentliche Befund vom 24.09.2026, nicht die 150
+       Sekunden.
+
+       Bis dahin standen beide NUR in dieser Antwort. Beim `IDLE_TIMEOUT`
+       bekam der Browser nichts, und im Protokoll stand vom Wappenversand
+       kein Wort: die Zeile des Spiele-Laufs war zu dem Zeitpunkt schon
+       geschrieben und abgeschlossen. **Ein Lauf, dessen Ergebnis nur in
+       einer Antwort steht, die verloren gehen kann, hat kein Ergebnis.**
+
+       ⚠ Nachgetragen an DERSELBEN Zeile, nicht als zweite: ein Lauf ist
+       ein Vorgang, kein Paar — dieselbe Begruendung wie beim Anlegen.
+
+       ⚠ Und der `status` bleibt der des Spiele-Laufs. Zwei Teile in eine
+       Farbe zu zwingen loeschte die Auskunft, welcher gescheitert ist;
+       `details.wappen.gesendet` und `details.wappen.fehler` tragen ihre
+       eigene Lage. Wer den Lauf beurteilt, liest beide.
+
+       ⚠ Der Nachtrag laeuft in seinem EIGENEN try: scheitert er, ist das
+       kein Grund, eine gelungene Antwort zu verlieren — aber er wird
+       gebunden und benannt, nicht verschluckt. */
+    let nachtrag: string | null = null;
+    /* ⚠ ⚠  DER `try` STEHT GANZ AUSSEN, und das ist keine Formfrage.
+
+       Zuerst stand hier `if (logId) { try { … } }`. Ein Fall in
+       `wpWappen.test.ts` wurde rot und hatte recht: geprueft wird, ob
+       zwischen den Ergebnissen und dem `return` etwas UNGESCHUETZTES
+       steht, und ein `if` ist als Anweisung nicht geschuetzt — auch dann
+       nicht, wenn sein ganzer Rumpf ein try ist. Die Pruefung muesste
+       sonst in jede Verschachtelung hineinsehen, und damit waere sie von
+       „es gibt hier irgendwo ein try" nicht mehr zu unterscheiden.
+
+       ⚠ Die Bedingung ist deshalb nach INNEN gewandert. Das Verhalten ist
+       dasselbe; lesbar ist jetzt beides an einer Stelle. */
+    try {
+      const logId = (lauf as { log_id?: string | null }).log_id ?? null;
+      if (!logId) {
+        nachtrag = "keine Protokollzeile — ohne api_verbindungen-Eintrag für "
+          + "`wordpress` protokolliert der Lauf nicht, und dann steht das "
+          + "Ergebnis von Ranglisten und Wappen NUR in dieser Antwort.";
+      } else {
+        const { data: vorher, error: leseFehler } = await db.from("api_sync_log")
+          .select("details").eq("id", logId).maybeSingle();
+        if (leseFehler) throw new Error(leseFehler.message);
+        const alt = (vorher as { details?: Record<string, unknown> } | null)?.details ?? {};
+        /* ⚠ Die bestehenden Schluessel bleiben. Ein Ueberschreiben mit
+           `{ wappen, ranglisten }` naehme die Spielzahlen mit, und die
+           sind der Grund, aus dem die Zeile ueberhaupt da ist. */
+        const { data: getroffen, error: schreibFehler } = await db.from("api_sync_log")
+          .update({ details: { ...alt, ranglisten: rang, wappen } })
+          .eq("id", logId).select("id");
+        if (schreibFehler) throw new Error(schreibFehler.message);
+        /* ⚠ `error` zu lesen genuegt nicht: ein `update`, das KEINE Zeile
+           trifft, ist fuer PostgREST kein Fehler (204, `error` null). Ohne
+           diese Zeile waere „nachgetragen" eine Behauptung. */
+        if (!getroffen || (getroffen as unknown[]).length === 0) {
+          throw new Error(`Protokollzeile ${logId} nicht getroffen — `
+            + "der Nachtrag ist NICHT geschrieben");
+        }
+      }
+    } catch (e) {
+      /* ⚠ In die ANTWORT, nicht ins Protokoll — dorthin kommen wir ja
+         gerade nicht. Und sichtbar, damit „steht nicht im Protokoll" von
+         „ist nicht gelaufen" zu unterscheiden bleibt. */
+      nachtrag = schwaerze(meldung(e));
+    }
+
+    return json({ ...lauf, ranglisten: rang, wappen, protokoll_nachtrag: nachtrag });
   } catch (e) {
     const meldung = protokollFehler(`wp-export/${aktion}/${vereinId}`, e);
     return json({ fehler: meldung }, 502);
@@ -929,6 +1007,17 @@ async function sendeAnWordpress(
   return {
     ziel: host,
     status,
+    /* ⚠ ⚠  DIE PROTOKOLL-ID WANDERT MIT HINAUS, und zwar aus einem
+       gemessenen Grund: bis zum 24.09.2026 stand das Ergebnis des
+       Wappen-Blocks NUR in der HTTP-Antwort. Genau die ist beim
+       `IDLE_TIMEOUT` verloren gegangen — der Browser bekam nichts, und im
+       Protokoll stand vom Wappenversand kein Wort.
+
+       ⚠ Sie dient AUSSCHLIESSLICH dem Nachtragen von `details.wappen`.
+       Der `status` der Zeile bleibt der des Spiele-Laufs: zwei Teile in
+       eine Farbe zu zwingen loeschte die Auskunft, welcher von beiden
+       gescheitert ist. Deshalb traegt `details.wappen` seine eigene Lage. */
+    log_id: logId,
     dauer_ms: dauerMs,
     /* ⚠ Was GEBAUT wurde und was GESENDET wurde, getrennt. Sie sind
        gleich, solange jedes Spiel eine Teamnummer traegt — und wenn nicht,
@@ -1116,7 +1205,14 @@ type DbSpeicher = { storage: { from: (eimer: string) => any } };
  * die Kachel um einen Export, den es nicht gab. Ihr Ergebnis steht
  * DANEBEN in der Antwort — dieselbe Trennung wie bei den Ranglisten.
  */
-async function sendeWappen(db: DbLeser & DbSpeicher, vereinId: string) {
+async function sendeWappen(
+  db: DbLeser & DbSpeicher, vereinId: string,
+  /* ⚠ ⚠  DER BEGINN DES GANZEN LAUFS, nicht der dieses Blocks. Das
+     Gateway zaehlt ab der Anfrage, also muss die Rechnung dort anfangen —
+     ein Budget ab dem Wappen-Block waere um die Zeit der Spiele und
+     Ranglisten zu grosszuegig, und genau die geht schon vorher hin. */
+  beginnMs: number,
+) {
   const basis = (Deno.env.get("WP_BASIS_URL") ?? "").replace(/\/+$/, "");
   const schluessel = Deno.env.get("WP_SCHLUESSEL") ?? "";
   if (!basis || !schluessel) {
@@ -1201,7 +1297,22 @@ async function sendeWappen(db: DbLeser & DbSpeicher, vereinId: string) {
      an einem Dutzend Stellen bezahlt hat. */
   const abgelehnt: string[] = [];
 
-  for (const z of wahl.zu_senden) {
+  /* ⚠ Wie viele dieser Lauf nicht mehr angefasst hat. Immer da, auch als
+     Null — eine nicht gestellte Frage und ein leerer Befund duerfen nicht
+     gleich aussehen. */
+  let offenWegenZeit = 0;
+
+  for (let iz = 0; iz < wahl.zu_senden.length; iz++) {
+    const z = wahl.zu_senden[iz];
+    /* ⚠ ⚠  VOR DEM DOWNLOAD, nicht danach und nicht erst bei den Paketen.
+       Gemessen am 24.09.2026: der teure Teil ist das LADEN — je Wappen ein
+       Download aus dem Bucket, und bei 223 alle vor dem ersten Paket. Wer
+       das Budget erst bei den Paketen prueft, hat die Zeit schon
+       ausgegeben. */
+    if (!nochZeit(beginnMs, Date.now())) {
+      offenWegenZeit = wahl.zu_senden.length - iz;
+      break;
+    }
     if (!z.mime) {
       /* ⚠ KEIN geratener Typ. Ein Wappen mit Pfad und ohne mime ist ein
          Befund ueber `logos.ts` (dort werden beide zusammen geschrieben);
@@ -1269,7 +1380,17 @@ async function sendeWappen(db: DbLeser & DbSpeicher, vereinId: string) {
   /* ⚠ SERIELL und mit gebundenem Fehler je Paket — dieselbe Bauart wie
      ein POST je Mannschaft: ein Abbruch bei Paket 3 liesse die Pakete 4
      bis 11 ungesendet, ohne dass jemand erfuehre, welche. */
+  let paketeOffen = 0;
   for (let i = 0; i < pakete.length; i++) {
+    /* ⚠ Auch hier, und aus demselben Grund: ein Paket dauert, und das
+       letzte darf den Lauf nicht ueber die Grenze tragen. Ein Paket, das
+       nicht mehr STARTET, ist etwas anderes als eines, das SCHEITERT —
+       deshalb eine eigene Zahl und nicht ein Eintrag in `paketFehler`. */
+    if (!nochZeit(beginnMs, Date.now())) {
+      paketeOffen = pakete.length - i;
+      for (let r = i; r < pakete.length; r++) offenWegenZeit += pakete[r].length;
+      break;
+    }
     try {
       antworten.push(await sendeWappenPaket(basis, schluessel, pakete[i]));
       angekommen += pakete[i].length;
@@ -1296,6 +1417,23 @@ async function sendeWappen(db: DbLeser & DbSpeicher, vereinId: string) {
     abgelehnt,
     pakete: pakete.length,
     pakete_gescheitert: paketFehler,
+    /* ⚠ ⚠  WAS DIESER LAUF NICHT MEHR ANGEFASST HAT — und das ist KEIN
+       Fehler, sondern die Aufteilung ueber mehrere Laeufe. Steht hier eine
+       Zahl, holt der naechste Lauf sie nach: `waehleWappen` vergleicht
+       gegen den Bestand drueben, ein gesendetes Wappen kommt also nicht
+       zweimal.
+
+       ⚠ Bleibt die Zahl ueber mehrere Laeufe GLEICH, ist das Budget zu
+       klein — dann kommt kein Lauf mehr dazu, und die Aufteilung
+       konvergiert nicht. Das ist der Befund, auf den zu achten ist, und
+       er ist von „noch nicht fertig" nur an der Wiederholung zu
+       unterscheiden. */
+    offen_wegen_zeit: offenWegenZeit,
+    pakete_nicht_gestartet: paketeOffen,
+    /* ⚠ Das Budget selbst in die Antwort: eine Zahl, die eine Grenze
+       nennt, ohne die Grenze zu nennen, laesst den Leser raten, ob sie
+       gross oder klein ist. */
+    budget_ms: WAPPEN_BUDGET_MS,
     /* Was die Gegenstelle gemeldet hat. `ersetzt > 0` waere ein BEFUND:
        wir senden nichts, dessen Nummer sie kennt — sie kann also nichts
        ersetzen. Steht dort eine Zahl, widersprechen ihr Bestand und ihr

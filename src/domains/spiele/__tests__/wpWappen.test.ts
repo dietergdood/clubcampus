@@ -62,6 +62,7 @@ import ts from "typescript";
 import {
   WAPPEN_PRO_PAKET, leseWappenBestand, waehleWappen, bildePakete,
   pruefeWappen, ERLAUBTE_MIME, WAPPEN_HOECHSTENS_BYTES,
+  nochZeit, WAPPEN_BUDGET_MS, portionBilanz,
 } from "../wpWappen.ts";
 import type { WappenZeile } from "../wpWappen.ts";
 import {
@@ -444,14 +445,43 @@ describe("⚠ Ein Fehler beim Wappenversand nimmt Spielplan und Ranglisten nicht
           + "hinter beide und vor das return.",
         );
       } else {
+        /* ⚠ ⚠  GEPRUEFT WIRD „UNGESCHUETZT", NICHT „AUSSERHALB DIESES
+           TRY" — und das ist am 24.09.2026 berichtigt worden.
+
+           Vorher stand hier `if (i === iTry) continue;` und jeder andere
+           Aufruf galt als Befund. Dann kam ein zweiter Block dazu, der das
+           Ergebnis von Ranglisten und Wappen ins Protokoll nachtraegt — in
+           seinem EIGENEN try, mit gebundenem Fehler und ohne Weiterwurf,
+           also genau so sicher wie der Wappenblock. Der Fall wurde rot.
+
+           ⚠ Er hatte recht in der Sache und pruefte das falsche Merkmal:
+           die Zusage ist „nichts zwischen den Ergebnissen und dem return
+           darf sie mitreissen", nicht „es gibt nur einen try". Ein
+           Merkmal, das die Absicht beschreibt, ueberlebt eine
+           Absichtsaenderung; eines, das eine Stelle zaehlt, nicht.
+
+           ⚠ Und die Verengung ist keine Lockerung: ein Aufruf OHNE try
+           ist weiterhin ein Befund, und ein try, dessen catch
+           weiterwirft, ebenfalls — beides gegengeprobt. */
+        const geschuetzt = (x: ts.Statement): boolean => {
+          if (!ts.isTryStatement(x)) return false;
+          const c = x.catchClause;
+          if (!c) return false;
+          /* Ein catch, der weiterwirft, schuetzt nichts. */
+          let wirft = false;
+          jederKnoten(c.block, (k) => { if (ts.isThrowStatement(k)) wirft = true; });
+          return !wirft;
+        };
         for (let i = iRang + 1; i < iReturn; i++) {
-          if (i === iTry) continue;
+          if (geschuetzt(s[i])) continue;
           const namen = aufrufNamen(s[i]);
           if (namen.length > 0) {
             befunde.push(
-              `Zwischen dem Ranglisten-Ergebnis und dem return steht ein Aufruf `
-              + `ausserhalb des Wappen-try (Zeile ${zeileVon(s[i])}: `
-              + `${namen.join(", ")}) — er nähme beide Ergebnisse mit.`,
+              `Zwischen dem Ranglisten-Ergebnis und dem return steht ein `
+              + `UNGESCHUETZTER Aufruf (Zeile ${zeileVon(s[i])}: `
+              + `${namen.join(", ")}) — er nähme beide Ergebnisse mit. `
+              + "Geschützt heisst: in einem try mit gebundenem catch, der "
+              + "nicht weiterwirft.",
             );
           }
         }
@@ -712,5 +742,139 @@ describe("⚠ Der Filter steht VOR dem Verpacken — sonst ist er wirkungslos", 
       + "Zuweisung aus der anderen, ist es EINE Liste — und ein Ausfall "
       + "wäre von einer Entscheidung nicht mehr zu unterscheiden.",
     ).toEqual(["abgelehnt", "nichtLadbar"]);
+  });
+});
+
+
+/* ══════════════════════════════════════════════════════════════════════
+   DAS ZEITBUDGET — damit ein Lauf nie an die 150 Sekunden stoesst
+   ══════════════════════════════════════════════════════════════════════
+
+   ⚠ ⚠  DER ANLASS IST GEMESSEN, NICHT BEFUERCHTET. Am 24.09.2026 endete
+   „Export starten" mit
+
+     {"code":"IDLE_TIMEOUT","message":"Request idle timeout limit (150s) reached"}
+
+   beim ERSTEN Lauf, der alle 223 Wappen senden musste. Der Browser bekam
+   keine Antwort — und damit auch keines der Felder, an denen die
+   Gegenseite ihren Empfaenger prueft.
+
+   ⚠ Der teure Teil ist NICHT das Senden, sondern das LADEN: je Wappen ein
+   Download aus dem Bucket, und bei 223 alle vor dem ersten Paket. Deshalb
+   prueft das Budget VOR jedem Download und nicht erst bei den Paketen.
+
+   ⚠ Ein BUDGET und keine Stueckzahl: wie lange 223 Downloads brauchen,
+   haengt am Netz und an der Bildgroesse. Eine Stueckzahl waere genau die
+   Schwelle, die dieses Papier als „nie durch einen Test gedeckt" fuehrt. */
+describe("nochZeit — das Budget", () => {
+  it("am Anfang ist Zeit", () => {
+    expect(nochZeit(1_000, 1_000)).toBe(true);
+  });
+
+  it("eine Millisekunde vor der Grenze ist noch Zeit", () => {
+    expect(nochZeit(0, WAPPEN_BUDGET_MS - 1)).toBe(true);
+  });
+
+  it("⚠ GENAU auf der Grenze ist KEINE Zeith mehr", () => {
+    /* Die Grenze ist ausschliessend, und das ist die sichere Richtung: ein
+       Paket, das genau auf der Grenze startet, braucht danach noch Zeit
+       fuer die Bilanz, die Protokollzeile und die Antwort. */
+    expect(nochZeit(0, WAPPEN_BUDGET_MS)).toBe(false);
+  });
+
+  it("darueber ebenfalls nicht", () => {
+    expect(nochZeit(0, WAPPEN_BUDGET_MS + 5_000)).toBe(false);
+  });
+
+  it("⚠ das Budget laesst der 150-Sekunden-Grenze Luft — und zwar deutlich", () => {
+    /* ⚠ Die eigentliche Zusage dieser Datei: das Budget MUSS kleiner sein
+       als die Grenze des Gateways, und zwar mit Abstand. Ein Budget von
+       150 Sekunden verlore genau die Antwort, um die es geht.
+
+       Gegengeprobt: mit `WAPPEN_BUDGET_MS = 150_000` ist dieser Fall rot. */
+    const GATEWAY_MS = 150_000;
+    expect(WAPPEN_BUDGET_MS).toBeLessThan(GATEWAY_MS);
+    /* Mindestens ein Drittel Reserve — Bilanz, Protokoll und Antwort
+       brauchen Zeit, und ein Paket, das schon laeuft, laeuft weiter. */
+    expect(WAPPEN_BUDGET_MS).toBeLessThanOrEqual(GATEWAY_MS * 2 / 3);
+  });
+
+  it("⚠ ein Lauf mit 223 offenen Wappen bleibt unter der Grenze", () => {
+    /* ⚠ ⚠  DER BESTELLTE FALL, und er prueft die SCHLEIFE, nicht die
+       Konstante. Nachgebaut wird der Ablauf: vor jedem Stueck fragen, ob
+       noch Zeit ist, und aufhoeren, wenn nicht.
+
+       Die Uhr ist ERFUNDEN und schreitet je Stueck um einen festen Betrag
+       — eine echte `Date.now()` waere hier nicht pruefbar, und genau
+       deshalb ist `nochZeit()` eine eigene Funktion und kein Ausdruck
+       mitten in der Schleife. */
+    const OFFEN = 223;
+    const MS_JE_STUECK = 700;          // eine Annahme, und sie steht hier als solche
+    const beginn = 0;
+    let uhr = beginn;
+    let geladen = 0;
+    for (let i = 0; i < OFFEN; i++) {
+      if (!nochZeit(beginn, uhr)) break;
+      uhr += MS_JE_STUECK;
+      geladen += 1;
+    }
+    /* ⚠ Die Zusage ist NICHT „es schafft alle" — das ist der Punkt. Sie
+       ist: der Lauf hoert von selbst auf, bevor die Grenze kommt. */
+    expect(uhr).toBeLessThan(150_000);
+    expect(geladen).toBeLessThan(OFFEN);
+    /* Und er schafft etwas — ein Lauf, der nichts tut, konvergiert nie. */
+    expect(geladen).toBeGreaterThan(0);
+  });
+
+  it("⚠ und mehrere Laeufe kommen durch — die Aufteilung konvergiert", () => {
+    /* ⚠ Die zweite Haelfte, ohne die der Fall darueber nichts wert waere:
+       ein Deckel, der jeden Lauf gleich weit kommen laesst, teilt nicht
+       auf, sondern blockiert. Gepruefte Zusage: nach endlich vielen
+       Laeufen ist nichts mehr offen.
+
+       Der naechste Lauf holt das Liegengebliebene nach, weil
+       `waehleWappen()` gegen den Bestand DRUEBEN vergleicht — ein
+       gesendetes Wappen kommt nicht zweimal. */
+    const MS_JE_STUECK = 700;
+    let offen = 223;
+    let laeufe = 0;
+    while (offen > 0 && laeufe < 100) {
+      laeufe += 1;
+      let uhr = 0, geladen = 0;
+      while (geladen < offen && nochZeit(0, uhr)) { uhr += MS_JE_STUECK; geladen += 1; }
+      expect(uhr).toBeLessThan(150_000);
+      expect(geladen).toBeGreaterThan(0);
+      offen -= geladen;
+    }
+    expect(offen).toBe(0);
+    /* ⚠ Und die Zahl der Laeufe gehoert in die Erwartung: waeren es
+       hundert, waere die Aufteilung unbrauchbar, auch wenn sie
+       „konvergiert". */
+    expect(laeufe).toBeLessThanOrEqual(3);
+  });
+});
+
+describe("portionBilanz — was liegen bleibt", () => {
+  it("alles angefasst heisst nichts offen", () => {
+    expect(portionBilanz([1, 2, 3], 3)).toEqual({ nehmen: [1, 2, 3], offen: 0 });
+  });
+
+  it("die Haelfte angefasst nennt den Rest", () => {
+    expect(portionBilanz([1, 2, 3, 4], 2)).toEqual({ nehmen: [1, 2], offen: 2 });
+  });
+
+  it("⚠ nichts angefasst ergibt offen = alle, nicht null", () => {
+    /* Der Fall, in dem das Budget schon vor dem ersten Stueck erschoepft
+       ist. `offen: 0` hiesse „fertig" und waere die glatte Luege. */
+    expect(portionBilanz([1, 2, 3], 0)).toEqual({ nehmen: [], offen: 3 });
+  });
+
+  it("⚠ mehr angefasst als vorhanden bleibt bei der Wirklichkeit", () => {
+    /* Eine negative Zahl in `offen` waere von aussen nicht zu deuten. */
+    expect(portionBilanz([1, 2], 5)).toEqual({ nehmen: [1, 2], offen: 0 });
+  });
+
+  it("eine leere Liste ist fertig", () => {
+    expect(portionBilanz([], 0)).toEqual({ nehmen: [], offen: 0 });
   });
 });

@@ -62,6 +62,100 @@
  */
 export const WAPPEN_PRO_PAKET = 20;
 
+/**
+ * Wie lange ein Lauf hoechstens fuer die Wappen aufwenden darf, gemessen
+ * vom Beginn des GANZEN Laufs.
+ *
+ * ⚠ ⚠  DIE GRENZE, DIE ES GIBT, IST NICHT UNSERE: das Gateway von Supabase
+ * bricht eine Anfrage nach **150 Sekunden** ab
+ * (`{"code":"IDLE_TIMEOUT","message":"Request idle timeout limit (150s)
+ * reached"}`, gemessen am 24.09.2026 beim ersten Lauf, der alle Wappen
+ * senden musste).
+ *
+ * ⚠ **Wie viele es sind, ist ein bewegtes Ziel, und deshalb steht hier
+ * keine Zahl als Konstante.** Am 23.09.2026 waren es 219 (so steht es
+ * oben und in den Tests), am 24.09.2026 nennt Didi 223 — beide waren zu
+ * ihrer Zeit richtig, und mit jedem neuen Gegner kommt eines dazu. Eine
+ * Stueckzahl im Code waere damit von Anfang an veraltet; genau das ist
+ * der zweite Grund fuer ein Budget.
+ *
+ * Der Browser bekam dabei **keine Antwort** — und damit auch keines der
+ * Felder, an denen die Gegenseite ihren Empfaenger prueft. ⚠ Die
+ * Protokollzeile stand zwar schon da (`status: "laeuft"`, geschrieben VOR
+ * dem Lauf), aber ihr Ergebnis fehlte: wird die Function beim Abbruch
+ * getoetet, kommt das `update` am Ende nie.
+ *
+ * **Ein Zeitbudget und keine Stueckzahl.** Eine Stueckzahl waere genau
+ * die Schwelle, die dieses Papier als „nie durch einen Test gedeckt"
+ * fuehrt — und sie muesste jedes Mal neu geraten werden, wenn ein Wappen
+ * dazukommt. Ein Budget misst, was die Grenze wirklich meint: Zeit.
+ *
+ * ⚠ ⚠  HIER STAND „und der Grund ist gemessen: der teure Teil ist nicht
+ * das Senden, sondern das LADEN". **Das war nicht gemessen**, und ein
+ * Subagent hat es am 24.09.2026 widerlegt: es gibt keine Zeitnahme im
+ * Ladeteil — anders als bei den Spielen, wo `dauer_ms` je Mannschaft
+ * steht. Die Aufteilung ist PLAUSIBEL (223 Downloads gegen 12 POSTs, und
+ * das Laden laeuft vollstaendig vor dem ersten Paket), aber sie ist ein
+ * Schluss und keine Beobachtung.
+ *
+ * ⚠ Fuer die Wahl des Budgets ist das folgenlos — es greift an BEIDEN
+ * Schleifen, gleich welche die teure ist. Fuer die Frage, wie gross es
+ * sein muss, ist es offen: **solange niemand die Zeit je Download
+ * gemessen hat, ist `offen_wegen_zeit` ueber mehrere Laeufe die einzige
+ * Auskunft darueber, ob 90 Sekunden reichen.**
+ *
+ * ⚠ **90 Sekunden von 150, und die Luecke ist Absicht.** Nach dem letzten
+ * Paket muss der Lauf noch seine Bilanz bilden, die Protokollzeile
+ * aktualisieren und antworten. Wer das Budget auf 150 setzt, verliert
+ * genau die Antwort, um die es geht.
+ *
+ * ⚠ Und es ist ein ERSTER Wert, nicht ein gemessener: wie lange ein
+ * Download braucht, ist ungemessen. Deshalb nennt die Antwort
+ * `wappen_offen` — bleibt die Zahl ueber mehrere Laeufe gleich, ist das
+ * Budget zu klein, und dann gehoert es korrigiert und nicht geraten.
+ */
+export const WAPPEN_BUDGET_MS = 90_000;
+
+/**
+ * Ist noch Zeit im Budget?
+ *
+ * ⚠ Eine eigene Funktion, damit die Entscheidung pruefbar ist. Ein
+ * `Date.now() - beginn < 90_000` mitten in der Schleife laesst sich gegen
+ * keine erfundene Uhr halten — und eine Grenze, die man nicht pruefen
+ * kann, ist eine Behauptung.
+ */
+export function nochZeit(beginnMs: number, jetztMs: number,
+                         budgetMs: number = WAPPEN_BUDGET_MS): boolean {
+  return jetztMs - beginnMs < budgetMs;
+}
+
+/**
+ * Was ein Lauf von den ausgewaehlten Wappen schafft, und was liegen bleibt.
+ *
+ * ⚠ `offen` ist NICHT „es gibt keine mehr" — es ist die Zahl derer, die
+ * dieser Lauf nicht mehr angefasst hat. Eine fehlende Angabe und eine
+ * Null duerfen nicht gleich aussehen, deshalb steht sie immer da.
+ */
+export interface WappenPortion<T> {
+  nehmen: T[];
+  offen: number;
+}
+
+/**
+ * Die Portion, die in das Budget passt — nach der Zeit, die das LADEN
+ * je Stueck gekostet hat.
+ *
+ * ⚠ Sie entscheidet nicht im Voraus, sondern beim Durchgehen: der
+ * Aufrufer ruft `nochZeit()` vor jedem Stueck. Diese Funktion ist der
+ * Abschluss danach — sie sagt, wie viele uebrig geblieben sind. Zwei
+ * Stellen fuer eine Aussage waeren eine zu viel, also rechnet sie NICHT
+ * selbst nach, sondern nimmt die Zahl der tatsaechlich Geladenen.
+ */
+export function portionBilanz<T>(alle: T[], angefasst: number): WappenPortion<T> {
+  const n = Math.max(0, Math.min(angefasst, alle.length));
+  return { nehmen: alle.slice(0, n), offen: alle.length - n };
+}
+
 /** Eine Zeile aus `public.sfv_team_logos`, so weit der Export sie braucht. */
 export interface WappenZeile {
   sfv_team_id: number;
@@ -401,6 +495,21 @@ export const ERLAUBTE_MIME: ReadonlySet<string> = new Set([
  * ⚠ Der Unterschied ist ein Drittel: base64 ist 4/3 so lang wie das
  * Bild. Wer den Text misst, weist Bilder ab 384 KiB ab und hält das
  * für die Grenze der Gegenstelle.
+ *
+ * ⚠ ⚠  UND SIE KANN FUER EIN BILD AUS DEM BUCKET NIE ZUSCHLAGEN. Gemessen
+ * am 24.09.2026: `storage.buckets.file_size_limit` steht auf **262144**
+ * (`migration_sfv_logos.sql:81`), also 256 KiB — halb so viel. Was groesser
+ * ist, liegt dort nicht, und der Sync koennte es nicht ablegen.
+ *
+ * Sie bleibt trotzdem stehen, und zwar als Guertel hinter dem Hosentraeger:
+ * die Grenze der Gegenstelle ist 512 KiB, und diese Pruefung sagt, was
+ * DRUEBEN nicht angenommen wird — nicht, was hier nicht ablegbar ist. Wer
+ * die Bucket-Grenze je erhoeht, findet sie hier vor.
+ *
+ * ⚠ Dass eine Pruefung heute nicht zuschlagen kann, gehoert aber
+ * hingeschrieben: sonst liest jemand ihre Null als „geprueft und in
+ * Ordnung", wo sie „nicht erreichbar" heisst. Dieselbe Familie wie eine
+ * Pruefung, die grundlos gruen ist.
  */
 export const WAPPEN_HOECHSTENS_BYTES = 512 * 1024;
 
