@@ -38,11 +38,24 @@ vi.mock('../../domains/spiele/wpExportService.ts', () => ({
   fasseExportZusammen: () => 'Lauf beendet.',
 }));
 
+/* ⚠ `export_wartet()` ist ein Datenbankaufruf. In einem Test gibt es
+   keine Datenbank — und ein Client-Platzhalter `{}` hat kein `.rpc`.
+   Die Attrappe liefert die Zahl, um die es geht, und jeder Fall sagt
+   selbst, welche. */
+vi.mock('../../domains/spiele/exportWartetService.ts', () => ({
+  holeExportWartet: vi.fn(async () => ({ wartet: 0, grund: null })),
+}));
+
 import { ApiTab } from '../portal/ApiTab.tsx';
 import * as dienst from '../../domains/spiele/wpExportService.ts';
+import * as wartetDienst from '../../domains/spiele/exportWartetService.ts';
 
 afterEach(cleanup);
-beforeEach(() => { dienst.starteWpExport.mockClear(); });
+beforeEach(() => {
+  dienst.starteWpExport.mockClear();
+  wartetDienst.holeExportWartet.mockClear();
+  wartetDienst.holeExportWartet.mockResolvedValue({ wartet: 0, grund: null });
+});
 
 /* Die zwei Zeilen, die am 07.09.2026 wirklich in api_verbindungen stehen.
    ⚠ wordpress ist active=false (Etappe 6 schaltet scharf) und hat nach
@@ -242,6 +255,92 @@ describe('API-Kacheln', () => {
        hält der Fall fest. */
     zeigeKacheln([{ key: 'wordpress', label: 'WordPress-Export', active: false }], []);
     expect(screen.queryByText(/fcherrliberg\.ch/)).toBeNull();
+  });
+
+  /* ══ Der Stand des Exports (24.09.2026) ═══════════════════════════
+
+     ⚠ ⚠  WARUM DIESE FÄLLE HIER STEHEN UND NICHT NUR IN
+     `exportStandAnzeige.test.ts`. Dort ist jede Lage einzeln geprüft —
+     das ist die KOMPONENTE der Deutung, nicht ihr EINBAU. Die Kachel
+     könnte die Funktion gar nicht rufen, und alle vierzehn Fälle blieben
+     grün.
+
+     Genau das ist in diesem Projekt schon passiert: die Bilanz-Karte
+     hatte fünf grüne Komponententests und erschien nicht, und die
+     Ziel-Zeilen der Kachel kamen nie an, während jeder Anzeige-Fall
+     grün war.
+
+     ⚠ Der Stand wird hier absichtlich als DATENLAGE gesetzt (alter
+     `letzter_sync`, wartende Zeilen) und nicht als erwarteter Text —
+     geprüft wird, was ein Mensch daraufhin sieht. */
+
+  /** Nur die Export-Kachel. ⚠ Allein, weil `football_ch` sonst selbst
+      ein „ok" in den Baum schreibt und `queryByText('ok')` es fände. */
+  function zeigeExport(zeile) {
+    render(
+      <ApiTab loading={false} isMobile={false} mobileKachel={null} sb={{}}
+        vereinId="v-1" apiVerbindungen={[{ key: 'wordpress', label: 'WordPress-Export',
+          active: true, ...zeile }]} syncLogs={[]} tab="api" />,
+    );
+  }
+
+  /* ⚠ DER FALL VOM 24.09.2026, an der Kachel statt an der Funktion. */
+  it('zeigt bei einem veralteten Stand NICHT „ok"', async () => {
+    wartetDienst.holeExportWartet.mockResolvedValue({ wartet: 47, grund: null });
+    zeigeExport({
+      sync_status: 'ok',
+      letzter_sync: new Date(Date.now() - 12 * 60 * 60_000).toISOString(),
+    });
+    expect(await screen.findByText('veraltet')).toBeTruthy();
+    /* Die zweite Hälfte ist die wichtigere: der alte Chip darf nicht
+       daneben stehenbleiben. */
+    expect(screen.queryByText('ok')).toBeNull();
+    expect(screen.getByText(/47 Änderungen warten/)).toBeTruthy();
+  });
+
+  it('holt die Zahl der wartenden Änderungen überhaupt', async () => {
+    /* ⚠ Ohne diesen Fall wäre „veraltet" auch dann grün, wenn die Zahl
+       aus einer Konstante käme. Bis zum 24.09.2026 hat das Frontend
+       `export_wartet()` NIE gelesen — das war der eigentliche Befund. */
+    zeigeExport({ sync_status: 'ok', letzter_sync: new Date().toISOString() });
+    await waitFor(() => expect(wartetDienst.holeExportWartet).toHaveBeenCalled());
+  });
+
+  it('sagt „nicht feststellbar", wenn die Zahl nicht zu holen war', async () => {
+    wartetDienst.holeExportWartet.mockResolvedValue({
+      wartet: null, grund: 'export_wartet() antwortet nicht: permission denied',
+    });
+    zeigeExport({
+      sync_status: 'ok',
+      letzter_sync: new Date(Date.now() - 12 * 60 * 60_000).toISOString(),
+    });
+    expect(await screen.findByText('nicht feststellbar')).toBeTruthy();
+    /* ⚠ Weder das eine noch das andere — und der Grund steht da. */
+    expect(screen.queryByText('ok')).toBeNull();
+    expect(screen.queryByText('veraltet')).toBeNull();
+    expect(screen.getByText(/permission denied/)).toBeTruthy();
+  });
+
+  it('lässt einen frischen Lauf ohne Wartendes bei „ok"', async () => {
+    zeigeExport({ sync_status: 'ok', letzter_sync: new Date().toISOString() });
+    expect(await screen.findByText('ok')).toBeTruthy();
+    expect(screen.queryByText('veraltet')).toBeNull();
+  });
+
+  /* ⚠ Die Deutung gehört dem Export allein. Der SFV-Sync hat einen TAKT
+     und wird danach beurteilt; wer ihn mit derselben Regel misst, baut
+     für ihn einen Fehlalarm-Generator. */
+  it('fasst den SFV-Anschluss nicht an', async () => {
+    wartetDienst.holeExportWartet.mockResolvedValue({ wartet: 99, grund: null });
+    render(
+      <ApiTab loading={false} isMobile={false} mobileKachel={null} sb={{}} vereinId="v-1"
+        apiVerbindungen={[{ key: 'football_ch', label: 'Football.ch', active: true,
+          sync_status: 'ok',
+          letzter_sync: new Date(Date.now() - 12 * 60 * 60_000).toISOString() }]}
+        syncLogs={[]} tab="api" />,
+    );
+    expect(await screen.findByText('ok')).toBeTruthy();
+    expect(screen.queryByText('veraltet')).toBeNull();
   });
 });
 

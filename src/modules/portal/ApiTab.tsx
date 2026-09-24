@@ -1,7 +1,7 @@
 /* ═══════════════════════════════════════════════════════════════
    ClubCampus — modules/portal/ApiTab.tsx
    ═══════════════════════════════════════════════════════════════ */
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Btn, Card, Chip, Row, InfoBox, useConfirm } from "../../theme.ts";
 import { TI } from "../../icons.tsx";
 import { GN, R, RL, BL, AM, BK } from "../../constants.ts";
@@ -15,6 +15,9 @@ import {
 } from "../../domains/sfv/sfvService.ts";
 import { starteWpExport, fasseExportZusammen, holeEmpfaengerStatus, holeBestand } from "../../domains/spiele/wpExportService.ts";
 import { deuteBestand } from "../../domains/spiele/bestandAnzeige.ts";
+import { deuteExportStand } from "../../domains/spiele/exportStandAnzeige.ts";
+import { holeExportWartet } from "../../domains/spiele/exportWartetService.ts";
+import type { WartetErgebnis } from "../../domains/spiele/exportWartetService.ts";
 import { deuteRangprobe } from "../../domains/sfv/rangprobeAnzeige.ts";
 import { deuteTeamprobe } from "../../domains/sfv/teamprobeAnzeige.ts";
 import { deuteNummernprobe } from "../../domains/sfv/nummernprobeAnzeige.ts";
@@ -60,6 +63,16 @@ export interface ApiVerbindung {
    * den Totmannschalter bei healthchecks.io (cron_sync_waechter.sql).
    */
   wache_zuletzt?: string | null;
+  /**
+   * Die Laufsperre — gesetzt beim Start eines Laufs, am Ende auf `null`.
+   *
+   * ⚠ STEHT SEIT JEHER IN DER TABELLE UND WAR HIER NICHT GETIPPT. Die
+   * Kachel lädt mit `select("*")`, der Wert kam also immer mit und war
+   * für TypeScript trotzdem nicht vorhanden. Er ist die einzige Angabe,
+   * an der ein GESTORBENER Lauf zu erkennen ist: bleibt sie stehen, hat
+   * ein Lauf begonnen und nie aufgehört — und sperrt jeden weiteren.
+   */
+  sync_laeuft_seit?: string | null;
 }
 
 interface ApiTabProps {
@@ -114,6 +127,37 @@ export function ApiTab({loading,isMobile,mobileKachel,apiVerbindungen,tab,sb=nul
      waere ein Weg zu wenig Nachdenken. */
   const [auskunft,setAuskunft]=useState<{titel: string; zeilen: string[]; fehler?: boolean; roh?: unknown}|null>(null);
   const [auskunftLaeuft,setAuskunftLaeuft]=useState<string|null>(null);
+
+  /* ⚠ ⚠  WIE VIELE AENDERUNGEN AUF DEN EXPORT WARTEN — die Zahl, die die
+     Kachel bis zum 24.09.2026 nicht hatte und ohne die sie „ok" zeigte,
+     waehrend ein Stand vom Vortag dastand.
+
+     `null` heisst „noch nicht geholt", NICHT „null Zeilen". Deshalb ist
+     der Anfangszustand ein eigener und wird als solcher angezeigt: eine
+     kurze Zeile „wird geholt" ist ehrlich, eine Null waere eine
+     Entwarnung, die niemand gemessen hat. */
+  const [wartet,setWartet]=useState<WartetErgebnis|null>(null);
+  /* Die Zeile, um die es geht. `export_wartet()` ist in der Datenbank auf
+     `key = 'wordpress'` verdrahtet und fuer keinen anderen Anschluss zu
+     gebrauchen — deshalb wird sie auch nur fuer diesen geholt. */
+  const wpZeile=apiVerbindungen.find(a=>a.key==="wordpress")||null;
+  /* ⚠ Die Abhaengigkeit ist `letzter_sync`, nicht die Zeile: die Zahl
+     rechnet gegen genau diesen Zeitstempel. Nach einem Lauf von Hand
+     laedt `onReload` die Zeile neu, der Stempel wandert — und dann muss
+     die Zahl mitwandern, sonst steht eine Wartemeldung neben einem
+     frischen Lauf. */
+  const wpStand=wpZeile?.letzter_sync??null;
+  /* ⚠ Kein Objekt in der Abhaengigkeitsliste: eine Zeile, die der Vater
+     bei jedem Render neu baut, liesse den Effekt endlos laufen. Ein
+     Wahrheitswert und ein Zeitstempel koennen das nicht. */
+  const wpDa=Boolean(wpZeile);
+  useEffect(()=>{
+    if(!wpDa){setWartet(null);return;}
+    let lebt=true;
+    setWartet(null);
+    holeExportWartet(sb,vereinId).then(e=>{if(lebt)setWartet(e);});
+    return ()=>{lebt=false;};
+  },[sb,vereinId,wpDa,wpStand]);
 
   /** Was vom Lauf angezeigt wird — aufgezaehlt, nicht ausgeschlossen. */
   function fasseZusammen(daten: unknown): string {
@@ -686,6 +730,29 @@ export function ApiTab({loading,isMobile,mobileKachel,apiVerbindungen,tab,sb=nul
               const info=API_INFOS[api.key];
               const statusColor=api.sync_status==="ok"?GN:api.sync_status==="fehler"?R:api.sync_status==="ausstehend"?AM:"#aaa";
               const statusBg=api.sync_status==="ok"?"#ECFDF5":api.sync_status==="fehler"?RL:api.sync_status==="ausstehend"?"#FFFBEB":"#f5f5f3";
+              /* ⚠ ⚠  NUR FUER DEN EXPORT. Der SFV-Sync hat einen TAKT und
+                 wird danach beurteilt („wann lief er zuletzt?"), der Export
+                 hat keinen und laeuft nach Bedarf („wartet etwas, und wie
+                 lange schon?"). Der Waechter trennt die beiden seit dem
+                 11.09.2026 aus genau diesem Grund; wer sie hier zusammenlegt,
+                 baut fuer den einen einen Fehlalarm-Generator.
+
+                 Die Deutung selbst liegt in `domains/spiele/` — eine
+                 Entscheidung, die in einer Komponente steht, laesst sich
+                 nicht gegen eine erfundene Antwort halten. */
+              const stand=api.key==="wordpress"
+                ? deuteExportStand({
+                    letzter_sync:api.letzter_sync,
+                    sync_status:api.sync_status,
+                    sync_laeuft_seit:api.sync_laeuft_seit,
+                    wartet:wartet?.wartet??null,
+                    /* ⚠ `wartet === null` hat ZWEI Gruende, und sie sehen in
+                       der Anzeige verschieden aus: „wird gerade geholt" ist
+                       ein Zustand von Sekunden, „gescheitert" einer, der
+                       bleibt. Zusammengelegt waere der zweite unsichtbar. */
+                    wartet_grund:wartet?wartet.grund:"wird gerade geholt",
+                  })
+                : null;
               return(
                 <Card key={api.key}>
                   <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10}}>
@@ -693,7 +760,9 @@ export function ApiTab({loading,isMobile,mobileKachel,apiVerbindungen,tab,sb=nul
                       <TI n="plug" style={{fontSize:18,color:api.active?BK:"#ccc"}}/>
                       <span style={{fontWeight:700,fontSize:14}}>{api.label||api.key}</span>
                     </Row>
-                    <Chip text={api.sync_status||"deaktiviert"} color={statusColor} bg={statusBg}/>
+                    {stand
+                      ? <Chip text={stand.chip} semantic={stand.semantic}/>
+                      : <Chip text={api.sync_status||"deaktiviert"} color={statusColor} bg={statusBg}/>}
                   </div>
                   <p style={{fontSize:14,color:"var(--sub)",margin:"0 0 10px",lineHeight:1.5}}>{info?.description||"Externe API-Verbindung"}</p>
                   {info?.felder&&(
@@ -787,6 +856,24 @@ export function ApiTab({loading,isMobile,mobileKachel,apiVerbindungen,tab,sb=nul
                       <div style={{marginTop:4,wordBreak:"break-word"}}>
                         Meldung: {api.sync_meldung || "— keine"}
                       </div>
+                    </div>
+                  )}
+                  {/* ⚠ ⚠  WAS DER CHIP BEHAUPTET, STEHT DARUNTER AUSGESCHRIEBEN.
+                      Ein Chip mit „veraltet" ohne Begruendung ist eine Zahl
+                      ohne Bezugsgroesse: er sagt nicht, wie alt, nicht wie
+                      viel wartet, und vor allem nicht, ob ueberhaupt
+                      nachgesehen wurde.
+
+                      ⚠ Steht AUSSERHALB des `letzter_sync`-Blocks darueber,
+                      mit Absicht: gerade wenn noch nie ein Lauf fertig
+                      geworden ist, muss die Kachel etwas sagen — sonst
+                      verschwindet die Auskunft genau im schlechtesten Fall. */}
+                  {stand&&(
+                    <div style={{fontSize:14,marginBottom:10,lineHeight:1.5}}>
+                      {stand.zeilen.map((z,i)=>(
+                        <div key={i} style={{color:stand.lage==="ok"?"var(--sub)":BK,
+                                             marginTop:i?4:0,wordBreak:"break-word"}}>{z}</div>
+                      ))}
                     </div>
                   )}
                   {/* Der Waechter. Steht auch dann da, wenn er NICHT gelaufen

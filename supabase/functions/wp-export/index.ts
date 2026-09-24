@@ -92,6 +92,12 @@ import {
   fasseWappenAntworten, pruefeWappen, nochZeit, WAPPEN_BUDGET_MS,
 } from "../../../src/domains/spiele/wpWappen.ts";
 import type { WappenZeile, WappenNutzlast, WappenAntwort } from "../../../src/domains/spiele/wpWappen.ts";
+/* Das Zeitbudget der Teile-Schleife und die Reihenfolge der Mannschaften.
+   ⚠ Eigene Datei OHNE esm.sh-Import, damit vitest sie laden kann — was
+   eine Zusage traegt, gehoert dorthin, wo eine Pruefung hinkommt. */
+import {
+  EXPORT_BUDGET_MS, ordneOffeneNachVorn, leseOffeneTeams,
+} from "./laufBudget.ts";
 import { protokoll, protokollFehler, schwaerze } from "../sfv-sync/protokoll.ts";
 /* ⚠ Der Eimername aus der Stelle, die ihn befuellt — nicht als zweite
    Zeichenkette daneben. Zwei Orte fuer eine Aussage laufen auseinander,
@@ -284,6 +290,26 @@ async function alleSeiten<T>(
  *    Die Frage ist deshalb nicht „habe ich index.ts angefasst?", sondern
  *    **„antwortet sie jetzt anders?"**.
  *
+ *    62  24.09.2026  ⚠ ⚠ DER SPIELE-LAUF HOERT VON SELBST AUF, STATT
+ *                    ABGEBROCHEN ZU WERDEN. Bis hierher hatte die
+ *                    Teile-Schleife kein Zeitbudget — das Gateway toetet
+ *                    nach 150 s, und ein getoeteter Worker fuehrt kein
+ *                    `finally` aus: die Protokollzeile bliebe auf
+ *                    `laeuft`, die Laufsperre gesetzt. **Ein Lauf, der
+ *                    abgebrochen wird, hat kein Ergebnis.**
+ *                    · `EXPORT_BUDGET_MS = 90_000`, geprueft VOR jedem
+ *                      POST und mit `break` — nie mit `return`, sonst
+ *                      spraenge der Ausstieg am Abschluss vorbei
+ *                    · die Grenze verlaeuft ZWISCHEN Mannschaften; eine
+ *                      halb gesendete loeschte drueben den halben
+ *                      Spielplan (`draft`-Regel der Gegenstelle)
+ *                    · `offen_teams` gehen beim naechsten Lauf ZUERST —
+ *                      ohne das schnitte jeder Lauf an derselben Stelle,
+ *                      und die hinteren Mannschaften gingen nie hinaus
+ *                    · `SPERRE_MINUTEN` 30 → 5: kein Lauf kann laenger
+ *                      dauern als das Gateway zulaesst, und eine Sperre,
+ *                      die laenger steht, kostet den naechsten Abholer
+ *                    · Status `warnung` statt `ok`, wenn etwas offen ist
  *    61  23.09.2026  DIE NAMENSKARTE WIRD GEPAGT — und das war der
  *                    sichtbare Schaden. `sfv_personen` und
  *                    `sfv_zuordnung` wurden ungepagt gelesen; PostgREST
@@ -420,21 +446,34 @@ async function alleSeiten<T>(
  *    46  12.09.2026  Durchreiche von personen/teams/unterfelder/
  *                    geschwister, nichtDurchgereicht(), diese Angabe
  */
-const FUNCTION_FASSUNG = 61;
+const FUNCTION_FASSUNG = 62;
 
 const AKTIONEN = ["probe", "export", "bestand", "status", "ranglisten"];
 
-/* ⚠ 30 Minuten, und die Zahl ist NICHT geraten — sie ist die Antwort auf
-   „wie lange kann ein Lauf hoechstens dauern, bevor Stillstand die
-   wahrscheinlichere Erklaerung ist". Ab Etappe 5 sind es 21 POST statt
-   einem; beim SFV-Sync stehen dafuer 15 Minuten, dort dauert ein Lauf
-   Sekunden.
+/* ⚠ ⚠  FUENF MINUTEN, UND DIE ZAHL IST SEIT DEM 24.09.2026 ABGELEITET
+   STATT GESCHAETZT.
 
-   ⚠ Sie ist eine Schwelle, und Schwellen sind nie durch einen Test
-   gedeckt (CLAUDE.md). Sobald der erste volle Lauf gemessen ist, gehoert
-   sie dagegen gehalten: `details.dauer_ms` steht seit dem 09.09.2026 im
-   Protokoll, damit diese Zahl eine Messung bekommt statt einer Meinung. */
-const SPERRE_MINUTEN = 30;
+   Hier standen 30 Minuten, mit der Begruendung „wie lange kann ein Lauf
+   hoechstens dauern, bevor Stillstand die wahrscheinlichere Erklaerung
+   ist". Die Frage war richtig; die Antwort hat eine Messung uebersehen,
+   die daneben lag: **das Gateway toetet jede Anfrage nach 150 Sekunden.**
+   Ein Lauf KANN gar nicht laenger dauern. Eine Sperre von 30 Minuten war
+   damit zwoelfmal so lang wie der laengstmoegliche Lauf.
+
+   Was das kostete: bleibt eine Sperre haengen — ein getoeteter Worker
+   fuehrt kein `finally` aus —, ueberspringt der Abholer (alle 15 Minuten)
+   den naechsten Lauf und faengt erst nach 30 Minuten wieder an. Eine
+   Sperre, die laenger steht als die Grenze, an der sie entstanden ist,
+   verlaengert jeden Ausfall um einen Takt.
+
+   150 Sekunden sind zwei_einhalb Minuten; fuenf sind das Doppelte. Eine
+   Sperre, die aelter ist, kann keinem lebenden Lauf gehoeren — und sie
+   loest sich damit VOR dem naechsten Abholer statt nach ihm.
+
+   ⚠ Sie bleibt eine Schwelle, und Schwellen sind nie durch einen Test
+   gedeckt (CLAUDE.md). Gedeckt ist nur ihr Verhaeltnis zum Gateway, und
+   genau das haelt ein Fall fest. */
+const SPERRE_MINUTEN = 5;
 
 Deno.serve(async (req) => {
   /* ⚠ ⚠  AB DER ANFRAGE, nicht ab dem Wappen-Block und nicht ab
@@ -622,7 +661,7 @@ Deno.serve(async (req) => {
 
        ⚠ Was NICHT faellt: der Abgleichbereich. Er kommt weiterhin aus den
        gelieferten Spielen, nicht aus dem Aufruf — siehe teileNachTeam(). */
-    const lauf = await sendeAnWordpress(db, vereinId, erg);
+    const lauf = await sendeAnWordpress(db, vereinId, erg, anfrageBeginnMs);
 
     /* ⚠ ⚠  DIE RANGLISTE GEHT ZULETZT, UND ZWAR NUR FUER MANNSCHAFTEN,
        DEREN SPIELE ANGEKOMMEN SIND.  ⚠ ⚠
@@ -767,6 +806,13 @@ Deno.serve(async (req) => {
 
 async function sendeAnWordpress(
   db: DbLeser, vereinId: string, erg: ProbeErgebnis,
+  /* ⚠ ⚠  DER NULLPUNKT KOMMT VON AUSSEN, und das ist der ganze Punkt.
+     Das Gateway zaehlt ab der ANFRAGE, nicht ab dem Beginn dieser
+     Funktion. Vor ihr liegt der Aufbau der Nutzlast — mehrere gepagte
+     Abfragen ueber `spiele`, `spiel_aufstellung` und `spiel_ereignisse`.
+     Ein `Date.now()` hier drin waere um genau diese Zeit zu
+     grosszuegig, und zwar unsichtbar. */
+  anfrageBeginnMs: number,
 ) {
   const basis = (Deno.env.get("WP_BASIS_URL") ?? "").replace(/\/+$/, "");
   const schluessel = Deno.env.get("WP_SCHLUESSEL") ?? "";
@@ -785,7 +831,7 @@ async function sendeAnWordpress(
      er stillschweigend ein Viertel und meldete Erfolg — genau die stille
      Kuerzung, gegen die die Grenze selbst gebaut ist. */
   const alle = erg.alle;
-  const teile = teileNachTeam(alle);
+  const teileRoh = teileNachTeam(alle);
   const heimatlos = ohneTeamnummer(alle);
 
   const beginn = new Date().toISOString();
@@ -803,7 +849,12 @@ async function sendeAnWordpress(
 
      Beanspruchen in EINEM Statement: pruefen und danach setzen waeren
      zwei Schritte, und dazwischen passt der zweite Lauf. Wortgleich zum
-     SFV-Sync, nur mit einer laengeren Frist. */
+     SFV-Sync.
+
+     ⚠ Hier stand „nur mit einer laengeren Frist". Das galt bis zum
+     24.09.2026 (30 gegen 15 Minuten) und gilt seither nicht mehr: die
+     Frist ist auf 5 Minuten gefallen, weil kein Lauf das Gateway
+     ueberdauern kann. Sie ist jetzt die KUERZERE von beiden. */
   if (verbindungId) {
     const grenze = new Date(Date.now() - SPERRE_MINUTEN * 60_000).toISOString();
     const { data: beansprucht } = await db.from("api_verbindungen")
@@ -820,6 +871,40 @@ async function sendeAnWordpress(
       };
     }
   }
+
+  /* ⚠ ⚠  WO DER LETZTE LAUF AUFGEHOERT HAT — GELESEN, BEVOR DIE EIGENE
+     ZEILE ENTSTEHT.
+
+     Das Zeitbudget (siehe die Teile-Schleife) laesst einen Lauf von selbst
+     aufhoeren, statt ihn abbrechen zu lassen. Ohne diese Zeilen waere das
+     ein dauerhafter blinder Fleck: `teileNachTeam()` sortiert stabil, also
+     schnitte jeder Lauf an derselben Stelle, und die hinteren
+     Mannschaften gingen NIE hinaus.
+
+     ⚠ VOR dem `insert` weiter unten. Danach waere die juengste Zeile die
+     eigene — und die traegt noch kein `offen_teams`.
+
+     ⚠ `error` wird gelesen, und ein Lesefehler ist KEIN Grund, den Lauf
+     abzubrechen: die Reihenfolge ist eine Verbesserung, keine Bedingung.
+     Er wird benannt statt verschluckt, sonst saehe „konnte nicht lesen"
+     aus wie „es lag nichts vor". */
+  let offenVorher: string[] = [];
+  let reihenfolgeFehler: string | null = null;
+  if (verbindungId) {
+    const { data: letzte, error: leseFehler } = await db.from("api_sync_log")
+      .select("details")
+      .eq("verbindung_id", verbindungId)
+      .eq("aktion", AKTION_EXPORT)
+      .order("gestartet_am", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (leseFehler) {
+      reihenfolgeFehler = schwaerze(leseFehler.message);
+    } else {
+      offenVorher = leseOffeneTeams((letzte as { details?: unknown } | null)?.details);
+    }
+  }
+  const teile = ordneOffeneNachVorn(teileRoh, offenVorher);
 
   /* ⚠ DER LAUF SAGT, DASS ER LAEUFT — sonst steht bis zum Ende NIRGENDS
      etwas, und „dauert noch" ist von „haengt" nicht zu unterscheiden.
@@ -859,8 +944,34 @@ async function sendeAnWordpress(
      Wettlauf, den niemand nachvollziehen kann. Es ist ein stuendlicher
      Auftrag, keine Interaktion — Dauer ist hier billig. */
   const ergebnisse: TeilErgebnis[] = [];
+  /* ⚠ Was dieser Lauf nicht mehr angefasst hat. IMMER da, auch als leere
+     Liste — eine nicht gestellte Frage und ein leerer Befund duerfen nicht
+     gleich aussehen. Sie geht ins Protokoll und ist die Reihenfolge des
+     naechsten Laufs. */
+  const offenTeams: string[] = [];
   try {
-    for (const teil of teile) {
+    for (let ix = 0; ix < teile.length; ix++) {
+      const teil = teile[ix];
+      /* ⚠ ⚠  DAS ZEITBUDGET — VOR DEM POST, UND ES BRICHT MIT `break` AB.
+
+         Vor dem POST, weil die Grenze ZWISCHEN Mannschaften verlaeuft und
+         nie innerhalb einer: der Empfaenger setzt jedes Spiel einer
+         gelieferten Mannschaft auf `draft`, das nicht in der Nutzlast
+         steht. Eine Mannschaft, die halb hinausgeht, loescht drueben den
+         halben Spielplan. Wer schon gestartet ist, laeuft zu Ende — dafuer
+         steht `EIN_TEIL_RESERVE_MS` in der Aufteilung.
+
+         ⚠ ⚠  UND `break`, NICHT `return` UND NICHT `throw`. Das ist die
+         eigentliche Zusage dieses Blocks: **das Ergebnis eines Laufs steht
+         immer im Protokoll.** Ein `return` spraenge am Abschluss vorbei,
+         und dann saehe ein Lauf, der ordentlich aufgehoert hat, genauso
+         aus wie einer, den das Gateway getoetet hat — eine Zeile auf
+         `laeuft`, fuer immer. Genau diese Ununterscheidbarkeit ist der
+         Grund, aus dem es dieses Budget gibt. */
+      if (!nochZeit(anfrageBeginnMs, Date.now(), EXPORT_BUDGET_MS)) {
+        for (let r = ix; r < teile.length; r++) offenTeams.push(teile[r].sfv_team_id);
+        break;
+      }
       /* ⚠ GEMESSEN, NICHT GESCHAETZT. „Wie lange dauern 21 serielle POST"
          war am 09.09.2026 eine Frage, auf die niemand eine Zahl hatte —
          und eine geschaetzte waere im Protokoll von einer gemessenen nicht
@@ -900,14 +1011,34 @@ async function sendeAnWordpress(
     }
   } finally {
     /* ⚠ Sperre IMMER loesen, auch wenn etwas darueber wirft — sonst
-       blockiert ein Fehlschlag den naechsten Lauf eine halbe Stunde. */
+       blockiert ein Fehlschlag den naechsten Lauf bis zum Ablauf der
+       Frist.
+
+       ⚠ ⚠  UND DAS IST GENAU DER WEG, DEN EIN GETOETETER WORKER NICHT
+       NIMMT. Ein `finally` schuetzt gegen einen Wurf, nicht gegen das
+       Gateway: laeuft die Anfrage in den `IDLE_TIMEOUT`, gibt es keinen
+       Code mehr, der diese Zeile ausfuehrt. Deshalb ist das Zeitbudget
+       oben die eigentliche Absicherung und diese Zeile nur die zweite —
+       und deshalb ist `SPERRE_MINUTEN` auf das Gateway bezogen und nicht
+       auf eine Vermutung ueber die Laufdauer. */
     if (verbindungId) {
       await db.from("api_verbindungen").update({ sync_laeuft_seit: null }).eq("id", verbindungId);
     }
   }
 
   const dauerMs = Date.now() - beginnMs;
-  const { status, zahlen } = fasseLauf(ergebnisse);
+  const { status: statusTeile, zahlen } = fasseLauf(ergebnisse);
+
+  /* ⚠ ⚠  EIN LAUF, DER MANNSCHAFTEN OFFEN LAESST, IST NICHT `ok`.
+
+     Er ist auch nicht `fehler`: nichts ist schiefgegangen, und der
+     Waechter schlaegt bei `fehler` Alarm. `warnung` ist die Lage —
+     sichtbar, ohne Alarm. Fuer die offenen Mannschaften steht drueben der
+     Stand von vorher, und das darf eine Kachel nicht gruen zeigen.
+
+     ⚠ Eine bestehende `fehler`-Farbe wird NICHT weggenommen: ein
+     gescheiterter Teil wiegt schwerer als ein offener. */
+  const status = offenTeams.length && statusTeile === "ok" ? "warnung" : statusTeile;
 
   /* ⚠ WAS WIR GEBAUT HABEN — die Gegenzahl zu dem, was WordPress
      geschrieben hat. Beide gehen in Meldung und Protokoll; eine allein
@@ -981,7 +1112,24 @@ async function sendeAnWordpress(
     zahlen.fehler.push(`${heimatlos.length} Spiel(e) ohne SFV-Teamnummer, nicht gesendet: `
       + heimatlos.slice(0, 10).join(", "));
   }
-  const meldung = laufMeldung(host, zahlen, dauerMs, gesendet);
+  /* ⚠ ⚠  DIE OFFENEN MANNSCHAFTEN STEHEN IN DER EINEN ZEILE, DIE DIE
+     KACHEL ZEIGT — nicht nur in `details`, wo sie niemand aufschlaegt.
+
+     Ein Lauf, der zwoelf von einundzwanzig geschafft hat, sieht in der
+     Meldung sonst aus wie ein Verein mit zwoelf Mannschaften. Und die
+     Zahl kommt MIT ihrer Bezugsgroesse: „9 offen" allein ist ein
+     Artefakt, „9 von 21 offen" ist eine Auskunft.
+
+     ⚠ Angehaengt statt in `laufMeldung()` gebaut: die Funktion liegt in
+     `wpLauf.ts` und wird von der Vorschau mitbenutzt, die kein Budget
+     kennt. Ein Feld, das dort immer leer waere, behauptete eine Messung,
+     die es nicht gibt. */
+  const meldungBasis = laufMeldung(host, zahlen, dauerMs, gesendet);
+  const meldung = offenTeams.length
+    ? `${meldungBasis} — ⏸ ${offenTeams.length} von ${teile.length} Mannschaft(en) `
+      + `offen (Zeitbudget ${Math.round(EXPORT_BUDGET_MS / 1000)} s), `
+      + "sie gehen beim nächsten Lauf zuerst"
+    : meldungBasis;
 
   if (verbindungId && logId) {
     await db.from("api_sync_log").update({
@@ -991,7 +1139,31 @@ async function sendeAnWordpress(
       datensaetze_aktualisiert: zahlen.aktualisiert,
       datensaetze_fehler: zahlen.fehler.length,
       meldung,
-      details: fuersProtokoll(host, zahlen, ergebnisse, dauerMs, gesendet),
+      details: {
+        ...fuersProtokoll(host, zahlen, ergebnisse, dauerMs, gesendet),
+        /* ⚠ ⚠  DREI FELDER, UND ALLE DREI IMMER DA — AUCH ALS NULL UND
+           LEERE LISTE. Ein fehlendes Feld hiesse „nicht gefragt", eine
+           leere Liste heisst „gefragt, nichts offen"; die beiden duerfen
+           nicht gleich aussehen.
+
+           ⚠ `offen_teams` ist zugleich die EINGABE des naechsten Laufs —
+           `leseOffeneTeams()` liest genau diesen Schluessel. Wer ihn
+           umbenennt, schaltet die Reihenfolge ab, ohne dass etwas
+           fehlschlaegt: der naechste Lauf faenge wieder bei Mannschaft 1
+           an und schnitte an derselben Stelle. Gehalten wird das von
+           einem Fall, nicht von diesem Kommentar. */
+        offen_teams: offenTeams,
+        offen_wegen_zeit: offenTeams.length,
+        budget_ms: EXPORT_BUDGET_MS,
+        /* Womit dieser Lauf angefangen hat — die offene Liste des
+           vorigen. Zwei Laeufe nebeneinander zeigen damit, ob die
+           Reihenfolge wirklich greift, statt dass man es glauben muss. */
+        offen_uebernommen: offenVorher,
+        /* ⚠ Nicht verschluckt: ohne diese Zeile saehe „konnte die letzte
+           Zeile nicht lesen" aus wie „es lag nichts vor", und die
+           Reihenfolge waere still aus. */
+        reihenfolge_fehler: reihenfolgeFehler,
+      },
     }).eq("id", logId);
 
     /* `letzter_sync` und `sync_status` im SELBEN update — der Waechter
@@ -1026,6 +1198,12 @@ async function sendeAnWordpress(
     gebaut: alle.length,
     gesendet: zahlen.spiele_gesendet,
     ohne_teamnummer: heimatlos,
+    /* ⚠ Auch in der ANTWORT, nicht nur im Protokoll. Wer den Knopf
+       drueckt, sieht sonst „12 Mannschaften" und haelt das fuer alle.
+       Immer da, auch als leere Liste. */
+    offen_teams: offenTeams,
+    offen_uebernommen: offenVorher,
+    budget_ms: EXPORT_BUDGET_MS,
     zahlen,
     je_team: ergebnisse.map((t) => ({
       team: t.sfv_team_id, gesendet: t.gesendet, dauer_ms: t.dauer_ms,
