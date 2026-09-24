@@ -33,7 +33,7 @@
    ═══════════════════════════════════════════════════════════════ */
 import type { AnzeigeEreignis } from "./matchdatenAnzeige.ts";
 import {
-  beschreibeWer, beschreibeGewechselten, TYP_TOR, TYP_VERWARNUNG, TYP_AUSSCHLUSS,
+  werBefund, rollenName, beschreibeGewechselten, TYP_TOR, TYP_VERWARNUNG, TYP_AUSSCHLUSS,
   torZusatz,
 } from "./matchdatenAnzeige.ts";
 
@@ -104,7 +104,7 @@ export type WpVerlaufArt = "tor" | "gelb" | "gelbrot" | "rot" | "wechsel" | "ass
  * einem SQL-Block. Gehalten wird es von `nutzlastFassung.test.ts`: ändert
  * sich ein Feldname, ist der Fall rot, und er nennt beide Stellen.
  */
-export const NUTZLAST_FASSUNG = 5;
+export const NUTZLAST_FASSUNG = 6;
 
 export interface WpVerlaufZeile {
   /** Text, nicht Zahl — damit „45+2" hineinpasst. */
@@ -154,8 +154,74 @@ export interface WpVerlaufZeile {
    * `mannschaftsstrafe` — das wäre eine Deutung, für die wir kein Merkmal
    * haben. Es sagt: **hier steht kein Mensch, den wir benennen können.**
    * Was die Website daraus macht, ist ihre Entscheidung.
+   *
+   * ══════════════════════════════════════════════════════════════════
+   * ⚠ ⚠  24.09.2026 — DAS MERKMAL GIBT ES JETZT, UND DAS FELD WIRD
+   *       DADURCH SELTENER WAHR.
+   *
+   * Der Verband liefert `roleCategoryId` und `personName` bei jedem
+   * Ereignis mit; seither trägt ein eigener Trainer einen NAMEN
+   * („Trainer Hans Meier"), und für ihn steht hier `false` — es steht ein
+   * Mensch da. Wahr bleibt es für den, den wir auch mit Rolle nicht
+   * benennen können („Trainer" allein), und für den Altbestand ohne
+   * Rollenangabe („Unser Team").
+   *
+   * ⚠ ⚠  UND DIE GRENZE `wir &&` BLEIBT — GEGEN DIE VORGABE DES AUFTRAGS.
+   *
+   * Der Auftrag vom 24.09.2026 sagte: *„Für den fremden Trainer bleibt es
+   * `true` — dort steht eine Rolle und ein Klub, kein Mensch."* Das Wort
+   * „bleibt" setzt voraus, dass es für Gegner schon `true` ist.
+   * **Gemessen am Code: es ist `false`, seit es das Feld gibt** — `wir &&`
+   * stand von der ersten Zeile an darin.
+   *
+   * Semantisch hätte der Auftrag recht: einen Gegner können wir nie
+   * benennen (Entscheid B), also wäre `true` die wahrere Antwort. Nur
+   * wäre das eine **unbestellte Bedeutungsänderung an 542 Zeilen** auf
+   * einer öffentlichen Seite, deren Umgang mit dem Feld wir nicht kennen
+   * — begründet mit einem Satz, dessen Voraussetzung nicht zutrifft.
+   *
+   * > Eine Zahl, deren Bedeutung sich ändert, ohne dass ihr Name sich
+   * > ändert, ist gefährlicher als eine falsche.
+   *
+   * Deshalb: die eigene Seite wird richtig, die fremde bleibt, wie sie
+   * ist, und der Widerspruch steht hier statt in einem Bericht. Wer ihn
+   * auflösen will, entfernt `wir &&` in `bildeVerlauf()` **und** erhöht
+   * `NUTZLAST_FASSUNG` — es ist eine Entscheidung, keine Reparatur.
+   * ══════════════════════════════════════════════════════════════════
    */
   ohne_person: boolean;
+  /**
+   * Die Rollenkategorie des Verbands als Klartext — „Trainer",
+   * „Betreuer", „Funktionär" — und `""`, wenn keine gilt.
+   *
+   * ⚠ ⚠  SIE STEHT DIREKT NEBEN `ohne_person`, WEIL DIE ZWEI EIN PAAR
+   * SIND. Zusammen sagen sie alles, was wir über den Menschen wissen:
+   *
+   *   `rolle: "Trainer"`, `ohne_person: false`  ein benannter Funktionsträger
+   *   `rolle: "Trainer"`, `ohne_person: true`   einer, den wir nicht benennen
+   *   `rolle: ""`,        `ohne_person: true`   der alte Fall „Unser Team"
+   *
+   * ⚠ ⚠  UND SIE IST DER GRUND, WARUM DIE WEBSITE `text` NICHT ZERLEGEN
+   * MUSS. `ohne_person` gibt es genau deshalb (13.09.2026): der Theme-Chat
+   * hätte sonst `"Unser Team"` als Zeichenkette vergleichen müssen. Ohne
+   * dieses Feld wäre er beim nächsten Schritt gezwungen, `"Trainer"` aus
+   * `text` herauszuschneiden — **derselbe Fehler, eine Runde später**, und
+   * er bräche beim ersten Umformulieren.
+   *
+   * ⚠ ALS KLARTEXT UND NICHT ALS ID, obwohl die Id bei uns entscheidet
+   * (`rolle_kategorie_id`). Der Grund ist der Zuschnitt der Gegenseite: sie
+   * würde die Angabe ANZEIGEN, nicht damit rechnen, und für eine Rechnung
+   * bräuchte sie die Liste der 28 Kategorien, die sie nicht hat. Dieselbe
+   * Wahl wie bei `ereignis_zusatz`, das unser Wort trägt und nicht
+   * `subtyp_id`.
+   *
+   * ⚠ `""` fasst „Spieler" und „nicht gefragt" zusammen, und das ist
+   * Absicht: die Frage der Website lautet „gibt es einen Rollenvermerk zu
+   * zeigen?", und in beiden Fällen lautet die Antwort nein. Wer die zwei
+   * Zustände auseinanderhalten muss, ist WIR — dafür ist der Zähler in der
+   * Vorschau da, nicht die Nutzlast.
+   */
+  rolle: string;
   art: WpVerlaufArt;
   seite: "heim" | "gast";
   text: string;
@@ -852,7 +918,14 @@ export function bildeVerlauf(
     /* Der Text ist die einzige Stelle, an der ein Mensch vorkommt — und er
        kommt als TEXT vor, nie als Verweis. So will es das Feld: „Nennt
        Personen nur als Text — für die Statistik zählt die Tabelle darüber." */
-    const wer = beschreibeWer(e, namen);
+    /* ⚠ ⚠  EIN AUFRUF FÜR BEIDES — den Text UND das Merkmal. Bis zum
+       24.09.2026 stand hier `beschreibeWer()` und weiter unten eine von
+       Hand nachgebaute Bedingung für `ohne_person`, mit dem Kommentar
+       „dieselbe Bedingung wie der Rückfalltext". Zwei Stellen, eine
+       Aussage, von Hand gleichgehalten — und `ohne_person` ist das Feld,
+       an dem die Website entscheidet, ob dort ein Mensch steht. */
+    const befund = werBefund(e, namen);
+    const wer = befund.text;
     /* ⚠ `subtyp` kann „-" sein, und das ist kein leerer Wert, sondern der
        Klartext zu Subtyp 0 in den SFV-Stammdaten. Ohne diese Prüfung stünde
        auf der Website „FC Küsnacht a · -". Aufgefallen in der Probe vom
@@ -942,11 +1015,22 @@ export function bildeVerlauf(
          hat: `update_field()` verwirft unbekannte Unterfelder still, und
          `unbeachtete_felder` sieht nur die oberste Ebene. */
       ereignis_zusatz: torZusatz(e.typ_id, e.subtyp_id ?? null),
-      /* ⚠ Dieselbe Bedingung wie der Rückfalltext in `beschreibeWer()` —
-         und sie steht hier, weil sie EINE Frage beantwortet: konnten wir
-         die Person benennen? Aus dem Text zurückzurechnen wäre der Umweg,
-         den dieses Papier als teuersten Fehler führt. */
-      ohne_person: wir && e.sfv_person_id == null && e.rueckennr == null,
+      /* ⚠ ⚠  AUS DEM BEFUND, NICHT NEU GERECHNET. `benennbar` beantwortet
+         genau eine Frage — konnten wir die Person kennzeichnen, durch Namen
+         ODER Rückennummer? —, und dieselbe Antwort formt den Text darüber.
+         Aus dem TEXT zurückzurechnen wäre der Umweg, den dieses Papier als
+         teuersten Fehler führt; ihn ein zweites Mal ZU RECHNEN war der
+         Fehler, der hier stand.
+
+         ⚠ `wir &&` bleibt mit Absicht und gegen die Vorgabe des Auftrags —
+         die Begründung steht am Feld selbst. `benennbar` ist beim Gegner
+         ohnehin `false`; die Grenze unterdrückt hier also ein `true`, und
+         genau das ist der offene Punkt. */
+      ohne_person: wir && !befund.benennbar,
+      /* ⚠ Der Rollentext kommt aus derselben Entscheidung wie `text`. Als
+         eigenes Feld, damit die Gegenseite ihn nicht herausschneiden muss —
+         siehe die Begründung am Feld. */
+      rolle: befund.rolle,
       /* ⚠ ⚠  EBENFALLS BEIDE SEITEN, seit dem 11.09.2026.
 
          Hier stand: „nur bei uns — die Nummer steht beim Gegner an der
@@ -1418,7 +1502,33 @@ export interface NamensZaehlung {
    * den Warnblock über `zaehleVerlaufNamen`.
    */
   mit_eigenem_namen: number;
-  /** Zeilen mit dem Namen aus der SFV-Ablage — der Rückfall. */
+  /**
+   * Zeilen mit einem Namen DES VERBANDS — der Rückfall.
+   *
+   * ⚠ ⚠  ZWEI QUELLEN SEIT DEM 24.09.2026, UND DAS IST EINE AUSWEITUNG DER
+   * BEDEUTUNG: bis dahin war es allein `sfv_personen` (über die
+   * Aufstellung), jetzt kommt `spiel_ereignisse.person_name` dazu — der
+   * rohe Name an der Ereigniszeile, den nur ein Rollenvermerk freigibt.
+   *
+   * Die FRAGE dieses Topfes bleibt dieselbe, und darauf kommt es an:
+   * **wessen Schreibweise steht auf der Seite — unsere, die des Verbands,
+   * oder keine?** Ein Trainername aus `person_name` ist die des Verbands.
+   * Er gehört hierher nach der Definition des Topfes, nicht als Ausnahme.
+   *
+   * ⚠ ⚠  UND ER DARF NICHT IN `mit_rueckennummer` FALLEN, wo er vor dem
+   * Umbau gelandet wäre (ein Trainer hat keine `sfv_person_id`). Dann
+   * zählte der Topf „Eigene Spieler ohne jeden Namen" eine Zeile, die
+   * einen Klarnamen zeigt — und das ist die EINE Zahl, die vor jedem Lauf
+   * entscheidet, ob Klarnamen von Junioren öffentlich werden. Sie hätte
+   * um die Zahl der benannten Trainer zu wenig gemeldet, und kein Test
+   * wäre rot geworden.
+   *
+   * ⚠ KEIN FÜNFTER TOPF. Er würde nach der QUELLTABELLE trennen
+   * (`sfv_personen` gegen die Ereigniszeile) — eine Unterscheidung, die
+   * keine Frage beantwortet, die jemand stellt; und er zerbräche die
+   * Aufteilung, deren Summe die Zeilenzahl ergeben muss
+   * (`zaehlung_stimmt`, gerechnet in `wp-export/index.ts`).
+   */
   mit_sfv_namen: number;
   /** Eigene Spieler ohne jeden Namen — „Nr. 13". */
   mit_rueckennummer: number;
@@ -1559,6 +1669,12 @@ export function zaehleVerlaufNamen(
        hier anders sortiert, misst etwas anderes als die Website zeigt. */
     if (id != null && zugeordnet.has(id)) { z.mit_eigenem_namen++; continue; }
     if (id != null && sfvNamen.has(id)) { z.mit_sfv_namen++; continue; }
+    /* ⚠ ⚠  DIE DRITTE NAMENSQUELLE, AN DERSELBEN STELLE WIE IN DER ANZEIGE
+       — nach dem SFV-Namen, vor der Rückennummer. Und über `rollenName()`,
+       nicht über eine eigene Bedingung: liefe sie hier anders als in
+       `werBefund()`, meldete die Zahl etwas anderes, als die Website zeigt,
+       und beide wären für sich genommen plausibel. */
+    if (rollenName(e)) { z.mit_sfv_namen++; continue; }
     z.mit_rueckennummer++;
   }
 

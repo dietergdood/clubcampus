@@ -64,13 +64,23 @@ describe("NUTZLAST_FASSUNG hält mit den Feldern Schritt", () => {
      äusserste Ebene, an der `liga` am 10.09.2026 gefehlt hat — stand in
      keiner Liste. **Sein Zuschnitt war schmaler als seine Zusage**, und
      genau dieses Feld wäre unbemerkt dazugekommen. Seither drei Listen
-     statt zwei. */
-  const VERLAUF_FASSUNG_5 = [
-    "minute", "nummer", "ereignis_zusatz", "ohne_person", "art", "seite",
-    "text", "stand", "klub", "sfv_person_id", "ein_nummer",
+     statt zwei.
+
+     ⚠ ⚠  FASSUNG 6 (24.09.2026): `rolle` an der Verlaufszeile — der
+     Klartext der Rollenkategorie („Trainer", „Betreuer"). Aus „Unser Team"
+     wird „Trainer Hans Meier", und das Feld steht daneben, damit die
+     Gegenseite die Rolle nicht aus `text` herausschneiden muss.
+
+     ⚠ Es steht mit Absicht direkt nach `ohne_person`: die zwei sind ein
+     Paar — die Rolle sagt, WAS jemand ist, `ohne_person`, ob wir sagen
+     können, WER. Die Reihenfolge ist hier die Aussage, wie bei
+     `sfv_gegner_team_id` neben `gegner`. */
+  const VERLAUF_FASSUNG_6 = [
+    "minute", "nummer", "ereignis_zusatz", "ohne_person", "rolle", "art",
+    "seite", "text", "stand", "klub", "sfv_person_id", "ein_nummer",
   ];
 
-  const AUFSTELLUNG_FASSUNG_5 = [
+  const AUFSTELLUNG_FASSUNG_6 = [
     "seite", "sfv_person_id", "nummer", "spieler", "position", "rolle",
     "ist_captain", "von_minute", "bis_minute", "spielzeit", "marken",
   ];
@@ -79,30 +89,30 @@ describe("NUTZLAST_FASSUNG hält mit den Feldern Schritt", () => {
      `sfv_gegner_team_id` steht mit Absicht direkt neben `gegner`: die
      zwei sind dasselbe Gegenüber, einmal als Name und einmal als
      Kennung, und die Reihenfolge ist hier die Aussage. */
-  const SPIEL_FASSUNG_5 = [
+  const SPIEL_FASSUNG_6 = [
     "sfv_match_id", "sfv_spiel_nr", "datum", "zeit", "sfv_team_id",
     "gegner", "sfv_gegner_team_id", "heim_auswaerts", "ort", "wettbewerb",
     "liga", "runde", "status", "publizieren", "tore_heim", "tore_gast",
     "halbzeit_heim", "halbzeit_gast", "verlauf", "aufstellung",
   ];
 
-  it("⚠⚠ WpVerlaufZeile trägt genau die Felder der Fassung 5", () => {
-    expect(felderVon("WpVerlaufZeile")).toEqual(VERLAUF_FASSUNG_5);
+  it("⚠⚠ WpVerlaufZeile trägt genau die Felder der Fassung 6", () => {
+    expect(felderVon("WpVerlaufZeile")).toEqual(VERLAUF_FASSUNG_6);
   });
 
-  it("⚠⚠ WpAufstellungZeile trägt genau die Felder der Fassung 5", () => {
-    expect(felderVon("WpAufstellungZeile")).toEqual(AUFSTELLUNG_FASSUNG_5);
+  it("⚠⚠ WpAufstellungZeile trägt genau die Felder der Fassung 6", () => {
+    expect(felderVon("WpAufstellungZeile")).toEqual(AUFSTELLUNG_FASSUNG_6);
   });
 
-  it("⚠⚠ WpSpiel trägt genau die Felder der Fassung 5", () => {
-    expect(felderVon("WpSpiel")).toEqual(SPIEL_FASSUNG_5);
+  it("⚠⚠ WpSpiel trägt genau die Felder der Fassung 6", () => {
+    expect(felderVon("WpSpiel")).toEqual(SPIEL_FASSUNG_6);
   });
 
-  it("die Fassung steht auf 5", () => {
+  it("die Fassung steht auf 6", () => {
     /* Der zweite Anker: wer die Listen oben anpasst und die Zahl
        vergisst, wird hier rot. Beide Fälle zusammen erzwingen, dass
        Feldliste und Fassung gemeinsam wandern. */
-    expect(NUTZLAST_FASSUNG).toBe(5);
+    expect(NUTZLAST_FASSUNG).toBe(6);
   });
 
   it("die Konstante steht in derselben Datei wie die Felder", () => {

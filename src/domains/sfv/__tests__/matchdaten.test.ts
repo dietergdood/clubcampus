@@ -1,11 +1,14 @@
 import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
+import ts from "typescript";
+import { suche, jederKnoten, kette, textLiterale } from "../../../test-helpers/quelltext.ts";
 import {
   bildeAufstellung, bildeEreignis, istEigener, istKorrekturUeberfluessig,
   leseHalbzeit, waehleKandidaten, NACHZUG_TAGE, bildeOffeneNamen, jahrgangAus,
   aeltesteHolungStunden,
   bildeSfvPerson, entdoppleSfvPersonen, verschmelzeAufstellung,
   zaehleVerbandKorrekturen, gegnerUnveraendert, verlaufUnveraendert,
+  VERLAUF_VERGLEICH,
 } from "../../../../supabase/functions/sfv-sync/matchdaten.ts";
 import type { KorrekturZeile } from "../../../../supabase/functions/sfv-sync/matchdaten.ts";
 
@@ -20,6 +23,13 @@ const FREMDES_TOR = {
   eventId: 29633777, clubNumber: FREMD, teamId: 37931, teamName: "FC Kuesnacht a",
   eventTypeId: 1, eventTypeName: "Tor", eventSubTypeId: 0, eventSubTypeName: "-",
   minute: 50, additionalMinute: 0,
+  /* ⚠ Die Rollenfelder sind echt benannt und ihre WERTE aus einer
+     aufgezeichneten Antwort uebernommen (docs/sfv/matchdaten_beispiel.json):
+     `roleCategoryName` steht dort als „Spieler/in", NICHT als „Spieler" wie
+     in sfv_stammdaten.json. Die Abweichung ist der Grund, warum kein Fall
+     auf den Klartext filtert — sie gehoert deshalb in die Attrappe. */
+  roleId: 1731146, roleCategoryId: 1, roleCategoryName: "Spieler/in",
+  isPlayer: true,
   personId: 1462762, personName: "Max Muster", birthDate: "2001-03-04",
   passportNumber: 987654, jerseyNumber: 7,
   substitutePlayerId: 1111, substitutePlayerName: "Anna Beispiel",
@@ -92,7 +102,12 @@ describe("Anonymitaet — erstes Netz: die Allowlist beim Uebernehmen", () => {
       "verein_id", "spiel_id", "herkunft", "sfv_event_id", "typ_id", "typ",
       "subtyp_id", "subtyp", "minute", "zusatzminute", "ist_eigener",
       "sfv_team_id", "gegner_club_name", "sfv_person_id", "rueckennr",
-      "ein_sfv_person_id", "ein_rueckennr", "zuletzt_synchronisiert",
+      "ein_sfv_person_id", "ein_rueckennr",
+      /* seit 24.09.2026 — die Kategorie fuer beide Seiten, der Name nur
+         fuer eigene. `roleId` steht hier NICHT und darf nicht dazukommen:
+         sie kennzeichnet die Rollen-Zuweisung eines Menschen. */
+      "rolle_kategorie_id", "rolle_kategorie", "person_name",
+      "zuletzt_synchronisiert",
     ]);
     const mitUeberraschung = { ...FREMDES_TOR, neuesFeldVomSfv: "Hans Meier", nationality: "CH" };
     const z = bildeEreignis(mitUeberraschung, UNSERE, "v1", "s1", JETZT)!;
@@ -102,14 +117,32 @@ describe("Anonymitaet — erstes Netz: die Allowlist beim Uebernehmen", () => {
     expect(JSON.stringify(z)).not.toContain("987654");
   });
 
-  it("uebernimmt bei einem eigenen Spieler die Person, aber nie Name oder Pass", () => {
+  /* ══════════════════════════════════════════════════════════════
+     ⚠ ⚠  GEAENDERT AM 24.09.2026 — und er ist ROT GEWORDEN, wie er soll.
+
+     Er hiess „die Person, aber nie Name oder Pass" und hielt
+     `not.toContain("Max Muster")`. Der NAME kommt jetzt mit, bei eigenen
+     Zeilen: sonst steht im Verlauf bei einer Karte gegen einen Trainer
+     weiterhin „Unser Team" — er hat keine Rueckennummer und keine
+     Aufstellungszeile.
+
+     ⚠ Der Fall ist beim Aendern des Codes rot geworden, bevor jemand an
+     ihn gedacht hat — das ist der Zweck. Und die HAELFTE, die weiterhin
+     gilt, steht unveraendert darunter: Pass und Geburtsdatum bleiben weg.
+     Ein Fall, der beim Lockern einer Regel komplett geloescht wird,
+     nimmt die Regeln mit, die nicht gelockert wurden.
+     ══════════════════════════════════════════════════════════════ */
+  it("uebernimmt bei einem eigenen Spieler Person UND Name — aber nie Pass oder Geburtsdatum", () => {
     const z = bildeEreignis(EIGENES_TOR, UNSERE, "v1", "s1", JETZT)!;
     expect(z.ist_eigener).toBe(true);
     expect(z.sfv_person_id).toBe(1135383);
     expect(z.rueckennr).toBe(13);
     expect(z.gegner_club_name).toBeNull();
-    expect(JSON.stringify(z)).not.toContain("Max Muster");
-    expect(JSON.stringify(z)).not.toContain("2001-03-04");
+    /* neu seit dem 24.09.2026 */
+    expect(z.person_name).toBe("Max Muster");
+    /* weiterhin verboten */
+    expect(JSON.stringify(z)).not.toContain("2001-03-04");   // birthDate
+    expect(JSON.stringify(z)).not.toContain("987654");       // passportNumber
   });
 
   /* ══════════════════════════════════════════════════════════════
@@ -305,6 +338,380 @@ describe("Anonymitaet — zweites Netz: der CHECK-Constraint", () => {
     const definition = schema.split("\n").filter((l) =>
       l.includes("spiel_ereignisse_schicht_check") && /CHECK\s*\(/.test(l));
     expect(definition.length).toBe(1);
+  });
+});
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Rollenkategorie und Personenname — 24.09.2026
+
+   Der Anlass: im Verlauf stand bei einer Karte gegen einen Trainer
+   „Unser Team". Gemessen am 11.09.2026: 5 von 42 eigenen Verwarnungen,
+   29 von 542 fremden Zeilen.
+
+   Die drei Felder kamen bei jedem Abruf mit und wurden verworfen.
+   ═══════════════════════════════════════════════════════════════════════════ */
+describe("Rollenkategorie — fuer BEIDE Seiten", () => {
+  it("kommt bei einer eigenen Zeile an, Id UND Klartext", () => {
+    const z = bildeEreignis(EIGENES_TOR, UNSERE, "v1", "s1", JETZT)!;
+    expect(z.rolle_kategorie_id).toBe(1);
+    expect(z.rolle_kategorie).toBe("Spieler/in");
+  });
+
+  /* ⚠ ⚠  DIE HAELFTE, DIE MAN VERGISST. Bei jedem anderen Personenfeld
+     steht in bildeEreignis() `eigen ? … : null` — wer die Kategorie
+     dazuschreibt, tippt das Muster mit, und dann bekaeme der Gegner
+     nie ein „Trainer FC Faellanden". Der Fall haelt fest, dass hier
+     ausdruecklich KEIN `eigen ?` steht. */
+  it("⚠ kommt bei einer FREMDEN Zeile genauso an — sie nennt keine Person", () => {
+    const z = bildeEreignis(FREMDES_TOR, UNSERE, "v1", "s1", JETZT)!;
+    expect(z.ist_eigener).toBe(false);
+    expect(z.rolle_kategorie_id).toBe(1);
+    expect(z.rolle_kategorie).toBe("Spieler/in");
+  });
+
+  it("nimmt eine Kategorie ohne Klartext, statt die Zeile fallen zu lassen", () => {
+    const z = bildeEreignis(
+      { ...FREMDES_TOR, roleCategoryName: null }, UNSERE, "v1", "s1", JETZT)!;
+    expect(z.rolle_kategorie_id).toBe(1);
+    expect(z.rolle_kategorie).toBeNull();
+  });
+
+  /* ⚠ `roleId` steht je Ereignis verschieden und wiederholt sich fuer
+     DIESELBE Person (gemessen in matchdaten_beispiel.json: 1313161,
+     1731146 zweimal, 1595830). Sie kennzeichnet also die Rollen-Zuweisung
+     eines Menschen, nicht eine Kategorie — bei einem Gegner waere sie eine
+     Personen-Handhabe, und Entscheid B verbietet genau die.
+
+     Der Fall haelt die ENTHALTUNG, nicht bloss den Ist-Zustand: ohne ihn
+     saehe „wir lesen roleId nicht" wie ein Versehen aus, das der Naechste
+     behebt. */
+  it("⚠ nimmt `roleId` NICHT mit — sie kennzeichnet einen Menschen, keine Kategorie", () => {
+    const z = bildeEreignis(FREMDES_TOR, UNSERE, "v1", "s1", JETZT)!;
+    expect(Object.keys(z)).not.toContain("rolle_id");
+    expect(JSON.stringify(z)).not.toContain("1731146");
+  });
+});
+
+describe("Personenname am Ereignis — nur bei eigenen", () => {
+  it("kommt bei einer eigenen Zeile an", () => {
+    const z = bildeEreignis(EIGENES_TOR, UNSERE, "v1", "s1", JETZT)!;
+    expect(z.person_name).toBe("Max Muster");
+  });
+
+  /* ⚠ ⚠  DIE ATTRAPPE MUSS DEN NAMEN FUEHREN, sonst prueft dieser Fall
+     nichts: bei einer Attrappe ohne `personName` waere `null` auch dann
+     das Ergebnis, wenn `eigen ?` fehlte. `FREMDES_TOR` traegt
+     `personName: "Max Muster"` — der Verband liefert ihn, und wir lassen
+     ihn liegen.
+
+     Das ist Entscheid B (10.09.2026) und er gilt unveraendert: von
+     fremden Personen bleiben Vereinsname und Rueckennummer, KEINE Namen. */
+  it("⚠ bleibt bei einer FREMDEN Zeile null — obwohl der Verband einen liefert", () => {
+    expect(FREMDES_TOR.personName).toBe("Max Muster");   // die Attrappe traegt ihn
+    const z = bildeEreignis(FREMDES_TOR, UNSERE, "v1", "s1", JETZT)!;
+    expect(z.person_name).toBeNull();
+    expect(JSON.stringify(z)).not.toContain("Max Muster");
+  });
+
+  /* ⚠ ⚠  `personName` IST BEI EINEM EREIGNIS DIE EINZIGE NAMENSQUELLE —
+     und das ist gemessen, nicht angenommen.
+
+     bildeAufstellung() setzt den Namen aus `firstname` + `name` zusammen
+     und laesst `secondName` bewusst weg. Die naheliegende Frage war, ob
+     bildeEreignis() dasselbe tun soll. Es KANN nicht: `MatchEvent` fuehrt
+     keines der drei Felder.
+
+     Dieser Fall liest die Spezifikation, damit die Begruendung nicht bloss
+     ein Kommentar ueber eine andere Stelle ist. Kommt `firstname` je dazu,
+     wird er rot — und dann ist die Frage neu zu stellen. */
+  it("⚠ MatchEvent fuehrt weder firstname noch name noch secondName — gemessen", () => {
+    const swagger = JSON.parse(readFileSync("docs/sfv/swagger_2026-08-28.json", "utf8"));
+    const felder = swagger?.components?.schemas?.MatchEvent?.properties;
+    /* ⚠ Ohne diese Zeile waere der Fall bei einer umbenannten Datei oder
+       einem geaenderten Aufbau GRUEN — eine leere Menge enthaelt kein
+       `firstname`. Er scheitert dann nach oben, nicht nach unten. */
+    expect(felder, "MatchEvent nicht in der Swagger-Datei gefunden — "
+      + "dann prüft dieser Fall nichts").toBeTruthy();
+    expect(Object.keys(felder).length).toBe(28);
+    expect(Object.keys(felder)).toContain("personName");
+    for (const weg of ["firstname", "name", "secondName"]) {
+      expect(Object.keys(felder)).not.toContain(weg);
+    }
+  });
+
+  /* Und die Gegenrichtung: taucht `firstname` doch einmal in der Antwort
+     auf, reist er nicht mit. Die Allowlist liest ihn nicht — das ist
+     dieselbe Zusage wie „kein unbekanntes Feld", nur an diesen drei
+     Namen festgemacht, weil bildeAufstellung() sie sehr wohl liest. */
+  it("liest firstname/name/secondName auch dann nicht, wenn sie mitkaemen", () => {
+    const z = bildeEreignis(
+      { ...EIGENES_TOR, firstname: "Karl", name: "Zweitname", secondName: "Heinz" },
+      UNSERE, "v1", "s1", JETZT)!;
+    expect(z.person_name).toBe("Max Muster");
+    expect(JSON.stringify(z)).not.toContain("Karl");
+    expect(JSON.stringify(z)).not.toContain("Heinz");
+  });
+});
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   ⚠ ⚠  DIE STELLE, AN DER DIESE ERWEITERUNG STILL WIRKUNGSLOS WERDEN KANN
+
+   Der Verlauf wird nur ERSETZT, wenn sich etwas geaendert hat
+   (`verlaufUnveraendert`, seit 11.09.2026). Der Vergleich laeuft ueber eine
+   Feldliste. Stuende ein neues Feld nicht darin, waere Folgendes passiert —
+   und zwar ohne dass etwas fehlschlaegt:
+
+     bestehende Zeile (ohne das Feld) == neue Zeile (mit dem Feld)
+       -> nicht ersetzt -> die Spalte bleibt FUER IMMER NULL, bei jedem
+          Spiel, an dem der Verband sonst nichts aendert
+
+   Also ein Ausfall, der aussieht wie „der Verband liefert es nicht" — und
+   die Suche waere beim Verband gelandet.
+   ═══════════════════════════════════════════════════════════════════════════ */
+describe("die drei Felder werden beim Vergleich gesehen", () => {
+  const ZEILE = {
+    typ_id: 3, typ: "Verwarnung", subtyp_id: 0, subtyp: "-",
+    minute: 50, zusatzminute: 0, ist_eigener: true, sfv_team_id: 38309,
+    gegner_club_name: null, sfv_person_id: 1135383, rueckennr: 13,
+    ein_sfv_person_id: null, ein_rueckennr: null,
+    rolle_kategorie_id: 3, rolle_kategorie: "Trainer/in",
+    person_name: "Hans Meier",
+  };
+
+  it("zwei gleiche Zeilen gelten als unveraendert", () => {
+    expect(verlaufUnveraendert([ZEILE], [{ ...ZEILE }])).toBe(true);
+  });
+
+  /* ⚠ Je Feld ein eigener Fall — nicht einer fuer alle drei. Sonst
+     genuegte EIN erkanntes Feld, damit der Fall gruen ist, und die
+     anderen zwei koennten fehlen. */
+  it("⚠ eine geaenderte Rollenkategorie-Id ist eine Aenderung", () => {
+    expect(verlaufUnveraendert([ZEILE], [{ ...ZEILE, rolle_kategorie_id: 9 }])).toBe(false);
+  });
+
+  it("⚠ ein geaenderter Klartext ist eine Aenderung", () => {
+    expect(verlaufUnveraendert([ZEILE], [{ ...ZEILE, rolle_kategorie: "Betreuer/in" }])).toBe(false);
+  });
+
+  it("⚠ ein geaenderter Personenname ist eine Aenderung", () => {
+    expect(verlaufUnveraendert([ZEILE], [{ ...ZEILE, person_name: "Peter Vogt" }])).toBe(false);
+  });
+
+  /* ⚠ Und der Fall, der beim Einspielen der Migration greift: die alte
+     Zeile kennt die Felder gar nicht. Ohne diesen Vergleich wuerden die
+     bestehenden Zeilen nie ersetzt und die Spalten nie gefuellt. */
+  it("⚠⚠ eine alte Zeile OHNE die Felder weicht von einer neuen MIT ab", () => {
+    const alt = { ...ZEILE } as Record<string, unknown>;
+    delete alt.rolle_kategorie_id;
+    delete alt.rolle_kategorie;
+    delete alt.person_name;
+    expect(verlaufUnveraendert([alt], [ZEILE])).toBe(false);
+  });
+});
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Und die ZWEITE Haelfte derselben Zusage: der `select`, der die alten
+   Zeilen holt, muss dieselben Spalten nennen.
+
+   ⚠ Fehlt dort eine Spalte, die verglichen wird, kommt sie als `undefined`
+   an, gilt als `null`, weicht bei JEDEM Lauf vom neuen Wert ab — und dann
+   ist jeder Lauf eine Aenderung: Stempel, `export_wartet() > 0`,
+   vollstaendiger WordPress-Export, stuendlich. Der Defekt vom 11.09.2026,
+   nur umgedreht.
+
+   ⚠ ⚠  UND `check:selects` SIEHT DIESEN SELECT NICHT. Gemessen am
+   24.09.2026: das Skript verlangt ein einzelnes Stringliteral, der Select
+   in matchdatenLauf.ts ist mit `+` zusammengesetzt — er steht damit unter
+   den „21 vom Muster nicht erfasst". Die Prueekette hat die Erweiterung
+   also nicht bestaetigt; sie hat sie nie angesehen.
+   ═══════════════════════════════════════════════════════════════════════════ */
+describe("der select in matchdatenLauf deckt VERLAUF_VERGLEICH", () => {
+  const LAUF = "supabase/functions/sfv-sync/matchdatenLauf.ts";
+
+  /** Die Spalten jedes `.select()` einer Kette, die `from("spiel_ereignisse")`
+      enthaelt — auch wenn das Argument aus `"a" + "b"` zusammengesetzt ist. */
+  function verlaufSelects(baum: ts.SourceFile): string[][] {
+    const raus: string[][] = [];
+    jederKnoten(baum, (n) => {
+      if (!ts.isCallExpression(n)) return;
+      const z = n.expression;
+      if (!ts.isPropertyAccessExpression(z) || z.name.text !== "select") return;
+      const glieder = kette(n);
+      const trifft = glieder.some((g) =>
+        g.name === "from" && g.texte.includes("spiel_ereignisse"));
+      if (!trifft) return;
+      /* ⚠ Ueber `textLiterale` des ARGUMENTS, nicht ueber `kette().texte`:
+         letzteres sieht nur einzelne Literale und liefert bei einer
+         `+`-Verkettung eine LEERE Liste — der Fall waere gruen, ohne
+         etwas geprueft zu haben. */
+      const roh = n.arguments.flatMap((a) => textLiterale(a)).join("");
+      raus.push(roh.split(",").map((s) => s.trim()).filter(Boolean));
+    });
+    return raus;
+  }
+
+  it("⚠ jede Spalte des Vergleichs steht im select — beide Listen oder keine", () => {
+    const treffer = suche({
+      frage: "welche Spalten holt der Verlauf-select aus spiel_ereignisse?",
+      dateien: [LAUF],
+      finde: verlaufSelects,
+      /* ⚠ PFLICHT: ohne sie waere nicht zu unterscheiden, ob es keinen
+         solchen select gibt oder ob die Abfrage keinen finden KANN.
+
+         ⚠ ⚠  UND SIE LEISTET WENIGER, ALS HIER ZUERST STAND — gemessen am
+         24.09.2026, nicht angenommen. Der erste Kommentar behauptete, sie
+         halte fest, dass die Abfrage die `+`-Verkettung aufloest. **Tut
+         sie nicht.**
+
+         Die Gegenprobe (`textLiterale` durch `kette().texte` ersetzt) hat
+         die Positivkontrolle ANSTANDSLOS bestanden: `kette()` sammelt die
+         Zeichenketten ALLER Kettenglieder, und `from("spiel_ereignisse")`
+         ist eine. Die Liste ist also nicht leer — und `suche()` fragt nur,
+         OB `finde` etwas geliefert hat, nie WAS.
+
+         Rot geworden ist die Sabotage erst an der Deckungs-Erwartung
+         darunter („dem besten fehlen 16 von 16"). Die Zusage haengt also
+         dort, nicht hier. Der Schnipsel traegt die Verkettung trotzdem:
+         er ist die Form, um die es geht. */
+      positivkontrolle: `
+        const r = await db.from("spiel_ereignisse")
+          .select("id, minute," + " typ_id")
+          .eq("herkunft", "sfv");`,
+    });
+
+    /* ⚠ ⚠  NICHT „JEDER select", SONDERN „MINDESTENS EINER" — und die
+       erste Fassung dieses Falls war genau daran falsch.
+
+       Sie verlangte es von jedem select auf `spiel_ereignisse` und hat
+       sofort Alarm geschlagen: der Nachzug liest dieselbe Tabelle mit
+       `select("*")` und braucht die Liste nicht. **Ein Melder, der
+       grundlos anschlaegt, wird nach dem dritten Mal abgeschaltet** — er
+       waere schlimmer als keiner.
+
+       ⚠ `select("*")` bleibt deshalb ausdruecklich draussen: es deckt zur
+       Laufzeit alles und braucht keine Pflege. Wuerde es mitzaehlen, waere
+       dieser Fall durch die zwei Nachzug-Abfragen dauerhaft gruen — also
+       genau dann zufrieden, wenn der gepruefte select leer ist. */
+    const benannt = treffer.filter((t) => !t.fund.includes("*"));
+
+    /* ⚠ Zwei Wachen gegen die leere Menge, und sie sind der eigentliche
+       Wert dieses Falls. Ohne sie waere er gruen, wenn der select
+       umgebaut wird oder die Feldliste leerlaeuft. */
+    expect(benannt.length,
+      `Kein select mit benannten Spalten auf spiel_ereignisse in ${LAUF} `
+      + "gefunden — dann prüft dieser Fall nichts, egal was er meldet.")
+      .toBeGreaterThan(0);
+    expect(VERLAUF_VERGLEICH.length,
+      "VERLAUF_VERGLEICH ist kürzer als erwartet — die Soll-Menge selbst "
+      + "ist geschrumpft, und dann sagt dieser Vergleich nichts.").toBe(16);
+
+    /* Die Soll-Menge wird NICHT abgeschrieben, sondern aus der Konstante
+       gelesen. Eine Erwartung, die ihre eigene Liste fuehrt, veraltet mit
+       — und prueft dann die Abschrift. */
+    const luecken = benannt.map((t) => VERLAUF_VERGLEICH.filter((f) => !t.fund.includes(f)));
+    const beste = luecken.reduce((a, b) => (b.length < a.length ? b : a));
+    expect(beste,
+      `${LAUF}: kein select holt alle verglichenen Spalten — dem besten fehlen `
+      + `${beste.length} von ${VERLAUF_VERGLEICH.length}. Fehlende kommen als `
+      + "undefined an und machen JEDEN Lauf zu einer Änderung: Stempel, "
+      + "export_wartet() > 0, stündlicher Vollexport.").toEqual([]);
+  });
+
+  /* ⚠ WAS DIESER FALL NICHT KANN, und es gehoert danebengeschrieben:
+     er prueft, dass IRGENDEIN benannter select die Liste deckt, nicht dass
+     der Vergleich genau von diesem gefuettert wird. Legte jemand einen
+     zweiten, vollstaendigen select an und kuerzte den echten, blieb er
+     gruen.
+
+     Er faengt den Fall, der real ist: jemand erweitert VERLAUF_VERGLEICH
+     und vergisst den select. Dann deckt KEINER die Liste, und er wird rot.
+     Mehr verspricht er nicht. */
+});
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   ⚠ ⚠  UEBERSPRUNGEN, MIT DATUM UND GRUND — nicht vergessen.
+
+   Das zweite Netz fuer `person_name` ist der CHECK-Constraint, und dieser
+   Fall liest ihn aus `supabase/schema.sql`. Der Dump kennt die Spalte erst,
+   wenn Didi `migration_ereignis_rolle_person.sql` eingespielt UND der Dump
+   nachgezogen ist — beides steht aus.
+
+   ⚠ Er waere bis dahin DAUERHAFT ROT, und das ist teurer als ein Skip:
+   „ein dauerhaft roter Test macht die Pruefkette wertlos — beim naechsten
+   echten Fehler schaut niemand mehr hin" (CLAUDE.md, 20.08.2026).
+
+   ⚠ UND DER SKIP IST EINE SCHULD, KEINE LOESUNG. Bis er laeuft, haengt die
+   Zusage „ein fremder Name kommt nicht in die Datenbank" allein an der
+   Allowlist in bildeEreignis() — also an EINEM Netz statt zwei. Wer die
+   Migration einspielt, nimmt das `.skip` weg; der Fall ist dann rot, bis
+   der Dump nachgezogen ist, und genau das ist die Reihenfolge.
+   ═══════════════════════════════════════════════════════════════════════════ */
+describe("Anonymitaet — der CHECK deckt auch den NAMEN", () => {
+  /* ⚠ ⚠  HIER STAND EIN `it.skip`, UND DER SKIP WAR DIE FALSCHE ANTWORT.
+
+     Er las `supabase/schema.sql` — den Dump. Der stimmt erst, wenn die
+     Migration eingespielt UND der Dump nachgezogen ist, also war der Fall
+     bis dahin dauerhaft rot, und ein dauerhaft roter Test macht die
+     Pruefkette wertlos. Die Begruendung war richtig, der Schluss nicht:
+     **die Zusage laesst sich heute pruefen, nur an einer anderen Datei.**
+
+     ⚠ Und der Skip hatte einen Preis, den man ihm nicht ansah: `vitest
+     list` zaehlt uebersprungene Faelle nicht, die Laufausgabe schon. Die
+     Zaehlprobe schlug deshalb an und erklaerte JEDEN Lauf fuer wertlos —
+     womit `npm run deploy` stand. Behoben am 24.09.2026 in
+     `scripts/test-mit-zaehlprobe.mjs`, aber der Skip war der Anlass. */
+
+  it("die Migration nennt person_name im erweiterten CHECK", () => {
+    /* Die eigentliche Zusage, und sie haengt an keinem Einspielstand: wer
+       die Spalte anlegt, erweitert den CHECK im SELBEN Auftrag. Genau das
+       ist die Reihenfolge, die am 20.08.2026 dreimal gefehlt hat — eine
+       Spalte ohne die Stelle, die sie liest. */
+    const mig = readFileSync("supabase/migration_ereignis_rolle_person.sql", "utf8");
+    expect(mig).toContain("add column if not exists person_name");
+    const ab = mig.indexOf("add constraint spiel_ereignisse_fremde_anonym_check");
+    expect(ab, "Die Migration ergaenzt den CHECK nicht").toBeGreaterThan(-1);
+    const block = mig.slice(ab, ab + 400);
+    for (const feld of ["sfv_person_id", "ein_sfv_person_id", "person_name"]) {
+      expect(block).toContain(feld);
+    }
+    /* ⚠ Die zweite Haelfte: die KATEGORIE steht NICHT im Verbot. Ohne sie
+       waere nicht zu unterscheiden, ob sie freigegeben wurde oder ob
+       jemand den CHECK zu weit gezogen hat. */
+    expect(block).not.toContain("rolle_kategorie");
+    expect(block).not.toContain("rueckennr");
+  });
+
+  it("⚠ Spalte und CHECK stehen im Dump ENTWEDER beide oder keiner", () => {
+    /* ⚠ ⚠  KEIN ZWEIG IST HIER LEER-GRUEN, und das ist der ganze Zweck.
+       Vor dem Einspielen fehlen beide, danach sind beide da — jede andere
+       Mischung ist der Defekt:
+
+         Spalte da, CHECK ohne `person_name`  → ein fremder Name KANN in
+           die Datenbank. Das ist die Lage, die dieser Fall verhindert.
+         CHECK mit `person_name`, Spalte weg  → der CHECK nennt eine
+           Spalte, die es nicht gibt; ein Dump, der so entsteht, ist kaputt.
+
+       Damit braucht es keinen Skip: der Fall prueft in JEDEM Zustand etwas,
+       und was er prueft, steht in seiner Erwartung statt in einem
+       Kommentar. Dieselbe Bauart wie eine Aufteilung, die aufgehen muss. */
+    const schema = readFileSync("supabase/schema.sql", "utf8");
+    const tabelle = schema.slice(
+      schema.indexOf('CREATE TABLE IF NOT EXISTS "public"."spiel_ereignisse"'));
+    const spalteDa = /^\s+"person_name"/m.test(tabelle.slice(0, tabelle.indexOf(");")));
+    const checkZeile = schema.split("\n")
+      .find((l) => l.includes("spiel_ereignisse_fremde_anonym_check")
+                && /CHECK\s*\(/.test(l)) ?? "";
+    expect(checkZeile, "Der CHECK steht nicht als Definition im Dump").not.toBe("");
+    expect(
+      checkZeile.includes("person_name"),
+      spalteDa
+        ? "Die Spalte person_name steht im Dump, der CHECK nennt sie NICHT — "
+          + "ein fremder Name kann damit in die Datenbank."
+        : "Der CHECK nennt person_name, aber die Spalte steht nicht im Dump — "
+          + "der Dump ist in sich widerspruechlich.",
+    ).toBe(spalteDa);
+    /* Die Kategorie bleibt in beiden Zustaenden ausserhalb des Verbots. */
+    expect(checkZeile).not.toContain("rolle_kategorie");
   });
 });
 

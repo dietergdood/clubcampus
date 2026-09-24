@@ -26,7 +26,10 @@ import {
 } from "../wpNutzlast.ts";
 import {
   baueNummernBruecke, beschreibeGewechselten, mischeEreignisse,
+  werBefund, ROLLE_SPIELER,
 } from "../matchdatenAnzeige.ts";
+import { suche, findeFunktion, jederKnoten } from "../../../test-helpers/quelltext.ts";
+import ts from "typescript";
 import type {
   SpielQuelle, AufstellungQuelle, AufstellungZaehlung, VerlaufZaehler,
 } from "../wpNutzlast.ts";
@@ -40,6 +43,9 @@ const e = (f: Partial<AnzeigeEreignis>): AnzeigeEreignis => ({
   ist_eigener: true, gegner_club_name: null,
   sfv_person_id: null, rueckennr: null,
   ein_sfv_person_id: null, ein_rueckennr: null,
+  /* Am 24.09.2026 dazugekommen — Vorgabe wie im Altbestand: nicht
+     gefragt, also gilt die Kette von vor dem Umbau. */
+  rolle_kategorie_id: null, rolle_kategorie: null, person_name: null,
   vomVerein: false, original: null,
   ...f,
 });
@@ -2058,5 +2064,353 @@ describe("halbzeitWiderspruch — Doppelmeldungen zaehlen statt glaetten", () =>
       [tor(20, true), { typ_id: TYP_VERWARNUNG, minute: 25, ist_eigener: true, subtyp_id: SUBTYP_EIGENTOR }],
       "1:0", true,
     )).toBe(false);
+  });
+});
+
+
+/* ══════════════════════════════════════════════════════════════════════
+   Rolle und Name in der Verlaufszeile — Fassung 6, 24.09.2026
+   ══════════════════════════════════════════════════════════════════════ */
+describe("bildeVerlauf — Rolle, Name und `ohne_person`", () => {
+  const ROLLE_TRAINER = 3;
+  const ROLLE_BETREUER = 9;
+
+  /** Eine eigene Verwarnung gegen einen Trainer — der Anlass des Umbaus. */
+  const karte = (f: Partial<AnzeigeEreignis> = {}) => e({
+    typ_id: TYP_VERWARNUNG, typ: "Verwarnung", minute: 55,
+    ist_eigener: true, sfv_person_id: null, rueckennr: null,
+    rolle_kategorie_id: ROLLE_TRAINER, rolle_kategorie: "Trainer",
+    person_name: "Hans Meier", ...f,
+  });
+  const lauf = (f: Partial<AnzeigeEreignis> = {}) =>
+    bildeVerlauf([karte(f)], true, new Map(), "FC Herrliberg")[0];
+
+  it("⚠ ⚠ der benannte Trainer: Text, Rolle — und `ohne_person` ist FALSCH", () => {
+    /* Es steht ein Mensch da. Bis zum 24.09.2026 stand „Unser Team" und
+       `ohne_person: true`, und der Theme-Chat hat gefragt, ob das unser
+       Kennzeichen für eine Mannschaftsstrafe sei. */
+    const z = lauf();
+    expect(z.text).toBe("Trainer Hans Meier");
+    expect(z.rolle).toBe("Trainer");
+    expect(z.ohne_person).toBe(false);
+  });
+
+  it("⚠ der Trainer ohne Namen: die Rolle allein, `ohne_person` WAHR", () => {
+    const z = lauf({ person_name: null });
+    expect(z.text).toBe("Trainer");
+    expect(z.rolle).toBe("Trainer");
+    expect(z.ohne_person).toBe(true);
+  });
+
+  it("der Betreuer genauso — es sind 28 Kategorien, nicht eine", () => {
+    const z = lauf({ rolle_kategorie_id: ROLLE_BETREUER, rolle_kategorie: "Betreuer" });
+    expect(z.text).toBe("Betreuer Hans Meier");
+    expect(z.rolle).toBe("Betreuer");
+  });
+
+  it("⚠ ⚠ der fremde Trainer trägt die Rolle und KEINEN Namen", () => {
+    const z = bildeVerlauf(
+      [karte({ ist_eigener: false, gegner_club_name: "FC Fällanden",
+               /* ⚠ Die Attrappe TRÄGT einen Namen — sonst wäre der Fall
+                  grün, auch wenn der Name durchkäme. */
+               person_name: "Hans Meier" })],
+      true, new Map(), "FC Herrliberg",
+    )[0];
+    expect(z.text).toBe("Trainer FC Fällanden");
+    expect(z.rolle).toBe("Trainer");
+    expect(z.text).not.toContain("Hans");
+    expect(z.klub).toBe("FC Fällanden");
+    expect(z.sfv_person_id).toBeNull();
+  });
+
+  it("⚠ ⚠ UND `ohne_person` BLEIBT BEIM GEGNER FALSCH — der offene Punkt", () => {
+    /* Der Auftrag vom 24.09.2026 sagte „für den fremden Trainer BLEIBT es
+       `true`". Gemessen: es war seit dem ersten Tag `false`, weil `wir &&`
+       davorsteht. Semantisch hätte er recht — einen Gegner können wir nie
+       benennen —, aber das wäre eine unbestellte Bedeutungsänderung an 542
+       Zeilen einer öffentlichen Seite.
+
+       ⚠ Dieser Fall hält den IST-Zustand fest und ist deshalb ein
+       Grenzfall: er bewacht etwas, das zur Entscheidung steht. Er trägt
+       die Begründung im Namen, damit niemand ihn für eine Zusage nimmt —
+       wer `wir &&` entfernt, ändert ihn MIT und erhöht die Fassung. */
+    const z = bildeVerlauf(
+      [karte({ ist_eigener: false, gegner_club_name: "FC Fällanden", person_name: null })],
+      true, new Map(), "FC Herrliberg",
+    )[0];
+    expect(z.ohne_person).toBe(false);
+    /* Und der Befund darunter sagt die Wahrheit, die die Grenze verdeckt: */
+    expect(werBefund(karte({ ist_eigener: false, gegner_club_name: "FC Fällanden" })).benennbar)
+      .toBe(false);
+  });
+
+  it("⚠ ⚠ ein SPIELER ohne Zuordnung bleibt „Unser Team“ — und `rolle` leer", () => {
+    const z = lauf({ rolle_kategorie_id: ROLLE_SPIELER, rolle_kategorie: "Spieler",
+                     person_name: "Luca Bianchi" });
+    expect(z.text).toBe("Unser Team");
+    expect(z.rolle).toBe("");
+    expect(z.ohne_person).toBe(true);
+    expect(z.text).not.toContain("Luca");
+  });
+
+  it("⚠ der Altbestand (Kategorie null) verhält sich wie vor dem Umbau", () => {
+    const z = lauf({ rolle_kategorie_id: null, rolle_kategorie: null });
+    expect(z.text).toBe("Unser Team");
+    expect(z.rolle).toBe("");
+    expect(z.ohne_person).toBe(true);
+  });
+
+  it("ein zugeordneter Spieler behält Nummer, Personennummer und Namen", () => {
+    const z = bildeVerlauf(
+      [karte({ rolle_kategorie_id: ROLLE_SPIELER, rolle_kategorie: "Spieler",
+               sfv_person_id: 111, rueckennr: 9, person_name: "Lucas BIANCHI" })],
+      true, new Map([[111, "L. Bianchi"]]), "FC Herrliberg",
+    )[0];
+    expect(z.text).toBe("L. Bianchi");
+    expect(z.rolle).toBe("");
+    expect(z.ohne_person).toBe(false);
+    expect(z.sfv_person_id).toBe("111");
+    expect(z.nummer).toBe(9);
+  });
+
+  it("⚠ ⚠ Text und `ohne_person` gehen NIE auseinander", () => {
+    /* Die Tabelle ist die Zusage aus dem Auftrag: „sabotier die eine
+       Seite und sieh, ob die andere mitgeht". Wer eines von beiden neu
+       rechnet, bricht hier — bei eigenen Zeilen, wo `ohne_person` gilt. */
+    const faelle: Array<[Partial<AnzeigeEreignis>, string, boolean]> = [
+      [{}, "Trainer Hans Meier", false],
+      [{ person_name: null }, "Trainer", true],
+      [{ person_name: null, rueckennr: 5 }, "Trainer Nr. 5", false],
+      [{ person_name: null, rolle_kategorie: null }, "Unser Team", true],
+      [{ rolle_kategorie_id: ROLLE_SPIELER, rolle_kategorie: "Spieler" }, "Unser Team", true],
+      [{ rolle_kategorie_id: null, rolle_kategorie: null }, "Unser Team", true],
+    ];
+    for (const [f, text, ohne] of faelle) {
+      const z = lauf(f);
+      expect({ text: z.text, ohne_person: z.ohne_person }).toEqual({ text, ohne_person: ohne });
+      /* Und dieselbe Antwort aus dem Befund selbst — nicht aus dem Text
+         zurückgerechnet. */
+      expect(werBefund(karte(f)).benennbar).toBe(!ohne);
+    }
+  });
+
+  it("⚠ der Eigentor-Zusatz bleibt neben der Rolle stehen", () => {
+    /* Der Text darf sich nur um die Person ändern. Der Zusatz trägt den
+       Zwischenstand der Spielseite, und wer ihn entfernt, verschiebt ihn
+       um zwei Tore — ohne Fehlermeldung. */
+    const z = bildeVerlauf(
+      [karte({ typ_id: TYP_TOR, typ: "Tor", subtyp_id: SUBTYP_EIGENTOR,
+               subtyp: "Eigentor", rolle_kategorie_id: ROLLE_SPIELER,
+               rolle_kategorie: "Spieler", rueckennr: 10, person_name: null })],
+      true, new Map(), "FC Herrliberg",
+    )[0];
+    expect(z.text).toBe("Nr. 10 · Eigentor");
+    expect(z.ereignis_zusatz).toBe("eigentor");
+  });
+});
+
+describe("⚠ ⚠ `ohne_person` rechnet nicht zum zweiten Mal — Strukturprüfung", () => {
+  /* Die Tabelle darüber prüft das VERHALTEN. Sie bliebe grün, wenn jemand
+     die Bedingung erneut von Hand hinschreibt und sie zufällig gleich
+     ausfällt — bis sie eines Tages auseinanderläuft. Diese Prüfung liest
+     den Quelltext und hält fest, dass es nur EINE Rechnung gibt.
+
+     ⚠ Über den Syntaxbaum, nicht über ein Textmuster: die Kommentare an
+     dieser Stelle nennen `sfv_person_id` und `rueckennr` mehrfach, und ein
+     Regex bliebe daran hängen. */
+  const DATEI = "src/domains/spiele/wpNutzlast.ts";
+
+  /** Die Initialisierung der Eigenschaft `ohne_person` in `bildeVerlauf`. */
+  const initialisierung = (baum: ts.SourceFile): ts.Node[] => {
+    const fn = findeFunktion(baum, "bildeVerlauf");
+    if (!fn) return [];
+    const raus: ts.Node[] = [];
+    jederKnoten(fn, (k) => {
+      if (ts.isPropertyAssignment(k) && ts.isIdentifier(k.name)
+          && k.name.text === "ohne_person") raus.push(k.initializer);
+    });
+    return raus;
+  };
+
+  it("die Eigenschaft steht genau einmal in `bildeVerlauf`", () => {
+    const treffer = suche({
+      frage: "wo wird `ohne_person` gesetzt?",
+      dateien: [DATEI],
+      finde: initialisierung,
+      positivkontrolle:
+        "export function bildeVerlauf() { return [{ ohne_person: wir && !b.benennbar }]; }",
+    });
+    expect(treffer).toHaveLength(1);
+  });
+
+  it("⚠ sie liest den Befund und prüft die Felder NICHT selbst", () => {
+    const [{ fund }] = suche({
+      frage: "woraus entsteht `ohne_person`?",
+      dateien: [DATEI],
+      finde: initialisierung,
+      positivkontrolle:
+        "export function bildeVerlauf() { return [{ ohne_person: wir && !b.benennbar }]; }",
+    });
+    const namen: string[] = [];
+    jederKnoten(fund, (k) => { if (ts.isIdentifier(k)) namen.push(k.text); });
+    expect(namen).toContain("benennbar");
+    /* ⚠ Die zwei Felder, aus denen die Bedingung bis zum 24.09.2026 von
+       Hand gebaut war. Stehen sie hier wieder, ist die Rechnung zurück. */
+    expect(namen).not.toContain("sfv_person_id");
+    expect(namen).not.toContain("rueckennr");
+  });
+});
+
+describe("zaehleVerlaufNamen — der Trainername ist ein Name des VERBANDS", () => {
+  const ROLLE_TRAINER = 3;
+  const kv = (f: Partial<AnzeigeEreignis> = {}) => e({
+    typ_id: TYP_VERWARNUNG, typ: "Verwarnung", ist_eigener: true,
+    sfv_person_id: null, rueckennr: null,
+    rolle_kategorie_id: ROLLE_TRAINER, rolle_kategorie: "Trainer",
+    person_name: "Hans Meier", ...f,
+  });
+
+  it("⚠ ⚠ zählt ihn zu `mit_sfv_namen`, NICHT zu `mit_rueckennummer`", () => {
+    /* `mit_rueckennummer` heisst „Eigene Spieler ohne jeden Namen". Eine
+       Zeile mit Klarnamen dort zu zählen wäre die eine Zahl falsch, die
+       vor jedem Lauf entscheidet, ob Klarnamen öffentlich werden — und
+       kein Test wäre rot geworden. */
+    const z = zaehleVerlaufNamen([kv()], new Set<number>(), new Set<number>());
+    expect(z.mit_sfv_namen).toBe(1);
+    expect(z.mit_rueckennummer).toBe(0);
+    expect(z.mit_eigenem_namen).toBe(0);
+  });
+
+  it("ohne Namen bleibt er in `mit_rueckennummer` — es steht keiner da", () => {
+    const z = zaehleVerlaufNamen([kv({ person_name: null })], new Set<number>(), new Set<number>());
+    expect(z.mit_sfv_namen).toBe(0);
+    expect(z.mit_rueckennummer).toBe(1);
+  });
+
+  it("⚠ ein unzugeordneter SPIELER mit `person_name` zählt NICHT als Name", () => {
+    const z = zaehleVerlaufNamen(
+      [kv({ rolle_kategorie_id: ROLLE_SPIELER, rolle_kategorie: "Spieler" })],
+      new Set<number>(), new Set<number>());
+    expect(z.mit_sfv_namen).toBe(0);
+    expect(z.mit_rueckennummer).toBe(1);
+  });
+
+  it("⚠ die Zuordnung gewinnt auch hier — dieselbe Ordnung wie in der Anzeige", () => {
+    const z = zaehleVerlaufNamen([kv({ sfv_person_id: 222 })],
+      new Map([[222, "H. Meier"]]), new Set<number>());
+    expect(z.mit_eigenem_namen).toBe(1);
+    expect(z.mit_sfv_namen).toBe(0);
+  });
+
+  it("⚠ ⚠ die Aufteilung geht weiter auf — vier Töpfe, kein fünfter", () => {
+    /* Die Summe muss die Zeilenzahl aus `bildeVerlauf()` ergeben; genau
+       daraus rechnet `wp-export/index.ts` sein `zaehlung_stimmt`. Ein
+       fünfter Topf hätte diese Gegenprobe zerbrochen. */
+    const zeilen = [
+      kv(),                                                             // Trainer, benannt
+      kv({ person_name: null }),                                        // Trainer, ohne Namen
+      kv({ rolle_kategorie_id: null, rolle_kategorie: null }),          // Altbestand
+      kv({ sfv_person_id: 222 }),                                       // zugeordnet
+      kv({ sfv_person_id: 333, rolle_kategorie_id: ROLLE_SPIELER }),     // SFV-Name
+      kv({ ist_eigener: false, gegner_club_name: "FC Egg" }),           // Gegner
+    ];
+    const z = zaehleVerlaufNamen(zeilen, new Map([[222, "H. Meier"]]), new Map([[333, "L. B."]]));
+    const summe = z.mit_eigenem_namen + z.mit_sfv_namen + z.mit_rueckennummer + z.mit_gegnername;
+    expect(summe).toBe(bildeVerlauf(zeilen, true, new Map(), "FC Herrliberg").length);
+    expect(summe).toBe(6);
+  });
+});
+
+
+/* ══════════════════════════════════════════════════════════════════════
+   ⚠ ⚠  WER `EreignisZeile` FÜLLT, MUSS JEDES FELD HOLEN — sonst ist ein
+         neues Feld `undefined`, und NICHTS schlägt fehl
+   24.09.2026
+
+   Der Typ behauptet, die Spalte sei da; `typecheck` glaubt ihm. Holt der
+   Select sie nicht, kommt `undefined` an, `istRollenvermerk()` sagt „nicht
+   gefragt", die Anzeige fällt auf „Unser Team" zurück — **und es sieht aus,
+   als lieferte der Verband nichts.** Ein Ausfall in der Verkleidung einer
+   Datenlage, an der Stelle, an der drei Felder gerade dazugekommen sind.
+
+   ⚠ ⚠  UND `check:selects` SIEHT DAS NICHT. Es hält Spaltennamen in einem
+   `select()` gegen `database.types.ts` — also das, was DASTEHT. Ein Select,
+   in dem ein Name FEHLT, ist für sie fehlerfrei. Die Prüfkette hat hier
+   keine Deckung, und deshalb steht sie hier.
+
+   ── Gemessen am 24.09.2026, bevor dieser Fall entstand ────────────────
+   Beide Stellen, die `EreignisZeile` füllen, holen `*`:
+
+     src/domains/spiele/matchdatenService.ts     .select("*")
+     supabase/functions/wp-export/index.ts       .select("*")
+
+   ⚠ Ein Hinweis aus dem parallelen Auftrag nannte einen dieser Selects als
+   „mit `+` zusammengesetzt". Nachgemessen: der einzige zusammengesetzte
+   Select in diesen zwei Dateien steht auf `personen`
+   (`wp-export/index.ts:1428`, `select(SPALTEN)`) — eine andere Tabelle. Für
+   `spiel_ereignisse` trifft es nicht zu.
+
+   **Der Fall sichert also nichts, was heute kaputt ist.** Er hält fest,
+   dass es so bleibt — und benennt, was sonst geschieht.
+   ══════════════════════════════════════════════════════════════════════ */
+describe("⚠ ⚠ jeder Select auf `spiel_ereignisse` holt alle Spalten", () => {
+  const DATEIEN = [
+    "src/domains/spiele/matchdatenService.ts",
+    "supabase/functions/wp-export/index.ts",
+  ];
+
+  /** Jeder `from("spiel_ereignisse")…select(X)` — mit X als Quelltext. */
+  const selects = (baum: ts.SourceFile): string[] => {
+    const raus: string[] = [];
+    jederKnoten(baum, (k) => {
+      if (!ts.isCallExpression(k)) return;
+      if (!ts.isPropertyAccessExpression(k.expression)) return;
+      if (k.expression.name.text !== "select") return;
+      /* Worauf bezieht sich der `.select`? Die Kette rückwärts bis zum
+         `from(...)` — nicht über den Dateitext, sonst trifft man den
+         Nachbarn. */
+      let ziel: ts.Node = k.expression.expression;
+      let tabelle = "";
+      while (true) {
+        if (ts.isCallExpression(ziel) && ts.isPropertyAccessExpression(ziel.expression)) {
+          if (ziel.expression.name.text === "from" && ziel.arguments.length
+              && ts.isStringLiteralLike(ziel.arguments[0])) {
+            tabelle = ziel.arguments[0].text;
+            break;
+          }
+          ziel = ziel.expression.expression;
+          continue;
+        }
+        break;
+      }
+      if (tabelle !== "spiel_ereignisse") return;
+      raus.push(k.arguments.length ? k.arguments[0].getText() : "");
+    });
+    return raus;
+  };
+
+  it("findet die Selects überhaupt — und jeder holt `*` oder zählt", () => {
+    const treffer = suche({
+      frage: "welche Selects lesen `spiel_ereignisse`?",
+      dateien: DATEIEN,
+      finde: selects,
+      positivkontrolle: 'db.from("spiel_ereignisse").select("*").eq("a", 1);',
+    });
+    /* ⚠ Die Zahl steht hier, damit ein WEGGEFALLENER Select auffällt. Ohne
+       sie wäre eine leere Liste grün — und genau das ist in diesem Projekt
+       schon viermal passiert. */
+    expect(treffer.length).toBeGreaterThanOrEqual(4);
+
+    for (const { datei, fund } of treffer) {
+      /* Erlaubt ist genau zweierlei:
+           `"*"`         — füllt eine `EreignisZeile`, holt also alles
+           `"id"`/`"spiel_id"` — zählt oder sammelt Ids, füllt keine Zeile
+         Eine Spaltenliste dazwischen ist der Fall, gegen den dieser Test
+         gebaut ist: sie sieht vollständig aus und ist es nicht mehr, sobald
+         ein Feld dazukommt. */
+      expect(['"*"', "'*'", '"id"', "'id'", '"spiel_id"', "'spiel_id'"],
+        `${datei}: select(${fund}) ist weder "*" noch eine reine Id-Abfrage`)
+        .toContain(fund);
+    }
   });
 });

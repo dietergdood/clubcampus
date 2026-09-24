@@ -6,16 +6,30 @@
 // DIE ALLOWLIST IST DAS ERSTE NETZ
 //
 // bildeEreignis() und bildeAufstellung() nennen jedes Feld, das in die Zeile
-// kommt, einzeln beim Namen. Was der SFV sonst noch liefert — personName,
-// birthDate, passportNumber, firstname, name, secondName, gender — wird nicht
-// weggefiltert, sondern gar nicht erst gelesen. Ein neues Feld der Gegenseite
-// reist damit nicht mit (CLAUDE.md: bei Fremddaten immer Allowlist).
+// kommt, einzeln beim Namen. Was der SFV sonst noch liefert — birthDate,
+// passportNumber, secondName, gender, roleId — wird nicht weggefiltert,
+// sondern gar nicht erst gelesen. Ein neues Feld der Gegenseite reist damit
+// nicht mit (CLAUDE.md: bei Fremddaten immer Allowlist).
+//
+// ⚠ `personName` STEHT SEIT DEM 24.09.2026 NICHT MEHR IN DIESER LISTE —
+// bildeEreignis() liest es, aber NUR fuer eigene Zeilen (`eigen ? … : null`),
+// genau wie sfv_person_id seit dem 19.08.2026. Bei bildeAufstellung() bleibt
+// es weiterhin unbenutzt: dort setzt `firstname` + `name` den Namen zusammen,
+// und der Grund steht an der Stelle.
 //
 // Das zweite Netz ist der CHECK-Constraint
 // spiel_ereignisse_fremde_anonym_check: ist_eigener = false erzwingt
-// sfv_person_id, rueckennr und die Wechselfelder auf NULL. Beide Netze sind
-// getestet — das erste in matchdaten.test.ts, das zweite ueber eine Pruefung
-// gegen schema.sql in derselben Datei.
+// sfv_person_id, ein_sfv_person_id und person_name auf NULL.
+//
+// ⚠ Die Rueckennummern stehen dort NICHT (mehr) — sie sind seit dem
+// 10.09.2026 fuer beide Seiten frei, weil die Symbole an der
+// Gegneraufstellung daran haengen. Hier stand bis zum 24.09.2026 „erzwingt
+// sfv_person_id, rueckennr und die Wechselfelder", und das war seit zwei
+// Wochen falsch: ein Kommentar ueber eine andere Stelle, den niemand
+// nachgesehen hat.
+//
+// Beide Netze sind getestet — das erste in matchdaten.test.ts, das zweite
+// ueber eine Pruefung gegen schema.sql in derselben Datei.
 // ═══════════════════════════════════════════════════════════════════════════
 
 export type SfvRoh = Record<string, unknown>;
@@ -131,7 +145,12 @@ export function bildeAufstellung(
     name: eigen
       ? ([text(p.firstname), text(p.name)].filter(Boolean).join(" ").trim() || null)
       : null,
-    /* Die KATEGORIE (Spieler/Trainer/Betreuer) kommt nur von der Bank. */
+    /* ⚠ DIE KATEGORIE (Spieler/Trainer/Betreuer) STEHT AN DER
+       AUFSTELLUNGSZEILE NICHT — hier stand bis zum 24.09.2026 „kommt nur
+       von der Bank", und das liest sich seither falsch: sie kommt seit dem
+       24.09.2026 sehr wohl mit, nur am EREIGNIS (bildeEreignis, aus
+       /events) und nicht an dieser Tabelle. `/players` fuehrt sie nicht,
+       und der Bank-Endpunkt ist am 10.09.2026 ausgebaut. */
     /* ⚠ DIE ZUWEISUNG DAGEGEN STEHT HIER — und zwar fuer BEIDE
        Mannschaften. Gemessen am 10.09.2026: der Gegner hat eine Bank, sie
        steht nur nicht in `positionName`. Drei Spieler tragen „Ersatz" bei
@@ -174,6 +193,14 @@ export interface EreignisZeile {
   rueckennr: number | null;
   ein_sfv_person_id: number | null;
   ein_rueckennr: number | null;
+  /** SFV roleCategoryId aus /events — 1 Spieler, 3 Trainer, 9 Betreuer.
+      Fuer BEIDE Seiten: eine Kategorie nennt keine Person. */
+  rolle_kategorie_id: number | null;
+  /** ⚠ NUR ANZEIGE, NIE VERGLEICH — der Verband schreibt „Spieler/in",
+      seine Stammdaten schreiben „Spieler". Siehe bildeEreignis(). */
+  rolle_kategorie: string | null;
+  /** ⚠ NULL bei Gegnern — der CHECK erzwingt es. Siehe bildeEreignis. */
+  person_name: string | null;
   zuletzt_synchronisiert: string;
 }
 
@@ -224,6 +251,75 @@ export function bildeEreignis(
     rueckennr:         zahl(e.jerseyNumber),
     ein_sfv_person_id: eigen ? zahl(e.substitutePlayerId) : null,
     ein_rueckennr:     zahl(e.substitutePlayerJerseyNumber),
+
+    /* ── Rollenkategorie und Name, seit dem 24.09.2026 ──────────────────
+       Im Verlauf stand bei einer Karte gegen einen Trainer „Unser Team" —
+       er hat keine Rueckennummer und keine Aufstellungszeile, also greift
+       kein anderer Weg. Gemessen am 11.09.2026: 5 von 42 eigenen
+       Verwarnungen, 29 von 542 fremden Zeilen.
+
+       ⚠ ES KOSTET KEINEN ABRUF. /events wird bei jedem Spiel geholt, und
+       `MatchEvent` traegt 28 Felder — roleCategoryId, roleCategoryName und
+       personName kamen die ganze Zeit mit und wurden in dieser Zeile
+       verworfen. Dieselbe Lage wie bei holeMatch.
+
+       ⚠ Der Bank-Endpunkt wird dafuer NICHT wieder eingebaut; er kostete
+       einen zusaetzlichen Abruf je Spiel und ist am 10.09.2026 gefallen.
+       (Sein Pfad steht hier absichtlich nicht ausgeschrieben: die zwei
+       Zeichen davor schliessen einen Blockkommentar, und genau daran ist
+       diese Zeile beim ersten Versuch zerbrochen — dieselbe Falle, die
+       test-helpers/quelltext.ts fuer den Textweg beschreibt.)
+
+       ⚠ DIE KATEGORIE FUER BEIDE SEITEN. Sie ist einer von 28 festen
+       Werten des Verbands (sfv_stammdaten.json) und nennt niemanden —
+       damit wird aus „FC Faellanden" ein „Trainer FC Faellanden", ohne
+       einen Namen. Entscheid B bleibt unangetastet.
+
+       ⚠ ⚠  UND DER KLARTEXT IST NUR ANZEIGE, NIE VERGLEICH. Gemessen am
+       24.09.2026: die echte Antwort schreibt „Spieler/in"
+       (matchdaten_beispiel.json, alle vier Ereignisse), die Stammdaten
+       schreiben „Spieler". **Zwei Listen desselben Verbands, nicht
+       zeichengleich.** Wer auf `rolle_kategorie` filtert, prueft eine
+       Schreibweise und trifft „Trainer/in" nicht — dafuer ist
+       `rolle_kategorie_id` da. Dieselbe Regel wie subtyp_id statt subtyp.
+
+       ⚠ `roleId` KOMMT NICHT MIT, und das ist eine Entscheidung. Gemessen
+       im Beispiel: sie steht je Ereignis verschieden (1313161, 1731146,
+       1595830) und wiederholt sich fuer dieselbe Person — sie kennzeichnet
+       also die Rollen-Zuweisung eines MENSCHEN, nicht eine Kategorie. Bei
+       einem Gegner waere sie eine Personen-Handhabe.
+
+       ⚠ ⚠  DER NAME NUR FUER EIGENE — und `eigen ?` steht hier, obwohl der
+       CHECK dasselbe erzwingt. Zwei Stellen, die dasselbe verbieten, sind
+       hier richtig: die eine faengt den Programmierfehler, die andere den
+       Weg um ihn herum. Der CHECK ist der Riegel, nicht die Begruendung.
+
+       ⚠ ⚠  UND AB JETZT GIBT ES FUER EINEN EIGENEN SPIELER ZWEI
+       NAMENSQUELLEN — die zugeordnete in `sfv_personen.name` (aus
+       /players, ueber sfv_zuordnung an ein Mitglied gehaengt) und diese
+       rohe hier. **Die ZUGEORDNETE hat Vorrang.** Sie ist der Name, den
+       der Verein fuehrt; dieser ist der, den der Verband schreibt, und er
+       veraltet mit jedem Abruf neu.
+
+       Dass es zwei sind, ist trotzdem kein Versehen: ein TRAINER steht in
+       `sfv_personen` gar nicht — die Tabelle kommt aus /players, und
+       /players fuehrt nur Spieler. Diese Spalte ist also die Quelle fuer
+       Menschen, die es sonst nirgends gibt.
+
+       ⚠ Zwei Aussagen ueber dieselbe Sache laufen still auseinander —
+       deshalb steht die Rangfolge hier UND am Spaltenkommentar in der
+       Datenbank. Wer sie aendert, aendert beide.
+
+       ⚠ `personName` ist bei einem Ereignis die EINZIGE Namensquelle:
+       `MatchEvent` fuehrt weder `firstname` noch `name` noch `secondName`
+       (gemessen gegen swagger_2026-08-28.json, 28 Felder). Anders als bei
+       bildeAufstellung() gibt es hier also keine Wahl — und damit auch
+       keine Moeglichkeit, `secondName` wegzulassen, weil er gar nicht
+       ankommt. Welche FORM `personName` hat, ist ungemessen: in der
+       aufgezeichneten Antwort ist er geschwaerzt. */
+    rolle_kategorie_id: zahl(e.roleCategoryId),
+    rolle_kategorie:    text(e.roleCategoryName),
+    person_name:        eigen ? text(e.personName) : null,
 
     zuletzt_synchronisiert: jetzt,
   };
@@ -670,10 +766,39 @@ export function gegnerUnveraendert(
    Sache unter neuer Nummer — **dann gibt es nichts zu ersetzen.** Die
    alte Nummer bleibt stehen; sie ist ohnehin keine verlaessliche Kennung
    und wird ausser vom (jetzt entfernten) Upsert von niemandem gelesen. */
-const VERLAUF_VERGLEICH = [
+/* ⚠ ⚠  UND WER DIE ZEILE UM EIN FELD ERWEITERT, ERWEITERT DIESE LISTE MIT —
+   sonst wird die Erweiterung STILL WIRKUNGSLOS.
+
+   Am 24.09.2026 kamen `rolle_kategorie_id`, `rolle_kategorie` und
+   `person_name` dazu. Ohne ihre drei Zeilen hier waere Folgendes passiert,
+   und zwar ohne dass etwas fehlschlaegt:
+
+     bestehende Zeile (ohne die Felder)  ==  neue Zeile (mit den Feldern)
+       -> `verlaufUnveraendert` sagt true
+       -> es wird nicht ersetzt
+       -> die drei Spalten bleiben bei JEDEM Spiel, an dem der Verband
+          sonst nichts aendert, FUER IMMER NULL
+
+   Also genau die Sorte Ausfall, die aussieht wie „der Verband liefert es
+   nicht" — und die Suche waere beim Verband gelandet statt hier.
+
+   ⚠ Die zweite Haelfte liegt in matchdatenLauf.ts: der `select`, der die
+   alten Zeilen holt, muss dieselben Spalten nennen. Fehlt eine dort,
+   kommt sie als `undefined` an, gilt als `null`, weicht bei jedem Lauf vom
+   neuen Wert ab — und dann wird JEDER Lauf zu einer Aenderung, der Stempel
+   wandert, `export_wartet()` steht dauerhaft auf > 0. Das ist der Defekt
+   vom 11.09.2026, nur umgedreht. **Beide Stellen oder keine.**
+
+   ⚠ EXPORTIERT, damit ein Fall die zwei Listen GEGENEINANDER halten kann,
+   statt die Namen ein drittes Mal abzuschreiben. Eine Erwartung, die ihre
+   Soll-Menge selbst abschreibt, veraltet mit — und dann prueft sie die
+   Abschrift (matchdaten.test.ts, „der select in matchdatenLauf deckt
+   VERLAUF_VERGLEICH"). Nur dieser Fall liest sie; Produktionscode nicht. */
+export const VERLAUF_VERGLEICH = [
   "typ_id", "typ", "subtyp_id", "subtyp", "minute", "zusatzminute",
   "ist_eigener", "sfv_team_id", "gegner_club_name",
   "sfv_person_id", "rueckennr", "ein_sfv_person_id", "ein_rueckennr",
+  "rolle_kategorie_id", "rolle_kategorie", "person_name",
 ] as const;
 
 /**

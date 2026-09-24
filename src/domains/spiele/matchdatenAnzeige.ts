@@ -42,6 +42,76 @@ export interface EreignisZeile {
   rueckennr: number | null;
   ein_sfv_person_id: number | null;
   ein_rueckennr: number | null;
+  /**
+   * Die Rollenkategorie des Verbands als ZAHL — `roleCategoryId`.
+   *
+   * ⚠ ⚠  SIE ENTSCHEIDET, NICHT DIE FEHLENDE RÜCKENNUMMER. Bis zum
+   * 24.09.2026 hing „Unser Team" daran, dass weder Name noch Nummer da
+   * war — und bei allen fünf gemessenen Fällen (11.09.2026) waren das
+   * Trainer und Betreuer. Der Schluss „keine Nummer ⇒ kein Spieler" ist
+   * trotzdem ein Filter auf ein NEBENPRODUKT: ein unzugeordneter SPIELER
+   * ohne Nummer landet im selben Zustand, und für ihn gilt ausdrücklich
+   * weiter „Nr. 13" bzw. „Unser Team".
+   *
+   * ⚠ `null` heisst NICHT GEFRAGT, nicht „Spieler". Jede Zeile, die vor
+   * dem 24.09.2026 geholt wurde, trägt null — rund tausend im Bestand,
+   * bis ein Nachlauf sie neu holt. Sie fallen deshalb auf den alten Text
+   * zurück, und das ist richtig: wir wissen es für sie nicht.
+   *
+   * ⚠ Der Verband führt **28** Kategorien (`docs/sfv/sfv_stammdaten.json`,
+   * Liste `Rollenkategorie`), und ihre Ids sind NICHT durchgehend: 1–6,
+   * 9–28, 98, 99. Wer auf „Trainer" prüft, verpasst den Betreuer (9) und
+   * den Funktionär (4).
+   */
+  rolle_kategorie_id: number | null;
+  /**
+   * Derselbe Wert als Klartext — `roleCategoryName`, „Trainer",
+   * „Betreuer", „Funktionär".
+   *
+   * ⚠ NUR FÜR DIE ANZEIGE. Entschieden wird an `rolle_kategorie_id`; ein
+   * Vergleich auf diesen Text wäre eine Schreibweise des Verbands, und
+   * `subtyp` hat gezeigt, wie unzuverlässig die ist — dort steht bei
+   * Subtyp 0 ein `-` statt eines leeren Werts.
+   */
+  rolle_kategorie: string | null;
+  /**
+   * Der Name, den der Verband an der Ereigniszeile selbst mitschickt
+   * (`personName`) — **nur bei eigenen Zeilen**.
+   *
+   * ⚠ ⚠  DIE DRITTE NAMENSQUELLE, UND DIE SCHWÄCHSTE. Es gibt jetzt drei:
+   *
+   *   1. die Zuordnung (`sfv_zuordnung`) — UNSERE Schreibweise, sie gewinnt
+   *   2. `sfv_personen` — der Verband, über die Aufstellung, als Rückfall
+   *   3. **dieses Feld** — der Verband, rohe Angabe an der Ereigniszeile
+   *
+   * Die ersten zwei kommen über die `namen`-Map bei `beschreibeWer()`;
+   * dieses Feld steht daneben. **Zwei Aussagen über dieselbe Sache laufen
+   * still auseinander**, deshalb ist die Reihenfolge festgelegt und nicht
+   * dem Zufall überlassen: die Zuordnung gewinnt immer.
+   *
+   * ⚠ UND ES IST NUR BEI EINEM ROLLENVERMERK ERREICHBAR (siehe
+   * `rollenName()`). Sonst bekäme ein unzugeordneter eigener Spieler seinen
+   * rohen Verbandsnamen statt „Nr. 13" — eine Preisgabe, die niemand
+   * bestellt hat, an der Stelle, an der 308 offene Zuordnungen warten.
+   *
+   * ⚠ Bei Gegnern verboten, nicht bloss ungenutzt — Entscheid B vom
+   * 10.09.2026. Eine Rollenkategorie ist einer von 28 festen Werten und
+   * bezeichnet keinen Menschen; ein Name schon.
+   *
+   * ⚠ ⚠  EINE KORRIGIERTE ZEILE TRÄGT DIE DREI FELDER NICHT — und das ist
+   * eine bestehende Lücke, keine neue. `speichereKorrektur()` schreibt
+   * genau die Spalten aus `KORRIGIERBAR` plus `typ`; alles andere bleibt an
+   * der Vereins-Zeile leer. **`subtyp_id` fällt dort schon heute weg**, und
+   * damit der Eigentor-Zusatz einer korrigierten Zeile.
+   *
+   * Für diese drei heisst das: wer eine Trainerkarte korrigiert, sieht
+   * danach wieder „Unser Team". Zu entscheiden ist nicht, ob das ein Fehler
+   * ist, sondern WELCHER — soll eine Korrektur die Rolle fortschreiben
+   * (dann gehört sie in den Insert) oder zurücksetzen (dann gehört der Satz
+   * in die Maske)? Das ist eine Frage an `matchdatenService.ts` und an die
+   * Korrekturmaske, nicht an diese Datei.
+   */
+  person_name: string | null;
 }
 
 /* Was der Bericht zeigt: eine Zeile je Ereignis, mit dem Vermerk, ob
@@ -444,14 +514,201 @@ export function unzugeordnetLabel(rueckennr: number | null): string {
   return rueckennr != null ? `Nr. ${rueckennr} · nicht zugeordnet` : "Nicht zugeordnet";
 }
 
+/** Die Rollenkategorie „Spieler" — Id 1 von 28 (`sfv_stammdaten.json`).
+
+    ⚠ Sie steht hier als EINZIGE der 28, und das ist Absicht: gefragt wird
+    nur, ob jemand ein Spieler ist. Eine Liste aller 28 wäre eine zweite
+    Wahrheit neben den Stammdaten des Verbands, und sie müsste gepflegt
+    werden — am 24.09.2026 sind es 28, morgen vielleicht 29. */
+export const ROLLE_SPIELER = 1;
+
+/**
+ * Trägt diese Zeile einen Rollenvermerk — ist der Mensch dahinter also
+ * ausdrücklich KEIN Spieler?
+ *
+ * ⚠ ⚠  DREI ZUSTÄNDE, NICHT ZWEI. `null` heisst **nicht gefragt** und darf
+ * nicht wie „Spieler" gelesen werden, auch wenn beide hier `false` ergeben:
+ * der Unterschied steht am Feld und in der Vorschau, nicht in dieser
+ * Antwort. Für die ANZEIGE fallen sie zusammen — in beiden Fällen gibt es
+ * keinen Rollenvermerk zu zeigen —, und genau deshalb bleibt für den
+ * Altbestand der alte Rückfalltext stehen.
+ *
+ * ⚠ Gefragt wird `!== ROLLE_SPIELER`, nicht `> 1`: die Ids des Verbands
+ * sind nicht durchgehend (1–6, 9–28, 98, 99), und `> 1` wäre eine Aussage
+ * über die Sortierung statt über die Sache.
+ */
+export function istRollenvermerk(
+  e: Pick<EreignisZeile, "rolle_kategorie_id">,
+): boolean {
+  if (e.rolle_kategorie_id == null) return false;
+  return e.rolle_kategorie_id !== ROLLE_SPIELER;
+}
+
+/** Der Rollentext, wie er vor dem Namen steht — `""`, wenn keiner gilt.
+
+    ⚠ `-` gilt als LEER, nicht als Text. Bei `subtyp` steht dort der
+    Klartext zu Subtyp 0 aus den SFV-Stammdaten, und ohne diese Prüfung
+    stand am 05.09.2026 beinahe „FC Küsnacht a · -" auf der Website. Ob der
+    Verband das bei `roleCategoryName` ebenso tut, ist ungemessen — die
+    Prüfung kostet nichts, das Nachmessen kostet einen Lauf.
+
+    ⚠ Fehlt der Text, obwohl die Id einen Vermerk nennt, bleibt der NAME
+    trotzdem erreichbar (siehe `rollenName()`). Dann steht „Hans Meier"
+    statt „Trainer Hans Meier" — weniger, aber nichts Falsches.
+
+    ⚠ ⚠  GEMESSEN AM 24.09.2026: DIE ECHTE ANTWORT SCHREIBT „Spieler/in",
+    DIE STAMMDATEN SCHREIBEN „Spieler".
+
+    Fünf aufgezeichnete Ereignisse (`docs/sfv/matchdaten_beispiel.json`)
+    tragen alle `roleCategoryId: 1` und `roleCategoryName: "Spieler/in"`;
+    `sfv_stammdaten.json` führt zur selben Id „Spieler". **Zwei Listen
+    desselben Verbands, nicht zeichengleich.**
+
+    Daraus folgt zweierlei, und beides steht hier, weil es von hier aus
+    wirkt:
+
+      · Für die ENTSCHEIDUNG ist das gleichgültig — sie läuft über
+        `rolle_kategorie_id`. Hätte sie über den Text gelaufen, wäre sie
+        heute schon falsch, und zwar still.
+      · Für die ANZEIGE heisst es: dort steht vermutlich „Trainer/in Hans
+        Meier". **Das wird nicht geputzt.** Ein „Trainer" daraus zu machen
+        wäre eine Schreibweise, die wir erfinden — dieselbe Entscheidung
+        wie beim Doppelabstand in „Gruppe  2" und bei „Schweizer-Cup"
+        neben „Schweizer Cup".
+
+    ⚠ Für Kategorie 3 ist kein Ereignis aufgezeichnet; ob dort „Trainer"
+    oder „Trainer/in" ankommt, ist ungemessen. Beide Fälle stehen deshalb
+    im Test, und keiner von beiden ist eine Zusage über den Verband. */
+export function rollenText(
+  e: Pick<EreignisZeile, "rolle_kategorie_id" | "rolle_kategorie">,
+): string {
+  if (!istRollenvermerk(e)) return "";
+  const t = (e.rolle_kategorie ?? "").trim();
+  return t && t !== "-" ? t : "";
+}
+
+/**
+ * Der rohe Name des Verbands an der Ereigniszeile — `""`, wenn er nicht
+ * gilt.
+ *
+ * ⚠ ⚠  ZWEI RIEGEL, UND BEIDE HIER: `ist_eigener` **und** der
+ * Rollenvermerk.
+ *
+ *   `ist_eigener`  Entscheid B — beim Gegner nie ein Name. Der CHECK in
+ *                  der Datenbank soll dasselbe erzwingen; darauf zu BAUEN
+ *                  wäre eine Zusicherung über eine andere Stelle, und die
+ *                  prüft kein Werkzeug in dieser Datei.
+ *   Rollenvermerk  sonst bekäme ein unzugeordneter eigener SPIELER seinen
+ *                  rohen Verbandsnamen statt „Nr. 13". Das ist der Fall,
+ *                  der die Regel von der fehlenden Nummer trennt.
+ *
+ * ⚠ EINE Stelle für diese Entscheidung, weil zwei Leser sie brauchen:
+ * `werBefund()` für den Text und `zaehleVerlaufNamen()` für die Zahl, die
+ * vor jedem Lauf entscheidet, ob Klarnamen auf eine öffentliche Seite
+ * gehen. Liefen die zwei auseinander, meldete die Zahl etwas anderes, als
+ * die Website zeigt — und beide wären für sich genommen plausibel.
+ */
+export function rollenName(
+  e: Pick<EreignisZeile, "ist_eigener" | "rolle_kategorie_id" | "person_name">,
+): string {
+  if (!e.ist_eigener || !istRollenvermerk(e)) return "";
+  /* ⚠ Unverändert durchgereicht, nur getrimmt. Welche FORM der Verband
+     wählt — „Hans Meier", „MEIER Hans", „Meier, Hans" — ist ungemessen: in
+     der aufgezeichneten Antwort ist `personName` geschwärzt. Ihn zu
+     zerlegen oder umzustellen hiesse, eine Form anzunehmen, die niemand
+     gesehen hat. */
+  return (e.person_name ?? "").trim();
+}
+
+/** Was von einer Zeile über den Menschen dahinter zu sagen ist. */
+export interface WerBefund {
+  /** Der Text, den die Anzeige zeigt — „Trainer Hans Meier", „Nr. 9",
+      „FC Fällanden", „Unser Team". */
+  text: string;
+  /** Der Rollentext allein, `""` wenn keiner gilt. Er geht als eigenes
+      Feld in die Nutzlast, damit die Gegenseite ihn nicht aus `text`
+      herausschneiden muss. */
+  rolle: string;
+  /**
+   * Ist der Mensch in `text` KENNTLICH — durch einen Namen oder eine
+   * Rückennummer?
+   *
+   * ⚠ Eine Rückennummer zählt mit. Das ist nicht „benannt", sondern
+   * „zuzuordnen", und genau so hat `ohne_person` es von Anfang an gemeint:
+   * *„weder über die Zuordnung noch über eine Rückennummer"*.
+   *
+   * ⚠ Beim Gegner immer `false` — eine Rolle und ein Vereinsname sind kein
+   * Mensch. Was die Nutzlast daraus macht, steht dort; siehe den Vermerk an
+   * `ohne_person` in `wpNutzlast.ts`.
+   */
+  benennbar: boolean;
+}
+
+/**
+ * Die EINE Entscheidung darüber, wer hinter einer Zeile steckt.
+ *
+ * ⚠ ⚠  SIE STEHT HIER ZUSAMMEN, WEIL SIE ZWEIMAL GEBRAUCHT WIRD — als Text
+ * und als Merkmal. Bis zum 24.09.2026 baute `wpNutzlast.ts` die Bedingung
+ * für `ohne_person` von Hand nach, mit dem Kommentar *„⚠ Dieselbe Bedingung
+ * wie der Rückfalltext in `beschreibeWer()`"*. Das ist eine Zusicherung
+ * über eine andere Stelle: ändert sich die eine, läuft die andere davon —
+ * und `ohne_person` ist das Feld, an dem die Website entscheidet, ob dort
+ * ein Mensch steht.
+ *
+ * Die Reihenfolge ist die Aussage:
+ *
+ *   1. Gegner         → Rolle + Vereinsname, nie ein Mensch
+ *   2. zugeordnet     → unsere Schreibweise, sie gewinnt immer
+ *   3. Rollenvermerk  → der rohe Name des Verbands (`person_name`)
+ *   4. Rückennummer   → „Nr. 9"
+ *   5. nichts         → der Rollentext allein, sonst „Unser Team"
+ *
+ * ⚠ Stufe 5 ist der Gewinn dieses Umbaus: ein Trainer, den wir nicht
+ * benennen können, heisst jetzt „Trainer" statt „Unser Team". Das sagt,
+ * WAS er ist, auch wenn wir nicht sagen können, WER.
+ */
+export function werBefund(
+  e: Pick<EreignisZeile, "ist_eigener" | "sfv_person_id" | "rueckennr"
+       | "gegner_club_name" | "rolle_kategorie_id" | "rolle_kategorie" | "person_name">,
+  namen?: Map<number, string>,
+): WerBefund {
+  const rolle = rollenText(e);
+  /* Rolle und Wer, mit genau einem Leerzeichen — und keinem, wenn eines
+     von beiden fehlt. „Trainer " oder „ Hans Meier" wäre eine Zeile, die
+     nach einem Fehler aussieht. */
+  const mit = (wer: string) => (rolle && wer ? `${rolle} ${wer}` : (rolle || wer));
+
+  if (!e.ist_eigener) {
+    return { text: mit(e.gegner_club_name ?? "Gegner"), rolle, benennbar: false };
+  }
+
+  const zugeordnet = e.sfv_person_id != null ? namen?.get(e.sfv_person_id) : null;
+  if (zugeordnet) return { text: mit(zugeordnet), rolle, benennbar: true };
+
+  const roh = rollenName(e);
+  if (roh) return { text: mit(roh), rolle, benennbar: true };
+
+  if (e.rueckennr != null) return { text: mit(`Nr. ${e.rueckennr}`), rolle, benennbar: true };
+
+  /* ⚠ Ohne Rollentext bleibt es bei „Unser Team", und zwar auch dann, wenn
+     die Id einen Vermerk nennt — dann wissen wir, dass es kein Spieler ist,
+     können es aber nicht in Worte fassen. Und für den Altbestand
+     (`rolle_kategorie_id === null`) ist es die einzige richtige Antwort:
+     nicht gefragt heisst nicht „Mannschaft". */
+  return { text: rolle || "Unser Team", rolle, benennbar: false };
+}
+
+/** Der Anzeigetext allein — die Fassade vor `werBefund()`.
+
+    ⚠ Sie bleibt, weil sie mehrere Aufrufstellen hat und keine davon das
+    Merkmal braucht. Wer beides braucht, ruft `werBefund()` einmal, statt
+    zweimal dasselbe zu rechnen. */
 export function beschreibeWer(
-  e: Pick<EreignisZeile, "ist_eigener" | "sfv_person_id" | "rueckennr" | "gegner_club_name">,
+  e: Pick<EreignisZeile, "ist_eigener" | "sfv_person_id" | "rueckennr"
+       | "gegner_club_name" | "rolle_kategorie_id" | "rolle_kategorie" | "person_name">,
   namen?: Map<number, string>,
 ): string {
-  if (!e.ist_eigener) return e.gegner_club_name ?? "Gegner";
-  const name = e.sfv_person_id != null ? namen?.get(e.sfv_person_id) : null;
-  if (name) return name;
-  return e.rueckennr != null ? `Nr. ${e.rueckennr}` : "Unser Team";
+  return werBefund(e, namen).text;
 }
 
 /**
@@ -600,7 +857,8 @@ export function beschreibeGewechselten(
 
 /** Kurzform eines Ereignisses für Dialoge: „Tor, 34' · Nr. 11". */
 export function beschreibeEreignis(
-  e: Pick<EreignisZeile, "typ" | "minute" | "ist_eigener" | "sfv_person_id" | "rueckennr" | "gegner_club_name">,
+  e: Pick<EreignisZeile, "typ" | "minute" | "ist_eigener" | "sfv_person_id" | "rueckennr"
+       | "gegner_club_name" | "rolle_kategorie_id" | "rolle_kategorie" | "person_name">,
   namen?: Map<number, string>,
 ): string {
   const teile = [e.typ ?? "Ereignis"];

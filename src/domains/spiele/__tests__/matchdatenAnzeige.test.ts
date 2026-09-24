@@ -4,6 +4,8 @@ import {
   offeneZuordnungen, TYP_AUSSCHLUSS, TYP_TOR, TYP_VERWARNUNG,
   beschreibeEreignis, geaenderteFelder, unzugeordnetLabel, SUBTYP_EIGENTOR,
   OHNE_MANNSCHAFT,
+  beschreibeWer, werBefund, istRollenvermerk, rollenText, rollenName,
+  ROLLE_SPIELER,
 } from "../matchdatenAnzeige.ts";
 import type { EreignisZeile } from "../matchdatenAnzeige.ts";
 /* ⚠ NUR LESEND. Die Regel lebt in `stammteam.ts`; hier wird sie als
@@ -18,7 +20,13 @@ const e = (p: Partial<EreignisZeile> & { id: string }): EreignisZeile => ({
   subtyp_id: null,
   typ_id: TYP_TOR, typ: "Tor", subtyp: null, minute: 10, zusatzminute: 0,
   ist_eigener: true, gegner_club_name: null, sfv_person_id: 111,
-  rueckennr: 9, ein_sfv_person_id: null, ein_rueckennr: null, ...p,
+  rueckennr: 9, ein_sfv_person_id: null, ein_rueckennr: null,
+  /* Am 24.09.2026 dazugekommen. Die Vorgabe ist die des Altbestands:
+     `rolle_kategorie_id: null` heisst NICHT GEFRAGT, und damit greift
+     die Kette, die es vor dem Umbau gab. Eine Attrappe, die hier 1
+     setzte, pruefte einen Zustand, den rund tausend Zeilen im Bestand
+     nicht haben. */
+  rolle_kategorie_id: null, rolle_kategorie: null, person_name: null, ...p,
 });
 
 describe("mischeEreignisse — die zwei Schichten", () => {
@@ -385,6 +393,227 @@ describe("beschreibeEreignis — für den Verwerfen-Dialog", () => {
     const fremd = e({ id: "s2", typ: "Verwarnung", minute: 57, ist_eigener: false,
                       sfv_person_id: null, rueckennr: null, gegner_club_name: "FC Egg" });
     expect(beschreibeEreignis(fremd)).toBe("Verwarnung, 57' · FC Egg");
+  });
+});
+
+/* ══════════════════════════════════════════════════════════════════════
+   Rolle und Name — aus „Unser Team" wird „Trainer Hans Meier"
+   24.09.2026
+
+   ⚠ ⚠  DIE ROLLE ENTSCHEIDET, NICHT DIE FEHLENDE RÜCKENNUMMER. Alle fünf
+   gemessenen „Unser Team"-Fälle (11.09.2026) waren Trainer und Betreuer
+   ohne Nummer — der Schluss „keine Nummer ⇒ kein Spieler" ist trotzdem ein
+   Filter auf ein Nebenprodukt. Ein unzugeordneter SPIELER ohne Nummer
+   landet im selben Zustand, und für ihn gilt weiter „Unser Team".
+   Die Fälle unten trennen die zwei.
+
+   ⚠ Der Verband führt 28 Kategorien, nicht drei — deshalb stehen hier
+   Trainer (3), Funktionär (4) UND Betreuer (9). Eine Prüfung auf „Trainer"
+   hätte die anderen zwei verpasst, und dann stünde dort weiter „Unser
+   Team", ohne dass etwas auffällt.
+   ══════════════════════════════════════════════════════════════════════ */
+const ROLLE_TRAINER = 3;
+const ROLLE_FUNKTIONAER = 4;
+const ROLLE_BETREUER = 9;
+
+describe("istRollenvermerk — drei Zustände, nicht zwei", () => {
+  it("null heisst NICHT GEFRAGT und ist kein Vermerk", () => {
+    /* ⚠ Der Altbestand: rund tausend Zeilen tragen null, bis ein Nachlauf
+       sie neu holt. Sie als „Spieler" zu lesen wäre eine Behauptung über
+       Daten, die niemand gefragt hat. */
+    expect(istRollenvermerk({ rolle_kategorie_id: null })).toBe(false);
+  });
+
+  it("Spieler (1) ist kein Vermerk", () => {
+    expect(istRollenvermerk({ rolle_kategorie_id: ROLLE_SPIELER })).toBe(false);
+    expect(ROLLE_SPIELER).toBe(1);
+  });
+
+  it("jede andere Kategorie ist einer — auch die, die niemand erwartet", () => {
+    for (const id of [ROLLE_TRAINER, ROLLE_FUNKTIONAER, ROLLE_BETREUER, 2, 28, 98, 99]) {
+      expect(istRollenvermerk({ rolle_kategorie_id: id })).toBe(true);
+    }
+  });
+});
+
+describe("rollenText — der Klartext, und wann er nicht gilt", () => {
+  it("nennt die Rolle, wie der Verband sie schreibt", () => {
+    expect(rollenText({ rolle_kategorie_id: ROLLE_TRAINER, rolle_kategorie: "Trainer" }))
+      .toBe("Trainer");
+    expect(rollenText({ rolle_kategorie_id: ROLLE_BETREUER, rolle_kategorie: "Betreuer" }))
+      .toBe("Betreuer");
+  });
+
+  it("schweigt beim Spieler, auch wenn der Text dasteht", () => {
+    expect(rollenText({ rolle_kategorie_id: ROLLE_SPIELER, rolle_kategorie: "Spieler" }))
+      .toBe("");
+  });
+
+  it("⚠ behandelt „-“ wie leer — es ist der Klartext zu Subtyp 0", () => {
+    /* Bei `subtyp` steht dort ein Strich statt eines leeren Werts, und am
+       05.09.2026 stand deshalb beinahe „FC Küsnacht a · -" auf der
+       Website. Ob der Verband das bei `roleCategoryName` auch tut, ist
+       ungemessen — die Prüfung kostet nichts. */
+    expect(rollenText({ rolle_kategorie_id: ROLLE_TRAINER, rolle_kategorie: "-" })).toBe("");
+    expect(rollenText({ rolle_kategorie_id: ROLLE_TRAINER, rolle_kategorie: "  " })).toBe("");
+    expect(rollenText({ rolle_kategorie_id: ROLLE_TRAINER, rolle_kategorie: null })).toBe("");
+  });
+});
+
+describe("rollenName — die zwei Riegel vor dem rohen Verbandsnamen", () => {
+  it("gibt den Namen bei einem eigenen Rollenvermerk heraus", () => {
+    expect(rollenName({ ist_eigener: true, rolle_kategorie_id: ROLLE_TRAINER,
+                        person_name: "  Hans Meier  " })).toBe("Hans Meier");
+  });
+
+  it("⚠ ⚠ schweigt beim GEGNER — Entscheid B, unabhängig vom CHECK", () => {
+    /* Der CHECK in der Datenbank soll dasselbe erzwingen. Darauf zu BAUEN
+       wäre eine Zusicherung über eine andere Stelle; hier steht der
+       zweite Riegel, und nur dieser ist von hier aus prüfbar. */
+    expect(rollenName({ ist_eigener: false, rolle_kategorie_id: ROLLE_TRAINER,
+                        person_name: "Hans Meier" })).toBe("");
+  });
+
+  it("⚠ ⚠ schweigt beim SPIELER — sonst verlöre „Nr. 13“ gegen einen Klarnamen", () => {
+    /* Das ist der Fall, der die Regel von der fehlenden Nummer trennt:
+       308 Zuordnungen sind offen, und ein unzugeordneter Spieler soll
+       weiterhin über seine Nummer erscheinen, nicht mit vollem Namen. */
+    expect(rollenName({ ist_eigener: true, rolle_kategorie_id: ROLLE_SPIELER,
+                        person_name: "Luca Bianchi" })).toBe("");
+    expect(rollenName({ ist_eigener: true, rolle_kategorie_id: null,
+                        person_name: "Luca Bianchi" })).toBe("");
+  });
+});
+
+describe("werBefund / beschreibeWer — Rolle UND Name", () => {
+  const trainer = (f: Partial<EreignisZeile> = {}) => e({
+    id: "t1", typ: "Verwarnung", typ_id: TYP_VERWARNUNG,
+    ist_eigener: true, sfv_person_id: null, rueckennr: null,
+    rolle_kategorie_id: ROLLE_TRAINER, rolle_kategorie: "Trainer",
+    person_name: "Hans Meier", ...f,
+  });
+
+  it("⚠ ⚠ ein eigener Trainer heisst „Trainer Hans Meier“", () => {
+    expect(beschreibeWer(trainer())).toBe("Trainer Hans Meier");
+  });
+
+  it("⚠ ⚠ ein fremder Trainer heisst „Trainer FC Fällanden“ — OHNE NAMEN", () => {
+    const fremd = trainer({
+      ist_eigener: false, gegner_club_name: "FC Fällanden",
+      /* ⚠ Die Attrappe TRÄGT einen Namen. Ohne ihn wäre der Fall grün,
+         auch wenn der Name durchkäme — er hätte nie einen gehabt. */
+      person_name: "Hans Meier",
+    });
+    expect(beschreibeWer(fremd)).toBe("Trainer FC Fällanden");
+    expect(beschreibeWer(fremd)).not.toContain("Hans");
+    expect(beschreibeWer(fremd)).not.toContain("Meier");
+  });
+
+  it("nennt Betreuer und Funktionär genauso — es sind 28 Kategorien", () => {
+    expect(beschreibeWer(trainer({ rolle_kategorie_id: ROLLE_BETREUER,
+                                   rolle_kategorie: "Betreuer" })))
+      .toBe("Betreuer Hans Meier");
+    expect(beschreibeWer(trainer({ rolle_kategorie_id: ROLLE_FUNKTIONAER,
+                                   rolle_kategorie: "Funktionär" })))
+      .toBe("Funktionär Hans Meier");
+  });
+
+  it("⚠ ⚠ ein SPIELER ohne Zuordnung und ohne Nummer bleibt „Unser Team“", () => {
+    /* Der Fall, der die Regel von der Nummer trennt. Er trägt einen
+       `person_name` und darf ihn trotzdem nicht zeigen. */
+    const spieler = trainer({ rolle_kategorie_id: ROLLE_SPIELER,
+                              rolle_kategorie: "Spieler", person_name: "Luca Bianchi" });
+    expect(beschreibeWer(spieler)).toBe("Unser Team");
+    expect(beschreibeWer(spieler)).not.toContain("Luca");
+  });
+
+  it("⚠ ⚠ der Altbestand (Kategorie null) bleibt „Unser Team“", () => {
+    /* Nicht gefragt ist nicht „Spieler" und nicht „Mannschaft" — es ist
+       die einzige Zeile, über die wir nichts wissen. */
+    const alt = trainer({ rolle_kategorie_id: null, rolle_kategorie: null,
+                          person_name: "Hans Meier" });
+    expect(beschreibeWer(alt)).toBe("Unser Team");
+    expect(beschreibeWer(alt)).not.toContain("Hans");
+  });
+
+  it("⚠ ein zugeordneter Spieler behält seinen zugeordneten Namen", () => {
+    const zug = trainer({ rolle_kategorie_id: ROLLE_SPIELER, rolle_kategorie: "Spieler",
+                          sfv_person_id: 111, person_name: "Lucas BIANCHI" });
+    expect(beschreibeWer(zug, new Map([[111, "L. Bianchi"]]))).toBe("L. Bianchi");
+  });
+
+  it("⚠ ⚠ die Zuordnung gewinnt auch beim Trainer — drei Quellen, eine Ordnung", () => {
+    /* Es gibt jetzt drei Namensquellen: die Zuordnung (unsere
+       Schreibweise), `sfv_personen` und `person_name`. Zwei Aussagen über
+       dieselbe Sache laufen still auseinander, wenn die Ordnung nicht
+       festliegt. */
+    const zug = trainer({ sfv_person_id: 222, person_name: "HANS MEIER" });
+    expect(beschreibeWer(zug, new Map([[222, "H. Meier"]]))).toBe("Trainer H. Meier");
+  });
+
+  it("nennt die Rückennummer, wenn es keinen Namen gibt", () => {
+    expect(beschreibeWer(trainer({ person_name: null, rueckennr: 5 })))
+      .toBe("Trainer Nr. 5");
+  });
+
+  it("⚠ ohne jeden Namen steht die Rolle allein — „Trainer“ statt „Unser Team“", () => {
+    /* Der Gewinn des Umbaus: es sagt, WAS er ist, auch wenn wir nicht
+       sagen können, WER. */
+    expect(beschreibeWer(trainer({ person_name: null }))).toBe("Trainer");
+  });
+
+  it("⚠ ⚠ nimmt die Schreibweise des Verbands, wie sie kommt — „Trainer/in“", () => {
+    /* ⚠ ⚠  GEMESSEN AM 24.09.2026: die echte Antwort schreibt „Spieler/in“,
+       die Stammdaten schreiben „Spieler“ — zwei Listen desselben Verbands,
+       nicht zeichengleich (fünf Ereignisse in
+       `docs/sfv/matchdaten_beispiel.json`, alle `roleCategoryId: 1`).
+
+       Meine Attrappen darüber tragen „Trainer“, also die Schreibweise der
+       STAMMDATEN. Für Kategorie 3 ist kein Ereignis aufgezeichnet; welche
+       der beiden Formen ankommt, ist ungemessen. Deshalb steht hier die
+       andere — eine Attrappe, die nur eine Form kennt, prüft eine
+       Datenlage statt einer Regel.
+
+       ⚠ Und der Schrägstrich wird NICHT geputzt. Ein „Trainer“ daraus zu
+       machen wäre eine Schreibweise, die wir erfinden. */
+    expect(beschreibeWer(trainer({ rolle_kategorie: "Trainer/in" })))
+      .toBe("Trainer/in Hans Meier");
+    expect(rollenText({ rolle_kategorie_id: ROLLE_SPIELER,
+                        rolle_kategorie: "Spieler/in" })).toBe("");
+  });
+
+  it("⚠ fehlt der Rollentext, bleibt der Name — weniger, aber nichts Falsches", () => {
+    expect(beschreibeWer(trainer({ rolle_kategorie: null }))).toBe("Hans Meier");
+    expect(beschreibeWer(trainer({ rolle_kategorie: "-" }))).toBe("Hans Meier");
+  });
+
+  it("⚠ kein doppeltes und kein führendes Leerzeichen", () => {
+    for (const t of [beschreibeWer(trainer()), beschreibeWer(trainer({ person_name: null })),
+                     beschreibeWer(trainer({ rolle_kategorie: null }))]) {
+      expect(t).toBe(t.trim());
+      expect(t).not.toMatch(/ {2}/);
+    }
+  });
+
+  it("⚠ ⚠ `rolle` und `benennbar` kommen aus DEMSELBEN Befund wie der Text", () => {
+    /* Die Tabelle ist die Zusage: wer eine der drei Antworten anders
+       rechnet, bricht hier — und nicht erst auf einer öffentlichen Seite.
+       `benennbar` heisst „durch Namen ODER Nummer kenntlich", nicht
+       „benannt": so hat `ohne_person` es von Anfang an gemeint. */
+    const faelle: Array<[Partial<EreignisZeile>, string, string, boolean]> = [
+      [{}, "Trainer Hans Meier", "Trainer", true],
+      [{ person_name: null }, "Trainer", "Trainer", false],
+      [{ person_name: null, rueckennr: 5 }, "Trainer Nr. 5", "Trainer", true],
+      [{ rolle_kategorie_id: null, rolle_kategorie: null }, "Unser Team", "", false],
+      [{ rolle_kategorie_id: ROLLE_SPIELER, rolle_kategorie: "Spieler" }, "Unser Team", "", false],
+      [{ ist_eigener: false, gegner_club_name: "FC Egg" }, "Trainer FC Egg", "Trainer", false],
+    ];
+    for (const [f, text, rolle, benennbar] of faelle) {
+      const b = werBefund(trainer(f));
+      expect({ text: b.text, rolle: b.rolle, benennbar: b.benennbar })
+        .toEqual({ text, rolle, benennbar });
+      expect(beschreibeWer(trainer(f))).toBe(text);
+    }
   });
 });
 

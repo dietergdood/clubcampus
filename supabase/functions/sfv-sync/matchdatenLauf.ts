@@ -381,10 +381,18 @@ export async function laufeMatchdaten(
          **Gemessen am 11.09.2026: null Vereinszeilen im ganzen Bestand.**
          Wer die erste erfasst, braucht davor ein Neuverankern ueber den
          fachlichen Schluessel. */
+      /* ⚠ ⚠  DIESE LISTE MUSS `VERLAUF_VERGLEICH` DECKEN — beide Stellen
+         oder keine. Fehlt hier eine Spalte, die dort verglichen wird, kommt
+         sie als `undefined` an, gilt als `null`, weicht bei jedem Lauf vom
+         neuen Wert ab — und dann ist JEDER Lauf eine Aenderung: Stempel,
+         `export_wartet() > 0`, vollstaendiger Export, stuendlich. Der
+         Defekt vom 11.09.2026, nur umgedreht.
+         Am 24.09.2026 sind die drei Rollen-/Namensfelder dazugekommen. */
       const altRes = await db.from("spiel_ereignisse")
         .select("id, minute, zusatzminute, typ_id, subtyp_id, ist_eigener,"
           + " sfv_person_id, rueckennr, typ, subtyp, sfv_team_id,"
-          + " gegner_club_name, ein_sfv_person_id, ein_rueckennr")
+          + " gegner_club_name, ein_sfv_person_id, ein_rueckennr,"
+          + " rolle_kategorie_id, rolle_kategorie, person_name")
         .eq("verein_id", v.verein_id)
         .eq("spiel_id", spiel.id)
         .eq("herkunft", "sfv");

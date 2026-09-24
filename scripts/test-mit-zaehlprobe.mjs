@@ -128,6 +128,18 @@ function letzteZahl(muster) {
 const gelaufeneDateien = letzteZahl(/Test Files.*\((\d+)\)\s*$/);
 const gelaufeneFaelle = letzteZahl(/^\s*Tests\s.*\((\d+)\)\s*$/);
 
+/* ⚠ ⚠  DIE ZAHL IN KLAMMERN ZAEHLT UEBERSPRUNGENE MIT, `vitest list`
+   NICHT. Gemessen am 24.09.2026: eine Datei mit einem `it.skip` listet
+   112 und meldet „112 passed | 1 skipped (113)". Ohne diese Zeile schlug
+   die Zaehlprobe bei JEDEM `.skip` an — und weil sie den Lauf fuer
+   wertlos erklaert, blieb `npm run deploy` stehen.
+
+   ⚠ Das ist die gefaehrlichere Haelfte: ein Melder, der bei etwas
+   Harmlosem anschlaegt, wird nach dem dritten Mal abgeschaltet — und dann
+   fehlt auch die Meldung ueber die verlorenen Dateien, fuer die es ihn
+   gibt. Dieselbe Abstumpfung wie bei den 758 Lint-Warnungen. */
+const uebersprungen = letzteZahl(/^\s*Tests\s.*?(\d+) skipped/) ?? 0;
+
 const befunde = [];
 if (gelaufeneDateien === null || gelaufeneFaelle === null) {
   befunde.push("Die Zusammenfassung ist nicht lesbar — hat vitest sein "
@@ -138,9 +150,24 @@ if (gelaufeneDateien === null || gelaufeneFaelle === null) {
       + `${erwarteteDateien.size} erwartet — `
       + `${erwarteteDateien.size - gelaufeneDateien} nicht ausgeführt.`);
   }
-  if (gelaufeneFaelle !== erwarteteFaelle) {
-    befunde.push(`Fälle: ${gelaufeneFaelle} gelaufen, `
-      + `${erwarteteFaelle} erwartet.`);
+  /* ⚠ Die uebersprungenen abziehen — sie stehen in der Klammer, aber
+     nicht in der Liste. */
+  const ausgefuehrt = gelaufeneFaelle - uebersprungen;
+  if (ausgefuehrt !== erwarteteFaelle) {
+    /* ⚠ ⚠  DAS VORZEICHEN TRENNT ZWEI SEHR VERSCHIEDENE DINGE, und bis
+       zum 24.09.2026 stand hier eine Meldung fuer beide. Sie nannte den
+       Worker-Timeout als haeufigste Ursache — richtig fuer die eine
+       Richtung, und fuer die andere schickte sie den Verdacht ins Leere. */
+    const fehlt = erwarteteFaelle - ausgefuehrt;
+    befunde.push(fehlt > 0
+      ? `Fälle: ${ausgefuehrt} ausgeführt, ${erwarteteFaelle} erwartet `
+        + `— ${fehlt} NICHT AUSGEFÜHRT. Das ist die Richtung, `
+        + `für die es diese Prüfung gibt.`
+      : `Fälle: ${ausgefuehrt} ausgeführt, ${erwarteteFaelle} erwartet `
+        + `— ${-fehlt} MEHR als gelistet. Kein Verlust: entweder hat `
+        + `jemand während des Laufs einen Fall ergänzt (ein Rennen `
+        + `zwischen „list“ und Lauf), oder die Klammerzahl zählt etwas `
+        + `mit, das die Liste nicht nennt.`);
   }
 }
 
@@ -155,7 +182,7 @@ if (befunde.length) {
      derselben roten Farbe. */
   console.error("\nDie gelesenen Zeilen (letzte 12):");
   for (const z of ausgabe.split(ZEILEN).slice(-12)) console.error("  | " + z);
-  console.error("\n⚠ Häufigste Ursache: ein Worker hat nicht geantwortet");
+  console.error("\n⚠ Häufigste Ursache, wenn FÄLLE FEHLEN: ein Worker antwortete nicht");
   console.error("  ([vitest-pool-runner]: Timeout waiting for worker).");
   console.error("  Reproduziert in 2 von 9 Läufen unter Last. Lief");
   console.error("  gleichzeitig ein Build oder ein Typecheck? Dann den");
@@ -166,5 +193,10 @@ if (befunde.length) {
 
 if (lauf.status !== 0) process.exit(lauf.status ?? 1);
 
-console.log(`\nZaehlprobe: ${gelaufeneDateien} Dateien, ${gelaufeneFaelle} `
-  + `Faelle — so viele, wie vitest list nennt.`);
+console.log(`\nZaehlprobe: ${gelaufeneDateien} Dateien, `
+  + `${gelaufeneFaelle - uebersprungen} ausgefuehrte Faelle `
+  + `— so viele, wie vitest list nennt.`
+  /* ⚠ Die uebersprungenen gehoeren in die Ausgabe, wenn es welche gibt:
+     sonst ist nicht zu sehen, dass die Zahl bereinigt ist, und die
+     naechste Abweichung sucht jemand im Abzug. */
+  + (uebersprungen ? ` (dazu ${uebersprungen} uebersprungen)` : ""));
