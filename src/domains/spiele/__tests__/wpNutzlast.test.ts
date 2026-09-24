@@ -22,6 +22,7 @@ import {
   leererWechselWiderspruch,
   spielerAnzeige, rolleAus, ROLLE_ERSATZ_ID, ROLLE_KEIN_EINSATZ_ID, verlaufSortiert,
   ROLLE_CAPTAIN_ID, baueAufstellung, leereAufstellungZahlen,
+  type AbgeleiteteMinuten,
   SUBTYP_EIGENTOR,
 } from "../wpNutzlast.ts";
 import {
@@ -1231,10 +1232,14 @@ describe("baueAufstellung", () => {
   });
   const keine = new Map<string, AufstellungZaehlung>();
   const keineNamen = new Map<number, string>();
+  /* ⚠ Leer heisst „hier ist nichts abzuleiten" — und das ist eine
+     Aussage, kein Weglassen. Die Ableitung selbst hat ihre eigene
+     Testdatei (`wechselMinuten.test.ts`). */
+  const keineAbleitung = new Map<string, AbgeleiteteMinuten>();
 
   it("eine eigene Zeile trägt Name, Nummer, Position und Rolle", () => {
     const zahlen = leereAufstellungZahlen();
-    const [z] = baueAufstellung([q()], keine, true, keineNamen, zahlen);
+    const [z] = baueAufstellung([q()], keine, true, keineNamen, zahlen, keineAbleitung);
     expect(z).toMatchObject({
       seite: "heim", nummer: 9, spieler: "Anna Beispiel",
       position: "Sturm", rolle: "start", ist_captain: false, marken: [],
@@ -1251,7 +1256,7 @@ describe("baueAufstellung", () => {
     const zahlen = leereAufstellungZahlen();
     const [z] = baueAufstellung(
       [q({ ist_eigener: false, sfv_person_id: 4711 })],
-      keine, true, keineNamen, zahlen,
+      keine, true, keineNamen, zahlen, keineAbleitung,
     );
     expect(z.sfv_person_id).toBeNull();
   });
@@ -1262,7 +1267,7 @@ describe("baueAufstellung", () => {
        bei einer Zählung über 269 Spiele Zeilen, ohne dass es auffällt.
        Eine Statistik, die zu wenig zählt, sieht aus wie eine Statistik. */
     const zahlen = leereAufstellungZahlen();
-    const [z] = baueAufstellung([q()], keine, true, keineNamen, zahlen);
+    const [z] = baueAufstellung([q()], keine, true, keineNamen, zahlen, keineAbleitung);
     expect(z.sfv_person_id).toBe("100");
     expect(typeof z.sfv_person_id).toBe("string");
   });
@@ -1274,7 +1279,7 @@ describe("baueAufstellung", () => {
     const zahlen = leereAufstellungZahlen();
     const [z] = baueAufstellung(
       [q({ ist_eigener: false, name: "Fremder Name", sfv_person_id: null })],
-      keine, true, keineNamen, zahlen,
+      keine, true, keineNamen, zahlen, keineAbleitung,
     );
     expect(z.spieler).toBe("");
     expect(z.nummer).toBe(9);
@@ -1287,7 +1292,7 @@ describe("baueAufstellung", () => {
 
   it("ohne Klarnamen steht „Nr. 9“, und es wird gezählt", () => {
     const zahlen = leereAufstellungZahlen();
-    const [z] = baueAufstellung([q({ name: null })], keine, true, keineNamen, zahlen);
+    const [z] = baueAufstellung([q({ name: null })], keine, true, keineNamen, zahlen, keineAbleitung);
     expect(z.spieler).toBe("Nr. 9");
     expect(zahlen.ohne_namen).toBe(1);
   });
@@ -1295,7 +1300,7 @@ describe("baueAufstellung", () => {
   it("eine Zuordnung gewinnt gegen den Namen aus der SFV-Antwort", () => {
     const zahlen = leereAufstellungZahlen();
     const namen = new Map([[100, "Anna Vereinsname"]]);
-    const [z] = baueAufstellung([q()], keine, true, namen, zahlen);
+    const [z] = baueAufstellung([q()], keine, true, namen, zahlen, keineAbleitung);
     expect(z.spieler).toBe("Anna Vereinsname");
   });
 
@@ -1312,11 +1317,11 @@ describe("baueAufstellung", () => {
         { art: "tor", minute: "5" },
       ] }],
     ]);
-    const [eigen] = baueAufstellung([q()], m, true, keineNamen, zahlen);
+    const [eigen] = baueAufstellung([q()], m, true, keineNamen, zahlen, keineAbleitung);
     expect(eigen.marken.map((x) => x.art)).toEqual(["tor", "tor", "gelb"]);
     const [fremd] = baueAufstellung(
       [q({ ist_eigener: false, sfv_person_id: null })], m, true, keineNamen,
-      leereAufstellungZahlen(),
+      leereAufstellungZahlen(), keineAbleitung,
     );
     expect(fremd.marken.map((x) => x.art)).toEqual(["tor"]);
   });
@@ -1332,7 +1337,7 @@ describe("baueAufstellung", () => {
         { art: "tor", minute: "67" }, { art: "gelb", minute: "45+2" },
       ] }],
     ]);
-    const [z] = baueAufstellung([q()], m, true, keineNamen, zahlen);
+    const [z] = baueAufstellung([q()], m, true, keineNamen, zahlen, keineAbleitung);
     expect(z.marken).toEqual([
       { art: "tor", minute: "67" },
       { art: "gelb", minute: "45+2" },
@@ -1345,7 +1350,7 @@ describe("baueAufstellung", () => {
       q({ rueckennr: 3, von_minute: 0, bis_minute: 0, spielzeit: 0 }),
       q({ rueckennr: 2, von_minute: 46, bis_minute: 90, spielzeit: 45 }),
       q({ rueckennr: 1 }),
-    ], keine, true, keineNamen, zahlen);
+    ], keine, true, keineNamen, zahlen, keineAbleitung);
     expect(zeilen.map((z) => z.rolle))
       .toEqual(["start", "eingewechselt", "nicht_eingesetzt"]);
   });
@@ -1355,13 +1360,13 @@ describe("baueAufstellung", () => {
     const zeilen = baueAufstellung([
       q({ ist_eigener: false, sfv_person_id: null, rueckennr: 4 }),
       q({ rueckennr: 5 }),
-    ], keine, true, keineNamen, zahlen);
+    ], keine, true, keineNamen, zahlen, keineAbleitung);
     expect(zeilen.map((z) => z.seite)).toEqual(["heim", "gast"]);
   });
 
   it("bei einem Auswärtsspiel dreht sich die Seite", () => {
     const zahlen = leereAufstellungZahlen();
-    const [z] = baueAufstellung([q()], keine, false, keineNamen, zahlen);
+    const [z] = baueAufstellung([q()], keine, false, keineNamen, zahlen, keineAbleitung);
     expect(z.seite).toBe("gast");
   });
 
@@ -1374,7 +1379,7 @@ describe("baueAufstellung", () => {
       q({ rolle_zuweisung_id: ROLLE_ERSATZ_ID }),
       /* Verdrehte Minuten — korrigiert UND weiterhin unplausibel. */
       q({ von_minute: 54, bis_minute: 32, spielzeit: -22 }),
-    ], keine, true, keineNamen, zahlen);
+    ], keine, true, keineNamen, zahlen, keineAbleitung);
     expect(zahlen.widerspruch).toBe(1);
     expect(zahlen.unplausibel).toBe(1);
     expect(zahlen.korrigiert).toBe(1);
@@ -1382,7 +1387,7 @@ describe("baueAufstellung", () => {
 
   it("⚠ meldet einen unbekannten Zuweisungswert, statt ihn zu schlucken", () => {
     const zahlen = leereAufstellungZahlen();
-    baueAufstellung([q({ rolle_zuweisung_id: 77 })], keine, true, keineNamen, zahlen);
+    baueAufstellung([q({ rolle_zuweisung_id: 77 })], keine, true, keineNamen, zahlen, keineAbleitung);
     expect(zahlen.unbekannte_rollen).toEqual([77]);
   });
 
@@ -1391,7 +1396,7 @@ describe("baueAufstellung", () => {
        Verbandswert lesen, sonst stünde dort dauerhaft „-1" und niemand
        schaute mehr hin. */
     const zahlen = leereAufstellungZahlen();
-    baueAufstellung([q({ rolle_zuweisung_id: null })], keine, true, keineNamen, zahlen);
+    baueAufstellung([q({ rolle_zuweisung_id: null })], keine, true, keineNamen, zahlen, keineAbleitung);
     expect(zahlen.unbekannte_rollen).toEqual([]);
   });
 
@@ -1399,21 +1404,29 @@ describe("baueAufstellung", () => {
     const zahlen = leereAufstellungZahlen();
     baueAufstellung(
       [q({ von_minute: null, bis_minute: null, spielzeit: null })],
-      keine, true, keineNamen, zahlen,
+      keine, true, keineNamen, zahlen, keineAbleitung,
     );
     expect(zahlen.ohne_minuten).toBe(1);
   });
 
-  it("die acht Zahlen stehen auch bei leerer Aufstellung da", () => {
-    /* ⚠ Der Fall, um den es bei „immer, auch als Null" geht. */
+  it("die neun Zahlen stehen auch bei leerer Aufstellung da", () => {
+    /* ⚠ Der Fall, um den es bei „immer, auch als Null" geht.
+
+       ⚠ `toEqual` und nicht `toMatchObject`: die Erwartung zaehlt die
+       Schluessel ABSCHLIESSEND auf. Genau deshalb ist sie beim Zulauf von
+       `minuten_abgeleitet` (25.09.2026) rot geworden — eine neue Zahl
+       kann hier nicht still dazukommen, ohne dass jemand sie ansieht. */
     const zahlen = leereAufstellungZahlen();
-    expect(baueAufstellung([], keine, true, keineNamen, zahlen)).toEqual([]);
+    expect(baueAufstellung([], keine, true, keineNamen, zahlen, keineAbleitung)).toEqual([]);
     expect(zahlen).toEqual({
       zeilen_eigen: 0, zeilen_fremd: 0, ohne_namen: 0, widerspruch: 0,
       unplausibel: 0, korrigiert: 0, unbekannte_rollen: [], ohne_minuten: 0,
       /* ⚠ Alle drei, auch die, die nie vorkommt. Ein fehlender Schlüssel
          wäre von einer Null nicht zu unterscheiden. */
       rollen: { start: 0, eingewechselt: 0, nicht_eingesetzt: 0 },
+      /* ⚠ Aus demselben Grund: 0 heisst „nichts abgeleitet", ein
+         fehlender Schluessel hiesse „nicht gemessen". */
+      minuten_abgeleitet: 0,
     });
   });
 
@@ -1431,7 +1444,7 @@ describe("baueAufstellung", () => {
         q({ von_minute: 82, bis_minute: 90, spielzeit: 8, rueckennr: 3 }),
         q({ von_minute: 0, bis_minute: 0, spielzeit: 0, rueckennr: 4 }),
       ],
-      keine, true, keineNamen, zahlen,
+      keine, true, keineNamen, zahlen, keineAbleitung,
     );
     expect(zahlen.rollen).toEqual({
       start: 1, eingewechselt: 2, nicht_eingesetzt: 1,

@@ -60,8 +60,23 @@ import {
   bildeSpiel, zaehleVerlaufNamen, hatDoppelabstand,
   baueAufstellung, leereAufstellungZahlen, sammleMarken,
   zaehleWechselWiderspruch, leererWechselWiderspruch, halbzeitWiderspruch,
-  verlaufSortiert,
+  verlaufSortiert, leiteWechselMinutenAb,
 } from "../../../src/domains/spiele/wpNutzlast.ts";
+/* ⚠ ⚠  DER LINKBAUER STEHT DORT, NICHT HIER — und zwar in
+   `verbandsadresse.ts`, nicht in `verbandslink.ts` daneben.
+
+   Der Unterschied ist gemessen: `verbandslink.ts` importiert `Tables` aus
+   `src/types.ts`, und `types.ts` nennt den React-Namensraum. `deno check`
+   bricht darauf mit `TS2503 Cannot find namespace 'React'` ab — beim
+   ersten Lauf der Pruefkette nach dem Anschluss genau so passiert.
+
+   `verbandsadresse.ts` kommt mit blossen Zahlen aus und hat keinen
+   einzigen Typ-Import. Dieselbe Trennung und derselbe Grund wie bei
+   `ergebnisTypen.ts`.
+
+   ⚠ Es ist EINE Fassung, keine Kopie: `verbandslink.ts` reicht dieselbe
+   Funktion an den Browser weiter. */
+import { verbandsLinkSpiel } from "../../../src/domains/sfv/verbandsadresse.ts";
 /* ⚠ Der Zeitraum ist RECHNUNG, keine Zusage — er gehoert dorthin, wo tsc
    und vitest ihn lesen koennen. Diese Datei importiert von esm.sh und wird
    von beiden nicht geprueft; eine Strukturpruefung auf den Quelltext taugt
@@ -1163,6 +1178,36 @@ async function sendeAnWordpress(
            Zeile nicht lesen" aus wie „es lag nichts vor", und die
            Reihenfolge waere still aus. */
         reihenfolge_fehler: reihenfolgeFehler,
+
+        /* ── Minuten aus dem Verlauf ────────────────────────────────
+           ⚠ ⚠  FELD FUER FELD, NICHT GESPREADET. `fuersProtokoll()` ist
+           eine Allowlist, und diese Zeilen sind ihre Fortsetzung: am
+           21.08.2026 sind 903 Klarnamen ins Protokoll geraten, weil ein
+           Objekt gespreadet wurde. Ein neues Feld erbt jeden Ausgang.
+
+           ⚠ Sie stehen HIER und nicht in `fuersProtokoll()`, weil sie
+           aus `erg.zusammenfassung` kommen — derselben Quelle, die die
+           Vorschau zeigt. Zwei Rechnungen fuer dieselbe Frage laufen
+           auseinander, und dann ist nicht zu sagen, welche stimmt.
+
+           ⚠ Alle sechs immer da, auch als Null: waeren sie es nicht,
+           liesse sich „nichts abgeleitet" nicht von „nicht gemessen"
+           unterscheiden — und ein Protokoll ohne die Zahl sieht aus wie
+           eines von vor dem Bau. */
+        aufstellung_minuten_abgeleitet: alsZahl("aufstellung_minuten_abgeleitet"),
+        minuten_spiele_abgeleitet: alsZahl("minuten_spiele_abgeleitet"),
+        minuten_spiele_verworfen: alsZahl("minuten_spiele_verworfen"),
+        minuten_spiele_ohne_spielende: alsZahl("minuten_spiele_ohne_spielende"),
+        minuten_spiele_keine_platzhalter: alsZahl("minuten_spiele_keine_platzhalter"),
+        minuten_wechsel_ohne_zeile: alsZahl("minuten_wechsel_ohne_zeile"),
+        /* ⚠ Die benannten Aussetzer — Titel, Grund, Befund, Link. Der
+           Befund traegt Minute und Rueckennummern, KEINE Namen; deshalb
+           darf die Liste ins Protokoll. Eine Zahl allein liesse offen, ob
+           es ein verdrehtes Matchblatt beim Verband ist oder ein Fehler
+           bei uns, und diese Frage ist an einem einzelnen Spiel zu
+           beantworten. */
+        minuten_aussetzer: Array.isArray(zf.minuten_aussetzer)
+          ? zf.minuten_aussetzer : [],
       },
     }).eq("id", logId);
 
@@ -2534,6 +2579,30 @@ async function laufeProbe(
     gesetzt: 0, ohne_zuordnung: 0, eigentore: 0,
     unbekannte_typen: new Set<number>(),
   };
+  /* ⚠ ⚠  DIE ABGELEITETEN MINUTEN — Zaehler und benannte Aussetzer.
+
+     Der Zaehler der ZEILEN steht in `aufZahlen.minuten_abgeleitet`; hier
+     stehen die Zahlen JE SPIEL, und die beantworten eine andere Frage:
+     nicht „wie viele Wechselpfeile entstehen", sondern „bei wie vielen
+     Spielen haetten welche entstehen koennen und sind es nicht".
+
+     ⚠ `verworfen` wird NAMENTLICH gemeldet, nicht bloss gezaehlt. Eine
+     Zahl allein laesst offen, ob es ein verdrehtes Matchblatt beim
+     Verband ist oder ein Fehler bei uns — und genau diese Frage ist an
+     einem einzelnen Spiel zu beantworten, nicht an einer Summe.
+
+     ⚠ Und NUR diese zwei Gruende bekommen eine Liste. `keine_platzhalter`
+     ist der Normalfall und traefe fast jedes Spiel; eine Liste, die jedes
+     Mal fast alles nennt, wird nach dem dritten Mal ueberlesen. */
+  const minuten = {
+    spiele_abgeleitet: 0,
+    spiele_verworfen: 0,
+    spiele_ohne_spielende: 0,
+    spiele_keine_platzhalter: 0,
+    wechsel_ohne_zeile: 0,
+  };
+  const minutenAussetzer: { spiel: string; grund: string;
+                            befund: string; link: string | null }[] = [];
 
   for (const s of eigene) {
     const roh = proSpiel.get(String(s.id)) ?? [];
@@ -2593,9 +2662,40 @@ async function laufeProbe(
       markenZahlen.ohne_zuordnung += marken.ohne_zuordnung;
       markenZahlen.eigentore += marken.eigentore;
       for (const t of marken.unbekannte_typen) markenZahlen.unbekannte_typen.add(t);
+      /* ⚠ ⚠  MINUTEN AUS DEM VERLAUF — nur wo die Aufstellung Platzhalter
+         traegt, und nur in der NUTZLAST. `spiel_aufstellung` bleibt
+         unberuehrt; jede betroffene Zeile traegt `minuten_abgeleitet`.
+         Siehe `leiteWechselMinutenAb()`.
+
+         ⚠ Sie kostet keinen Abruf: Ereignisse und Aufstellung sind
+         ohnehin geladen. */
+      const ableitung = leiteWechselMinutenAb(ereignisse, aufZeilen);
+      minuten.wechsel_ohne_zeile += ableitung.ohne_zeile;
+      if (ableitung.grund === null) minuten.spiele_abgeleitet += 1;
+      else if (ableitung.grund === "keine_platzhalter") minuten.spiele_keine_platzhalter += 1;
+      if (ableitung.grund === "widerspruch" || ableitung.grund === "kein_spielende") {
+        if (ableitung.grund === "widerspruch") minuten.spiele_verworfen += 1;
+        else minuten.spiele_ohne_spielende += 1;
+        /* ⚠ TITEL UND LINK, nicht nur die Match-Id. Eine Nummer allein
+           zwingt den Leser zu einer zweiten Abfrage, bevor er ueberhaupt
+           weiss, um welches Spiel es geht — und der Befund ist an genau
+           einem Spiel zu pruefen.
+
+           ⚠ Der Befund nennt Minute und Rueckennummern, KEINE Namen: die
+           Liste geht ins Protokoll, und dort sind am 21.08.2026 schon
+           einmal 903 Klarnamen gelandet. */
+        minutenAussetzer.push({
+          spiel: `${teamListe.find((x) => x.sfv_team_id === String(s.sfv_team_id))?.name ?? "—"}`
+            + ` — ${spiel.gegner} · ${spiel.datum}`,
+          grund: ableitung.grund,
+          befund: ableitung.widerspruch
+            ?? "keine ablesbare Spieldauer (keine oder mehrere 1/X/X-Zeilen)",
+          link: verbandsLinkSpiel(spiel.sfv_match_id),
+        });
+      }
       spiel.aufstellung = baueAufstellung(
         aufZeilen, marken.je_spieler, spiel.heim_auswaerts === "heim",
-        namen, aufZahlen,
+        namen, aufZahlen, ableitung.je_zeile,
       );
       const ww = zaehleWechselWiderspruch(ereignisse, aufZeilen);
       for (const k of Object.keys(wechselWiderspruch) as (keyof typeof wechselWiderspruch)[]) {
@@ -2739,6 +2839,32 @@ async function laufeProbe(
          `eingewechselt` bei uns überhaupt entsteht — die Frage der
          Website-Seite vom 11.09.2026. Drei Zahlen, keine Person. */
       aufstellung_rollen: aufZahlen.rollen,
+      /* ── Minuten aus dem Verlauf ──────────────────────────────────
+         ⚠ FUENF ZAHLEN, ALLE IMMER DA, AUCH ALS NULL — und die erste ist
+         die Bezugsgroesse der uebrigen. „3 verworfen" heisst etwas
+         anderes bei 4 abgeleiteten Spielen als bei 40.
+
+         ⚠ Die ZEILEN-Zahl steht daneben und ist eine andere Frage: wie
+         viele Wechselpfeile ueberhaupt entstehen. Ein Spiel kann sechs
+         Zeilen beitragen. */
+      aufstellung_minuten_abgeleitet: aufZahlen.minuten_abgeleitet,
+      minuten_spiele_abgeleitet: minuten.spiele_abgeleitet,
+      /* ⚠ Das Spiel wurde GANZ verworfen — keine Teilableitung. Siehe die
+         benannte Liste darunter. */
+      minuten_spiele_verworfen: minuten.spiele_verworfen,
+      minuten_spiele_ohne_spielende: minuten.spiele_ohne_spielende,
+      /* Der Normalfall: der Verband hat echte Minuten geliefert, und die
+         gelten. Steht diese Zahl hoch, ist alles in Ordnung. */
+      minuten_spiele_keine_platzhalter: minuten.spiele_keine_platzhalter,
+      /* ⚠ KEIN Widerspruch: `/events` kennt Spieler, die `/players` nicht
+         listet (fuenf Faelle in vier Spielen, 11.09.2026). Eine eigene
+         Zahl, damit eine bekannte Luecke der Quelle nicht wie ein Befund
+         aussieht. */
+      minuten_wechsel_ohne_zeile: minuten.wechsel_ohne_zeile,
+      /* ⚠ ⚠  MIT TITEL UND LINK, nicht bloss gezaehlt — und ausdruecklich
+         NUR fuer die zwei seltenen Gruende. Der Befund nennt Minute und
+         Rueckennummern, keine Namen. */
+      minuten_aussetzer: minutenAussetzer,
       /* ⚠ Wie oft die Bruecke ueber die Rueckennummer getragen hat.
          Immer da, auch als Null. Sie ist ein Rueckfall ueber eine
          ANZEIGEANGABE — steigt die Zahl, ist das kein Erfolg, sondern

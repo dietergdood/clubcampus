@@ -26,22 +26,25 @@
 
 import type { Tables } from "../../types.ts";
 
-/**
- * Eine Zahl, die wirklich eine ist.
- *
- * ⚠ ⚠  `Number(null)` IST 0, UND 0 IST ENDLICH. Ein blosses
- * `Number.isFinite(Number(x))` hält eine fehlende Angabe für die Zahl Null
- * — und dann entstünde ein Link mit `v=0`, der auf eine fremde oder leere
- * Seite führt. Genau die Einebnung, die dieses Papier an einem Dutzend
- * Stellen führt: ein fehlender Wert und die Zahl Null sehen gleich aus.
- *
- * Gefangen hat es der eigene Testfall, nicht der Compiler.
- */
-function zahl(x: unknown): number | null {
-  if (x === null || x === undefined || x === "") return null;
-  const n = Number(x);
-  return Number.isFinite(n) && n > 0 ? n : null;
-}
+/* ⚠ ⚠  `zahl()` UND DER SPIELBERICHT LIEGEN NEBENAN, IN
+   `verbandsadresse.ts` — und das ist kein Ordnungstick, sondern eine
+   gemessene Notwendigkeit.
+
+   DIESE Datei importiert `Tables` aus `src/types.ts`, und `types.ts`
+   nennt den React-Namensraum. Eine Edge Function, die sie anfasst,
+   bricht mit `TS2503 Cannot find namespace 'React'` ab (gemessen
+   25.09.2026, `check:deno`). Der Spielbericht wird aber genau dort
+   gebraucht: der WordPress-Export meldet die Spiele, deren Minuten er
+   nicht ableiten konnte, mit Titel und Link.
+
+   Was `vereine` braucht, bleibt hier. Was mit blossen Zahlen auskommt,
+   liegt nebenan — und wird hier weitergereicht, damit es fuer den
+   Browser bei EINER Anlaufstelle bleibt.
+
+   ⚠ Weitergereicht, nicht kopiert: `verbandsLinkSpiel` steht genau
+   einmal. */
+import { zahl, verbandsLinkSpiel } from "./verbandsadresse.ts";
+export { verbandsLinkSpiel };
 
 /**
  * Was der Link braucht — aus `vereine`, nicht aus einem Secret.

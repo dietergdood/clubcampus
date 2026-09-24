@@ -104,7 +104,7 @@ export type WpVerlaufArt = "tor" | "gelb" | "gelbrot" | "rot" | "wechsel" | "ass
  * einem SQL-Block. Gehalten wird es von `nutzlastFassung.test.ts`: ändert
  * sich ein Feldname, ist der Fall rot, und er nennt beide Stellen.
  */
-export const NUTZLAST_FASSUNG = 6;
+export const NUTZLAST_FASSUNG = 7;
 
 export interface WpVerlaufZeile {
   /** Text, nicht Zahl — damit „45+2" hineinpasst. */
@@ -1875,6 +1875,36 @@ export function leererWechselWiderspruch(): WechselWiderspruch {
   };
 }
 
+/**
+ * Die EINE Aufstellungszeile zu einer Rueckennummer auf einer Seite.
+ *
+ * ⚠ ⚠  BEI ZWEI KANDIDATEN GAR KEINER — dieselbe Regel wie in
+ *       `baueNummernBruecke()`, und aus demselben Grund: die Nummer ist
+ *       KEIN Schluessel. Bei zwei eigenen Mannschaften gegeneinander
+ *       stehen beide Kader unter derselben `spiel_id`, und dann gibt es
+ *       die 9 zweimal.
+ *
+ * ⚠ HIER STAND BIS ZUM 25.09.2026 EIN `.find()`, und das nimmt den
+ *   ERSTEN von zweien. Fuer `zaehleWechselWiderspruch()` hiess das: bei
+ *   einer doppelten Nummer wurde ein Widerspruch gegen moeglicherweise
+ *   die falsche Person gezaehlt. Heute folgenlos — `erg.derbys` steht
+ *   seit dem 28.08.2026 auf 0 —, und eine Datenlage ist keine
+ *   Absicherung.
+ *
+ * ⚠ Herausgezogen, weil zwei Stellen dieselbe Frage stellen: der Zaehler
+ *   und die Minuten-Ableitung. Zwei Ausdruecke fuer dieselbe Frage laufen
+ *   in diesem Projekt verlaesslich auseinander.
+ */
+export function findeAufstellungszeile(
+  aufstellung: AufstellungQuelle[], istEigener: boolean, nummer: number | null,
+): AufstellungQuelle | null {
+  if (nummer == null) return null;
+  const treffer = aufstellung.filter(
+    (a) => a.ist_eigener === istEigener && a.rueckennr === nummer,
+  );
+  return treffer.length === 1 ? treffer[0] : null;
+}
+
 export function zaehleWechselWiderspruch(
   ereignisse: { typ_id: number; subtyp_id: number | null; ist_eigener: boolean;
                 ein_rueckennr: number | null }[],
@@ -1883,9 +1913,17 @@ export function zaehleWechselWiderspruch(
   const raus = leererWechselWiderspruch();
   for (const e of ereignisse) {
     if (e.typ_id !== TYP_WECHSEL || e.ein_rueckennr == null) continue;
-    const zeile = aufstellung.find(
-      (a) => a.ist_eigener === e.ist_eigener && a.rueckennr === e.ein_rueckennr,
-    );
+    /* ⚠ ⚠  UEBER `findeAufstellungszeile()`, SEIT DEM 25.09.2026. Hier
+       stand ein `.find()`, und das nimmt den ERSTEN von zweien: bei einer
+       doppelten Nummer wurde ein Widerspruch gegen moeglicherweise die
+       falsche Person gezaehlt. Die Regel „bei zwei Kandidaten gar keiner"
+       gilt fuer diesen Schluessel im ganzen Projekt — sie stand nur nicht
+       hier.
+
+       ⚠ Heute aendert das keinen Messwert: `erg.derbys` steht seit dem
+       28.08.2026 auf 0, und nur ein Derby legt zwei eigene Kader unter
+       dieselbe `spiel_id`. Eine Datenlage ist keine Absicherung. */
+    const zeile = findeAufstellungszeile(aufstellung, e.ist_eigener, e.ein_rueckennr);
     if (!zeile) continue;
 
     /* ⚠ ⚠  UEBER rolleAus(), NICHT ueber eine eigene Bedingung.
@@ -1921,6 +1959,366 @@ export function zaehleWechselWiderspruch(
     }
   }
   return raus;
+}
+
+
+/* ══════════════════════════════════════════════════════════════════════
+   Minuten aus dem Verlauf — nur wo die Aufstellung Platzhalter traegt
+   25.09.2026
+
+   ⚠ ⚠ ⚠  DIE DATENBANK WIRD NICHT ANGEFASST. `spiel_aufstellung` behaelt,
+   was der Verband lieferte; abgeleitet wird ausschliesslich in der
+   NUTZLAST, und jede betroffene Zeile traegt `minuten_abgeleitet: true`.
+
+   CLAUDE.md fuehrt unter „EINE AUFSTELLUNGSZEILE AUS EREIGNISSEN
+   ZUSAMMENZUSETZEN IST AUSDRUECKLICH ABGELEHNT" (Didi, 11.09.2026):
+
+   > eine Zeile, die wir uns selbst ableiten, waere von einer gelieferten
+   > nicht mehr zu unterscheiden — und genau diese Ununterscheidbarkeit
+   > ist der teuerste Fehler in diesem Papier.
+   > **Wenn je, dann mit eigenem Merkmal und eigenem Zaehler.**
+
+   Das ist die Vorgabe, und beide Haelften stehen hier: das Merkmal an der
+   Zeile, der Zaehler in `AufstellungZahlen.minuten_abgeleitet`.
+
+   ── DER ANLASS ────────────────────────────────────────────────────────
+
+   Bei mindestens vier Spielen traegt die Aufstellung nur Platzhalter —
+   Startelf `1/90/90`, alle uebrigen `0/0/0`, niemand „eingewechselt" —,
+   waehrend der Verlauf sehr wohl Wechsel MIT Minute fuehrt. Auf der
+   Website fehlen dadurch die Wechselpfeile.
+
+   ── WAS EIN PLATZHALTER IST, UND WARUM DIE FRAGE JE SEITE GESTELLT WIRD
+
+   Eine EINZELNE Zeile `1/90/90` ist nicht von einem echten Wert zu
+   unterscheiden — wer durchspielt, traegt genau das. Erkennbar ist nur
+   die LAGE EINER GANZEN SEITE:
+
+     · kein einziger Eintrag „eingewechselt", UND
+     · jede Zeile traegt eine der zwei Platzhalterformen —
+       `1/X/X` (Feld) oder `0/0/0` (Bank), UND
+     · es gibt genau EIN X, also eine ablesbare Spieldauer.
+
+   Traegt auch nur eine Zeile etwas anderes (`1/46/45`, `63/90/27`), hat
+   der Verband fuer diese Seite echte Daten geliefert — **und die
+   gelten**. Dann wird auf dieser Seite nichts abgeleitet.
+
+   ⚠ JE SEITE, NICHT JE SPIEL: bei 4395750 trug die GEGNERZEILE Nr. 9
+   `1/70/70`, waehrend unsere Seite in Ordnung war; bei 4378093 standen
+   die Ersatzspieler BEIDER Seiten auf `0/0/0`. Die zwei Seiten sind zwei
+   unabhaengige Lagen, und ein gemeinsames Urteil waere fuer eine davon
+   immer falsch.
+
+   ── DIE SPIELDAUER WIRD GELESEN, NICHT ANGENOMMEN ─────────────────────
+
+   `bis_minute` eines Eingewechselten ist das Spielende. Die Zahl steht in
+   den `1/X/X`-Zeilen derselben Seite — 90 bei Aktiven, 80 bei Junioren,
+   70 bei den Juengsten. **Eine 90 hier hart hinzuschreiben waere eine
+   erfundene Zahl**, und bei 226 gemessenen `1/80/80`-Zeilen (CLAUDE.md,
+   10.09.2026) waere sie bei jedem Juniorenspiel falsch.
+
+   Gibt es kein X oder mehrere verschiedene, wird nichts abgeleitet
+   (`kein_spielende`) — raten ist hier dasselbe wie erfinden.
+
+   ── WAS NICHT ABGELEITET WIRD ─────────────────────────────────────────
+
+   `spielzeit` bleibt, wie der Verband sie lieferte. Sie wird
+   **ausdruecklich nicht gerechnet**: seine eigene Rechnung ist uneinig.
+   Aus CLAUDE.md, an allen Zeilen gemessen (10.09.2026):
+
+     1/90/90   →  90   = bis − von + 1
+     1/46/45   →  45   = bis − von
+     46/90/45  →  45   = bis − von + 1
+     40/80/40  →  40   = bis − von
+
+   Die letzten beiden widersprechen einander. Eine Formel daraus zu
+   bilden hiesse, sich fuer eine der zwei zu entscheiden — und das ist
+   erfinden, nicht ableiten.
+
+   ⚠ Auf einer abgeleiteten Zeile steht `spielzeit` deshalb auf `null`,
+   nicht auf der gelieferten 0. Eine 0 neben `von 63 / bis 90` waere ein
+   Widerspruch in derselben Zeile; `null` sagt „wir wissen es nicht", und
+   das ist die Wahrheit. Dieselbe Trennung wie bei Weg B: ein fehlender
+   Wert und eine Null sind zwei Aussagen.
+   ══════════════════════════════════════════════════════════════════════ */
+
+/** Warum fuer ein Spiel (oder eine Seite) nichts abgeleitet wurde. */
+export type AbleitungGrund =
+  /** Der Verlauf fuehrt keinen Wechsel mit Minute — nichts abzuleiten. */
+  | "kein_wechsel"
+  /** Die Quelle traegt echte Minuten. Sie gilt. Der Normalfall. */
+  | "keine_platzhalter"
+  /** Platzhalter, aber keine ablesbare Spieldauer — siehe oben. */
+  | "kein_spielende"
+  /** ⚠ Ein Wechsel passt nicht zum Stand des Spiels. Siehe unten. */
+  | "widerspruch";
+
+export interface AbgeleiteteMinuten {
+  von: number;
+  bis: number;
+  rolle: SpielerRolle;
+}
+
+export interface MinutenAbleitung {
+  /**
+   * `ableitungsSchluessel()` → Minuten. **Leer, wenn nichts abgeleitet
+   * wurde** — auch im Widerspruchsfall.
+   */
+  je_zeile: Map<string, AbgeleiteteMinuten>;
+  /** `null`, sobald mindestens eine Zeile Minuten bekommen hat. */
+  grund: AbleitungGrund | null;
+  /**
+   * Der Wechsel, an dem es gescheitert ist — **Minute und Nummern, keine
+   * Namen**. Er geht in Probe und Protokoll; ein Klarname duerfte das
+   * nicht (21.08.2026, 903 Klarnamen im Protokoll).
+   */
+  widerspruch: string | null;
+  /**
+   * Wechsel, zu denen es keine EINDEUTIGE Aufstellungszeile gibt.
+   *
+   * ⚠ DAS IST KEIN WIDERSPRUCH, und die Unterscheidung ist der Grund,
+   * warum es eine eigene Zahl gibt. Gemessen am 11.09.2026: `/events`
+   * kennt Spieler, die `/players` nicht listet — fuenf Faelle in vier
+   * Spielen, alle auf der Ausgewechselten-Seite. Ein ganzes Spiel dafuer
+   * zu verwerfen hiesse, eine bekannte Luecke der Quelle wie einen
+   * Befund zu behandeln.
+   */
+  ohne_zeile: number;
+}
+
+/** `e:9` / `f:9` — Seite und Nummer, wie `findeAufstellungszeile()` sucht. */
+export function ableitungsSchluessel(istEigener: boolean, nummer: number): string {
+  return `${istEigener ? "e" : "f"}:${nummer}`;
+}
+
+function leereAbleitung(grund: AbleitungGrund, ohneZeile = 0): MinutenAbleitung {
+  return { je_zeile: new Map(), grund, widerspruch: null, ohne_zeile: ohneZeile };
+}
+
+/** Wo eine Seite zu Spielbeginn steht — und ob sie ueberhaupt lesbar ist. */
+interface SeitenLage {
+  /** Jede Zeile traegt eine der zwei Platzhalterformen. */
+  platzhalter: boolean;
+  /** Das eine X aus `1/X/X`. `null` heisst: keines oder mehrere. */
+  spielende: number | null;
+  /**
+   * Nummer → wo sie gerade steht. Doppelte Nummern fehlen.
+   *
+   * ⚠ ⚠  DREI ZUSTAENDE, NICHT ZWEI. `raus` ist nicht dasselbe wie `bank`:
+   * wer ausgewechselt wurde, darf nicht wiederkommen. Mit nur zwei
+   * Zustaenden waeren zwei Datenfehler still durchgegangen —
+   *
+   *   · jemand wird zweimal eingewechselt, dazwischen ausgewechselt
+   *   · jemand ersetzt sich selbst (`rueckennr === ein_rueckennr`)
+   *
+   * und in beiden Faellen stuende am Ende eine plausibel aussehende
+   * Zeile, die nur den zweiten Aufenthalt zeigt.
+   */
+  stand: Map<number, "feld" | "bank" | "raus">;
+}
+
+/**
+ * ⚠ ⚠  DIE ROLLE KOMMT AUS `rolleAus()`, NICHT AUS EINER EIGENEN
+ *       BEDINGUNG. Dieselbe Regel, die `zaehleWechselWiderspruch()`
+ *       befolgt, und aus demselben Grund: die erste Fassung DORT fragte
+ *       `von_minute <= 1` und warf zwei Muster in einen Topf, die
+ *       Gegenteiliges bedeuten.
+ *
+ * Die Formpruefung steht DANEBEN, nicht statt dessen: `rolleAus()` sagt
+ * „start", und erst `1/X/X` sagt „und zwar als Platzhalter".
+ */
+function lageDerSeite(zeilen: AufstellungQuelle[]): SeitenLage {
+  const stand = new Map<number, "feld" | "bank" | "raus">();
+  const doppelt = new Set<number>();
+  const enden = new Set<number>();
+  let platzhalter = zeilen.length > 0;
+
+  for (const z of zeilen) {
+    const b = rolleAus(z);
+
+    /* Ein echter Eintrag „eingewechselt" heisst: der Verband hat fuer
+       diese Seite gemessen. Dann gibt es nichts abzuleiten. */
+    if (b.rolle === "eingewechselt") { platzhalter = false; continue; }
+
+    let wo: "feld" | "bank";
+    if (b.rolle === "start") {
+      /* `1/X/X` — von der ersten Minute bis zum Schluss. ⚠ Die GELIEFERTEN
+         Werte, nicht die von `rolleAus()` korrigierten: ein gedrehtes Paar
+         ist gerade KEIN Platzhalter, und die Korrektur wuerde es zu einem
+         machen. */
+      const voll = z.von_minute === 1 && z.bis_minute !== null
+        && z.bis_minute > 0 && z.spielzeit === z.bis_minute;
+      if (!voll) { platzhalter = false; continue; }
+      enden.add(z.bis_minute as number);
+      wo = "feld";
+    } else {
+      /* `0/0/0` — und 0 ist nicht null. Eine Zeile ganz ohne Minuten
+         (`null/null/null`) ist etwas anderes: dort traegt die Zuweisung
+         die Rolle, und wir wissen nichts ueber ihren Platz. */
+      const leer = z.von_minute === 0 && z.bis_minute === 0 && z.spielzeit === 0;
+      if (!leer) { platzhalter = false; continue; }
+      wo = "bank";
+    }
+
+    if (z.rueckennr == null) continue;
+    if (stand.has(z.rueckennr)) doppelt.add(z.rueckennr);
+    stand.set(z.rueckennr, wo);
+  }
+
+  /* ⚠ Doppelte Nummern fliegen RAUS statt die erste zu behalten — siehe
+     `findeAufstellungszeile()`. Ein Stand, der raet, ist schlimmer als
+     keiner: er laesst einen Wechsel plausibel aussehen, der es nicht
+     ist. */
+  for (const n of doppelt) stand.delete(n);
+
+  return {
+    platzhalter,
+    spielende: enden.size === 1 ? [...enden][0] : null,
+    stand,
+  };
+}
+
+/** Wie die Aufstellung diese Nummer gerade fuehrt — fuer die Meldung. */
+function wortFuer(l: SeitenLage, nr: number): string {
+  const s = l.stand.get(nr);
+  if (s === "feld") return "auf dem Feld";
+  if (s === "bank") return "auf der Bank";
+  if (s === "raus") return "als bereits ausgewechselt";
+  return "nicht";
+}
+
+/** Eine Seite laesst sich ableiten. */
+function ableitbar(l: SeitenLage): boolean {
+  return l.platzhalter && l.spielende !== null && l.stand.size > 0;
+}
+
+/**
+ * Minuten und Rolle aus den Wechseln — fuer EIN Spiel.
+ *
+ * ── DIE WIDERSPRUCHSPRUEFUNG ──────────────────────────────────────────
+ *
+ * Die Wechsel laufen chronologisch durch, und das Spiel fuehrt dabei
+ * einen Stand mit: wer ist gerade auf dem Feld, wer auf der Bank.
+ *
+ *   Ausgewechselter  muss auf dem FELD stehen
+ *   Eingewechselter  muss auf der BANK stehen
+ *
+ * ⚠ ⚠  DER STAND WANDERT MIT, UND DAS IST DER GANZE PUNKT. Wer in der
+ *       46. kommt und in der 70. geht, traegt als Platzhalter `0/0/0` —
+ *       eine Pruefung gegen die ROHE Zeile haette ihn in der 70. auf der
+ *       Bank gesehen und einen Widerspruch gemeldet, den es nicht gibt.
+ *
+ * ⚠ ⚠  WIDERSPRICHT AUCH NUR EIN WECHSEL, WIRD FUER DAS GANZE SPIEL
+ *       NICHTS ABGELEITET. Keine Teilableitung, kein Drehen, keine
+ *       „Korrektur".
+ *
+ *       Der Grund steht im Bestand: beim Spiel FC Herrliberg 2 –
+ *       FC Hinwil 1 vom 12.09.2026 zeigt **schon der Spielbericht des
+ *       Verbands** „Robin Jeriha ersetzt durch James Schmid" in der 49.,
+ *       obwohl Jeriha auf der Bank steht (und in der 90.+3 trifft) und
+ *       Schmid in der Startelf. **Das Matchblatt ist dort verkehrt
+ *       erfasst — unsere Felder geben es getreu wieder.** Wer aus einem
+ *       verdrehten Matchblatt Minuten ableitet, schreibt den Fehler auf
+ *       eine oeffentliche Seite und macht ihn dabei unkenntlich.
+ *
+ * ⚠  Geprueft werden nur Wechsel auf Seiten, die ueberhaupt abgeleitet
+ *    werden. Eine Seite mit ECHTEN Minuten, die dem Verlauf widerspricht,
+ *    ist eine andere Frage — sie zaehlt `zaehleWechselWiderspruch()`, und
+ *    dafuer das ganze Spiel zu verwerfen hiesse, die andere Seite fuer
+ *    einen Befund zu bestrafen, der sie nichts angeht.
+ *
+ * ⚠  Die Zuordnung laeuft ueber die RUECKENNUMMER, nicht ueber
+ *    `ein_sfv_person_id`: gemessen am 10.09.2026 ist `substitutePlayerId`
+ *    KEINE `personId` — fuenf von fuenf loesten nirgends auf. Dieselbe
+ *    Bruecke wie in `baueNummernBruecke()`, mit derselben Grenze:
+ *    dieselbe Seite, dasselbe Spiel, genau ein Treffer.
+ */
+export function leiteWechselMinutenAb(
+  ereignisse: { typ_id: number; ist_eigener: boolean;
+                minute: number | null; zusatzminute: number | null;
+                rueckennr: number | null; ein_rueckennr: number | null }[],
+  aufstellung: AufstellungQuelle[],
+): MinutenAbleitung {
+  const wechsel = ereignisse
+    .filter((e) => e.typ_id === TYP_WECHSEL && e.minute !== null)
+    .sort((a, b) => ((a.minute as number) - (b.minute as number))
+      || ((a.zusatzminute ?? 0) - (b.zusatzminute ?? 0)));
+  if (!wechsel.length) return leereAbleitung("kein_wechsel");
+
+  const eigen = lageDerSeite(aufstellung.filter((a) => a.ist_eigener));
+  const fremd = lageDerSeite(aufstellung.filter((a) => !a.ist_eigener));
+  const lageVon = (istEigener: boolean) => (istEigener ? eigen : fremd);
+
+  if (!ableitbar(eigen) && !ableitbar(fremd)) {
+    /* ⚠ Zwei Gruende, nicht einer. „Platzhalter, aber keine Spieldauer"
+       ist ein Befund ueber die Quelle; „echte Minuten" ist der
+       Normalfall. Wer sie zusammenzaehlt, verliert den seltenen. */
+    const platz = eigen.platzhalter || fremd.platzhalter;
+    return leereAbleitung(platz ? "kein_spielende" : "keine_platzhalter");
+  }
+
+  const je_zeile = new Map<string, AbgeleiteteMinuten>();
+  let ohne_zeile = 0;
+
+  for (const w of wechsel) {
+    const l = lageVon(w.ist_eigener);
+    if (!ableitbar(l)) continue;
+    const minute = w.minute as number;
+    const spielende = l.spielende as number;
+    const seite = w.ist_eigener ? "eigen" : "Gegner";
+
+    /* ── Wer geht ─────────────────────────────────────────────────── */
+    const zeileRaus = findeAufstellungszeile(aufstellung, w.ist_eigener, w.rueckennr);
+    if (zeileRaus === null) {
+      ohne_zeile += 1;
+    } else {
+      const nr = w.rueckennr as number;
+      if (l.stand.get(nr) !== "feld") {
+        return {
+          je_zeile: new Map(), grund: "widerspruch", ohne_zeile,
+          widerspruch: `Wechsel in der ${minute}. (${seite}): Nr. ${nr} soll vom `
+            + `Feld, die Aufstellung fuehrt ihn ${wortFuer(l, nr)}`,
+        };
+      }
+      const k = ableitungsSchluessel(w.ist_eigener, nr);
+      const vorher = je_zeile.get(k);
+      je_zeile.set(k, {
+        /* ⚠ Wer schon eingewechselt WURDE, behaelt seine Kommminute und
+           seine Rolle — hier faellt nur das Ende an. */
+        von: vorher?.von ?? (zeileRaus.von_minute ?? 1),
+        bis: minute,
+        rolle: vorher?.rolle ?? "start",
+      });
+      /* ⚠ `raus`, nicht `bank` — siehe SeitenLage.stand. */
+      l.stand.set(nr, "raus");
+    }
+
+    /* ── Wer kommt ────────────────────────────────────────────────── */
+    const zeileRein = findeAufstellungszeile(aufstellung, w.ist_eigener, w.ein_rueckennr);
+    if (zeileRein === null) {
+      ohne_zeile += 1;
+      continue;
+    }
+    const nr = w.ein_rueckennr as number;
+    if (l.stand.get(nr) !== "bank") {
+      return {
+        je_zeile: new Map(), grund: "widerspruch", ohne_zeile,
+        widerspruch: `Wechsel in der ${minute}. (${seite}): Nr. ${nr} soll von der `
+          + `Bank, die Aufstellung fuehrt ihn ${wortFuer(l, nr)}`,
+      };
+    }
+    je_zeile.set(ableitungsSchluessel(w.ist_eigener, nr), {
+      von: minute, bis: spielende, rolle: "eingewechselt",
+    });
+    l.stand.set(nr, "feld");
+  }
+
+  /* ⚠ Kein Widerspruch, aber auch keine Zeile getroffen — dann ist die
+     Ableitung leer, und der Grund ist nicht „keine Platzhalter". */
+  if (je_zeile.size === 0) {
+    return { je_zeile, grund: "kein_wechsel", widerspruch: null, ohne_zeile };
+  }
+  return { je_zeile, grund: null, widerspruch: null, ohne_zeile };
 }
 
 export interface WpAufstellungZeile {
@@ -1962,6 +2360,29 @@ export interface WpAufstellungZeile {
   von_minute: number | null;
   bis_minute: number | null;
   spielzeit: number | null;
+  /**
+   * ⚠ ⚠  `von_minute` UND `bis_minute` STAMMEN NICHT VOM VERBAND, SONDERN
+   *       AUS DEM VERLAUF. Siehe `leiteWechselMinutenAb()`.
+   *
+   * Das Merkmal ist die Bedingung, unter der diese Ableitung ueberhaupt
+   * gebaut werden durfte (CLAUDE.md, 11.09.2026): *„eine Zeile, die wir
+   * uns selbst ableiten, waere von einer gelieferten nicht mehr zu
+   * unterscheiden — wenn je, dann mit eigenem Merkmal und eigenem
+   * Zaehler."*
+   *
+   * ⚠ ES IST EIN FELD, KEIN TEXTZUSATZ. Wer es aus einer Beschriftung
+   * herauslesen muesste, pruefte eine Schreibweise — dieselbe Falle wie
+   * `"Unser Team"` vor der Fassung 4.
+   *
+   * ⚠ `spielzeit` ist auf einer solchen Zeile `null`, nicht 0: sie wird
+   * **nicht** mitgerechnet, weil die Rechnung des Verbands uneinig ist
+   * (1/90/90 → 90, aber 40/80/40 → 40). Eine 0 neben `von 63 / bis 90`
+   * waere ein Widerspruch in derselben Zeile.
+   *
+   * `false` an jeder anderen Zeile — nie `undefined`. Ein fehlendes Feld
+   * hiesse „nicht gefragt", und das ist etwas anderes als „vom Verband".
+   */
+  minuten_abgeleitet: boolean;
   /**
    * Die Symbole dieser Zeile, je mit Minute: `[{art:"tor",minute:"67"}]`.
    *
@@ -2023,6 +2444,21 @@ export interface AufstellungZahlen {
    * drei Werte und nennt keine Person.
    */
   rollen: Record<SpielerRolle, number>;
+  /**
+   * Zeilen, deren Minuten aus dem Verlauf stammen — das Gegenstueck zum
+   * Merkmal an der Zeile.
+   *
+   * ⚠ IMMER DA, AUCH ALS NULL. Steht hier 0, heisst das „nichts
+   * abgeleitet" und nicht „nicht gemessen" — und genau diese
+   * Unterscheidung ist am 10.09.2026 achtmal an einem Tag verlorengegangen.
+   *
+   * ⚠ Sie ist KEIN Erfolgsmass. Steigt sie, heisst das nicht, dass wir
+   * besser geworden sind, sondern dass der Verband bei mehr Spielen nur
+   * Platzhalter liefert. Faellt sie gegen null, fuellt er die Minuten
+   * wieder selbst aus — dieselbe Lesart wie bei
+   * `ueber_nummer_aufgeloest`.
+   */
+  minuten_abgeleitet: number;
 }
 
 export function leereAufstellungZahlen(): AufstellungZahlen {
@@ -2033,6 +2469,7 @@ export function leereAufstellungZahlen(): AufstellungZahlen {
        ein fehlender Schlüssel wäre von einer Null nicht zu unterscheiden,
        und genau diese Verwechslung ist der Anlass. */
     rollen: { start: 0, eingewechselt: 0, nicht_eingesetzt: 0 },
+    minuten_abgeleitet: 0,
   };
 }
 
@@ -2045,12 +2482,40 @@ export function baueAufstellung(
   heimspiel: boolean,
   namen: Map<number, string>,
   zahlen: AufstellungZahlen,
+  /**
+   * Minuten aus dem Verlauf — `leiteWechselMinutenAb(...).je_zeile`.
+   *
+   * ⚠ PFLICHT, NICHT OPTIONAL. Eine Aufrufstelle, die sie weglassen kann,
+   * laesst die Wechselpfeile still verschwinden — und der Compiler meldet
+   * nichts. Dieselbe Entscheidung wie bei `ist_eigener` an
+   * `beschreibeGewechselten()`, nachdem dessen Fehlen am 11.09.2026
+   * unsere Namen auf die Gegnerseite gesetzt hat. Wer nichts abzuleiten
+   * hat, uebergibt eine leere Map und sagt damit genau das.
+   */
+  ableitung: Map<string, AbgeleiteteMinuten>,
 ): WpAufstellungZeile[] {
   const unbekannt = new Set<number>(zahlen.unbekannte_rollen);
   const raus: WpAufstellungZeile[] = [];
 
   for (const z of zeilen) {
     const b = rolleAus(z);
+
+    /* ⚠ ⚠  DIE ABLEITUNG STEHT NEBEN `rolleAus()`, NICHT DARIN.
+       `rolleAus()` beantwortet „was sagt DIESE Zeile" und wird an drei
+       weiteren Stellen so gebraucht — unter anderem von der
+       Platzhaltererkennung selbst. Eine Ableitung darin waere ein Kreis:
+       die Erkennung fragte dann Werte ab, die sie gerade erzeugt hat.
+
+       ⚠ Und die Zaehler darueber bleiben an der QUELLE haengen:
+       `widerspruch`, `unplausibel`, `ohne_minuten` und `rollen`
+       beschreiben, was der Verband geliefert hat. Sie hier auf die
+       abgeleiteten Werte umzustellen hiesse, den Befund mit der
+       Reparatur zu loeschen — dieselbe Regel wie bei `unplausibel`, das
+       nach `korrigiereMinuten()` ausdruecklich gesetzt bleibt. */
+    const ab = z.rueckennr != null
+      ? ableitung.get(ableitungsSchluessel(z.ist_eigener, z.rueckennr))
+      : undefined;
+    if (ab) zahlen.minuten_abgeleitet += 1;
 
     if (z.ist_eigener) zahlen.zeilen_eigen += 1; else zahlen.zeilen_fremd += 1;
     if (b.widerspruch) zahlen.widerspruch += 1;
@@ -2093,11 +2558,17 @@ export function baueAufstellung(
       nummer: z.rueckennr,
       spieler,
       position: String(z.position_name ?? ""),
-      rolle: b.rolle,
+      rolle: ab ? ab.rolle : b.rolle,
       ist_captain: b.ist_captain,
-      von_minute: b.von_minute,
-      bis_minute: b.bis_minute,
-      spielzeit: b.spielzeit,
+      von_minute: ab ? ab.von : b.von_minute,
+      bis_minute: ab ? ab.bis : b.bis_minute,
+      /* ⚠ NICHT GERECHNET. Die Rechnung des Verbands ist uneinig
+         (1/90/90 → 90, aber 40/80/40 → 40), und eine Formel daraus waere
+         erfunden. `null` sagt „wir wissen es nicht" — die gelieferte 0
+         neben `von 63 / bis 90` waere ein Widerspruch in derselben
+         Zeile. */
+      spielzeit: ab ? null : b.spielzeit,
+      minuten_abgeleitet: ab !== undefined,
       marken: zaehlung?.marken ?? [],
     });
   }

@@ -74,45 +74,61 @@ describe("NUTZLAST_FASSUNG hält mit den Feldern Schritt", () => {
      ⚠ Es steht mit Absicht direkt nach `ohne_person`: die zwei sind ein
      Paar — die Rolle sagt, WAS jemand ist, `ohne_person`, ob wir sagen
      können, WER. Die Reihenfolge ist hier die Aussage, wie bei
-     `sfv_gegner_team_id` neben `gegner`. */
-  const VERLAUF_FASSUNG_6 = [
+     `sfv_gegner_team_id` neben `gegner`.
+
+     ⚠ ⚠  FASSUNG 7 (25.09.2026): `minuten_abgeleitet` an der
+     AUFSTELLUNGSZEILE. Wo der Verband nur Platzhalter liefert
+     (`1/90/90` · `0/0/0`), kommen `von_minute` und `bis_minute` aus dem
+     Verlauf — und dann sagt dieses Feld es.
+
+     **Es ist die Bedingung, unter der die Ableitung gebaut werden
+     durfte**, nicht ein Zusatz: *„eine Zeile, die wir uns selbst
+     ableiten, wäre von einer gelieferten nicht mehr zu unterscheiden —
+     wenn je, dann mit eigenem Merkmal und eigenem Zähler."* (CLAUDE.md,
+     11.09.2026.) Fällt das Feld weg, ist die Ununterscheidbarkeit
+     zurück — und dieser Fall ist die einzige Stelle, die es merkt.
+
+     ⚠ Es steht direkt hinter den drei Minutenfeldern, weil es GENAU SIE
+     beschreibt und sonst nichts. */
+  const VERLAUF_FASSUNG_7 = [
     "minute", "nummer", "ereignis_zusatz", "ohne_person", "rolle", "art",
     "seite", "text", "stand", "klub", "sfv_person_id", "ein_nummer",
   ];
 
-  const AUFSTELLUNG_FASSUNG_6 = [
+  const AUFSTELLUNG_FASSUNG_7 = [
     "seite", "sfv_person_id", "nummer", "spieler", "position", "rolle",
-    "ist_captain", "von_minute", "bis_minute", "spielzeit", "marken",
+    "ist_captain", "von_minute", "bis_minute", "spielzeit",
+    "minuten_abgeleitet", "marken",
   ];
 
   /* ⚠ DIE ÄUSSERSTE EBENE, und sie hat bis zur Fassung 5 gefehlt.
      `sfv_gegner_team_id` steht mit Absicht direkt neben `gegner`: die
      zwei sind dasselbe Gegenüber, einmal als Name und einmal als
      Kennung, und die Reihenfolge ist hier die Aussage. */
-  const SPIEL_FASSUNG_6 = [
+  const SPIEL_FASSUNG_7 = [
     "sfv_match_id", "sfv_spiel_nr", "datum", "zeit", "sfv_team_id",
     "gegner", "sfv_gegner_team_id", "heim_auswaerts", "ort", "wettbewerb",
     "liga", "runde", "status", "publizieren", "tore_heim", "tore_gast",
     "halbzeit_heim", "halbzeit_gast", "verlauf", "aufstellung",
   ];
 
-  it("⚠⚠ WpVerlaufZeile trägt genau die Felder der Fassung 6", () => {
-    expect(felderVon("WpVerlaufZeile")).toEqual(VERLAUF_FASSUNG_6);
+  it("⚠⚠ WpVerlaufZeile trägt genau die Felder der Fassung 7", () => {
+    expect(felderVon("WpVerlaufZeile")).toEqual(VERLAUF_FASSUNG_7);
   });
 
-  it("⚠⚠ WpAufstellungZeile trägt genau die Felder der Fassung 6", () => {
-    expect(felderVon("WpAufstellungZeile")).toEqual(AUFSTELLUNG_FASSUNG_6);
+  it("⚠⚠ WpAufstellungZeile trägt genau die Felder der Fassung 7", () => {
+    expect(felderVon("WpAufstellungZeile")).toEqual(AUFSTELLUNG_FASSUNG_7);
   });
 
-  it("⚠⚠ WpSpiel trägt genau die Felder der Fassung 6", () => {
-    expect(felderVon("WpSpiel")).toEqual(SPIEL_FASSUNG_6);
+  it("⚠⚠ WpSpiel trägt genau die Felder der Fassung 7", () => {
+    expect(felderVon("WpSpiel")).toEqual(SPIEL_FASSUNG_7);
   });
 
-  it("die Fassung steht auf 6", () => {
+  it("die Fassung steht auf 7", () => {
     /* Der zweite Anker: wer die Listen oben anpasst und die Zahl
        vergisst, wird hier rot. Beide Fälle zusammen erzwingen, dass
        Feldliste und Fassung gemeinsam wandern. */
-    expect(NUTZLAST_FASSUNG).toBe(6);
+    expect(NUTZLAST_FASSUNG).toBe(7);
   });
 
   it("die Konstante steht in derselben Datei wie die Felder", () => {
