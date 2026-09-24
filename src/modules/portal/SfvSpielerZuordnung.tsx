@@ -124,17 +124,18 @@ export function SfvSpielerZuordnung({ sb, vereinId, benutzerId, dbMitglieder, db
   const [ladefehler, setLadefehler] = useState<string | null>(null);
   const [offenesTeam, setOffenesTeam] = useState<string | null>(null);
   /* ══ Welche Mannschaften in die Excel-Liste gehen ═══════════════════
-     ⚠ ⚠  DER NAME IST DER SCHLÜSSEL, NICHT `sfv_team_id`. Der Auftrag
-     nannte `String(sfv_team_id ?? "-")` — derselbe Schlüssel, den das
-     Aufklappen benutzt. `alsMannschaftsliste()` filtert aber gegen
-     `SpielerZeile.teams`, und das führt NAMEN; eine Nummer trifft dort
-     nie.
+     ⚠ ⚠  DER SCHLÜSSEL `String(sfv_team_id ?? "-")`, NICHT DER NAME.
 
-     ⚠ Und beides ist `ReadonlySet<string>`: der Typ passt, die Bedeutung
-     nicht. `typecheck` wäre grün gewesen, die Datei leer — und die
-     Meldung daneben hätte „1 Spieler geladen" behauptet. Genau die
-     Familie „ein Filter auf einen NAMEN prüft eine Schreibweise", nur
-     einmal umgedreht: hier prüft eine Nummer, wo ein Name gemeint ist.
+     ⚠ ⚠  HIER STAND BIS ZUM 24.09.2026 DAS GEGENTEIL („DER NAME IST DER
+     SCHLÜSSEL") — und der Vermerk am `alleTeamSchluessel` weiter unten
+     widersprach ihm, seit die Sache am selben Tag berichtigt wurde. Zwei
+     Kommentare über dieselbe Entscheidung, und der obere sagte das
+     Falsche: wer ihn liest, sieht nicht nach.
+
+     Beides ist `ReadonlySet<string>`: der Typ passt, die Bedeutung nicht.
+     Mit dem Namen als Schlüssel war `typecheck` grün, der Download lief,
+     und die Datei trug nur die Kopfzeile — während die Meldung daneben
+     „1 Spieler geladen" behauptete.
 
      ⚠ Übersetzt wird deshalb NICHT. Zwei Schlüsselräume in einer Maske,
      zwischen denen jemand hin- und herrechnet, sind die Stelle, an der
@@ -143,7 +144,16 @@ export function SfvSpielerZuordnung({ sb, vereinId, benutzerId, dbMitglieder, db
      es hat mit der Auswahl nichts zu tun.
 
      ⚠ Leer heisst leer, nicht „alle". Wer nichts wählt, bekommt keine
-     Datei — siehe `mannschaftslisteHerunterladen()`. */
+     Datei — siehe `mannschaftslisteHerunterladen()`.
+
+     ⚠ ⚠  UND SEIT DEM 24.09.2026 TRIFFT DIE AUSWAHL DAS STAMMTEAM. Die
+     Liste führt eine Zeile je Person, nicht je Person und Mannschaft;
+     `alsMannschaftsliste()` filtert gegen `stammteamSchluessel`. Die
+     Kästchen kommen aber weiter aus `gruppiereNachTeam()`, das je Person
+     nur die ERSTE `sfv_team_id` kennt — die beiden können also
+     auseinanderfallen, und gemessen kann eine Person dann über KEIN
+     Kästchen erreichbar sein. Der Befund steht ausführlich an
+     `alsMannschaftsliste()`; die Maske wird hier nicht geändert. */
   const [teamsGewaehlt, setTeamsGewaehlt] = useState<ReadonlySet<string>>(new Set());
 
   async function laden() {
@@ -295,10 +305,16 @@ export function SfvSpielerZuordnung({ sb, vereinId, benutzerId, dbMitglieder, db
 
      Gezählt wird dieselbe Liste mit demselben Satz, den die Funktion
      bekommt — die Zahl kann der Datei deshalb nicht widersprechen. */
+  /* ⚠ ⚠  UEBER DAS STAMMTEAM, NICHT UEBER ALLE MANNSCHAFTEN DER PERSON
+     (24.09.2026). Die Liste fuehrt seither EINE Zeile je Person, unter
+     ihrem Stammteam, und `alsMannschaftsliste()` filtert genau danach.
+     Wer hier weiter `some()` ueber `teamSchluessel` rechnete, zaehlte
+     jede Person mit, die fuer eine gewaehlte Mannschaft gespielt hat —
+     und die Meldung behauptete mehr Zeilen, als in der Datei stehen.
+     Zwei Zahlen fuer dieselbe Sache, und die falsche steht an der
+     Stelle, an die der Benutzer schaut. */
   const anzahlGewaehlteSpieler = useMemo(
-    () => spielerZeilen.filter(
-      z => (z.teamSchluessel.length ? z.teamSchluessel : ["-"])
-        .some(k => teamsGewaehlt.has(k))).length,
+    () => spielerZeilen.filter(z => teamsGewaehlt.has(z.stammteamSchluessel)).length,
     [spielerZeilen, teamsGewaehlt]);
 
   function mannschaftslisteHerunterladen() {

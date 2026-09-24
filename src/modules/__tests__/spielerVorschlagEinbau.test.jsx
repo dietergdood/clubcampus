@@ -90,7 +90,11 @@ beforeEach(() => {
   gespeichert.length = 0;
   geladen.length = 0;
   aufstellungZeilen = [
-    { sfv_person_id: 500, sfv_team_id: 38309, rueckennr: 9, spiel_id: 's1' },
+    { sfv_person_id: 500, sfv_team_id: 38309, rueckennr: 9, spiel_id: 's1',
+      /* ⚠ `spielzeit` gehoert dazu, seit die Liste das Stammteam kennt.
+         Der Dienst liefert sie immer (`select("*")`); eine Attrappe ohne sie
+         pruefte eine Form, die es nicht gibt. */
+      spielzeit: 90 },
   ];
   antwort = {
     /* ⚠ Mit den getrennten Teilen, so wie `bildeOffeneNamen` sie seit dem
@@ -265,7 +269,8 @@ describe('Die Mannschaft lässt sich für die Liste wählen', () => {
 
   it('„Alle auswählen" wählt alle Mannschaften', async () => {
     aufstellungZeilen.push(
-      { sfv_person_id: 501, sfv_team_id: 38310, rueckennr: 7, spiel_id: 's2' });
+      { sfv_person_id: 501, sfv_team_id: 38310, rueckennr: 7, spiel_id: 's2',
+        spielzeit: 90 });
     zeichne([MITGLIED()]);
     await namenHolen();
 
@@ -283,7 +288,8 @@ describe('Die Mannschaft lässt sich für die Liste wählen', () => {
        „alle", das bei Teilauswahl falsch stünde, sondern zwei Knöpfe, die
        jeder sagen, was sie tun. Also muss auch der zweite wirken. */
     aufstellungZeilen.push(
-      { sfv_person_id: 501, sfv_team_id: 38310, rueckennr: 7, spiel_id: 's2' });
+      { sfv_person_id: 501, sfv_team_id: 38310, rueckennr: 7, spiel_id: 's2',
+        spielzeit: 90 });
     zeichne([MITGLIED()]);
     await namenHolen();
 
@@ -397,13 +403,109 @@ describe('Die Mannschaft lässt sich für die Liste wählen', () => {
     });
 
     const zeilen = geladen[0].inhalt.trim().split('\r\n');
-    /* Der Kopf nennt fünf Spalten in dieser Reihenfolge. */
-    expect(zeilen[0]).toContain('Name;Vorname;Team;Rückennummer;SFV-personId');
+    /* Der Kopf nennt SECHS Spalten in dieser Reihenfolge — `Stammteam laut`
+       kam am 24.09.2026 zwischen `Team` und `Rückennummer` dazu. */
+    expect(zeilen[0]).toContain('Name;Vorname;Team;Stammteam laut;Rückennummer;SFV-personId');
     /* Und die Datenzeile füllt BEIDE — die zweite Zelle ist nicht leer.
        Genau das wäre sie beim Rückfall, und dann sähe die Datei auf den
        ersten Blick richtig aus. */
     const felder = zeilen[1].split(';');
     expect(felder[0]).toBe('Meier');
     expect(felder[1]).toBe('Anna');
+  });
+
+  it('⚠ ⚠  die Datei trägt EINE Zeile je Person, unter ihrem Stammteam — im Einbau', async () => {
+    /* ⚠ ⚠  DER FALL ZUM UMBAU VOM 24.09.2026, und er prüft die VERDRAHTUNG.
+
+       `alsMannschaftsliste()` und `bestimmeStammteam()` sind einzeln
+       geprüft. Was dazwischen liegt, ist diese Komponente: `spielzeit` muss
+       von `fetchAlleAufstellungen` durch `baueSpielerZeilen` bis in die
+       Regel kommen. Reicht die Maske sie nicht durch, fällt jede Person auf
+       eine Mannschaft ohne gezählte Einsätze zurück — und die Spalte
+       `Stammteam laut` stünde trotzdem gefüllt da.
+
+       Diese Person läuft in ZWEI Mannschaften auf, mit mehr Einsätzen bei
+       den Cb-Junioren. Die Datei muss deshalb EINE Zeile haben, und darin
+       die Cb — über das Da-Kästchen ist sie nicht mehr zu erreichen.
+
+       ⚠ Gegengeprobt: `spielzeit` in der Attrappe weggelassen — dann sind
+       die Einsätze ein Gleichstand, die kleinere Nummer 38309 gewinnt, und
+       die Zeile nennt Da-Junioren statt Cb. Dieser Fall rot, die anderen
+       grün.
+
+       ⚠ Person 501 steht hier NUR, damit es die Cb-Gruppe überhaupt gibt —
+       siehe den Fall darunter. Ohne sie ist Person 500 über kein Kästchen
+       erreichbar, und dieser Fall prüfte eine leere Datei. */
+    aufstellungZeilen.push(
+      { sfv_person_id: 500, sfv_team_id: 38310, rueckennr: 7, spiel_id: 's2', spielzeit: 90 },
+      { sfv_person_id: 500, sfv_team_id: 38310, rueckennr: 7, spiel_id: 's3', spielzeit: 90 },
+      { sfv_person_id: 501, sfv_team_id: 38310, rueckennr: 4, spiel_id: 's4', spielzeit: 90 });
+    zeichne([MITGLIED()]);
+    await namenHolen();
+    /* Beide Kästchen setzen — die Frage ist nicht, ob die Auswahl greift,
+       sondern ob die Person EINMAL dasteht. */
+    await act(async () => { fireEvent.click(screen.getByText('Alle auswählen')); });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /Liste nach Mannschaft/ }));
+    });
+
+    const zeilen = geladen[0].inhalt.trim().split('\r\n');
+    /* ⚠ Die Zeilen DIESER Person, über die personId gesucht — nicht
+       `zeilen[1]`: Person 501 steht ebenfalls in der Datei, und eine
+       Erwartung auf die Position hinge an der Sortierung. */
+    const meine = zeilen.filter(z => z.includes('="500"'));
+    /* GENAU EINE — vorher waren es zwei, eine je Mannschaft. */
+    expect(meine).toHaveLength(1);
+    const felder = meine[0].split(';');
+    expect(felder[2]).toBe('Cb-Junioren');
+    /* ⚠ Die vierte Spalte ist gefüllt, und zwar mit dem Text der Regel, die
+       hier greifen MUSS. `toBeTruthy()` allein hielte auch „Kader" — und das
+       wäre die Aussage, die Person hätte nur eine Mannschaft. */
+    expect(felder[3]).toBe('mehrere Kader, meiste Einsätze');
+    /* Und ihre andere Mannschaft steht in ihrer Zeile nirgends. */
+    expect(meine[0]).not.toContain('Da-Junioren');
+  });
+
+  it('⚠ ⚠  gemessen: eine Person in zwei Mannschaften kann über KEIN Kästchen erreichbar sein', async () => {
+    /* ⚠ ⚠  DIE FOLGE DES UMBAUS, UND SIE IST SCHÄRFER ALS ANGENOMMEN.
+
+       Erwartet hatte ich: die Person ist nur über das Kästchen der ANDEREN
+       Mannschaft zu bekommen. Gemessen am 24.09.2026 an diesem Fall: es gibt
+       das andere Kästchen unter Umständen gar nicht.
+
+       `gruppiereNachTeam()` arbeitet auf `offeneZuordnungen()`, und das
+       behält je Person nur die ERSTE `sfv_team_id`. Person 500 landet damit
+       in der Da-Gruppe; eine Cb-Gruppe entsteht nur, wenn eine ANDERE Person
+       dort ihre erste Zeile hat. Ihr Stammteam ist aber die Cb — also wählt
+       „Alle auswählen" die Da, und die Datei bleibt leer.
+
+       ⚠ Das ist kein Defekt dieses Umbaus, sondern die Naht zwischen Maske
+       und Ausgabe. Die Maske wird hier ausdrücklich nicht geändert; dieser
+       Fall hält fest, was dabei offen bleibt — damit niemand es später für
+       einen Zufall hält.
+
+       ⚠ Und die Meldung sagt die WAHRE Zahl: „0 Spieler". Zählte die Maske
+       weiter über alle Mannschaften der Person, stünde dort „1 Spieler" über
+       einer Datei mit nur der Kopfzeile — zwei Zahlen für dieselbe Sache,
+       und die falsche an der Stelle, an die der Benutzer schaut. */
+    aufstellungZeilen.push(
+      { sfv_person_id: 500, sfv_team_id: 38310, rueckennr: 7, spiel_id: 's2', spielzeit: 90 },
+      { sfv_person_id: 500, sfv_team_id: 38310, rueckennr: 7, spiel_id: 's3', spielzeit: 90 });
+    zeichne([MITGLIED()]);
+    await namenHolen();
+
+    /* Es gibt nur EIN Kästchen, obwohl die Person in zwei Mannschaften
+       aufläuft — die Hälfte des Befundes, die man sonst nicht sieht. */
+    expect(screen.queryByLabelText(/Cb-Junioren für die Liste/)).toBeNull();
+    await act(async () => { fireEvent.click(screen.getByText('Alle auswählen')); });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /Liste nach Mannschaft/ }));
+    });
+
+    /* Nur der Kopf. ⚠ Die Datei wird MITGEPRÜFT, nicht nur die Meldung: ein
+       Fall auf den Satz allein wäre grün, sobald die Zahl 0 heisst, egal was
+       in der Datei steht. */
+    expect(geladen[0].inhalt.trim().split('\r\n')).toHaveLength(1);
+    expect(screen.getByText(/0 Spieler aus 1 Mannschaft geladen/)).toBeTruthy();
   });
 });

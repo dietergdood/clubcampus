@@ -20,9 +20,46 @@
    Eine Zeile je Mannschaft wäre die andere Möglichkeit gewesen — 314
    Zeilen für 287 Spieler. Verworfen: dann steht jemand zweimal in der
    Liste, und beim Abhaken übersieht man den zweiten. (Didi.)
+
+   ⚠ ⚠  UND DIESE ENTSCHEIDUNG GILT SEIT DEM 24.09.2026 AUCH FÜR DIE
+   EXCEL-LISTE. Sie führte bis dahin eine Zeile je Person UND
+   Mannschaft — die einzige Ausgabe, in der jemand mehrfach stand. Das
+   war eine falsche Vorgabe und ist zurückgenommen: eine Zeile je
+   Person, unter ihrem STAMMTEAM, und daneben eine Spalte, die sagt,
+   nach welcher Regel es bestimmt wurde.
+
+   ⚠ Die Regel selbst steht NICHT hier, sondern in `stammteam.ts` —
+   eine zweite Fassung daneben liefe still auseinander.
    ═══════════════════════════════════════════════════════════════ */
 import { OHNE_MANNSCHAFT } from "./matchdatenAnzeige.ts";
 import type { AufstellungZeile } from "./matchdatenAnzeige.ts";
+import { bestimmeStammteam, STAMMTEAM_LAUT } from "./stammteam.ts";
+import type { StammteamRegel, StammteamZeile } from "./stammteam.ts";
+
+/**
+ * Eine Aufstellungszeile MIT der Spielzeit.
+ *
+ * ⚠ ⚠  EIN EIGENER PARAMETERTYP, UND `spielzeit` IST PFLICHT — nicht ein
+ * Feld an `AufstellungZeile` und nicht `spielzeit?:` mit Rückfall.
+ *
+ * Warum nicht an `AufstellungZeile`: die trägt, was `offeneZuordnungen()`
+ * und `baueStatistik()` brauchen, und die brauchen die Spielzeit nicht
+ * (`baueStatistik` liest sie über einen lokalen Cast — das Feld ist
+ * absichtlich nicht am Basistyp). Ein Pflichtfeld dort träfe sechs
+ * Testdateien und zwei weitere Module, die den Wert nie ansehen. ⚠ Und es
+ * wäre trotzdem UNVOLLSTÄNDIG: fünf der Aufrufstellen gehen über
+ * `as never`, und dort nennt der Compiler nichts. Der weite Kreis kostet
+ * also mehr und deckt weniger.
+ *
+ * Warum nicht optional: dann zählte eine Aufrufstelle, die den Wert nicht
+ * durchreicht, JEDE Zeile als Einsatz von null Minuten — und das Stammteam
+ * fiele auf die erste Mannschaft, ohne dass etwas meldet. So nennt der
+ * Compiler jede Aufrufstelle einmal.
+ *
+ * Die Maske lädt ohnehin `AufstellungMitZeit` (`select("*")`); der Wert ist
+ * da und wurde nur nicht weitergegeben.
+ */
+export type AufstellungFuerListe = AufstellungZeile & { spielzeit: number | null };
 
 export interface SpielerZeile {
   sfv_person_id: number;
@@ -49,6 +86,25 @@ export interface SpielerZeile {
       ⚠ Getrennt von `teams`, weil ein Anzeigename sich aendern darf und
       ein Schluessel nicht. */
   teamSchluessel: string[];
+  /**
+   * Das Stammteam als AUSWAHLSCHLUESSEL — `String(sfv_team_id)`, oder `"-"`,
+   * wenn keine Team-Id bekannt ist.
+   *
+   * ⚠ Genau EINER, nicht eine Liste: unter dieser Mannschaft steht die
+   * Person in der Excel-Liste, und zwar einmal. `teamSchluessel` daneben
+   * führt weiterhin ALLE — die Textliste und die Importdatei brauchen das.
+   */
+  stammteamSchluessel: string;
+  /** Dasselbe Stammteam als ANZEIGENAME. Unbekannte Id: `Team 58655`. */
+  stammteam: string;
+  /**
+   * Nach welcher Regel das Stammteam bestimmt wurde.
+   *
+   * ⚠ DIE KENNUNG, NICHT DER ANZEIGETEXT. Der steht in `STAMMTEAM_LAUT`
+   * und wird erst beim Schreiben der Datei nachgeschlagen — ein Text an
+   * der Zeile wäre eine zweite Stelle, an der die Formulierung lebt.
+   */
+  stammteamRegel: StammteamRegel;
   /** ALLE Rückennummern — 58 der 287 laufen unter mehr als einer. */
   rueckennummern: number[];
   einsaetze: number;
@@ -63,7 +119,7 @@ export interface SpielerZeile {
  * jemand auch die WordPress-Beiträge durchgeht.
  */
 export function baueSpielerZeilen(
-  aufstellung: AufstellungZeile[],
+  aufstellung: AufstellungFuerListe[],
   namen: Record<number, string>,
   teamNamen: Map<number, string>,
   /**
@@ -76,7 +132,15 @@ export function baueSpielerZeilen(
    */
   teile: Record<number, { vorname: string; nachname: string }>,
 ): SpielerZeile[] {
-  const proPerson = new Map<number, SpielerZeile & { teamIds: Set<number> }>();
+  /* ⚠ Das Stammteam steht hier NOCH NICHT drin: es lässt sich erst
+     bestimmen, wenn alle Zeilen der Person gesammelt sind. Deshalb ein
+     eigener Zwischentyp und nicht `SpielerZeile` mit Platzhaltern — ein
+     Platzhalter, den jemand zu überschreiben vergisst, wäre eine
+     Mannschaft, die nach einer Messung aussieht. */
+  type Zwischen =
+    Omit<SpielerZeile, "stammteamSchluessel" | "stammteam" | "stammteamRegel">
+    & { teamIds: Set<number>; stammZeilen: StammteamZeile[] };
+  const proPerson = new Map<number, Zwischen>();
 
   for (const a of aufstellung) {
     let z = proPerson.get(a.sfv_person_id);
@@ -99,22 +163,41 @@ export function baueSpielerZeilen(
            entgegengesetzt falsch — eine leere Zelle ist eine Auskunft,
            eine falsch getrennte eine Behauptung. */
         nachname: t?.nachname ?? ganz,
-        teams: [], teamSchluessel: [], teamIds: new Set(), rueckennummern: [], einsaetze: 0,
+        teams: [], teamSchluessel: [], teamIds: new Set(), stammZeilen: [],
+        rueckennummern: [], einsaetze: 0,
       };
       proPerson.set(a.sfv_person_id, z);
     }
     z.einsaetze += 1;
+    /* ⚠ JEDE Zeile, auch die ohne Team-Id und die ohne Spielzeit. Die
+       Regel in `bestimmeStammteam()` entscheidet, was daraus folgt —
+       hier zu filtern hiesse, sie an zwei Orten zu führen. */
+    z.stammZeilen.push({ sfv_team_id: a.sfv_team_id, spielzeit: a.spielzeit });
     if (a.sfv_team_id !== null) z.teamIds.add(a.sfv_team_id);
     if (a.rueckennr !== null && !z.rueckennummern.includes(a.rueckennr)) {
       z.rueckennummern.push(a.rueckennr);
     }
   }
 
-  const zeilen: SpielerZeile[] = [...proPerson.values()].map(z => ({
+  /* ⚠ Der Anzeigename einer Team-Id — an EINER Stelle, weil `teams` und
+     `stammteam` denselben Platzhalter tragen müssen. Stünde die Regel
+     zweimal, zeigte die Spalte `Team` eines Tages `Ohne Mannschaft`, wo die
+     Textliste `Team 58655` sagt, und niemand sähe, welche recht hat. */
+  const teamName = (id: number | null): string =>
+    id === null ? OHNE_MANNSCHAFT : (teamNamen.get(id) || `Team ${id}`);
+
+  const zeilen: SpielerZeile[] = [...proPerson.values()].map(z => {
+    const st = bestimmeStammteam(z.stammZeilen);
+    return {
     sfv_person_id: z.sfv_person_id,
     name: z.name,
     vorname: z.vorname,
     nachname: z.nachname,
+    /* ⚠ `String(id ?? "-")` — genau die Form, die `gruppiereNachTeam()`
+       bildet. Die Auswahl der Excel-Liste trifft über DIESEN Wert. */
+    stammteamSchluessel: String(st.sfv_team_id ?? "-"),
+    stammteam: teamName(st.sfv_team_id),
+    stammteamRegel: st.regel,
     /* ⚠ Sortiert, damit „2. Mannschaft, 3. Mannschaft" nicht mal so und mal
        andersherum dasteht — sonst sieht dieselbe Person bei zwei Läufen
        verschieden aus. */
@@ -122,7 +205,7 @@ export function baueSpielerZeilen(
        Team-Zuordnung fehlt, und WELCHE Nummer sie braucht. Ein Test haelt
        das seit langem fest, und er hat am 24.09.2026 eine Reparatur
        aufgehalten, die ihn geopfert haette. */
-    teams: [...z.teamIds].map(id => teamNamen.get(id) || `Team ${id}`).sort(),
+    teams: [...z.teamIds].map(id => teamName(id)).sort(),
     /* ⚠ ⚠  DER SCHLUESSEL FUER DIE AUSWAHL — und er ist NICHT der
        Anzeigename.
 
@@ -135,15 +218,36 @@ export function baueSpielerZeilen(
 
        ⚠ Und `String(id)` ist genau die Form, die `gruppiereNachTeam`
        bildet (`String(o.sfv_team_id ?? "-")`). Eine Person ohne jede
-       Team-Id bekommt hier eine LEERE Liste und ist damit ueber kein
-       Kaestchen erreichbar — in der Maske steht sie unter `"-"`. Das ist
-       die eine Lage, die beide Seiten noch verschieden sehen; heute
-       folgenlos, weil `bildeAufstellung` ohne Team-Id keine Zeile
-       schreibt. */
+       Team-Id bekommt hier eine LEERE Liste; in der Maske steht sie
+       unter `"-"`.
+
+       ⚠ ⚠  HIER STAND „heute folgenlos, weil `bildeAufstellung` ohne
+       Team-Id keine Zeile schreibt". DAS IST FALSCH, gemessen am
+       24.09.2026 am Code — und ich habe den Satz gelesen und in einen
+       Auftrag uebernommen, statt ihn zu pruefen:
+
+         • `bildeAufstellung` hat genau ZWEI Ausschluesse (`eigen &&
+           personId === null`, `!eigen && nummer === null`). Keiner davon
+           sieht `teamId` an.
+         • `zahl(p.teamId)` gibt `null`, wenn der Wert fehlt oder leer ist.
+         • `spiel_aufstellung` hat KEINEN CHECK auf `sfv_team_id`.
+         • Das Schema `Player` der Swagger-Datei hat GAR KEINE
+           `required`-Liste — `teamId` ist als `integer` deklariert, seine
+           ANWESENHEIT nirgends zugesagt. Ein fehlender Schluessel im JSON
+           ergibt `undefined` und damit `null`.
+
+       Eine eigene Zeile ohne Team-Id wird also geschrieben. Ob eine im
+       Bestand steht, ist ungemessen — die Abfrage dazu liegt in
+       `supabase/abfragen_2026-09-24_stammteam.sql` (Nr. 6).
+
+       ⚠ Ein Kommentar, der eine ANDERE Stelle zusichert, ist eine
+       Behauptung ohne Pruefung, und wer ihn liest, prueft erst recht
+       nicht nach. Dieser hier hat genau das bewirkt. */
     teamSchluessel: [...z.teamIds].map(String).sort(),
     rueckennummern: [...z.rueckennummern].sort((a, b) => a - b),
     einsaetze: z.einsaetze,
-  }));
+    };
+  });
 
   return zeilen.sort((a, b) =>
     (a.teams[0] || "").localeCompare(b.teams[0] || "", "de")
@@ -263,13 +367,21 @@ ${items}
 
 /* ── C · Liste nach Mannschaft (CSV für Excel) ──────────────────────
 
-   Zum Ausdrucken und Abhaken, mannschaftsweise — und damit die EINE
-   Ausgabe, in der eine Person MEHRFACH stehen darf: eine Zeile je
-   Person und Mannschaft. Der Kopf dieser Datei begründet, warum die
-   Textliste das nicht tut (dort hakt man EINE Liste ab und übersieht
-   den zweiten Eintrag). Hier ist die Mannschaft der Zuschnitt: wer die
-   Liste der Cb-Junioren durchgeht, will die Person darin sehen, auch
-   wenn sie zusätzlich bei den Ca-Junioren steht.
+   Zum Ausdrucken und Abhaken, mannschaftsweise — und wie jede andere
+   Ausgabe **eine Zeile je Person**, unter ihrem STAMMTEAM.
+
+   ⚠ ⚠  BIS ZUM 24.09.2026 STAND HIER DAS GEGENTEIL: eine Zeile je
+   Person UND Mannschaft, mit der Begründung, der Zuschnitt sei die
+   Mannschaft. Die Vorgabe ist zurückgenommen — und der Grund dagegen
+   ist derselbe, der im Kopf dieser Datei schon für die Textliste steht:
+   wer eine Liste abhakt und jemanden zweimal darin hat, übersieht den
+   zweiten Eintrag.
+
+   ⚠ Der Preis ist benannt und bleibt: eine Person, die für zwei
+   Mannschaften gespielt hat, erscheint in der Liste der anderen
+   Mannschaft NICHT. Deshalb sagt die Spalte `Stammteam laut`, nach
+   welcher Regel die eine gewählt wurde — sonst wäre die Zuordnung eine
+   Behauptung ohne Herkunft.
 
    ⚠ EIGENER CSV-SCHREIBER, OBWOHL `shared/list/exportUtils.ts` EINEN
    HAT — und das ist keine vergessene Dublette. `csvDownload()` dort
@@ -279,9 +391,10 @@ ${items}
    sondern sichtbarer Text `="123"`. Deshalb hier bedingtes Quoten.
    Wer die zwei je zusammenlegt, legt zuerst diese Bedingung zusammen. */
 
-/** Die Spaltenköpfe, in der bestellten Reihenfolge. */
+/** Die Spaltenköpfe, in der bestellten Reihenfolge.
+    ⚠ `Team` ist das STAMMTEAM; `Stammteam laut` sagt, nach welcher Regel. */
 export const MANNSCHAFTSLISTE_SPALTEN = [
-  "Name", "Vorname", "Team", "Rückennummer", "SFV-personId",
+  "Name", "Vorname", "Team", "Stammteam laut", "Rückennummer", "SFV-personId",
 ] as const;
 
 /* Excel in der Schweiz liest CSV mit Semikolon. */
@@ -340,7 +453,10 @@ interface MannschaftsZeile {
   name: string;
   /** Der Vorname. Leer, wenn die Gegenstelle die Teile nicht lieferte. */
   vorname: string;
+  /** Der Name des STAMMTEAMS. */
   team: string;
+  /** Nach welcher Regel es bestimmt wurde — der Text aus `STAMMTEAM_LAUT`. */
+  stammteamLaut: string;
   /** Alle Nummern in EINER Zelle, mit `, ` — wie die Maske sie zeigt. */
   nummern: string;
   sfvPersonId: number;
@@ -349,9 +465,10 @@ interface MannschaftsZeile {
 /**
  * Die Liste nach Mannschaft, als CSV für Excel.
  *
- * `teamsGewaehlt` nennt die Mannschaften beim NAMEN — dasselbe, was
- * `SpielerZeile.teams` führt und was die Maske gruppiert, einschliesslich
- * `OHNE_MANNSCHAFT` für die Personen ohne Team-Zuordnung.
+ * `teamsGewaehlt` nennt die Mannschaften über ihren SCHLUESSEL —
+ * `String(sfv_team_id)`, bzw. `"-"` für eine Person ohne Team-Zuordnung.
+ * Dieselbe Form, die `gruppiereNachTeam()` für die Kästchen der Maske
+ * bildet; ⚠ ausdrücklich NICHT der Anzeigename.
  *
  * ⚠ EINE LEERE AUSWAHL ERGIBT KEINE DATENZEILE — und ausdrücklich nicht
  * alle. „Nichts gewählt“ und „alles gewählt“ dürfen nicht dasselbe bedeuten;
@@ -362,19 +479,16 @@ interface MannschaftsZeile {
  * Zeilen ist eine leere Liste, eine ganz leere Datei sieht nach einem Fehler
  * beim Erzeugen aus.
  *
- * ⚠ EINE Namensspalte, und die Spalte `Vorname` ENTFÄLLT. Bestellt waren
- * beide, mit der Bedingung „nimm die getrennten Felder des Verbands, falls es
- * sie gibt“. Es gibt sie bei uns nicht: der Verband liefert `firstname`,
- * `name` und `secondName` getrennt, und `matchdaten.ts` setzt sie an vier
- * Stellen zusammen und verwirft die Teile (`sfv_personen.name` und
- * `spiel_aufstellung.name` führen EIN Feld). Eine leere Spalte `Vorname`
- * wäre eine Behauptung über die Person („hat keinen“); sie weglassen ist
- * eine Auskunft über unsere Daten.
- *
  * ⚠ Und NICHT am Leerzeichen trennen: „Lorena Sara Hug“ und „Tamara Hidber
  * Mullis“ sind mit derselben Regel nicht lösbar — beim einen ist der Vorname
  * zweiteilig, beim anderen der Nachname. Wer hier trennt, hat in der Hälfte
  * der Fälle recht und weiss nicht, in welcher.
+ *
+ * ⚠ ⚠  EINE ZEILE JE PERSON, UNTER IHREM STAMMTEAM (24.09.2026). Gewählt
+ * wird gegen den Schlüssel des STAMMTEAMS — nicht gegen alle Mannschaften
+ * der Person. Steht ihr Stammteam nicht in der Auswahl, fällt sie weg, auch
+ * wenn sie für eine gewählte Mannschaft gespielt hat. Das ist der Preis
+ * dafür, dass niemand zweimal in der Liste steht, und er ist gewollt.
  */
 export function alsMannschaftsliste(
   zeilen: SpielerZeile[],
@@ -384,33 +498,61 @@ export function alsMannschaftsliste(
 
   for (const z of zeilen) {
     /* ⚠ ⚠  GEWAEHLT WIRD UEBER DEN SCHLUESSEL, ANGEZEIGT WIRD DER NAME.
+       Wer hier gegen `stammteam` filtert, vergleicht einen Anzeigenamen mit
+       einem Gruppenschluessel — beides `string`, der Typ passt, die Bedeutung
+       nicht. Gemessen am 24.09.2026: Kaestchen setzbar, Download laeuft,
+       Datei mit nur der Kopfzeile.
 
-       Sie stehen paarweise in derselben Reihenfolge (beide aus `teamIds`,
-       beide sortiert). Wer hier gegen `teams` filtert, vergleicht
-       Anzeigenamen mit Gruppenschluesseln — beides `string`, der Typ
-       passt, die Bedeutung nicht. Gemessen am 24.09.2026: Kaestchen
-       setzbar, Download laeuft, Datei mit nur der Kopfzeile.
+       ⚠ ⚠  UND EINE FOLGE, DIE HIER NUR VERMERKT UND NICHT BEHOBEN WIRD —
+       sie ist SCHAERFER, als sie beim Planen aussah.
 
-       ⚠ Eine Person ohne jede Team-Id steht unter demselben Namen wie in
-       der Maske; ihr Schluessel ist dann `"-"`, wie `gruppiereNachTeam()`
-       ihn bildet. */
-    const paare: Array<[string, string]> = z.teamSchluessel.length
-      ? z.teamSchluessel.map((k, i) => [k, z.teams[i] ?? OHNE_MANNSCHAFT])
-      : [["-", OHNE_MANNSCHAFT]];
-    for (const [schluessel, team] of paare) {
-      if (!teamsGewaehlt.has(schluessel)) continue;
-      daten.push({
-        /* ⚠ Leer, wenn der Verband keinen Namen liefert — und hier NICHT
-           `OHNE_NAMEN` wie in der Textliste. Dort ist es eine Anzeigezeile,
-           hier ein Datenfeld: ein Warntext in der Namensspalte würde
-           sortiert und gefiltert, als wäre er ein Name. */
-        name: z.nachname,
-        vorname: z.vorname,
-        team,
-        nummern: z.rueckennummern.join(", "),
-        sfvPersonId: z.sfv_person_id,
-      });
-    }
+       Die Kaestchen der Maske kommen aus `gruppiereNachTeam()`, und das
+       arbeitet auf `offeneZuordnungen()` — das je Person nur die ERSTE
+       `sfv_team_id` behaelt. Erwartet war deshalb: eine Person ist nur
+       ueber das Kaestchen ihrer anderen Mannschaft zu bekommen.
+
+       ⚠ Gemessen am 24.09.2026 im Einbau (`spielerVorschlagEinbau.test.jsx`):
+       das andere Kaestchen gibt es unter Umstaenden GAR NICHT. Eine Gruppe
+       entsteht nur, wenn irgendeine Person dort ihre erste Zeile hat. Ist
+       das Stammteam einer Person eine Mannschaft, in der sonst niemand
+       zuerst auflaeuft, ist sie ueber KEIN Kaestchen erreichbar — und die
+       Meldung sagt dann wahrheitsgemaess „0 Spieler".
+
+       Gemessen: 27 der 287 laufen in zwei Mannschaften auf; die Menge ist
+       real, wie viele davon betroffen sind, ist ungemessen. Die Maske wird
+       in diesem Auftrag ausdruecklich nicht geaendert; wer sie anfasst,
+       faengt bei `offeneZuordnungen()` an, nicht hier. */
+    if (!teamsGewaehlt.has(z.stammteamSchluessel)) continue;
+    daten.push({
+      /* ⚠ Leer, wenn der Verband keinen Namen liefert — und hier NICHT
+         `OHNE_NAMEN` wie in der Textliste. Dort ist es eine Anzeigezeile,
+         hier ein Datenfeld: ein Warntext in der Namensspalte würde
+         sortiert und gefiltert, als wäre er ein Name. */
+      name: z.nachname,
+      vorname: z.vorname,
+      team: z.stammteam,
+      /* ⚠ Nachgeschlagen, nicht an der Zeile geführt: die Formulierung
+         lebt an EINER Stelle, in `stammteam.ts`. */
+      stammteamLaut: STAMMTEAM_LAUT[z.stammteamRegel],
+      /* ⚠ ⚠  ALLE Rückennummern der PERSON, nicht nur die des Stammteams —
+         und das ist unverändert gegenüber der Fassung mit einer Zeile je
+         Mannschaft: die Zelle war nie teambezogen (`z.rueckennummern` ohne
+         Filter), auch nicht in den Zeilen der anderen Mannschaft.
+
+         Der Grund, sie so zu lassen: die Zeile IST jetzt die Person, und
+         jede andere Zelle ist personenbezogen (Name, Vorname, personId).
+         Eine Nummer ist an der KADERZEILE vergeben, nicht an der Person —
+         wer hier auf das Stammteam einengte, liesse die Nummern der anderen
+         Mannschaft nirgends mehr erscheinen, und genau diese Nummern sind
+         das Wiedererkennungsmerkmal, für das die Liste da ist.
+
+         ⚠ Der Preis, und er gehört genannt: eine Nummer in dieser Zeile
+         kann zu einer anderen Mannschaft gehören als die daneben genannte.
+         Der Spaltenkopf heisst deshalb `Rückennummer` und nicht
+         „Nummer in diesem Team". */
+      nummern: z.rueckennummern.join(", "),
+      sfvPersonId: z.sfv_person_id,
+    });
   }
 
   /* Mannschaft, darin Name — `localeCompare` mit "de", damit Umlaute
@@ -427,6 +569,7 @@ export function alsMannschaftsliste(
     csvFeld(d.name),
     csvFeld(d.vorname),
     csvFeld(d.team),
+    csvFeld(d.stammteamLaut),
     csvFeld(d.nummern),
     /* ⚠ OHNE `csvFeld`: die Textform trägt selbst Anführungszeichen, und ein
        zweites Quoten machte aus der Zelle sichtbaren Text `="123"`. */

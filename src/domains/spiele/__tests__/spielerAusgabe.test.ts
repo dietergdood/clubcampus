@@ -19,10 +19,17 @@
    ═══════════════════════════════════════════════════════════════ */
 import { describe, it, expect } from "vitest";
 import { baueSpielerZeilen, alsTextliste, alsWxr, OHNE_NAMEN } from "../spielerAusgabe.ts";
-import type { AufstellungZeile } from "../matchdatenAnzeige.ts";
+import type { AufstellungFuerListe } from "../spielerAusgabe.ts";
 
-const z = (person: number, team: number | null, nr: number | null, spiel = "s1"): AufstellungZeile =>
-  ({ sfv_person_id: person, sfv_team_id: team, rueckennr: nr, spiel_id: spiel });
+/* ⚠ `spielzeit` ist PFLICHT am Parametertyp von `baueSpielerZeilen` — und
+   genau deshalb hat der Compiler diese Zeile am 24.09.2026 genannt, als das
+   Stammteam dazukam. 90 heisst „hat gespielt"; keiner der Fälle dieser Datei
+   handelt vom Stammteam, sie brauchen nur einen Wert, der ein Einsatz ist. */
+const z = (
+  person: number, team: number | null, nr: number | null, spiel = "s1",
+  spielzeit: number | null = 90,
+): AufstellungFuerListe =>
+  ({ sfv_person_id: person, sfv_team_id: team, rueckennr: nr, spiel_id: spiel, spielzeit });
 
 const TEAMS = new Map([[1, "1. Mannschaft"], [2, "2. Mannschaft"]]);
 
@@ -42,7 +49,7 @@ const TEAMS = new Map([[1, "1. Mannschaft"], [2, "2. Mannschaft"]]);
  * Testdatei und nirgends sonst.
  */
 function bauen(
-  aufstellung: AufstellungZeile[],
+  aufstellung: AufstellungFuerListe[],
   namen: Record<number, string>,
   teams: Map<number, string> = TEAMS,
 ) {
