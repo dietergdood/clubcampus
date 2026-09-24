@@ -202,9 +202,18 @@ select e.minute,
           „FC Kuesnacht a · -" auf der Website. */
        w.rolle_text,
        w.name_laut_rangfolge,
+       /* ⚠ Beim Gegner immer `false` — und das ist die Gegenprobe darauf,
+          dass der Gegnerzweig greift: stuende hier bei einer Gegnerzeile
+          `true`, waere sie durch die Namensstufen gelaufen. */
+       w.benennbar,
        /* Stufe 5 aus `werBefund()`: der Rollentext allein, sonst
           „Unser Team". Ohne diesen Zweig stuende hier ein leeres Feld, wo
-          die Website einen Satz zeigt. */
+          die Website einen Satz zeigt.
+
+          ⚠ Sie kann eine GEGNERZEILE nicht treffen: der Gegnerzweig
+          liefert immer einen Wert (mindestens „Gegner"), also ist
+          `name_laut_rangfolge` dort nie `null`. „Unser Team" an einer
+          fremden Zeile waere ein Defekt. */
        case when w.name_laut_rangfolge is not null
             then btrim(concat_ws(' ', w.rolle_text, w.name_laut_rangfolge))
             else coalesce(nullif(w.rolle_text, ''), 'Unser Team')
@@ -243,12 +252,47 @@ select e.minute,
     select case when not v.ist_vermerk then ''
                 when btrim(coalesce(e.rolle_kategorie, '')) in ('', '-') then ''
                 else btrim(e.rolle_kategorie) end               as rolle_text,
+           /* Die Namensstufen 2 bis 4 — NUR fuer eigene Zeilen. Beim Gegner
+              werden sie nie erreicht, siehe das Lateral darunter. */
            coalesce(nullif(btrim(concat_ws(' ', p.vorname, p.nachname)), ''),
                     nullif(btrim(sp.name), ''),
                     case when v.ist_vermerk
                          then nullif(btrim(e.person_name), '') end,
                     case when e.rueckennr is not null
-                         then 'Nr. ' || e.rueckennr end)        as name_laut_rangfolge
+                         then 'Nr. ' || e.rueckennr end)        as eigen_name
+  ) r
+  /* ⚠ ⚠  DER GEGNERZWEIG STEHT VOR ALLEN NAMENSSTUFEN — und er hat in der
+     geerbten Fassung GEFEHLT. `werBefund()` prueft `!ist_eigener` als
+     ERSTES (`matchdatenAnzeige.ts:681`) und gibt den Vereinsnamen zurueck,
+     NIE eine Rueckennummer.
+
+     ⚠ Gemessen am 24.09.2026 gegen ein echtes Postgres, mit derselben
+     Zeile durch beide Fassungen: eine Gegnerzeile mit `rueckennr = 9` und
+     `gegner_club_name = 'FC Maennedorf'` ergab in der Funktion
+     „FC Maennedorf", in der geerbten Abfrage „Nr. 9".
+
+     ⚠ ⚠  AUFGEFALLEN IST ES NUR, WEIL DIESE ABFRAGE NICHT FILTERT. Die
+     geerbte Fassung steht in beiden ihrer Abfragen hinter
+     `and e.ist_eigener` — dort ist sie richtig, weil der Zweig nie
+     erreicht wird. Sie ist nicht falsch, sondern unvollstaendig, und das
+     faellt erst ausserhalb ihres Filters auf. Wer sie das naechste Mal
+     ohne den Filter uebernimmt, bekommt fuer JEDE Gegnerzeile mit Nummer
+     den falschen Text.
+
+     ⚠ `coalesce(e.gegner_club_name, 'Gegner')` ohne `nullif` und ohne
+     `btrim` — die Funktion schreibt `?? "Gegner"`, und `??` faellt nur bei
+     `null` zurueck, nicht bei einer leeren Zeichenkette. Ein `nullif`
+     hier waere strenger als das Original. */
+  cross join lateral (
+    select r.rolle_text,
+           case when not e.ist_eigener
+                then coalesce(e.gegner_club_name, 'Gegner')
+                else r.eigen_name end                           as name_laut_rangfolge,
+           /* ⚠ Dasselbe Merkmal, das als `ohne_person` (negiert) in die
+              Nutzlast geht: konnten wir die Person kennzeichnen, durch
+              Namen ODER Rueckennummer? Beim Gegner immer `false` — eine
+              Rolle und ein Vereinsname sind kein Mensch. */
+           e.ist_eigener and r.eigen_name is not null            as benennbar
   ) w
  /* ⚠ ALLE Herkuenfte, nicht nur `sfv`. Eine Vereins-Zeile ist ein Nachtrag
     oder eine Korrektur und erscheint auf der Website genauso; sie
@@ -342,7 +386,22 @@ select s.sfv_match_id,
                     case when v.ist_vermerk
                          then nullif(btrim(e.person_name), '') end,
                     case when e.rueckennr is not null
-                         then 'Nr. ' || e.rueckennr end)        as name_laut_rangfolge
+                         then 'Nr. ' || e.rueckennr end)        as eigen_name
+  ) r
+  /* ⚠ ⚠  DERSELBE GEGNERZWEIG WIE IN ABFRAGE 3 — obwohl das `and
+     e.ist_eigener` unten ihn nie erreichen laesst.
+
+     Er steht hier trotzdem, und zwar aus dem Grund, aus dem die Luecke
+     ueberhaupt entstanden ist: die geerbte Fassung war nur INNERHALB ihres
+     Filters richtig, und genau das war von aussen nicht zu sehen. Zwei
+     Fassungen derselben Rechnung in EINER Datei, von denen eine einen
+     Zweig weniger hat, laufen beim naechsten Anfassen auseinander. */
+  cross join lateral (
+    select r.rolle_text,
+           case when not e.ist_eigener
+                then coalesce(e.gegner_club_name, 'Gegner')
+                else r.eigen_name end                           as name_laut_rangfolge,
+           e.ist_eigener and r.eigen_name is not null            as benennbar
   ) w
  where e.herkunft = 'sfv'
    and e.ist_eigener

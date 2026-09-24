@@ -127,7 +127,29 @@ select s.sfv_match_id,
     select case when not v.ist_vermerk then ''
                 when btrim(coalesce(e.rolle_kategorie, '')) in ('', '-') then ''
                 else btrim(e.rolle_kategorie) end               as rolle_text,
-           coalesce(nullif(btrim(concat_ws(' ', p.vorname, p.nachname)), ''),
+           coalesce(
+                    /* ⚠ ⚠  DER GEGNERZWEIG, UND ER FEHLTE. `werBefund()`
+                       prueft `!ist_eigener` als ERSTES und gibt
+                       `gegner_club_name ?? "Gegner"` zurueck — nie eine
+                       Rueckennummer. Dieser Nachbau fiel stattdessen bis
+                       zu `'Nr. ' || rueckennr` durch.
+
+                       ⚠ Gemessen am 24.09.2026 gegen ein echtes Postgres:
+                       fuer eine Gegnerzeile mit `rueckennr = 9` sagte die
+                       Funktion „FC Maennedorf" und die Abfrage „Nr. 9".
+
+                       ⚠ Und warum es niemandem auffiel: **beide Abfragen
+                       dieser Datei filtern auf `and e.ist_eigener`.**
+                       Innerhalb ihres Filters war der Nachbau richtig —
+                       er war UNVOLLSTAENDIG, und das ist von aussen nicht
+                       zu sehen. Wer ihn ohne den Filter uebernimmt,
+                       bekommt fuer jede Gegnerzeile mit Nummer den
+                       falschen Text. Gefunden hat es genau so ein
+                       Uebernehmen, in einer Abfrage ohne Filter. */
+                    case when not e.ist_eigener
+                         then coalesce(nullif(btrim(e.gegner_club_name), ''), 'Gegner')
+                         end,
+                    nullif(btrim(concat_ws(' ', p.vorname, p.nachname)), ''),
                     nullif(btrim(sp.name), ''),
                     /* ⚠ ⚠  NUR BEI EINEM ROLLENVERMERK — derselbe Riegel wie
                        in `rollenName()`. Ohne ihn bekaeme ein unzugeordneter
