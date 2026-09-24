@@ -608,10 +608,58 @@ describe("bildeOffeneNamen", () => {
     const r = bildeOffeneNamen([SPIELER({})], UNSERE, new Set());
     expect(r).toEqual([{
       sfv_person_id: 500, name: "Adrian Schmid", rueckennr: 9, sfv_team_id: 38309,
+      /* ⚠ ⚠  DIE TEILE STEHEN DANEBEN, UND `name` IST DER ABGELEITETE WERT.
+         Seit dem 24.09.2026 behaelt die Funktion `firstname` und `name`
+         einzeln, statt sie zusammenzusetzen und zu verwerfen — die Liste
+         „Nach Mannschaft" braucht zwei Spalten, und aus einem
+         zusammengesetzten Namen sind sie nicht wiederherzustellen:
+         „Lorena Sara Hug" und „Tamara Hidber Mullis" verlangen
+         entgegengesetzte Trennregeln.
+
+         ⚠ Dieser Fall ist ROT GEWORDEN, als die Felder dazukamen, und das
+         ist der Zweck von `toEqual` auf dem ganzen Objekt: ein neues Feld
+         faellt auf, statt mitzureisen. Mit `toMatchObject` waere er gruen
+         geblieben. */
+      vorname: "Adrian",
+      nachname: "Schmid",
       /* ⚠ Die Attrappe fuehrt kein `birthDate` — also `null`, und das ist
          die haeufigere Haelfte: die Form des Feldes ist ungemessen. */
       jahrgang: null,
     }]);
+  });
+
+  it("⚠ `secondName` bleibt in BEIDEN Teilen weg — eine Enthaltung, keine Annahme", () => {
+    /* Die Attrappe fuehrt `secondName: "Karl"`. Es steht in keinem der drei
+       Felder — und das ist ausdruecklich eine Enthaltung: ob dort ein zweiter
+       VORNAME oder ein zweiter NACHNAME steht, ist ungemessen.
+
+       ⚠ Gemessen am 24.09.2026 an `docs/sfv/swagger_2026-08-28.json`: das
+       Feld steht in sechs Schemata, und zu keinem davon gibt es eine
+       `description` oder ein `example` — `example` kommt im ganzen Dokument
+       null Mal vor. Der Kommentar in `leseSchiedsrichter` behauptete
+       „`secondName` ist ein zweiter Vorname"; das ist eine Behauptung ohne
+       Prüfung und steht seither als Enthaltung da.
+
+       ⚠ Und die vier Namen, an denen sich die Frage entscheiden sollte,
+       koennen sie nicht entscheiden: sie sind mit drei bzw. vier Woertern
+       vollstaendig im Bestand, zusammengesetzt aus ZWEI Feldern — bei ihnen
+       war `secondName` also leer oder eine Wiederholung. */
+    const [r] = bildeOffeneNamen([SPIELER({})], UNSERE, new Set());
+    expect(r.vorname).toBe("Adrian");
+    expect(r.nachname).toBe("Schmid");
+    expect(r.name).toBe("Adrian Schmid");
+    expect(JSON.stringify(r)).not.toContain("Karl");
+  });
+
+  it("⚠ ein fehlender Vorname ergibt einen leeren Teil, nicht den ganzen Namen", () => {
+    /* Liefert der Verband nur `name`, steht der Nachname allein da und
+       `vorname` ist leer. ⚠ Nicht den ganzen Wert in beide Teile schreiben:
+       dann stuende derselbe Name in der Datei zweimal, und zwei Spalten
+       sagten dasselbe. */
+    const [r] = bildeOffeneNamen([SPIELER({ firstname: null })], UNSERE, new Set());
+    expect(r.vorname).toBe("");
+    expect(r.nachname).toBe("Schmid");
+    expect(r.name).toBe("Schmid");
   });
 
   it("laesst GEGNER weg — auch wenn der Verband ihren Namen mitliefert", () => {

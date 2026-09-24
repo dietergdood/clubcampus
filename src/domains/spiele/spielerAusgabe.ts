@@ -26,8 +26,21 @@ import type { AufstellungZeile } from "./matchdatenAnzeige.ts";
 
 export interface SpielerZeile {
   sfv_person_id: number;
-  /** Aus der SFV-Antwort; leer, wenn der Verband keinen liefert. */
+  /** Aus der SFV-Antwort; leer, wenn der Verband keinen liefert.
+      ⚠ Die ABLEITUNG aus `vorname`/`nachname`, wo die Teile vorliegen. */
   name: string;
+  /**
+   * `firstname` des Verbands, ungetrennt.
+   *
+   * ⚠ ⚠  LEER, WENN DIE TEILE NICHT VORLIEGEN — und dann bleibt die
+   * Spalte leer, statt am Leerzeichen geraten zu werden. „Lorena Sara
+   * Hug" und „Tamara Hidber Mullis" trennt dieselbe Regel entgegengesetzt
+   * falsch; eine leere Zelle ist eine Auskunft, eine falsch getrennte
+   * eine Behauptung.
+   */
+  vorname: string;
+  /** `name` des Verbands, ungetrennt. Leer, wenn die Teile fehlen. */
+  nachname: string;
   /** ALLE Mannschaften, in denen die Person aufgelaufen ist — als
       ANZEIGENAME. Unbekannte Id: `Team 58655`. */
   teams: string[];
@@ -53,15 +66,39 @@ export function baueSpielerZeilen(
   aufstellung: AufstellungZeile[],
   namen: Record<number, string>,
   teamNamen: Map<number, string>,
+  /**
+   * Die getrennten Teile, wo der Verband sie geliefert hat.
+   *
+   * ⚠ ⚠  PFLICHTARGUMENT UND NICHT OPTIONAL — mit Absicht. Optional
+   * haette jeder bestehende Aufrufer weitergebaut, und die Teile waeren an
+   * einer Stelle da und an der anderen nicht, ohne dass etwas meldet. So
+   * nennt der Compiler jede Aufrufstelle einmal.
+   */
+  teile: Record<number, { vorname: string; nachname: string }>,
 ): SpielerZeile[] {
   const proPerson = new Map<number, SpielerZeile & { teamIds: Set<number> }>();
 
   for (const a of aufstellung) {
     let z = proPerson.get(a.sfv_person_id);
     if (!z) {
+      const ganz = namen[a.sfv_person_id] ?? "";
+      const t = teile[a.sfv_person_id];
       z = {
         sfv_person_id: a.sfv_person_id,
-        name: namen[a.sfv_person_id] ?? "",
+        name: ganz,
+        vorname: t?.vorname ?? "",
+        /* ⚠ ⚠  DER RUECKFALL LEGT DEN GANZEN NAMEN IN `nachname`, NICHT
+           IN `vorname`. Liefert die Gegenstelle die Teile nicht (eine
+           Fassung vor dem 24.09.2026), ist die Trennung unbekannt — und
+           dann gehoert der ganze Name in die Spalte, die im Export `Name`
+           heisst, damit er nicht verloren geht. `Vorname` bleibt leer und
+           zeigt damit an, dass nicht getrennt wurde.
+
+           ⚠ Die Alternative waere, am Leerzeichen zu raten. „Lorena Sara
+           Hug" und „Tamara Hidber Mullis" trennt dieselbe Regel
+           entgegengesetzt falsch — eine leere Zelle ist eine Auskunft,
+           eine falsch getrennte eine Behauptung. */
+        nachname: t?.nachname ?? ganz,
         teams: [], teamSchluessel: [], teamIds: new Set(), rueckennummern: [], einsaetze: 0,
       };
       proPerson.set(a.sfv_person_id, z);
@@ -76,6 +113,8 @@ export function baueSpielerZeilen(
   const zeilen: SpielerZeile[] = [...proPerson.values()].map(z => ({
     sfv_person_id: z.sfv_person_id,
     name: z.name,
+    vorname: z.vorname,
+    nachname: z.nachname,
     /* ⚠ Sortiert, damit „2. Mannschaft, 3. Mannschaft" nicht mal so und mal
        andersherum dasteht — sonst sieht dieselbe Person bei zwei Läufen
        verschieden aus. */
@@ -108,7 +147,11 @@ export function baueSpielerZeilen(
 
   return zeilen.sort((a, b) =>
     (a.teams[0] || "").localeCompare(b.teams[0] || "", "de")
-    || (a.name || "￿").localeCompare(b.name || "￿", "de"));
+    || (a.name || "￿").localeCompare(b.name || "￿", "de")
+    /* ⚠ Der Vorname als zweite Ebene: zwei Adrian Schmid gibt es in
+       diesem Verein nachweislich, und ohne sie stuenden zwei Menschen mit
+       demselben Nachnamen in zufaelliger Reihenfolge. */
+    || a.vorname.localeCompare(b.vorname, "de"));
 }
 
 /* ── A · Nachschlageliste ───────────────────────────────────────── */
@@ -238,7 +281,7 @@ ${items}
 
 /** Die Spaltenköpfe, in der bestellten Reihenfolge. */
 export const MANNSCHAFTSLISTE_SPALTEN = [
-  "Name", "Team", "Rückennummer", "SFV-personId",
+  "Name", "Vorname", "Team", "Rückennummer", "SFV-personId",
 ] as const;
 
 /* Excel in der Schweiz liest CSV mit Semikolon. */
@@ -293,7 +336,10 @@ function alsTextzelle(sfvPersonId: number): string {
 }
 
 interface MannschaftsZeile {
+  /** Der NACHNAME — oder der ganze Name, wenn die Teile fehlen. */
   name: string;
+  /** Der Vorname. Leer, wenn die Gegenstelle die Teile nicht lieferte. */
+  vorname: string;
   team: string;
   /** Alle Nummern in EINER Zelle, mit `, ` — wie die Maske sie zeigt. */
   nummern: string;
@@ -358,7 +404,8 @@ export function alsMannschaftsliste(
            `OHNE_NAMEN` wie in der Textliste. Dort ist es eine Anzeigezeile,
            hier ein Datenfeld: ein Warntext in der Namensspalte würde
            sortiert und gefiltert, als wäre er ein Name. */
-        name: z.name,
+        name: z.nachname,
+        vorname: z.vorname,
         team,
         nummern: z.rueckennummern.join(", "),
         sfvPersonId: z.sfv_person_id,
@@ -378,6 +425,7 @@ export function alsMannschaftsliste(
   const kopf = MANNSCHAFTSLISTE_SPALTEN.map(csvFeld).join(CSV_TRENNER);
   const zeilenText = daten.map(d => [
     csvFeld(d.name),
+    csvFeld(d.vorname),
     csvFeld(d.team),
     csvFeld(d.nummern),
     /* ⚠ OHNE `csvFeld`: die Textform trägt selbst Anführungszeichen, und ein

@@ -404,7 +404,30 @@ export function entdoppleSfvPersonen(zeilen: SfvPersonZeile[]): SfvPersonZeile[]
    Schiedsrichter. */
 export interface OffenerName {
   sfv_person_id: number;
+  /**
+   * Der ganze Name, wie ihn die Anzeige braucht.
+   *
+   * ⚠ Er ist die ABLEITUNG aus `vorname` und `nachname`, nicht eine
+   * dritte Angabe. Ein Fall in `offeneNamenTeile.test.ts` haelt fest, dass
+   * die drei nicht auseinanderlaufen koennen.
+   */
   name: string;
+  /**
+   * `firstname` des Verbands — ungetrennt uebernommen.
+   *
+   * ⚠ ⚠  SEIT DEM 24.09.2026 REIST ER MIT, UND DAS IST DER GANZE PUNKT.
+   * Vorher wurde hier `firstname + name` zusammengesetzt und die Teile
+   * verworfen; der Export konnte sie danach nur noch am Leerzeichen
+   * trennen — und das ist bei „Lorena Sara Hug" und „Tamara Hidber
+   * Mullis" **dieselbe Regel mit entgegengesetztem Ergebnis.**
+   *
+   * ⚠ Und er wird NICHT gespeichert. Die Namen leben im Zustand der
+   * Maske (Bedingung Didi, 25.08.2026); deshalb brauchte es fuer die
+   * Trennung keine Spalte und keinen Nachlauf.
+   */
+  vorname: string;
+  /** `name` des Verbands — der Nachname, ungetrennt uebernommen. */
+  nachname: string;
   rueckennr: number | null;
   sfv_team_id: number | null;
   /**
@@ -461,11 +484,28 @@ export function bildeOffeneNamen(
     /* Erster Treffer gewinnt: derselbe Spieler steht in mehreren Spielen,
        und der Name ist ueberall derselbe. */
     if (nach.has(id)) continue;
-    const name = [text(p.firstname), text(p.name)].filter(Boolean).join(" ").trim();
+    /* ⚠ ⚠  DIE TEILE BLEIBEN, `name` IST DIE ABLEITUNG — seit dem
+       24.09.2026. Vorher wurde hier zusammengesetzt und verworfen, und
+       der Export konnte danach nur noch am Leerzeichen trennen:
+
+         „Tamara Hidber Mullis"   -> Tamara | Hidber Mullis   ✓
+         „Lorena Sara Hug"        -> Lorena | Sara Hug        ✗
+
+       Dieselbe Regel, entgegengesetztes Ergebnis. Wer trennt, hat in der
+       Haelfte der Faelle recht und weiss nicht, in welcher.
+
+       ⚠ `secondName` bleibt weiterhin weg, und das ist jetzt eine
+       ausdrueckliche Enthaltung statt einer Annahme: ob dort ein zweiter
+       VORNAME oder ein zweiter NACHNAME steht, ist ungemessen — das Feld
+       ist in der aufgezeichneten Probe geschwaerzt. Solange das offen
+       ist, gehoert es in keine der beiden Spalten. */
+    const vorname = text(p.firstname) ?? "";
+    const nachname = text(p.name) ?? "";
+    const name = [vorname, nachname].filter(Boolean).join(" ").trim();
     if (!name) continue;
     nach.set(id, {
       sfv_person_id: id,
-      name,
+      name, vorname, nachname,
       rueckennr: zahl(p.jerseyNumber),
       sfv_team_id: zahl(p.teamId),
       jahrgang: jahrgangAus(p.birthDate),

@@ -327,10 +327,13 @@ describe("namenFuersProtokoll", () => {
     offen_gesamt: 177,
     jahrgang_unlesbar: 1,
     namen: [
-      { sfv_person_id: 500, name: "Anna Beispiel", rueckennr: 9,
-        sfv_team_id: 38309, jahrgang: 2011 },
-      { sfv_person_id: 501, name: "Bruno Muster", rueckennr: null,
-        sfv_team_id: 38309, jahrgang: null },
+      /* ⚠ `name` ist der ABGELEITETE Wert, `vorname`/`nachname` sind die
+         Quelle — so, wie `bildeOffeneNamen` es baut. Eine Attrappe, in der
+         die drei nicht zusammenpassen, prueft eine Form, die es nie gibt. */
+      { sfv_person_id: 500, name: "Anna Beispiel", vorname: "Anna", nachname: "Beispiel",
+        rueckennr: 9, sfv_team_id: 38309, jahrgang: 2011 },
+      { sfv_person_id: 501, name: "Bruno Muster", vorname: "Bruno", nachname: "Muster",
+        rueckennr: null, sfv_team_id: 38309, jahrgang: null },
     ],
   };
 

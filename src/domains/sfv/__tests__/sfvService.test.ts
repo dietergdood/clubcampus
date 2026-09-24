@@ -9,7 +9,7 @@
    merken.
    ═══════════════════════════════════════════════════════════════ */
 import { describe, it, expect } from "vitest";
-import { baueZuordnung, auswahlFuer, leseNamenAntwort } from "../sfvService.ts";
+import { baueZuordnung, auswahlFuer, leseNamenAntwort, leseNamenTeile } from "../sfvService.ts";
 import type { NamenAntwort } from "../sfvService.ts";
 import type { SfvTeam } from "../sfvService.ts";
 import type { Team } from "../../../types.ts";
@@ -121,5 +121,84 @@ describe("leseNamenAntwort", () => {
 
   it("ohne Antwort ist es leer, kein Fehler", () => {
     expect(leseNamenAntwort(null)).toEqual({});
+  });
+});
+
+
+/* ── Die getrennten Namensteile ───────────────────────────────────────────
+   ⚠ ⚠  DIESE FUNKTION HATTE BIS ZUM 24.09.2026 KEINEN EINZIGEN FALL, und
+   das ist die Lücke, die keine Prüfkette findet: gäbe `leseNamenTeile`
+   dauerhaft `{}` zurück, fiele die Maske auf den ganzen Namen in der Spalte
+   „Name" zurück, die Spalte „Vorname" bliebe bei JEDER Person leer — und
+   `typecheck`, Tests und `check:deno` wären grün. Eine Funktion ohne
+   Aufrufer ist in keiner Hinsicht defekt; eine ohne Fall auch nicht.
+
+   Sie ist das Glied zwischen der Antwort der Function und dem Zustand der
+   Maske. Beide Enden sind geprüft (`bildeOffeneNamen` drüben, `alsMannschafts-
+   liste` hier) — geprüft war die Mitte nicht. */
+describe("leseNamenTeile", () => {
+  const MIT_TEILEN = {
+    namen: [
+      { sfv_person_id: 7, name: "Lorena Sara Hug", vorname: "Lorena Sara", nachname: "Hug" },
+      { sfv_person_id: 9, name: "Tamara Hidber Mullis", vorname: "Tamara", nachname: "Hidber Mullis" },
+    ],
+    spiele_abgefragt: 1, namen_gefunden: 2, offen_gesamt: 2, fehler: 0,
+  } as unknown as NamenAntwort;
+
+  it("liest vorname und nachname getrennt, wie sie ankommen", () => {
+    expect(leseNamenTeile(MIT_TEILEN)).toEqual({
+      7: { vorname: "Lorena Sara", nachname: "Hug" },
+      9: { vorname: "Tamara", nachname: "Hidber Mullis" },
+    });
+  });
+
+  it("⚠ und setzt NICHT zusammen — der ganze Name steht in keinem Teil", () => {
+    /* Die Gegenrichtung: beide Teile zusammen ergeben den Namen, aber kein
+       einzelner trägt ihn. Ohne diesen Fall wäre eine Fassung grün, die
+       `nachname` mit dem ganzen Namen füllt — und in der Datei stünde dann
+       „Lorena Sara Hug" unter Name UND „Lorena Sara" unter Vorname. */
+    const t = leseNamenTeile(MIT_TEILEN)[7];
+    expect(t.nachname).toBe("Hug");
+    expect(t.vorname).toBe("Lorena Sara");
+  });
+
+  it("eine Antwort OHNE Teile ergibt eine leere Karte, keinen Fehler", () => {
+    /* Der Fall, der heute eintritt, solange `sfv-sync` nicht neu deployt
+       ist: die Function liefert nur `name`. Dann gibt es keine Teile, und
+       der Rückfall in `baueSpielerZeilen` legt den ganzen Namen unter
+       „Name" — eine leere Zelle ist eine Auskunft, eine geratene nicht. */
+    const ohne: NamenAntwort = {
+      namen: [{ sfv_person_id: 7, name: "Adrian Schmid" }],
+      spiele_abgefragt: 1, namen_gefunden: 1, offen_gesamt: 1, fehler: 0,
+    };
+    expect(leseNamenTeile(ohne)).toEqual({});
+  });
+
+  it("⚠ ein einzelner Teil genügt — nur BEIDE leer wird übergangen", () => {
+    /* Liefert der Verband keinen Vornamen, ist das eine gültige Auskunft.
+       Zwei leere Teile sind keine: sie stünden für eine alte Antwortform
+       und überschrieben später eine echte Trennung mit Leere. */
+    const halb = {
+      namen: [
+        { sfv_person_id: 7, name: "Schmid", vorname: "", nachname: "Schmid" },
+        { sfv_person_id: 8, name: "Egal", vorname: "  ", nachname: " " },
+      ],
+      spiele_abgefragt: 1, namen_gefunden: 2, offen_gesamt: 2, fehler: 0,
+    } as unknown as NamenAntwort;
+    expect(leseNamenTeile(halb)).toEqual({ 7: { vorname: "", nachname: "Schmid" } });
+  });
+
+  it("ohne Antwort ist es leer, kein Fehler", () => {
+    expect(leseNamenTeile(null)).toEqual({});
+  });
+
+  it("⚠ eine unlesbare sfv_person_id wird übergangen, nicht zu NaN", () => {
+    /* `Number("x")` ist `NaN`, und `raus[NaN]` wäre ein Eintrag, den kein
+       Aufrufer je findet — die Person hätte dann stumm keine Teile. */
+    const kaputt = { namen: [
+      { sfv_person_id: "x", name: "A B", vorname: "A", nachname: "B" },
+      { sfv_person_id: 7, name: "C D", vorname: "C", nachname: "D" },
+    ] } as unknown as NamenAntwort;
+    expect(leseNamenTeile(kaputt)).toEqual({ 7: { vorname: "C", nachname: "D" } });
   });
 });

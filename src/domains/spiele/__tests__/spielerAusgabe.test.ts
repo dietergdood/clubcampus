@@ -26,49 +26,75 @@ const z = (person: number, team: number | null, nr: number | null, spiel = "s1")
 
 const TEAMS = new Map([[1, "1. Mannschaft"], [2, "2. Mannschaft"]]);
 
+/**
+ * `baueSpielerZeilen` mit den getrennten Namensteilen, aus dem ganzen
+ * Namen abgeleitet.
+ *
+ * ⚠ ⚠  DIE TRENNREGEL HIER IST NICHT DIE DES CODES, und das ist der
+ * Grund, warum sie an EINER Stelle steht. Der Code trennt NIE selbst — er
+ * nimmt `firstname` und `name` des Verbands, wie sie kommen. Hier wird am
+ * letzten Leerzeichen getrennt, damit nicht jeder Fall jeden Namen
+ * doppelt führen muss.
+ *
+ * ⚠ Und im Produktivcode wäre genau diese Regel falsch: „Lorena Sara Hug"
+ * ergibt hier „Lorena Sara" / „Hug" — richtig; „Tamara Hidber Mullis"
+ * ergibt „Tamara Hidber" / „Mullis" — falsch. Deshalb steht sie in einer
+ * Testdatei und nirgends sonst.
+ */
+function bauen(
+  aufstellung: AufstellungZeile[],
+  namen: Record<number, string>,
+  teams: Map<number, string> = TEAMS,
+) {
+  const teile: Record<number, { vorname: string; nachname: string }> = {};
+  for (const [id, ganz] of Object.entries(namen)) {
+    const i = ganz.lastIndexOf(" ");
+    teile[Number(id)] = i < 0
+      ? { vorname: "", nachname: ganz }
+      : { vorname: ganz.slice(0, i), nachname: ganz.slice(i + 1) };
+  }
+  return baueSpielerZeilen(aufstellung, namen, teams, teile);
+}
+
 describe("baueSpielerZeilen", () => {
   it("⚠ sammelt ALLE Mannschaften, nicht nur die erste", () => {
     /* Der gemessene Fall: 27 von 287 laufen in zwei Mannschaften auf,
        durchweg benachbarte Stufen. */
-    const [zeile] = baueSpielerZeilen(
-      [z(100, 1, 7, "a"), z(100, 2, 7, "b")], { 100: "Adrian Schmid" }, TEAMS);
+    const [zeile] = bauen([z(100, 1, 7, "a"), z(100, 2, 7, "b")], { 100: "Adrian Schmid" });
     expect(zeile.teams).toEqual(["1. Mannschaft", "2. Mannschaft"]);
     expect(zeile.einsaetze).toBe(2);
   });
 
   it("⚠ sammelt ALLE Rückennummern — 58 laufen unter mehreren", () => {
-    const [zeile] = baueSpielerZeilen(
-      [z(100, 1, 7, "a"), z(100, 1, 13, "b")], { 100: "A" }, TEAMS);
+    const [zeile] = bauen([z(100, 1, 7, "a"), z(100, 1, 13, "b")], { 100: "A" });
     expect(zeile.rueckennummern).toEqual([7, 13]);
   });
 
   it("⚠ die Reihenfolge der Mannschaften ist stabil", () => {
     /* Sonst sieht dieselbe Person bei zwei Läufen verschieden aus, und wer
        zwei Listen vergleicht, sucht einen Unterschied, den es nicht gibt. */
-    const a = baueSpielerZeilen([z(1, 2, null, "a"), z(1, 1, null, "b")], { 1: "X" }, TEAMS);
-    const b = baueSpielerZeilen([z(1, 1, null, "a"), z(1, 2, null, "b")], { 1: "X" }, TEAMS);
+    const a = bauen([z(1, 2, null, "a"), z(1, 1, null, "b")], { 1: "X" });
+    const b = bauen([z(1, 1, null, "a"), z(1, 2, null, "b")], { 1: "X" });
     expect(a[0].teams).toEqual(b[0].teams);
   });
 
   it("eine unbekannte Mannschaft bekommt einen erkennbaren Platzhalter", () => {
     /* Nicht leer lassen: „Team 99" sagt, dass die Team-Zuordnung fehlt. */
-    const [zeile] = baueSpielerZeilen([z(1, 99, null)], { 1: "X" }, TEAMS);
+    const [zeile] = bauen([z(1, 99, null)], { 1: "X" });
     expect(zeile.teams).toEqual(["Team 99"]);
   });
 });
 
 describe("alsTextliste", () => {
   it("⚠ nennt Spieler ohne Namen, statt sie wegzulassen", () => {
-    const text = alsTextliste(baueSpielerZeilen(
-      [z(100, 1, 7), z(200, 1, 9)], { 100: "Adrian Schmid" }, TEAMS));
+    const text = alsTextliste(bauen([z(100, 1, 7), z(200, 1, 9)], { 100: "Adrian Schmid" }));
     expect(text).toContain("Adrian Schmid");
     expect(text).toContain(OHNE_NAMEN);
     expect(text).toContain("200");
   });
 
   it("gruppiert nach Mannschaft", () => {
-    const text = alsTextliste(baueSpielerZeilen(
-      [z(1, 1, null), z(2, 2, null)], { 1: "Eins", 2: "Zwei" }, TEAMS));
+    const text = alsTextliste(bauen([z(1, 1, null), z(2, 2, null)], { 1: "Eins", 2: "Zwei" }));
     expect(text).toContain("1. Mannschaft");
     expect(text).toContain("2. Mannschaft");
     expect(text.indexOf("1. Mannschaft")).toBeLessThan(text.indexOf("2. Mannschaft"));
@@ -77,7 +103,7 @@ describe("alsTextliste", () => {
 
 describe("alsWxr", () => {
   it("⚠ trägt die sfv_person_id als postmeta — das ist der ganze Zweck", () => {
-    const { xml } = alsWxr(baueSpielerZeilen([z(1339751, 1, 13)], { 1339751: "Adrian Schmid" }, TEAMS));
+    const { xml } = alsWxr(bauen([z(1339751, 1, 13)], { 1339751: "Adrian Schmid" }));
     expect(xml).toContain("<wp:meta_key>sfv_person_id</wp:meta_key>");
     expect(xml).toContain("1339751");
     expect(xml).toContain("<title>Adrian Schmid</title>");
@@ -86,7 +112,7 @@ describe("alsWxr", () => {
   it("⚠ legt Entwürfe an, nicht veröffentlichte Beiträge", () => {
     /* 287 auf einen Schlag veröffentlichte Spielerseiten mit Namen und ohne
        Foto hat niemand bestellt. */
-    const { xml } = alsWxr(baueSpielerZeilen([z(1, 1, null)], { 1: "X" }, TEAMS));
+    const { xml } = alsWxr(bauen([z(1, 1, null)], { 1: "X" }));
     expect(xml).toContain("<wp:status>draft</wp:status>");
     expect(xml).not.toContain("publish");
   });
@@ -94,8 +120,7 @@ describe("alsWxr", () => {
   it("⚠ lässt Spieler ohne Namen weg UND sagt wie viele", () => {
     /* Die Zahl ist der Punkt: ein Import mit 1 statt 3 Beiträgen, ohne dass
        jemand die Differenz erfährt, ist die stille Sorte. */
-    const erg = alsWxr(baueSpielerZeilen(
-      [z(1, 1, null), z(2, 1, null), z(3, 1, null)], { 1: "Nur einer" }, TEAMS));
+    const erg = alsWxr(bauen([z(1, 1, null), z(2, 1, null), z(3, 1, null)], { 1: "Nur einer" }));
     expect(erg.aufgenommen).toBe(1);
     expect(erg.uebergangen).toBe(2);
     expect(erg.xml).not.toContain("<title></title>");
@@ -104,14 +129,14 @@ describe("alsWxr", () => {
   it("⚠ maskiert XML-Sonderzeichen im Namen", () => {
     /* Ein Name mit & oder < zerreisst die Datei, und der WordPress-Importer
        sagt dann nicht, welche Zeile schuld ist. */
-    const { xml } = alsWxr(baueSpielerZeilen([z(1, 1, null)], { 1: 'Ann & <Ben>' }, TEAMS));
+    const { xml } = alsWxr(bauen([z(1, 1, null)], { 1: 'Ann & <Ben>' }));
     expect(xml).toContain("Ann &amp; &lt;Ben&gt;");
     expect(xml).not.toContain("<Ben>");
   });
 
   it("die Pflicht-Namensräume stehen im Kopf", () => {
     /* Ohne sie weist der Importer die Datei ab, ohne zu sagen warum. */
-    const { xml } = alsWxr(baueSpielerZeilen([z(1, 1, null)], { 1: "X" }, TEAMS));
+    const { xml } = alsWxr(bauen([z(1, 1, null)], { 1: "X" }));
     for (const ns of ["xmlns:wp=", "xmlns:content=", "xmlns:excerpt=", "<wp:wxr_version>1.2"]) {
       expect(xml).toContain(ns);
     }

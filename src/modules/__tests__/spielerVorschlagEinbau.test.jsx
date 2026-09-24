@@ -93,7 +93,11 @@ beforeEach(() => {
     { sfv_person_id: 500, sfv_team_id: 38309, rueckennr: 9, spiel_id: 's1' },
   ];
   antwort = {
-    namen: [{ sfv_person_id: 500, name: 'Anna Meier', jahrgang: 2011 }],
+    /* ⚠ Mit den getrennten Teilen, so wie `bildeOffeneNamen` sie seit dem
+       24.09.2026 liefert. `name` ist der ABGELEITETE Wert — eine Attrappe,
+       in der die drei nicht zusammenpassen, prüft eine Form, die es nie gibt. */
+    namen: [{ sfv_person_id: 500, name: 'Anna Meier', vorname: 'Anna',
+      nachname: 'Meier', jahrgang: 2011 }],
     spiele_abgefragt: 1, namen_gefunden: 1, offen_gesamt: 1, fehler: 0,
     jahrgang_unlesbar: 0,
   };
@@ -361,7 +365,45 @@ describe('Die Mannschaft lässt sich für die Liste wählen', () => {
     /* Kopf plus genau eine Datenzeile. `toHaveLength` allein wäre hier
        richtig — aber die Zeile soll auch die richtige sein. */
     expect(zeilen).toHaveLength(2);
-    expect(zeilen[1]).toMatch(/Anna Meier/);
+    /* ⚠ Nachname zuerst, Vorname als zweite Spalte — `/Anna Meier/` stünde
+       so in keiner Zeile mehr. */
+    expect(zeilen[1]).toMatch(/Meier;Anna/);
     expect(zeilen[1]).toMatch(/Da-Junioren/);
+  });
+
+  it('⚠ ⚠  die Datei trägt Vorname und Name GETRENNT — im Einbau', async () => {
+    /* ⚠ ⚠  DER FALL, DER DAS DURCHREICHEN DER TEILE PRÜFT.
+
+       `alsMannschaftsliste()` und `leseNamenTeile()` sind einzeln geprüft.
+       Was dazwischen liegt, ist die Verdrahtung in dieser Komponente:
+       `setNamensTeile(leseNamenTeile(daten))` und das VIERTE Argument an
+       `baueSpielerZeilen`. Gibt die Maske dort `{}` durch, fällt der Code
+       auf den ganzen Namen unter „Name" zurück, die Spalte „Vorname" bleibt
+       bei JEDER Person leer — und kein einziger anderer Fall wird rot.
+
+       ⚠ Gegengeprobt mit zwei Sabotagen — das vierte Argument auf `{}`,
+       und `setNamensTeile` gar nicht gerufen. Beide machen ZWEI Fälle rot:
+       diesen und den darüber, der seit dem 24.09.2026 `Meier;Anna` erwartet.
+       ⚠ Hier stand „die sieben darüber bleiben grün" — gemessen sind es
+       sechs. Ein Kommentar über eine andere Stelle ist eine Behauptung ohne
+       Prüfung, und diese hier war falsch. */
+    zeichne([MITGLIED()]);
+    await namenHolen();
+    await act(async () => {
+      fireEvent.click(screen.getByLabelText(/Da-Junioren für die Liste/));
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /Liste nach Mannschaft/ }));
+    });
+
+    const zeilen = geladen[0].inhalt.trim().split('\r\n');
+    /* Der Kopf nennt fünf Spalten in dieser Reihenfolge. */
+    expect(zeilen[0]).toContain('Name;Vorname;Team;Rückennummer;SFV-personId');
+    /* Und die Datenzeile füllt BEIDE — die zweite Zelle ist nicht leer.
+       Genau das wäre sie beim Rückfall, und dann sähe die Datei auf den
+       ersten Blick richtig aus. */
+    const felder = zeilen[1].split(';');
+    expect(felder[0]).toBe('Meier');
+    expect(felder[1]).toBe('Anna');
   });
 });

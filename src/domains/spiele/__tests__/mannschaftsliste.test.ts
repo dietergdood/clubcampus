@@ -52,11 +52,40 @@ const BOM = String.fromCharCode(0xFEFF);
  */
 const sp = (
   sfv_person_id: number, name: string, teams: string[], rueckennummern: number[] = [],
+  /* ⚠ Ausdruecklich setzbar, weil die Ableitung unten am letzten
+     Leerzeichen trennt. Wo ein Name ein Semikolon oder ein
+     Anfuehrungszeichen traegt, ist diese Trennung ein Artefakt der
+     Attrappe — dort gehoeren die Teile hingeschrieben, sonst prueft der
+     Fall die Trennung statt die Maskierung. */
+  teile?: { vorname: string; nachname: string },
 ): SpielerZeile => ({
   sfv_person_id, name, teams,
   teamSchluessel: teams.map(t => `k:${t}`),
   rueckennummern, einsaetze: 1,
+  /* ⚠ Am LETZTEN Leerzeichen, und das ist NICHT die Regel des Codes — der
+     trennt nie selbst, er nimmt `firstname` und `name` des Verbands. Hier
+     steht sie nur, damit `name` und die Teile zusammenpassen; im
+     Produktivcode waere sie fuer „Tamara Hidber Mullis" falsch. */
+  vorname: teile ? teile.vorname : name.slice(0, Math.max(0, name.lastIndexOf(" "))),
+  nachname: teile ? teile.nachname : name.slice(name.lastIndexOf(" ") + 1),
 });
+
+/**
+ * Die getrennten Teile zu einem Namens-Objekt.
+ *
+ * ⚠ Am LETZTEN Leerzeichen — und das ist NICHT die Regel des Codes. Der
+ * trennt nie selbst, er nimmt `firstname` und `name` des Verbands, wie sie
+ * kommen. Hier steht sie nur, damit die Attrappe nicht jeden Namen doppelt
+ * fuehren muss; im Produktivcode waere sie fuer „Tamara Hidber Mullis"
+ * falsch (sie ergaebe Nachname „Mullis" statt „Hidber Mullis").
+ */
+const teileAus = (namen: Record<number, string>): Record<number, { vorname: string; nachname: string }> =>
+  Object.fromEntries(Object.entries(namen).map(([id, ganz]) => {
+    const i = ganz.lastIndexOf(" ");
+    return [Number(id), i < 0
+      ? { vorname: "", nachname: ganz }
+      : { vorname: ganz.slice(0, i), nachname: ganz.slice(i + 1) }];
+  }));
 
 /** Alle Mannschaften, die in den Zeilen vorkommen — der Normalfall der Maske.
     ⚠ Als SCHLUESSEL, nicht als Name: das ist, was die Maske an
@@ -75,10 +104,10 @@ describe("alsMannschaftsliste — Form der Datei", () => {
     const zeilen = [sp(100, "Adrian Schmid", ["1. Mannschaft"], [7])];
     const csv = alsMannschaftsliste(zeilen, alleTeams(zeilen));
     const kopf = csv.replace(BOM, "").split("\r\n")[0];
-    expect(kopf).toBe("Name;Team;Rückennummer;SFV-personId");
+    expect(kopf).toBe("Name;Vorname;Team;Rückennummer;SFV-personId");
     /* Die Reihenfolge ist bestellt, nicht abgeleitet — deshalb wörtlich. */
     expect([...MANNSCHAFTSLISTE_SPALTEN]).toEqual(
-      ["Name", "Team", "Rückennummer", "SFV-personId"]);
+      ["Name", "Vorname", "Team", "Rückennummer", "SFV-personId"]);
   });
 
   it("⚠ das BOM ist das erste Zeichen — ohne es liest Excel die Umlaute als Latin-1", () => {
@@ -104,13 +133,13 @@ describe("alsMannschaftsliste — Spalteninhalte", () => {
        eine Spalte je Nummer wäre eine Spaltenzahl, die von den Daten abhängt. */
     const zeilen = [sp(100, "Adrian Schmid", ["1. Mannschaft"], [9, 18, 21])];
     const [zeile] = datenzeilen(alsMannschaftsliste(zeilen, alleTeams(zeilen)));
-    expect(zeile).toBe('Adrian Schmid;1. Mannschaft;9, 18, 21;="100"');
+    expect(zeile).toBe('Schmid;Adrian;1. Mannschaft;9, 18, 21;="100"');
   });
 
   it("keine Rückennummer ergibt eine leere Zelle, nicht eine Null", () => {
     const zeilen = [sp(100, "Adrian Schmid", ["1. Mannschaft"], [])];
     const [zeile] = datenzeilen(alsMannschaftsliste(zeilen, alleTeams(zeilen)));
-    expect(zeile).toBe('Adrian Schmid;1. Mannschaft;;="100"');
+    expect(zeile).toBe('Schmid;Adrian;1. Mannschaft;;="100"');
   });
 
   it('⚠ ein fehlender Name bleibt LEER — nicht „Nr. 13“ und nicht OHNE_NAMEN', () => {
@@ -118,7 +147,7 @@ describe("alsMannschaftsliste — Spalteninhalte", () => {
        Datenfeld, und ein Warntext würde sortiert und gefiltert wie ein Name. */
     const zeilen = [sp(100, "", ["1. Mannschaft"], [13])];
     const [zeile] = datenzeilen(alsMannschaftsliste(zeilen, alleTeams(zeilen)));
-    expect(zeile).toBe(';1. Mannschaft;13;="100"');
+    expect(zeile).toBe(';;1. Mannschaft;13;="100"');
     expect(zeile).not.toContain(OHNE_NAMEN);
     expect(zeile).not.toContain("Nr.");
   });
@@ -130,7 +159,7 @@ describe("alsMannschaftsliste — Spalteninhalte", () => {
        ANZEIGENAME daneben ist `OHNE_MANNSCHAFT`, und die beiden sind
        absichtlich nicht dasselbe. */
     const csv = alsMannschaftsliste(zeilen, new Set(["-"]));
-    expect(datenzeilen(csv)[0]).toBe(`Adrian Schmid;${OHNE_MANNSCHAFT};;="100"`);
+    expect(datenzeilen(csv)[0]).toBe(`Schmid;Adrian;${OHNE_MANNSCHAFT};;="100"`);
   });
 });
 
@@ -157,7 +186,9 @@ describe("alsMannschaftsliste — Sortierung", () => {
       sp(2, "Amrein", ["2. Mannschaft"]),
     ];
     const daten = datenzeilen(alsMannschaftsliste(zeilen, alleTeams(zeilen)));
-    expect(daten.map(z => z.split(";").slice(0, 2).join(" / "))).toEqual([
+    /* ⚠ Spalte 0 und 2 — dazwischen steht seit dem 24.09.2026 der Vorname.
+       Ein `slice(0, 2)` ergaebe „Berger / " und sagte nichts ueber das Team. */
+    expect(daten.map(z => { const f = z.split(";"); return `${f[0]} / ${f[2]}`; })).toEqual([
       "Berger / 1. Mannschaft",
       "Amrein / 2. Mannschaft",
       "Zeller / 2. Mannschaft",
@@ -216,7 +247,7 @@ describe("alsMannschaftsliste — die Auswahl", () => {
        einsetzt, bekommt eine Datei mit nur der Kopfzeile — genau der
        Fehler vom 24.09.2026. */
     const csv = alsMannschaftsliste(zeilen, new Set(["k:2. Mannschaft"]));
-    expect(datenzeilen(csv)).toEqual(['B;2. Mannschaft;;="2"']);
+    expect(datenzeilen(csv)).toEqual(['B;;2. Mannschaft;;="2"']);
   });
 
   it("⚠ eine Person in zwei gewählten Mannschaften steht ZWEIMAL da, je einmal", () => {
@@ -226,15 +257,15 @@ describe("alsMannschaftsliste — die Auswahl", () => {
     const zeilen = [sp(100, "Adrian Schmid", ["Ca-Junioren", "Cb-Junioren"], [9])];
     const daten = datenzeilen(alsMannschaftsliste(zeilen, alleTeams(zeilen)));
     expect(daten).toEqual([
-      'Adrian Schmid;Ca-Junioren;9;="100"',
-      'Adrian Schmid;Cb-Junioren;9;="100"',
+      'Schmid;Adrian;Ca-Junioren;9;="100"',
+      'Schmid;Adrian;Cb-Junioren;9;="100"',
     ]);
   });
 
   it("dieselbe Person erscheint nur einmal, wenn nur eine ihrer Mannschaften gewählt ist", () => {
     const zeilen = [sp(100, "Adrian Schmid", ["Ca-Junioren", "Cb-Junioren"], [9])];
     const daten = datenzeilen(alsMannschaftsliste(zeilen, new Set(["k:Cb-Junioren"])));
-    expect(daten).toEqual(['Adrian Schmid;Cb-Junioren;9;="100"']);
+    expect(daten).toEqual(['Schmid;Adrian;Cb-Junioren;9;="100"']);
   });
 });
 
@@ -243,15 +274,20 @@ describe("alsMannschaftsliste — Maskierung", () => {
     /* Vorsorge: heute trägt kein Mannschaftsname ein Semikolon. Käme je eines
        vom Verband, verschöben sich die Spalten der ganzen Zeile — lautlos,
        weil eine verschobene Spalte plausibel aussieht. */
-    const zeilen = [sp(1, "Meier; Hans", ["1. Mannschaft; B"])];
+    /* ⚠ Die Teile ausdruecklich: das Semikolon gehoert in den NACHNAMEN,
+       also in die Spalte „Name". Waere es der Ableitung ueberlassen, landete
+       es im Vornamen, und der Fall pruefte die Trennregel der Attrappe. */
+    const zeilen = [sp(1, "Meier; Hans", ["1. Mannschaft; B"], [],
+      { vorname: "Hans", nachname: "Meier;" })];
     const [zeile] = datenzeilen(alsMannschaftsliste(zeilen, alleTeams(zeilen)));
-    expect(zeile).toBe('"Meier; Hans";"1. Mannschaft; B";;="1"');
+    expect(zeile).toBe('"Meier;";Hans;"1. Mannschaft; B";;="1"');
   });
 
   it("ein inneres Anführungszeichen wird verdoppelt", () => {
-    const zeilen = [sp(1, 'Hans "Hasi" Meier', ["T1"])];
+    const zeilen = [sp(1, 'Hans "Hasi" Meier', ["T1"], [],
+      { vorname: 'Hans "Hasi"', nachname: "Meier" })];
     const [zeile] = datenzeilen(alsMannschaftsliste(zeilen, alleTeams(zeilen)));
-    expect(zeile.startsWith('"Hans ""Hasi"" Meier";T1;')).toBe(true);
+    expect(zeile.startsWith('Meier;"Hans ""Hasi""";T1;')).toBe(true);
   });
 
   it("ein Zeilenumbruch im Namen zerreisst die Datei nicht", () => {
@@ -279,11 +315,12 @@ describe("alsMannschaftsliste — gegen baueSpielerZeilen", () => {
       [a(100, 1, 7, "s1"), a(100, 2, 13, "s2")],
       { 100: "Adrian Schmid" },
       new Map([[1, "1. Mannschaft"], [2, "2. Mannschaft"]]),
+      teileAus({ 100: "Adrian Schmid" }),
     );
     const daten = datenzeilen(alsMannschaftsliste(zeilen, alleTeams(zeilen)));
     expect(daten).toEqual([
-      'Adrian Schmid;1. Mannschaft;7, 13;="100"',
-      'Adrian Schmid;2. Mannschaft;7, 13;="100"',
+      'Schmid;Adrian;1. Mannschaft;7, 13;="100"',
+      'Schmid;Adrian;2. Mannschaft;7, 13;="100"',
     ]);
   });
 });
@@ -323,6 +360,7 @@ describe("⚠ Gewählt wird über den Schlüssel, angezeigt der Name", () => {
       [{ sfv_person_id: 700, sfv_team_id: 58655, rueckennr: 7 }] as never,
       { 700: "Wilma Weber" },
       new Map(),           // ⚠ leer: die Id ist nicht auflösbar
+      teileAus({ 700: "Wilma Weber" }),
     );
     expect(zeilen[0].teams).toEqual(["Team 58655"]);
     expect(zeilen[0].teamSchluessel).toEqual(["58655"]);
@@ -336,9 +374,13 @@ describe("⚠ Gewählt wird über den Schlüssel, angezeigt der Name", () => {
       [{ sfv_person_id: 700, sfv_team_id: 58655, rueckennr: 7 }] as never,
       { 700: "Wilma Weber" },
       new Map(),
+      teileAus({ 700: "Wilma Weber" }),
     );
     const csv = alsMannschaftsliste(zeilen, new Set(["58655"]));
-    expect(csv).toMatch(/Wilma Weber/);
+    /* ⚠ Nachname zuerst: „Wilma Weber" stuende so in keiner Zeile mehr.
+       Ein Muster auf den zusammengesetzten Namen waere ab dem 24.09.2026
+       dauerhaft rot — und der Fall handelt von der Auswahl, nicht vom Namen. */
+    expect(csv).toMatch(/Weber;Wilma/);
     /* ⚠ Ueber `datenzeilen()`, nicht selbst gezaehlt: der Helfer gibt es
        schon, und die Zeilenenden von Hand zu schreiben hat hier beim
        ersten Versuch echte Steuerzeichen in den Quelltext gelegt statt
@@ -354,8 +396,85 @@ describe("⚠ Gewählt wird über den Schlüssel, angezeigt der Name", () => {
       [{ sfv_person_id: 700, sfv_team_id: 58655, rueckennr: 7 }] as never,
       { 700: "Wilma Weber" },
       new Map(),
+      teileAus({ 700: "Wilma Weber" }),
     );
     const csv = alsMannschaftsliste(zeilen, new Set(["Team 58655"]));
     expect(datenzeilen(csv)).toHaveLength(0);
+  });
+});
+
+describe("⚠ Vorname und Name kommen aus den TEILEN, nie aus einer Trennung", () => {
+  /* Der Grund, aus dem `baueSpielerZeilen` ein viertes Argument bekam und es
+     PFLICHT ist statt optional: der Compiler nennt so jede Aufrufstelle. Und
+     der Grund, aus dem hier vier echte Namen stehen statt „Hans Meier":
+
+     ⚠ JEDE Trennung am Leerzeichen ist bei mindestens einem von ihnen falsch,
+     und zwar in BEIDE Richtungen. „Lorena Sara Hug" braucht die Trennung am
+     LETZTEN Leerzeichen, „Tamara Hidber Mullis" am ERSTEN — es gibt keine
+     Regel, die beide trifft. Deshalb wird nicht getrennt, sondern genommen,
+     was der Verband getrennt liefert. */
+  /* ⚠ ⚠  DIESE AUFTEILUNGEN SIND KONSTRUIERT, NICHT GEMESSEN.
+     Welches Wort der Verband bei diesen vier Menschen in `firstname` und
+     welches in `name` legt, ist ungemessen: `secondName` hat in der
+     Spezifikation weder Beschreibung noch Beispiel (geprüft am 24.09.2026
+     an `docs/sfv/swagger_2026-08-28.json`), und in keiner Spalte steht es.
+     Die Zusage hier ist deshalb NICHT „Lorenas Vorname ist X", sondern:
+     **was als `firstname` ankommt, bleibt Vorname.**
+
+     ⚠ Und der Beleg dafür liegt in der PAARUNG, nicht im Einzelfall: Zeile 1
+     und 3 wären nur durch eine Trennung am LETZTEN Leerzeichen zu treffen,
+     Zeile 2 und 4 nur durch eine am ERSTEN. Keine der beiden Regeln besteht
+     alle vier — nur das Durchreichen. Ein Fall allein wäre grün, egal welche
+     Regel der Code anwendet, und genau das ist beim ersten Versuch passiert:
+     die Sabotage „trenne am ersten Leerzeichen" machte 2 von 4 rot statt 4. */
+  const FAELLE: Array<[string, string, string]> = [
+    /* Zwei Vornamen → nur eine Trennung am LETZTEN Leerzeichen träfe das */
+    ["Lorena Sara", "Hug", "Hug;Lorena Sara"],
+    /* Allianzname, zwei Nachnamen → nur eine am ERSTEN träfe das */
+    ["Tamara", "Hidber Mullis", "Hidber Mullis;Tamara"],
+    /* Drei Vornamen → wieder nur die letzte */
+    ["Stella Laerke Mina", "Johansen", "Johansen;Stella Laerke Mina"],
+    /* Spanische Doppelform, zwei Nachnamen → wieder nur die erste */
+    ["Karmen", "Zerdilas Herrera", "Zerdilas Herrera;Karmen"],
+  ];
+
+  for (const [vorname, nachname, erwartet] of FAELLE) {
+    it(`„${vorname} ${nachname}" bleibt getrennt, wie der Verband es liefert`, () => {
+      const zeilen = baueSpielerZeilen(
+        [{ sfv_person_id: 1, sfv_team_id: 1, rueckennr: 7 }] as never,
+        { 1: `${vorname} ${nachname}` },
+        new Map([[1, "T"]]),
+        { 1: { vorname, nachname } },
+      );
+      const [zeile] = datenzeilen(alsMannschaftsliste(zeilen, new Set(["1"])));
+      expect(zeile).toBe(`${erwartet};T;7;="1"`);
+    });
+  }
+
+  it("⚠ ohne Teile steht der GANZE Name unter Name, und Vorname bleibt LEER", () => {
+    /* Der Rueckfall, und er raet ausdruecklich nicht. Eine leere Zelle ist
+       eine Auskunft — eine falsch getrennte eine Behauptung, und die stuende
+       in einer Liste, die jemand abhakt. */
+    const zeilen = baueSpielerZeilen(
+      [{ sfv_person_id: 1, sfv_team_id: 1, rueckennr: 7 }] as never,
+      { 1: "Lorena Sara Hug" },
+      new Map([[1, "T"]]),
+      {},                                  // ⚠ keine Teile bekannt
+    );
+    const [zeile] = datenzeilen(alsMannschaftsliste(zeilen, new Set(["1"])));
+    expect(zeile).toBe('Lorena Sara Hug;;T;7;="1"');
+  });
+
+  it("⚠ und die Sortierung folgt dem NACHNAMEN, nicht dem ganzen Namen", () => {
+    /* Die Gegenprobe zur Spaltenfrage: waere `name` weiterhin der
+       zusammengesetzte Wert, stuende „Anna Zeller" vor „Bruno Amrein". In
+       einer Liste zum Abhaken sucht man den Nachnamen. */
+    const z = (id: number, vorname: string, nachname: string) => ({
+      sfv_person_id: id, name: `${vorname} ${nachname}`, teams: ["T"],
+      teamSchluessel: ["k"], rueckennummern: [], einsaetze: 1, vorname, nachname,
+    });
+    const zeilen = [z(1, "Anna", "Zeller"), z(2, "Bruno", "Amrein")];
+    const daten = datenzeilen(alsMannschaftsliste(zeilen, new Set(["k"])));
+    expect(daten.map(d => d.split(";")[0])).toEqual(["Amrein", "Zeller"]);
   });
 });

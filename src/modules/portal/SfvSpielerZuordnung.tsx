@@ -48,8 +48,9 @@
    ═══════════════════════════════════════════════════════════════ */
 import { useEffect, useMemo, useState } from "react";
 import { Btn, Card, InfoBox } from "../../theme.ts";
-import { holeNamen, leseNamenAntwort, leseNamenJahrgaenge }
+import { holeNamen, leseNamenAntwort, leseNamenJahrgaenge, leseNamenTeile }
   from "../../domains/sfv/sfvService.ts";
+import type { NamensTeile } from "../../domains/sfv/sfvService.ts";
 import { schlageAlleVor } from "../../domains/sfv/spielerVorschlag.ts";
 import type { VorschlagKandidat } from "../../domains/sfv/spielerVorschlag.ts";
 import { TI } from "../../icons.tsx";
@@ -82,6 +83,19 @@ export function SfvSpielerZuordnung({ sb, vereinId, benutzerId, dbMitglieder, db
      wieder Nummern — und die Maske sagt ihm, wie er sie zurückholt. Das ist
      der Preis dafür, dass hinterher nichts aufzuräumen ist. */
   const [namen, setNamen] = useState<Record<number, string>>({});
+  /**
+   * Vorname und Nachname getrennt, wie der Verband sie liefert.
+   *
+   * ⚠ ⚠  NUR IM ZUSTAND, wie die Namen — und genau deshalb brauchte die
+   * Trennung keine Spalte in der Datenbank und keinen Nachlauf. Der
+   * Verband liefert `firstname` und `name` getrennt; bis zum 24.09.2026
+   * wurden sie zusammengesetzt und die Teile verworfen.
+   *
+   * ⚠ Leer, solange „Namen holen" nicht gedrückt ist — dann bleibt die
+   * Spalte `Vorname` im Export leer, und der ganze Name steht unter
+   * `Name`. Nicht geraten.
+   */
+  const [namensTeile, setNamensTeile] = useState<Record<number, NamensTeile>>({});
   const [namenLaeuft, setNamenLaeuft] = useState(false);
   const [namenFehler, setNamenFehler] = useState<string | null>(null);
   const [ohneNamen, setOhneNamen] = useState(0);
@@ -185,6 +199,12 @@ export function SfvSpielerZuordnung({ sb, vereinId, benutzerId, dbMitglieder, db
     setNamenLaeuft(false);
     if (fehler) { setNamenFehler(fehler); return; }
     setNamen(leseNamenAntwort(daten));
+    /* ⚠ Aus DERSELBEN Antwort, mit einer zweiten Funktion — nicht aus
+       dem Namen zurueckgerechnet. Wer den zusammengesetzten Namen wieder
+       zerlegt, misst seine eigene Formatierung; genau das ist die Familie,
+       in der am 05.09.2026 ein Zaehler 431 Klarnamen meldete, wo null
+       waren. */
+    setNamensTeile(leseNamenTeile(daten));
     setJahrgaenge(leseNamenJahrgaenge(daten));
     /* ⚠ `undefined` heisst NICHT GEFRAGT, nicht „alle lesbar". Eine Fassung
        vor dem 13.09.2026 schickt das Feld nicht — dann bleibt es `null` und
@@ -205,7 +225,7 @@ export function SfvSpielerZuordnung({ sb, vereinId, benutzerId, dbMitglieder, db
      die Liste. Wer erst zuordnet und dann exportiert, bekommt eine kürzere
      Liste und käme nicht darauf, dass die eigene Arbeit der Grund ist. */
   const spielerZeilen = useMemo(
-    () => baueSpielerZeilen(aufstellung, namen, teamNamen),
+    () => baueSpielerZeilen(aufstellung, namen, teamNamen, namensTeile),
     [aufstellung, namen, teamNamen]);
 
   async function listeKopieren() {

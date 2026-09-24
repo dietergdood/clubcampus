@@ -180,6 +180,44 @@ export function leseNamenAntwort(daten: NamenAntwort | null): Record<number, str
   return raus;
 }
 
+/** Vorname und Nachname einer Person, wie der Verband sie getrennt liefert. */
+export interface NamensTeile {
+  vorname: string;
+  nachname: string;
+}
+
+/**
+ * Dieselbe Antwort, aber die TEILE — `firstname` und `name` des Verbands.
+ *
+ * ⚠ ⚠  EINE EIGENE FUNKTION UND KEIN ZWEITES FELD IN DER ERSTEN. Die
+ * Anzeige braucht den ganzen Namen, der Export die Teile; beides aus
+ * einem Aufruf zu geben hiesse, jeden Leser zu zwingen, sich für eine
+ * Hälfte zu entscheiden. Die zwei Funktionen lesen dieselbe Antwort und
+ * können nicht auseinanderlaufen — ein Fall hält fest, dass
+ * `name === [vorname, nachname].filter(Boolean).join(" ")`.
+ *
+ * ⚠ Eine Antwort von VOR dem 24.09.2026 führt die Teile nicht. Dann bleibt
+ * der Eintrag hier WEG, statt am Leerzeichen geraten zu werden — und der
+ * Export zeigt eine leere Spalte. **Eine leere Zelle ist eine Auskunft,
+ * eine falsch getrennte eine Behauptung.**
+ */
+export function leseNamenTeile(daten: NamenAntwort | null): Record<number, NamensTeile> {
+  const raus: Record<number, NamensTeile> = {};
+  for (const e of daten?.namen ?? []) {
+    const id = Number(e?.sfv_person_id);
+    if (!Number.isFinite(id)) continue;
+    const roh = e as unknown as { vorname?: unknown; nachname?: unknown };
+    const vorname = typeof roh.vorname === "string" ? roh.vorname.trim() : "";
+    const nachname = typeof roh.nachname === "string" ? roh.nachname.trim() : "";
+    /* ⚠ Mindestens EINER der beiden muss da sein. Zwei leere Teile sind
+       keine Trennung, sondern eine alte Antwort — und die gehört nicht in
+       die Karte, sonst überschreibt sie später eine echte. */
+    if (!vorname && !nachname) continue;
+    raus[id] = { vorname, nachname };
+  }
+  return raus;
+}
+
 /**
  * Einen Sync-Lauf von Hand anstossen.
  *
