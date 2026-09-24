@@ -21,14 +21,21 @@
    Zeilen für 287 Spieler. Verworfen: dann steht jemand zweimal in der
    Liste, und beim Abhaken übersieht man den zweiten. (Didi.)
    ═══════════════════════════════════════════════════════════════ */
+import { OHNE_MANNSCHAFT } from "./matchdatenAnzeige.ts";
 import type { AufstellungZeile } from "./matchdatenAnzeige.ts";
 
 export interface SpielerZeile {
   sfv_person_id: number;
   /** Aus der SFV-Antwort; leer, wenn der Verband keinen liefert. */
   name: string;
-  /** ALLE Mannschaften, in denen die Person aufgelaufen ist. */
+  /** ALLE Mannschaften, in denen die Person aufgelaufen ist — als
+      ANZEIGENAME. Unbekannte Id: `Team 58655`. */
   teams: string[];
+  /** Dieselben Mannschaften als AUSWAHLSCHLUESSEL — `String(sfv_team_id)`,
+      dieselbe Form wie `gruppiereNachTeam()` sie bildet.
+      ⚠ Getrennt von `teams`, weil ein Anzeigename sich aendern darf und
+      ein Schluessel nicht. */
+  teamSchluessel: string[];
   /** ALLE Rückennummern — 58 der 287 laufen unter mehr als einer. */
   rueckennummern: number[];
   einsaetze: number;
@@ -55,7 +62,7 @@ export function baueSpielerZeilen(
       z = {
         sfv_person_id: a.sfv_person_id,
         name: namen[a.sfv_person_id] ?? "",
-        teams: [], teamIds: new Set(), rueckennummern: [], einsaetze: 0,
+        teams: [], teamSchluessel: [], teamIds: new Set(), rueckennummern: [], einsaetze: 0,
       };
       proPerson.set(a.sfv_person_id, z);
     }
@@ -72,7 +79,29 @@ export function baueSpielerZeilen(
     /* ⚠ Sortiert, damit „2. Mannschaft, 3. Mannschaft" nicht mal so und mal
        andersherum dasteht — sonst sieht dieselbe Person bei zwei Läufen
        verschieden aus. */
+    /* ⚠ `Team ${id}` bleibt der Platzhalter — er sagt, DASS die
+       Team-Zuordnung fehlt, und WELCHE Nummer sie braucht. Ein Test haelt
+       das seit langem fest, und er hat am 24.09.2026 eine Reparatur
+       aufgehalten, die ihn geopfert haette. */
     teams: [...z.teamIds].map(id => teamNamen.get(id) || `Team ${id}`).sort(),
+    /* ⚠ ⚠  DER SCHLUESSEL FUER DIE AUSWAHL — und er ist NICHT der
+       Anzeigename.
+
+       Die Mannschafts-Auswahl in der Maske kommt aus
+       `gruppiereNachTeam()`, und die gruppiert nach `sfv_team_id`. Wer
+       hier gegen `teams` filtert, vergleicht ANZEIGENAMEN mit
+       GRUPPENSCHLUESSELN — beides `string`, der Typ passt, die Bedeutung
+       nicht. Gemessen am 24.09.2026: das Kaestchen laesst sich setzen,
+       der Download laeuft, und die Datei enthaelt nur die Kopfzeile.
+
+       ⚠ Und `String(id)` ist genau die Form, die `gruppiereNachTeam`
+       bildet (`String(o.sfv_team_id ?? "-")`). Eine Person ohne jede
+       Team-Id bekommt hier eine LEERE Liste und ist damit ueber kein
+       Kaestchen erreichbar — in der Maske steht sie unter `"-"`. Das ist
+       die eine Lage, die beide Seiten noch verschieden sehen; heute
+       folgenlos, weil `bildeAufstellung` ohne Team-Id keine Zeile
+       schreibt. */
+    teamSchluessel: [...z.teamIds].map(String).sort(),
     rueckennummern: [...z.rueckennummern].sort((a, b) => a - b),
     einsaetze: z.einsaetze,
   }));
@@ -105,7 +134,10 @@ export function alsTextliste(zeilen: SpielerZeile[]): string {
   let letztesTeam = "\0";
 
   for (const z of zeilen) {
-    const team = z.teams.join(", ") || "Ohne Mannschaft";
+    /* ⚠ Die Konstante, nicht die getippte Zeichenkette — ihr eigener
+       Kommentar in matchdatenAnzeige.ts verlangt genau das. Wertgleich
+       zum Stand davor, es ändert sich keine Ausgabe. */
+    const team = z.teams.join(", ") || OHNE_MANNSCHAFT;
     if (team !== letztesTeam) { teil.push(`\n${team}`); letztesTeam = team; }
     const nr = z.rueckennummern.length ? `Nr. ${z.rueckennummern.join(", ")}` : "";
     teil.push([
@@ -184,4 +216,179 @@ ${items}
     aufgenommen: mitNamen.length,
     uebergangen: zeilen.length - mitNamen.length,
   };
+}
+
+/* ── C · Liste nach Mannschaft (CSV für Excel) ──────────────────────
+
+   Zum Ausdrucken und Abhaken, mannschaftsweise — und damit die EINE
+   Ausgabe, in der eine Person MEHRFACH stehen darf: eine Zeile je
+   Person und Mannschaft. Der Kopf dieser Datei begründet, warum die
+   Textliste das nicht tut (dort hakt man EINE Liste ab und übersieht
+   den zweiten Eintrag). Hier ist die Mannschaft der Zuschnitt: wer die
+   Liste der Cb-Junioren durchgeht, will die Person darin sehen, auch
+   wenn sie zusätzlich bei den Ca-Junioren steht.
+
+   ⚠ EIGENER CSV-SCHREIBER, OBWOHL `shared/list/exportUtils.ts` EINEN
+   HAT — und das ist keine vergessene Dublette. `csvDownload()` dort
+   quotet JEDES Feld unbedingt; die Textform der Personennummer
+   (siehe `alsTextzelle`) verträgt das nicht: in Anführungszeichen
+   gesetzt ist sie keine Zelle mehr, die Excel als Text übernimmt,
+   sondern sichtbarer Text `="123"`. Deshalb hier bedingtes Quoten.
+   Wer die zwei je zusammenlegt, legt zuerst diese Bedingung zusammen. */
+
+/** Die Spaltenköpfe, in der bestellten Reihenfolge. */
+export const MANNSCHAFTSLISTE_SPALTEN = [
+  "Name", "Team", "Rückennummer", "SFV-personId",
+] as const;
+
+/* Excel in der Schweiz liest CSV mit Semikolon. */
+const CSV_TRENNER = ";";
+
+/**
+ * Ein CSV-Feld, nur wenn nötig in Anführungszeichen.
+ *
+ * ⚠ VORSORGE, kein bekannter Fall: heute trägt kein Mannschaftsname ein
+ * Semikolon, und die Nummernzelle trennt mit Komma. Ein Mannschaftsname kommt
+ * aber vom Verband, und ein Trennzeichen darin zerschösse die Spalten der
+ * ganzen Zeile — lautlos, weil eine verschobene Spalte plausibel aussieht.
+ *
+ * ⚠ Was es NICHT tut: ein Feld gegen Excel-Formeln sichern. Beginnt ein
+ * Mannschaftsname je mit `=`, `+`, `-` oder `@`, wertet Excel ihn aus — auch
+ * in Anführungszeichen. Nicht abgefangen, weil fremde Daten stillschweigend
+ * zu putzen den Fehler versteckt statt ihn zu melden; offener Punkt, sobald
+ * ein solcher Name auftaucht.
+ */
+/* ⚠ Das Anfuehrungszeichen steht als \u0022 und nicht als Zeichen: ein
+   ASCII-" in einem Regex-Literal bringt den Scanner von
+   scripts/check-quotes.mjs aus dem Tritt — er kennt keine Regex-Literale,
+   haelt das Zeichen fuer einen Stringanfang und meldet danach Fehlalarm in
+   dieser Datei (gemessen am 24.09.2026, Exit 1). Wertgleich; wer es
+   zurueckvereinfacht, macht die Pruefkette rot.
+   Dieselbe Familie wie das NUL-Byte, das grep verstummen liess. */
+function csvFeld(wert: string): string {
+  return /[;\u0022\r\n]/.test(wert) ? `"${wert.replace(/"/g, '""')}"` : wert;
+}
+
+/**
+ * Die Personennummer so, dass Excel sie als TEXT übernimmt.
+ *
+ * ⚠ ANFÜHRUNGSZEICHEN ALLEIN GENÜGEN NICHT. `"1097318"` in einer CSV-Zeile
+ * entpackt Excel und macht eine Zahl daraus; die Form `="1097318"` ist der
+ * einzige Weg, der ohne Import-Assistenten eine Textzelle ergibt.
+ *
+ * ⚠ DER PREIS, und er gehört genannt: die Zelle ist damit eine FORMEL — in
+ * Excel wie in LibreOffice. Angezeigt und beim gewöhnlichen Kopieren
+ * übernommen wird `1097318`; wer die Rohzelle liest, bekommt `="1097318"`.
+ *
+ * ⚠ UND DIE GRENZE DER ZUSAGE, gemessen statt vermutet: `sfv_person_id` ist
+ * in TypeScript eine `number` — führende Nullen sind strukturell unmöglich —
+ * und die Nummern sind sechs- bis siebenstellig, also weit unter den 15
+ * Stellen, ab denen Excel rundet. Der WERT geht also auch als Zahl nicht
+ * verloren. Die Textform schützt den TYP, nicht den Wert: sie hält die Spalte
+ * vergleichbar mit einer Textspalte und sortierbar wie eine Kennung. Wer sie
+ * je gegen eine nackte Zahl tauscht, verliert nichts als das.
+ */
+function alsTextzelle(sfvPersonId: number): string {
+  return `="${sfvPersonId}"`;
+}
+
+interface MannschaftsZeile {
+  name: string;
+  team: string;
+  /** Alle Nummern in EINER Zelle, mit `, ` — wie die Maske sie zeigt. */
+  nummern: string;
+  sfvPersonId: number;
+}
+
+/**
+ * Die Liste nach Mannschaft, als CSV für Excel.
+ *
+ * `teamsGewaehlt` nennt die Mannschaften beim NAMEN — dasselbe, was
+ * `SpielerZeile.teams` führt und was die Maske gruppiert, einschliesslich
+ * `OHNE_MANNSCHAFT` für die Personen ohne Team-Zuordnung.
+ *
+ * ⚠ EINE LEERE AUSWAHL ERGIBT KEINE DATENZEILE — und ausdrücklich nicht
+ * alle. „Nichts gewählt“ und „alles gewählt“ dürfen nicht dasselbe bedeuten;
+ * sonst bekommt jemand 314 Zeilen, der eine Mannschaft vergessen hat
+ * anzuklicken, und hält sie für seine Auswahl.
+ *
+ * Der Spaltenkopf bleibt trotzdem stehen: eine Datei mit Köpfen und ohne
+ * Zeilen ist eine leere Liste, eine ganz leere Datei sieht nach einem Fehler
+ * beim Erzeugen aus.
+ *
+ * ⚠ EINE Namensspalte, und die Spalte `Vorname` ENTFÄLLT. Bestellt waren
+ * beide, mit der Bedingung „nimm die getrennten Felder des Verbands, falls es
+ * sie gibt“. Es gibt sie bei uns nicht: der Verband liefert `firstname`,
+ * `name` und `secondName` getrennt, und `matchdaten.ts` setzt sie an vier
+ * Stellen zusammen und verwirft die Teile (`sfv_personen.name` und
+ * `spiel_aufstellung.name` führen EIN Feld). Eine leere Spalte `Vorname`
+ * wäre eine Behauptung über die Person („hat keinen“); sie weglassen ist
+ * eine Auskunft über unsere Daten.
+ *
+ * ⚠ Und NICHT am Leerzeichen trennen: „Lorena Sara Hug“ und „Tamara Hidber
+ * Mullis“ sind mit derselben Regel nicht lösbar — beim einen ist der Vorname
+ * zweiteilig, beim anderen der Nachname. Wer hier trennt, hat in der Hälfte
+ * der Fälle recht und weiss nicht, in welcher.
+ */
+export function alsMannschaftsliste(
+  zeilen: SpielerZeile[],
+  teamsGewaehlt: ReadonlySet<string>,
+): string {
+  const daten: MannschaftsZeile[] = [];
+
+  for (const z of zeilen) {
+    /* ⚠ ⚠  GEWAEHLT WIRD UEBER DEN SCHLUESSEL, ANGEZEIGT WIRD DER NAME.
+
+       Sie stehen paarweise in derselben Reihenfolge (beide aus `teamIds`,
+       beide sortiert). Wer hier gegen `teams` filtert, vergleicht
+       Anzeigenamen mit Gruppenschluesseln — beides `string`, der Typ
+       passt, die Bedeutung nicht. Gemessen am 24.09.2026: Kaestchen
+       setzbar, Download laeuft, Datei mit nur der Kopfzeile.
+
+       ⚠ Eine Person ohne jede Team-Id steht unter demselben Namen wie in
+       der Maske; ihr Schluessel ist dann `"-"`, wie `gruppiereNachTeam()`
+       ihn bildet. */
+    const paare: Array<[string, string]> = z.teamSchluessel.length
+      ? z.teamSchluessel.map((k, i) => [k, z.teams[i] ?? OHNE_MANNSCHAFT])
+      : [["-", OHNE_MANNSCHAFT]];
+    for (const [schluessel, team] of paare) {
+      if (!teamsGewaehlt.has(schluessel)) continue;
+      daten.push({
+        /* ⚠ Leer, wenn der Verband keinen Namen liefert — und hier NICHT
+           `OHNE_NAMEN` wie in der Textliste. Dort ist es eine Anzeigezeile,
+           hier ein Datenfeld: ein Warntext in der Namensspalte würde
+           sortiert und gefiltert, als wäre er ein Name. */
+        name: z.name,
+        team,
+        nummern: z.rueckennummern.join(", "),
+        sfvPersonId: z.sfv_person_id,
+      });
+    }
+  }
+
+  /* Mannschaft, darin Name — `localeCompare` mit "de", damit Umlaute
+     einsortiert werden und nicht hinter Z landen.
+     ⚠ Der Wächterwert für den fehlenden Namen ist derselbe wie in
+     `baueSpielerZeilen`, als ESCAPE geschrieben: zwei Ausgaben derselben
+     Daten sollen nicht verschieden ordnen. */
+  daten.sort((a, b) =>
+    a.team.localeCompare(b.team, "de")
+    || (a.name || "\uFFFF").localeCompare(b.name || "\uFFFF", "de"));
+
+  const kopf = MANNSCHAFTSLISTE_SPALTEN.map(csvFeld).join(CSV_TRENNER);
+  const zeilenText = daten.map(d => [
+    csvFeld(d.name),
+    csvFeld(d.team),
+    csvFeld(d.nummern),
+    /* ⚠ OHNE `csvFeld`: die Textform trägt selbst Anführungszeichen, und ein
+       zweites Quoten machte aus der Zelle sichtbaren Text `="123"`. */
+    alsTextzelle(d.sfvPersonId),
+  ].join(CSV_TRENNER));
+
+  /* ⚠ Führendes BOM, sonst liest Excel die Umlaute als Latin-1 — und ⚠ als
+     ESCAPE geschrieben, nicht als rohes Byte: ein BOM im Quelltext ist genau
+     das, was `scripts/check-encoding.mjs` abweist (dieselbe Regel wie beim
+     NUL-Wächter in `alsTextliste`). Zeilenenden CRLF, weil Excel sie in CSV
+     erwartet. */
+  return "\uFEFF" + [kopf, ...zeilenText].join("\r\n") + "\r\n";
 }

@@ -53,7 +53,9 @@ import { holeNamen, leseNamenAntwort, leseNamenJahrgaenge }
 import { schlageAlleVor } from "../../domains/sfv/spielerVorschlag.ts";
 import type { VorschlagKandidat } from "../../domains/sfv/spielerVorschlag.ts";
 import { TI } from "../../icons.tsx";
-import { baueSpielerZeilen, alsTextliste, alsWxr } from "../../domains/spiele/spielerAusgabe.ts";
+import {
+  baueSpielerZeilen, alsTextliste, alsWxr, alsMannschaftsliste,
+} from "../../domains/spiele/spielerAusgabe.ts";
 import { dateiDownload, inZwischenablage } from "../../shared/list/exportUtils.ts";
 import { BL } from "../../constants.ts";
 import {
@@ -107,6 +109,28 @@ export function SfvSpielerZuordnung({ sb, vereinId, benutzerId, dbMitglieder, db
      der Kette. Zwei Aussagen, zwei Orte. */
   const [ladefehler, setLadefehler] = useState<string | null>(null);
   const [offenesTeam, setOffenesTeam] = useState<string | null>(null);
+  /* ══ Welche Mannschaften in die Excel-Liste gehen ═══════════════════
+     ⚠ ⚠  DER NAME IST DER SCHLÜSSEL, NICHT `sfv_team_id`. Der Auftrag
+     nannte `String(sfv_team_id ?? "-")` — derselbe Schlüssel, den das
+     Aufklappen benutzt. `alsMannschaftsliste()` filtert aber gegen
+     `SpielerZeile.teams`, und das führt NAMEN; eine Nummer trifft dort
+     nie.
+
+     ⚠ Und beides ist `ReadonlySet<string>`: der Typ passt, die Bedeutung
+     nicht. `typecheck` wäre grün gewesen, die Datei leer — und die
+     Meldung daneben hätte „1 Spieler geladen" behauptet. Genau die
+     Familie „ein Filter auf einen NAMEN prüft eine Schreibweise", nur
+     einmal umgedreht: hier prüft eine Nummer, wo ein Name gemeint ist.
+
+     ⚠ Übersetzt wird deshalb NICHT. Zwei Schlüsselräume in einer Maske,
+     zwischen denen jemand hin- und herrechnet, sind die Stelle, an der
+     es still auseinanderläuft; gespeichert wird gleich das, was die
+     Ausgabe versteht. Das Aufklappen behält seinen eigenen Schlüssel —
+     es hat mit der Auswahl nichts zu tun.
+
+     ⚠ Leer heisst leer, nicht „alle". Wer nichts wählt, bekommt keine
+     Datei — siehe `mannschaftslisteHerunterladen()`. */
+  const [teamsGewaehlt, setTeamsGewaehlt] = useState<ReadonlySet<string>>(new Set());
 
   async function laden() {
     setLaedt(true);
@@ -198,6 +222,79 @@ export function SfvSpielerZuordnung({ sb, vereinId, benutzerId, dbMitglieder, db
   function listeHerunterladen() {
     dateiDownload(alsTextliste(spielerZeilen), "spieler-zuordnung.txt", "text/plain;charset=utf-8");
     setAusgabeMeldung(`${spielerZeilen.length} Spieler als Textdatei geladen.`);
+  }
+
+  /* ══ Die Auswahl der Mannschaften ═══════════════════════════════════
+     ⚠ ⚠  KEIN DREIWERTIGER SCHALTER, UND DAS IST DIE REGEL AUS CLAUDE.MD
+     („Zwei Zustände für EINEN Schlüssel sind ehrlich. Zwei Zustände für
+     eine SAMMLUNG sind es nicht", 21.08.2026).
+
+     Ein Kästchen JE MANNSCHAFT ist richtig — ein Schlüssel, zwei
+     Zustände. Über der Sammlung wäre dasselbe Kästchen falsch: eine
+     Sammlung hat drei Tatsachen (alles · gemischt · nichts), und ab drei
+     Mannschaften ist „gemischt" der Normalfall — der Schalter stünde
+     also meistens falsch.
+
+     ⚠ „Gemischt" ist kein Wert, den man SETZEN kann, nur einer, den man
+     ANZEIGT. Deshalb hier zwei HANDLUNGEN statt eines Zustands —
+     „Alle auswählen" und „Auswahl aufheben". Jede sagt, was sie tut,
+     und keine kann etwas Falsches behaupten. Die Mischung steht als
+     ZAHL daneben („n von m gewählt"): angezeigt, nicht bedienbar. */
+  /* ⚠ Eine MENGE, keine Liste. Zwei `sfv_team_id`, die in `dbTeams` auf
+     denselben Namen zeigen, sind für die Ausgabe eine Mannschaft — als
+     Liste gezählt stünde nach „Alle auswählen" „1 von 2 gewählt", und die
+     Anzeige behauptete eine unvollständige Auswahl. */
+  /* ⚠ ⚠  DIE SCHLUESSEL, NICHT DIE NAMEN — berichtigt am 24.09.2026.
+     Hier standen Teamnamen, weil der Auftrag sie verlangte. Die Ausgabe
+     filtert aber gegen `SpielerZeile.teamSchluessel` (`String(sfv_team_id)`),
+     und **beides ist `string`: der Typ passt, die Bedeutung nicht.**
+     Gemessen: Kaestchen setzbar, Download laeuft, Datei mit nur der
+     Kopfzeile. `key` ist genau die Form, die `gruppiereNachTeam()` bildet. */
+  const alleTeamSchluessel = useMemo(
+    () => new Set(gruppen.map(g => String(g.sfv_team_id ?? "-"))), [gruppen]);
+
+  function teamUmschalten(schluessel: string) {
+    setTeamsGewaehlt(alt => {
+      const neu = new Set(alt);
+      if (neu.has(schluessel)) neu.delete(schluessel); else neu.add(schluessel);
+      return neu;
+    });
+  }
+
+  /* ⚠ Gegen die HEUTIGEN Gruppen gezählt, nicht `teamsGewaehlt.size`.
+     Verschwindet eine Mannschaft aus der Liste (alle zugeordnet), bleibt
+     ihr Name im Satz stehen — die Zahl behauptete dann eine Mannschaft
+     mehr, als es zu wählen gibt. */
+  const anzahlGewaehlt = [...alleTeamSchluessel]
+    .filter(k => teamsGewaehlt.has(k)).length;
+
+  /* ⚠ AUS DER ENTSCHEIDUNG GEZÄHLT, NICHT AUS DER AUSGABE. Die Zeilen des
+     erzeugten CSV zu zählen wäre der Umweg, an dem am 05.09.2026 ein
+     Zähler 431 Klarnamen meldete, wo null waren: wer seinen eigenen
+     Ausgabetext wieder zerlegt, misst seine Formatierung mit.
+
+     Gezählt wird dieselbe Liste mit demselben Satz, den die Funktion
+     bekommt — die Zahl kann der Datei deshalb nicht widersprechen. */
+  const anzahlGewaehlteSpieler = useMemo(
+    () => spielerZeilen.filter(
+      z => (z.teamSchluessel.length ? z.teamSchluessel : ["-"])
+        .some(k => teamsGewaehlt.has(k))).length,
+    [spielerZeilen, teamsGewaehlt]);
+
+  function mannschaftslisteHerunterladen() {
+    /* ⚠ NICHTS GEWÄHLT HEISST NICHTS GELADEN. Eine leere Datei sieht aus
+       wie ein Fehlschlag und ist einer, den niemand meldet — sie landet
+       im Download-Ordner und fällt erst auf, wenn jemand sie öffnet.
+       Stattdessen der Satz, der sagt, was zu tun ist. */
+    if (anzahlGewaehlt === 0) {
+      setAusgabeMeldung("Keine Mannschaft gewählt — bitte mindestens ein Kästchen "
+        + "an einer Mannschaft setzen. Es wurde nichts geladen.");
+      return;
+    }
+    dateiDownload(alsMannschaftsliste(spielerZeilen, teamsGewaehlt),
+      "spieler-nach-mannschaft.csv", "text/csv;charset=utf-8");
+    setAusgabeMeldung(`${anzahlGewaehlteSpieler} Spieler aus ${anzahlGewaehlt} `
+      + `Mannschaft${anzahlGewaehlt === 1 ? "" : "en"} geladen.`);
   }
 
   function wxrHerunterladen() {
@@ -415,6 +512,36 @@ export function SfvSpielerZuordnung({ sb, vereinId, benutzerId, dbMitglieder, db
               <Btn small variant="outline" onClick={wxrHerunterladen}>
                 WordPress-Importdatei (XML)
               </Btn>
+              <Btn small variant="outline" onClick={mannschaftslisteHerunterladen}>
+                Liste nach Mannschaft (Excel)
+              </Btn>
+            </div>
+
+            {/* ⚠ ZWEI HANDLUNGEN, KEIN SCHALTER. Ein Kästchen „alle" über
+                einer Sammlung müsste drei Tatsachen auf zwei Stellungen
+                abbilden und stünde bei jeder Teilauswahl falsch — die
+                Regel steht bei `alleTeamSchluessel`. Ein Knopf beschreibt,
+                was er tut, und kann nichts Falsches behaupten.
+
+                Die Mischung steht als Zahl daneben: angezeigt, nicht
+                bedienbar. */}
+            <div className="cc-row cc-gap-8 cc-mt-8" style={{flexWrap:"wrap"}}>
+              <Btn small variant="outline"
+                onClick={() => setTeamsGewaehlt(new Set(alleTeamSchluessel))}>
+                Alle auswählen
+              </Btn>
+              <Btn small variant="outline"
+                onClick={() => setTeamsGewaehlt(new Set())}>
+                Auswahl aufheben
+              </Btn>
+              <span className="cc-text-sm cc-text-sub">
+                {anzahlGewaehlt} von {alleTeamSchluessel.size} Mannschaften gewählt
+              </span>
+            </div>
+            <div className="cc-inline-hint">
+              Für „Liste nach Mannschaft (Excel)“: das Kästchen steht an jeder
+              Mannschaft weiter unten. Ohne Auswahl wird nichts geladen — eine
+              leere Datei sähe aus wie ein Fehlschlag.
             </div>
             <div className="cc-inline-hint">
               Nummer, Name, Mannschaft und Rückennummern der {spielerZeilen.length} Spieler
@@ -493,12 +620,36 @@ export function SfvSpielerZuordnung({ sb, vereinId, benutzerId, dbMitglieder, db
         return (
           <Card key={key}>
             <div className="cc-section-title-row">
-              <button className="cc-section-title cc-row cc-gap-6"
-                style={{ background: "none", border: "none", cursor: "pointer", padding: 0 }}
-                onClick={() => setOffenesTeam(auf ? null : key)}>
-                <TI n={auf ? "chevron-down" : "chevron-right"} size={14}/>
-                {g.teamName}
-              </button>
+              <div className="cc-row cc-gap-6">
+                {/* ⚠ ⚠  DAS KÄSTCHEN STEHT NEBEN DEM AUSLÖSER, NICHT DARIN.
+                    Die Überschrift ist der Knopf fürs Aufklappen; ein
+                    Kästchen INNERHALB wäre nicht nur ungültiges Markup,
+                    sondern ein Klick, der ZWEI Dinge tut — auswählen und
+                    aufklappen. Zwei Wirkungen auf einen Klick sind von
+                    einer falschen Wirkung nicht zu unterscheiden.
+
+                    Als Geschwister blubbert der Klick heute nirgends hin.
+                    `stopPropagation` steht trotzdem da: es kostet nichts
+                    und hält, wenn jemand die Zeile später anklickbar
+                    macht — der naheliegendste nächste Umbau. Ein Fall in
+                    `spielerVorschlagEinbau.test.jsx` hält die Zusage fest,
+                    damit sie nicht still bricht. */}
+                {/* ⚠ `key` ist der Gruppenschluessel (`String(sfv_team_id ?? "-")`),
+                    nicht der Anzeigename — siehe `alleTeamSchluessel`. Das
+                    `aria-label` nennt weiter den Namen: es spricht zum
+                    Menschen, der Schluessel zur Ausgabe. */}
+                <input type="checkbox" checked={teamsGewaehlt.has(key)}
+                  aria-label={`${g.teamName} für die Liste wählen`}
+                  title="Für „Liste nach Mannschaft (Excel)“ auswählen"
+                  onClick={ev => ev.stopPropagation()}
+                  onChange={() => teamUmschalten(key)}/>
+                <button className="cc-section-title cc-row cc-gap-6"
+                  style={{ background: "none", border: "none", cursor: "pointer", padding: 0 }}
+                  onClick={() => setOffenesTeam(auf ? null : key)}>
+                  <TI n={auf ? "chevron-down" : "chevron-right"} size={14}/>
+                  {g.teamName}
+                </button>
+              </div>
               <span className="cc-text-sm cc-text-sub">{g.offen.length} offen</span>
             </div>
 

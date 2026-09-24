@@ -49,6 +49,34 @@
        still aushöhlen.
      · **`scripts/` bleibt draußen** — Begründung unten bei ORDNER.
 
+   ⚠ ⚠  EIN BEKANNTER FEHLALARM, UND ER ZEIGT AUF DIE FALSCHE ZEILE
+   (gemessen 24.09.2026)
+
+   Der Zustandsleser kennt **keine Regex-Literale**. Ein Anführungszeichen
+   darin — `/[;"
+]/` — versetzt ihn in den String-Zustand, und alles
+   danach gilt als Text, bis das nächste `"` kommt.
+
+   ⚠ Die Folge ist nicht, dass er zu viel meldet, sondern dass er die
+   FALSCHE STELLE meldet. Gemessen in `spielerAusgabe.ts`: die Ursache
+   stand in Zeile 241, gemeldet wurde Zeile **296** — ein Kommentar, der
+   ganz richtig `wäre` schreibt. Wer dort sucht, findet nichts und hält
+   die Prüfung für kaputt.
+
+   **Dieselbe Familie wie „eine Meldung nennt das letzte Glied der Kette,
+   nicht das gerissene."**
+
+   ⚠ Der Umweg, bis es jemand behebt: das Zeichen als `"`
+   schreiben. Wertgleich für die Regex, unsichtbar für den Scanner — so
+   steht es in `spielerAusgabe.ts:241`, mit Begründung daneben.
+
+   ⚠ Und warum hier nicht einfach ein Regex-Erkenner nachgerüstet wird:
+   `/` ist in JavaScript auch Division, und die beiden auseinanderzuhalten
+   braucht den halben Parser. **Ein halber Erkenner wäre schlimmer als
+   keiner** — er verschöbe den Fehlalarm nur auf Fälle, die niemand
+   erwartet. Wer es baut, baut es ganz, mit Positivkontrolle in beide
+   Richtungen.
+
    ⚠ UND WARUM DIESE PRÜFUNG DEN TEXT LESEN DARF, während
    `test-helpers/quelltext.ts` genau davon abrät: sie sucht ein Zeichen,
    das ein Literal ZERREISST. Danach gäbe es keinen Syntaxbaum mehr, den

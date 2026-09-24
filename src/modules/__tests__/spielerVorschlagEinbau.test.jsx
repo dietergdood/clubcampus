@@ -23,15 +23,30 @@ vi.mock('../../theme.ts', () => ({
 vi.mock('../../icons.tsx', () => ({ TI: () => null }));
 
 const gespeichert = [];
+/* ⚠ Aus dem `beforeEach` gesetzt statt fest verdrahtet. Die
+   Mannschafts-Auswahl braucht ZWEI Gruppen — eine Sammlung aus einem
+   Element kann „alle" nicht von „eines" unterscheiden, und ein Test, der
+   das nicht trennen kann, ist grün, ohne zu prüfen. Die Vorgabe bleibt
+   die eine Zeile von vorher, damit die älteren Fälle unberührt sind. */
+let aufstellungZeilen;
 vi.mock('../../domains/spiele/matchdatenService.ts', () => ({
-  fetchAlleAufstellungen: vi.fn(async () => ([
-    { sfv_person_id: 500, sfv_team_id: 38309, rueckennr: 9, spiel_id: 's1' },
-  ])),
+  fetchAlleAufstellungen: vi.fn(async () => aufstellungZeilen),
   fetchZuordnungen: vi.fn(async () => []),
   loescheZuordnung: vi.fn(async () => null),
   speichereZuordnung: vi.fn(async (_sb, _v, sfvId, mid) => {
     gespeichert.push([sfvId, mid]); return null;
   }),
+}));
+
+/* ⚠ NUR `dateiDownload` ist eine Attrappe, nicht die Ausgabe-Funktion.
+   Im jsdom einen echten Download auszulösen prüfte den Browser; was hier
+   zu prüfen ist, ist ob überhaupt einer ausgelöst wird — und mit welchem
+   Dateinamen. `alsMannschaftsliste()` läuft dabei ECHT: eine Attrappe
+   dafür prüfte die Abschrift statt den Einbau. */
+const geladen = [];
+vi.mock('../../shared/list/exportUtils.ts', () => ({
+  dateiDownload: vi.fn((inhalt, name, mime) => { geladen.push({ inhalt, name, mime }); }),
+  inZwischenablage: vi.fn(async () => true),
 }));
 
 let antwort;
@@ -45,7 +60,12 @@ vi.mock('../../domains/sfv/sfvService.ts', async (echt) => ({
 
 import { SfvSpielerZuordnung } from '../portal/SfvSpielerZuordnung.tsx';
 
-const TEAMS = [{ id: 't1', name: 'Da-Junioren', sfv_team_id: 38309 }];
+const TEAMS = [
+  { id: 't1', name: 'Da-Junioren', sfv_team_id: 38309 },
+  /* Zweite Mannschaft: nur damit `38310` einen NAMEN bekommt. Eine Gruppe
+     entsteht daraus erst, wenn eine Aufstellungszeile darauf zeigt. */
+  { id: 't2', name: 'Cb-Junioren', sfv_team_id: 38310 },
+];
 const MITGLIED = (ueber) => ({
   id: 1, vorname: 'Anna', nachname: 'Meier', aktiv: true,
   geburtsdatum: '2011-03-14', kader_teams: [{ name: 'Da-Junioren' }], ...ueber,
@@ -68,6 +88,10 @@ async function namenHolen() {
 
 beforeEach(() => {
   gespeichert.length = 0;
+  geladen.length = 0;
+  aufstellungZeilen = [
+    { sfv_person_id: 500, sfv_team_id: 38309, rueckennr: 9, spiel_id: 's1' },
+  ];
   antwort = {
     namen: [{ sfv_person_id: 500, name: 'Anna Meier', jahrgang: 2011 }],
     spiele_abgefragt: 1, namen_gefunden: 1, offen_gesamt: 1, fehler: 0,
@@ -189,5 +213,155 @@ describe('⚠ Die Maske sagt, WELCHE Nummer gilt', () => {
     await namenHolen();
     expect(screen.getByText(/noch keinen Einsatz/)).toBeTruthy();
     expect(screen.getByText(/keine Nummer ins Profil/)).toBeTruthy();
+  });
+});
+
+/* ══════════════════════════════════════════════════════════════════════
+   Die Mannschafts-Auswahl für die Excel-Liste — im EINBAU.
+
+   ⚠ Geprüft wird nicht, ob `alsMannschaftsliste()` richtig rechnet (das
+   ist ihre eigene Sache), sondern ob die Maske sie überhaupt erreicht:
+   dass das Kästchen dasteht, dass es NUR auswählt, und dass ohne Auswahl
+   nichts geladen wird. Dieselbe Trennung wie beim Vorschlag oben.
+   ══════════════════════════════════════════════════════════════════════ */
+describe('Die Mannschaft lässt sich für die Liste wählen', () => {
+  it('zeigt je Mannschaft ein Kästchen und setzt es', async () => {
+    zeichne([MITGLIED()]);
+    await waitFor(() =>
+      expect(screen.getByLabelText(/Da-Junioren für die Liste/)).toBeTruthy());
+    expect(screen.getByLabelText(/Da-Junioren für die Liste/).checked).toBe(false);
+
+    await act(async () => {
+      fireEvent.click(screen.getByLabelText(/Da-Junioren für die Liste/));
+    });
+    expect(screen.getByLabelText(/Da-Junioren für die Liste/).checked).toBe(true);
+  });
+
+  it('⚠ ein Klick aufs Kästchen klappt die Gruppe NICHT auf', async () => {
+    /* ⚠ DIE ZUSAGE, DIE SONST STILL BRICHT. Die Überschrift ist der
+       Auslöser fürs Aufklappen; wandert das Kästchen je hinein — oder
+       wird die ganze Zeile anklickbar —, tut ein Klick zwei Dinge, und
+       zwei Wirkungen auf einen Klick sind von einer falschen Wirkung
+       nicht zu unterscheiden.
+
+       Erkannt am `<select>`: das steht nur in einer aufgeklappten Gruppe. */
+    zeichne([MITGLIED()]);
+    await waitFor(() =>
+      expect(screen.getByLabelText(/Da-Junioren für die Liste/)).toBeTruthy());
+    expect(screen.queryByRole('combobox')).toBeNull();
+
+    await act(async () => {
+      fireEvent.click(screen.getByLabelText(/Da-Junioren für die Liste/));
+    });
+    /* Beide Hälften. Ohne die erste wäre der Fall auch grün, wenn das
+       Kästchen gar nichts täte — und prüfte dann nichts. */
+    expect(screen.getByLabelText(/Da-Junioren für die Liste/).checked).toBe(true);
+    expect(screen.queryByRole('combobox')).toBeNull();
+  });
+
+  it('„Alle auswählen" wählt alle Mannschaften', async () => {
+    aufstellungZeilen.push(
+      { sfv_person_id: 501, sfv_team_id: 38310, rueckennr: 7, spiel_id: 's2' });
+    zeichne([MITGLIED()]);
+    await namenHolen();
+
+    await act(async () => { fireEvent.click(screen.getByText('Alle auswählen')); });
+    /* ⚠ ZWEI Mannschaften, und beide werden genannt. Mit einer einzigen
+       Gruppe wäre „alle" von „die eine" nicht zu unterscheiden. */
+    expect(screen.getByLabelText(/Da-Junioren für die Liste/).checked).toBe(true);
+    expect(screen.getByLabelText(/Cb-Junioren für die Liste/).checked).toBe(true);
+    /* Die Mischung als ZAHL — angezeigt, nicht bedienbar. */
+    expect(screen.getByText(/2 von 2 Mannschaften gewählt/)).toBeTruthy();
+  });
+
+  it('„Auswahl aufheben" nimmt alle zurück — zwei Handlungen, kein Schalter', async () => {
+    /* ⚠ Die Gegenprobe zur Regel aus CLAUDE.md: es gibt kein Kästchen
+       „alle", das bei Teilauswahl falsch stünde, sondern zwei Knöpfe, die
+       jeder sagen, was sie tun. Also muss auch der zweite wirken. */
+    aufstellungZeilen.push(
+      { sfv_person_id: 501, sfv_team_id: 38310, rueckennr: 7, spiel_id: 's2' });
+    zeichne([MITGLIED()]);
+    await namenHolen();
+
+    await act(async () => { fireEvent.click(screen.getByText('Alle auswählen')); });
+    await act(async () => { fireEvent.click(screen.getByText('Auswahl aufheben')); });
+    expect(screen.getByLabelText(/Da-Junioren für die Liste/).checked).toBe(false);
+    expect(screen.getByText(/0 von 2 Mannschaften gewählt/)).toBeTruthy();
+  });
+
+  it('⚠ ohne Auswahl wird NICHTS geladen, und die Meldung sagt warum', async () => {
+    /* ⚠ Eine leere Datei sieht aus wie ein Fehlschlag und ist einer, den
+       niemand meldet: sie landet im Download-Ordner und fällt erst auf,
+       wenn jemand sie öffnet. */
+    zeichne([MITGLIED()]);
+    await namenHolen();
+
+    await act(async () => {
+      /* ⚠ Auf die ROLLE eingeengt, nicht `getByText`: der Hinweis
+         darunter nennt denselben Knopfnamen, und ein Muster über das ganze
+         Dokument träfe beide. `getByRole` wirft bei zwei Treffern — und das
+         ist richtig so, es zwingt zur Frage, WELCHE Stelle gemeint ist. */
+      fireEvent.click(screen.getByRole('button', { name: /Liste nach Mannschaft/ }));
+    });
+    expect(geladen).toEqual([]);
+    expect(screen.getByText(/Keine Mannschaft gewählt/)).toBeTruthy();
+  });
+
+  it('mit Auswahl wird geladen, und die Meldung nennt ZWEI Zahlen', async () => {
+    /* ⚠ DIE GEGENPROBE ZUM FALL DARÜBER. Ohne sie wäre die Sperre auch
+       dann grün, wenn der Knopf NIE etwas lädt — eine Prüfung, die den
+       Gut-Fall nicht kennt, kann „geht nicht" nicht von „geht nie"
+       unterscheiden. */
+    zeichne([MITGLIED()]);
+    await namenHolen();
+    await act(async () => {
+      fireEvent.click(screen.getByLabelText(/Da-Junioren für die Liste/));
+    });
+
+    await act(async () => {
+      /* ⚠ Auf die ROLLE eingeengt, nicht `getByText`: der Hinweis
+         darunter nennt denselben Knopfnamen, und ein Muster über das ganze
+         Dokument träfe beide. `getByRole` wirft bei zwei Treffern — und das
+         ist richtig so, es zwingt zur Frage, WELCHE Stelle gemeint ist. */
+      fireEvent.click(screen.getByRole('button', { name: /Liste nach Mannschaft/ }));
+    });
+    expect(geladen).toHaveLength(1);
+    expect(geladen[0].name).toBe('spieler-nach-mannschaft.csv');
+    expect(geladen[0].mime).toMatch(/text\/csv/);
+    /* ⚠ Die Zahlen NAMENTLICH, nicht bloss „eine Meldung erscheint". Ein
+       „✓" ohne Zahl ist in diesem Projekt ausdrücklich unerwünscht — und
+       eine Erwartung, die nur die Länge prüft, hielte auch ein „0 Spieler
+       aus 0 Mannschaften". */
+    expect(screen.getByText(/1 Spieler aus 1 Mannschaft geladen/)).toBeTruthy();
+  });
+
+  it('⚠ ⚠  und die Datei hat eine DATENZEILE, nicht nur den Kopf', async () => {
+    /* ⚠ ⚠  DIE ERWARTUNG, DIE DEN VERTRAGSFEHLER GEFANGEN HÄTTE.
+       Der Auftrag nannte als zweites Argument `String(sfv_team_id ?? "-")`.
+       `alsMannschaftsliste()` filtert aber gegen `SpielerZeile.teams`, und
+       das führt NAMEN — eine Nummer trifft dort nie.
+
+       ⚠ Beides ist `ReadonlySet<string>`: `typecheck` war grün, ein
+       Download fand statt, und die Meldung sagte „1 Spieler geladen“ —
+       während in der Datei nur die Kopfzeile stand. Ein Fall, der bloss
+       prüft, DASS geladen wird, kann das nicht sehen.
+
+       Deshalb hier der INHALT. Mit dem falschen Schlüssel ist dieser Fall
+       rot und die fünf darüber bleiben grün. */
+    zeichne([MITGLIED()]);
+    await namenHolen();
+    await act(async () => {
+      fireEvent.click(screen.getByLabelText(/Da-Junioren für die Liste/));
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /Liste nach Mannschaft/ }));
+    });
+
+    const zeilen = geladen[0].inhalt.trim().split('\r\n');
+    /* Kopf plus genau eine Datenzeile. `toHaveLength` allein wäre hier
+       richtig — aber die Zeile soll auch die richtige sein. */
+    expect(zeilen).toHaveLength(2);
+    expect(zeilen[1]).toMatch(/Anna Meier/);
+    expect(zeilen[1]).toMatch(/Da-Junioren/);
   });
 });
