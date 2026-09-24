@@ -3926,6 +3926,9 @@ export type Database = {
           korrigiert_am: string | null
           korrigiert_von: string | null
           minute: number | null
+          person_name: string | null
+          rolle_kategorie: string | null
+          rolle_kategorie_id: number | null
           rueckennr: number | null
           sfv_event_id: number | null
           sfv_person_id: number | null
@@ -3953,6 +3956,9 @@ export type Database = {
           korrigiert_am?: string | null
           korrigiert_von?: string | null
           minute?: number | null
+          person_name?: string | null
+          rolle_kategorie?: string | null
+          rolle_kategorie_id?: number | null
           rueckennr?: number | null
           sfv_event_id?: number | null
           sfv_person_id?: number | null
@@ -3980,6 +3986,9 @@ export type Database = {
           korrigiert_am?: string | null
           korrigiert_von?: string | null
           minute?: number | null
+          person_name?: string | null
+          rolle_kategorie?: string | null
+          rolle_kategorie_id?: number | null
           rueckennr?: number | null
           sfv_event_id?: number | null
           sfv_person_id?: number | null

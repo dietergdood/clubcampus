@@ -2141,7 +2141,10 @@ CREATE TABLE IF NOT EXISTS "public"."spiel_ereignisse" (
     "ein_rueckennr" integer,
     "zuletzt_synchronisiert" timestamp with time zone DEFAULT "now"() NOT NULL,
     "zuletzt_geaendert" timestamp with time zone DEFAULT "now"() NOT NULL,
-    CONSTRAINT "spiel_ereignisse_fremde_anonym_check" CHECK (("ist_eigener" OR (("sfv_person_id" IS NULL) AND ("ein_sfv_person_id" IS NULL)))),
+    "rolle_kategorie_id" integer,
+    "rolle_kategorie" "text",
+    "person_name" "text",
+    CONSTRAINT "spiel_ereignisse_fremde_anonym_check" CHECK (("ist_eigener" OR (("sfv_person_id" IS NULL) AND ("ein_sfv_person_id" IS NULL) AND ("person_name" IS NULL)))),
     CONSTRAINT "spiel_ereignisse_herkunft_check" CHECK (("herkunft" = ANY (ARRAY['sfv'::"text", 'verein'::"text"]))),
     CONSTRAINT "spiel_ereignisse_schicht_check" CHECK (((("herkunft" = 'sfv'::"text") AND ("sfv_event_id" IS NOT NULL) AND ("ersetzt_ereignis_id" IS NULL) AND ("geaenderte_felder" IS NULL) AND ("korrigiert_von" IS NULL)) OR (("herkunft" = 'verein'::"text") AND ("sfv_event_id" IS NULL) AND ("korrigiert_von" IS NOT NULL) AND ((("ersetzt_ereignis_id" IS NOT NULL) AND ("array_length"("geaenderte_felder", 1) > 0)) OR (("ersetzt_ereignis_id" IS NULL) AND ("geaenderte_felder" IS NULL))))))
 );
@@ -2150,7 +2153,7 @@ CREATE TABLE IF NOT EXISTS "public"."spiel_ereignisse" (
 ALTER TABLE "public"."spiel_ereignisse" OWNER TO "postgres";
 
 
-COMMENT ON TABLE "public"."spiel_ereignisse" IS 'Spielverlauf. herkunft=sfv wird bei jedem Lauf fortgeschrieben, herkunft=verein nie. Eine Vereins-Zeile verdeckt ueber ersetzt_ereignis_id eine SFV-Zeile (Korrektur) oder steht fuer sich (nachgetragener Assist). Von fremden Spielern bleiben gegner_club_name UND die Rueckennummer (seit 10.09.2026, fuer die Symbole an der Gegneraufstellung) — Personennummern bleiben verboten, erzwungen durch spiel_ereignisse_fremde_anonym_check.';
+COMMENT ON TABLE "public"."spiel_ereignisse" IS 'Spielverlauf. herkunft=sfv wird bei jedem Lauf fortgeschrieben, herkunft=verein nie. Eine Vereins-Zeile verdeckt ueber ersetzt_ereignis_id eine SFV-Zeile (Korrektur) oder steht fuer sich (nachgetragener Assist). Von fremden Spielern bleiben gegner_club_name, die Rueckennummer (seit 10.09.2026, fuer die Symbole an der Gegneraufstellung) UND die Rollenkategorie (seit 24.09.2026, fuer "Trainer FC Faellanden") — Personennummern und Namen bleiben verboten, erzwungen durch spiel_ereignisse_fremde_anonym_check.';
 
 
 
@@ -2163,6 +2166,18 @@ COMMENT ON COLUMN "public"."spiel_ereignisse"."typ_id" IS 'SFV Ereignistyp: 1 To
 
 
 COMMENT ON COLUMN "public"."spiel_ereignisse"."zuletzt_geaendert" IS 'Wie bei spiel_aufstellung.';
+
+
+
+COMMENT ON COLUMN "public"."spiel_ereignisse"."rolle_kategorie_id" IS 'SFV roleCategoryId aus /events. BEIDE Seiten — eine Kategorie nennt keine Person. Einer von 28 Werten (docs/sfv/sfv_stammdaten.json, Rollenkategorie): 1 Spieler, 3 Trainer, 4 Funktionaer, 9 Betreuer, dazu Verein, Medien, Sponsor, Scout. ⚠ Die Ids sind nicht fortlaufend (7 und 8 fehlen, 98/99 am Ende). DIES ist der Schluessel, nicht der Klartext daneben.';
+
+
+
+COMMENT ON COLUMN "public"."spiel_ereignisse"."rolle_kategorie" IS 'SFV roleCategoryName aus /events, Klartext des Verbands. BEIDE Seiten. ⚠ NUR ANZEIGE, NIE VERGLEICH: die echte Antwort schreibt "Spieler/in", die Stammdaten schreiben "Spieler" — zwei Listen desselben Verbands, nicht zeichengleich (gemessen 24.09.2026). Wer darauf filtert, prueft eine Schreibweise und trifft "Trainer/in" nicht. Dafuer ist rolle_kategorie_id da.';
+
+
+
+COMMENT ON COLUMN "public"."spiel_ereignisse"."person_name" IS 'SFV personName aus /events. ⚠ NUR bei ist_eigener — erzwungen von spiel_ereignisse_fremde_anonym_check, nicht bloss ungelesen (Entscheid B, 10.09.2026). Die Quelle fuer Menschen, die in KEINER Aufstellungszeile stehen: Trainer und Betreuer kommen aus /players nicht mit. ⚠ Fuer einen eigenen SPIELER ist es die ZWEITE Namensquelle neben sfv_personen.name — die zugeordnete gewinnt, siehe den Kommentar in matchdaten.ts.';
 
 
 
