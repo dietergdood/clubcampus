@@ -11,6 +11,9 @@
    nie auslösen (siehe migration_matchdaten.sql).
    ═══════════════════════════════════════════════════════════════ */
 
+import { bestimmeStammteam } from "./stammteam.ts";
+import type { StammteamZeile } from "./stammteam.ts";
+
 export type Herkunft = "sfv" | "verein";
 
 export interface EreignisZeile {
@@ -122,12 +125,67 @@ export interface AufstellungZeile {
   spiel_id: string;
 }
 
+/**
+ * Eine Aufstellungszeile, wie die Warteschlange sie braucht.
+ *
+ * ⚠ ⚠  `spielzeit` IST PFLICHT, NICHT OPTIONAL — und der Grund ist nicht
+ * Ordnungsliebe, sondern ein **stiller** Ausfall.
+ *
+ * `bestimmeStammteam()` zählt Einsätze, und `istEinsatz(undefined)` ist
+ * `true`. Eine Aufrufstelle, die den Wert nicht durchreicht, bekäme also
+ * für JEDE Mannschaft dieselbe Zahl — Gleichstand —, und das Stammteam
+ * fiele auf die kleinste Teamnummer. Keine Zeile schlägt fehl, keine
+ * Meldung entsteht, und die Gruppe stimmt in der Hälfte der Fälle
+ * zufällig. Als Pflichtfeld nennt der Compiler jede Aufrufstelle einmal.
+ *
+ * ⚠ Abgeleitet aus `StammteamZeile` und NICHT neben ihr her getippt: was
+ * die Regel liest, steht in `stammteam.ts` und nirgends sonst. Ein zweites
+ * `{ spielzeit: number | null }` wäre dieselbe Aussage an zwei Orten —
+ * `AufstellungFuerListe` in `spielerAusgabe.ts` ist derselbe Gedanke für
+ * die Ausgabe, und auch die leitet ab statt zu tippen.
+ *
+ * Die Maske lädt ohnehin `AufstellungMitZeit` (`select("*")`); der Wert
+ * ist da und wurde nur nicht weitergegeben.
+ */
+export type AufstellungFuerWarteschlange = AufstellungZeile & StammteamZeile;
+
 export interface OffeneZuordnung {
   sfv_person_id: number;
+  /**
+   * Das STAMMTEAM der Person — nicht die Mannschaft ihrer ersten Zeile.
+   *
+   * ⚠ ⚠  BIS ZUM 24.09.2026 STAND HIER DIE ERSTE GESCHRIEBENE ZEILE, und
+   * die Reihenfolge kam aus `.order("id")` — also aus der Einfügereihenfolge
+   * in die Datenbank. Das ist willkürlich: dieselbe Person konnte nach
+   * einem Nachlauf unter einer anderen Mannschaft stehen, ohne dass sich
+   * an ihren Einsätzen etwas geändert hätte.
+   *
+   * Der Schaden war nicht die Willkür selbst, sondern dass die Ausgabe
+   * seit demselben Tag das Stammteam nimmt (`alsMannschaftsliste()`):
+   * Kästchen und Datei gruppierten nach zwei verschiedenen Regeln. Und
+   * gemessen konnte eine Person dadurch über **kein** Kästchen erreichbar
+   * sein — eine Gruppe entstand nur für Mannschaften, die irgendjemandes
+   * ERSTE waren.
+   *
+   * ⚠ `null` heisst „keine einzige Zeile mit Mannschaft", nicht „unbekannte
+   * Mannschaft": eine Teamnummer, die `teams` nicht kennt, steht hier
+   * weiterhin als Zahl und bekommt erst in `gruppiereNachTeam()` den Namen
+   * `OHNE_MANNSCHAFT`. Die zwei dürfen nicht verwechselt werden — das eine
+   * ist eine fehlende Angabe des Verbands, das andere eine fehlende
+   * Team-Zuordnung bei uns.
+   */
   sfv_team_id: number | null;
   /** Alle Rückennummern, unter denen die Person aufgelaufen ist. */
   rueckennummern: number[];
-  /** Wie oft sie in der Aufstellung stand — hilft beim Einordnen. */
+  /**
+   * Wie oft sie in der Aufstellung stand — hilft beim Einordnen.
+   *
+   * ⚠ ZEILEN, nicht Einsätze im Sinne von `bestimmeStammteam()`. Dort
+   * zählt eine gemessene Null nicht mit; hier zählt jede Zeile. Der
+   * Unterschied ist gewollt: die Anzeige sagt „in so vielen Aufstellungen
+   * gefunden", und das ist auch dann wahr, wenn die Person nicht gespielt
+   * hat. Zwei Fragen, zwei Zahlen.
+   */
   einsaetze: number;
 }
 
@@ -136,37 +194,64 @@ export interface OffeneZuordnung {
  *
  * Nach Einsätzen absteigend: wer oft spielt, ist zuerst interessant und
  * am leichtesten zu erkennen.
+ *
+ * ⚠ Das Team kommt aus `bestimmeStammteam()` — derselben Regel, nach der
+ * die Excel-Liste gruppiert. Sie steht an EINER Stelle; hätte die
+ * Warteschlange ihre eigene, liefen die beiden wieder auseinander, und
+ * zwar still.
  */
 export function offeneZuordnungen(
-  aufstellung: AufstellungZeile[], bekannt: Set<number>,
+  aufstellung: AufstellungFuerWarteschlange[], bekannt: Set<number>,
 ): OffeneZuordnung[] {
-  const proPerson = new Map<number, OffeneZuordnung>();
+  /* ⚠ ZWEI DURCHGÄNGE, und das ist nicht vermeidbar: das Stammteam steht
+     erst fest, wenn ALLE Zeilen der Person gelesen sind. Die alte Fassung
+     entschied es bei der ersten — genau das war der Defekt. */
+  const proPerson = new Map<number, {
+    zeilen: StammteamZeile[]; rueckennummern: number[]; einsaetze: number;
+  }>();
   for (const a of aufstellung) {
     if (bekannt.has(a.sfv_person_id)) continue;
-    const vorhanden = proPerson.get(a.sfv_person_id);
-    if (!vorhanden) {
-      proPerson.set(a.sfv_person_id, {
-        sfv_person_id: a.sfv_person_id,
-        sfv_team_id: a.sfv_team_id,
-        rueckennummern: a.rueckennr === null ? [] : [a.rueckennr],
-        einsaetze: 1,
-      });
-      continue;
+    let p = proPerson.get(a.sfv_person_id);
+    if (!p) {
+      p = { zeilen: [], rueckennummern: [], einsaetze: 0 };
+      proPerson.set(a.sfv_person_id, p);
     }
-    vorhanden.einsaetze += 1;
-    if (a.rueckennr !== null && !vorhanden.rueckennummern.includes(a.rueckennr)) {
-      vorhanden.rueckennummern.push(a.rueckennr);
+    p.zeilen.push(a);
+    p.einsaetze += 1;
+    if (a.rueckennr !== null && !p.rueckennummern.includes(a.rueckennr)) {
+      p.rueckennummern.push(a.rueckennr);
     }
   }
-  return [...proPerson.values()].sort((a, b) => b.einsaetze - a.einsaetze);
+
+  return [...proPerson.entries()].map(([sfv_person_id, p]) => ({
+    sfv_person_id,
+    sfv_team_id: bestimmeStammteam(p.zeilen).sfv_team_id,
+    rueckennummern: p.rueckennummern,
+    einsaetze: p.einsaetze,
+  /* `Array.prototype.sort` ist stabil — bei gleicher Zahl bleibt die
+     Reihenfolge der Map, also die des ersten Vorkommens. Unverändert
+     gegenüber der alten Fassung. */
+  })).sort((a, b) => b.einsaetze - a.einsaetze);
 }
 
 /**
- * Nach Mannschaft gruppiert.
+ * Nach Mannschaft gruppiert — seit dem 24.09.2026 nach dem STAMMTEAM.
  *
  * Beim ersten Lauf standen 129 verschiedene eigene Spieler in zehn
  * Spielen; über die ganze Saison werden es mehr. Zweihundert Namen am
  * Stück sortiert man schlechter als fünfzehn pro Mannschaft.
+ *
+ * ⚠ ⚠  JEDE PERSON STEHT IN GENAU EINER GRUPPE, und das ist die Zusage,
+ * an der es hing. `offeneZuordnungen()` liefert je Person eine Zeile mit
+ * einem Team, also kann keine Person in zwei Gruppen stehen und keine in
+ * keiner. Die Kästchen der Maske kommen aus dieser Liste — damit ist jede
+ * Person über genau ein Kästchen erreichbar, und die Excel-Liste gruppiert
+ * nach derselben Regel.
+ *
+ * Vorher entstand eine Gruppe nur für Mannschaften, die irgendjemandes
+ * ERSTE waren. Wessen Stammteam eine Mannschaft war, in der sonst niemand
+ * zuerst auflief, hatte kein Kästchen — und fiel damit aus der Ausgabe,
+ * ohne dass etwas fehlschlug.
  */
 export interface ZuordnungGruppe {
   sfv_team_id: number | null;
@@ -194,6 +279,17 @@ export function gruppiereNachTeam(
 ): ZuordnungGruppe[] {
   const proTeam = new Map<string, ZuordnungGruppe>();
   for (const o of offen) {
+    /* ⚠ ⚠  `"-"` IST EINE GRUPPE WIE JEDE ANDERE, kein Rest und kein
+       Sonderfall. Sie bekommt in der Maske ihr eigenes Kästchen, weil die
+       Kästchen aus dieser Liste kommen — und `alsMannschaftsliste()`
+       filtert gegen genau diese Form. Wer sie hier überspränge („die
+       kennen wir ja nicht"), machte jede Person ohne Team-Id
+       unerreichbar: nicht in der Liste, nicht im Export, und nichts
+       schlüge fehl.
+
+       ⚠ Und derselbe Schlüssel entsteht an drei Orten aus derselben
+       Regel — hier, in `SpielerZeile.stammteamSchluessel` und am `key`
+       der Kästchen. Wer ihn ändert, ändert alle drei. */
     const schluessel = String(o.sfv_team_id ?? "-");
     let g = proTeam.get(schluessel);
     if (!g) {

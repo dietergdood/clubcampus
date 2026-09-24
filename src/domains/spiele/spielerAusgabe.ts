@@ -10,12 +10,18 @@
    zurück:** kein `api_sync_log`, keine Datei, kein zweiter Aufruf
    beim Verband. (Bedingung Didi, 25.08.2026.)
 
-   ⚠ EIGENE AGGREGATION, NICHT `offeneZuordnungen()`. Die behält pro
-   Person nur die ERSTE `sfv_team_id` — die Map-Zeile wird einmal
-   angelegt und der Wert nie ergänzt. Für die Maske reicht das (sie
-   gruppiert und braucht einen Ort); für eine Liste, die jemand
-   abhakt, nicht: 27 der 287 Spieler laufen in ZWEI Mannschaften auf,
+   ⚠ EIGENE AGGREGATION, NICHT `offeneZuordnungen()` — die braucht nur
+   EINEN Ort je Person, diese Liste alle Mannschaften (`teams`) UND das
+   Stammteam. 27 der 287 Spieler laufen in ZWEI Mannschaften auf,
    durchweg benachbarte Stufen (1./2. Mannschaft, Ca/Cb, Ba/Bb).
+
+   ⚠ ⚠  HIER STAND ALS GRUND: „die behält pro Person nur die ERSTE
+   `sfv_team_id`". Das galt bis zum 24.09.2026 und gilt nicht mehr —
+   `offeneZuordnungen()` ruft seither `bestimmeStammteam()`, also
+   dieselbe Regel wie hier. Die Aggregation bleibt trotzdem eigen: sie
+   braucht `rueckennummern` und `teams` je Person, die dort niemand
+   führt. **Der Satz war richtig und ist es nicht mehr; ein Grund, der
+   veraltet, trägt seine Entscheidung nicht weiter.**
 
    Eine Zeile je Mannschaft wäre die andere Möglichkeit gewesen — 314
    Zeilen für 287 Spieler. Verworfen: dann steht jemand zweimal in der
@@ -105,8 +111,38 @@ export interface SpielerZeile {
    * der Zeile wäre eine zweite Stelle, an der die Formulierung lebt.
    */
   stammteamRegel: StammteamRegel;
-  /** ALLE Rückennummern — 58 der 287 laufen unter mehr als einer. */
+  /** ALLE Rückennummern — 58 der 287 laufen unter mehr als einer.
+      ⚠ Die Textliste zeigt diese; die Excel-Liste seit dem 24.09.2026
+      `stammteamNummern`. Beide bleiben, weil sie zwei Fragen beantworten. */
   rueckennummern: number[];
+  /**
+   * Nur die Rückennummern aus den Spielen des STAMMTEAMS.
+   *
+   * ⚠ ⚠  EIN EIGENES FELD UND KEIN FILTER IN `alsMannschaftsliste()` — die
+   * Ausgabe bekommt nur `SpielerZeile[]` und hat die Aufstellungszeilen
+   * nicht mehr. Der Schnitt kann also nur hier entstehen, wo Nummer und
+   * Team noch nebeneinander stehen.
+   *
+   * ⚠ DER PREIS, und er gehört genannt statt verschwiegen (Entscheidung
+   * Didi, 24.09.2026, sie ersetzt die vorherige): eine Nummer, unter der
+   * die Person in einer ANDEREN Mannschaft aufgelaufen ist, erscheint in
+   * der Excel-Liste NIRGENDS mehr. Bei jemandem, der in zwei Teams zwei
+   * Nummern trägt, fehlt die zweite in genau der Liste, die zum
+   * Wiedererkennen gedacht ist. Das ist gewollt: die Zeile IST die
+   * Mannschaft daneben, und eine Nummer, die zu einer anderen gehört,
+   * wäre in dieser Zeile eine falsche Auskunft.
+   *
+   * ⚠ Gegengerichtet bleibt `rueckennummern` vollständig — die Textliste
+   * ist NICHT mannschaftsweise geschnitten, sie gruppiert nach allen
+   * Mannschaften der Person. Dort erscheint die zweite Nummer weiterhin.
+   *
+   * ⚠ Bei `regel: "ohne_team"` sind es die Nummern der Zeilen OHNE
+   * Team-Angabe — also dieselbe Menge wie `rueckennummern`, wenn die
+   * Person nur solche Zeilen hat. Das ist kein Sonderfall, sondern
+   * dieselbe Regel: die Nummern der Zeilen, aus denen das Stammteam
+   * hervorgegangen ist.
+   */
+  stammteamNummern: number[];
   einsaetze: number;
 }
 
@@ -138,8 +174,21 @@ export function baueSpielerZeilen(
      Platzhalter, den jemand zu überschreiben vergisst, wäre eine
      Mannschaft, die nach einer Messung aussieht. */
   type Zwischen =
-    Omit<SpielerZeile, "stammteamSchluessel" | "stammteam" | "stammteamRegel">
-    & { teamIds: Set<number>; stammZeilen: StammteamZeile[] };
+    Omit<SpielerZeile,
+      "stammteamSchluessel" | "stammteam" | "stammteamRegel" | "stammteamNummern">
+    & {
+      teamIds: Set<number>;
+      stammZeilen: StammteamZeile[];
+      /* ⚠ Der Schlüssel ist `number | null` und nicht der Auswahl-Schlüssel
+         `String(id ?? "-")`: nachgeschlagen wird mit dem Wert, den
+         `bestimmeStammteam()` zurückgibt, und das ist die rohe Id. Über die
+         Zeichenform zu gehen hiesse, die Regel und die Ausgabe über eine
+         Normalisierung zu verbinden, die zwischen ihnen liegt — und dann
+         entscheidet eine Formatierung, welche Nummern erscheinen.
+         `null` ist als Map-Schlüssel gültig und meint hier „die Zeilen ohne
+         Team-Angabe", also genau die Menge, aus der `ohne_team` entsteht. */
+      nummernJeTeam: Map<number | null, number[]>;
+    };
   const proPerson = new Map<number, Zwischen>();
 
   for (const a of aufstellung) {
@@ -164,6 +213,7 @@ export function baueSpielerZeilen(
            eine falsch getrennte eine Behauptung. */
         nachname: t?.nachname ?? ganz,
         teams: [], teamSchluessel: [], teamIds: new Set(), stammZeilen: [],
+        nummernJeTeam: new Map(),
         rueckennummern: [], einsaetze: 0,
       };
       proPerson.set(a.sfv_person_id, z);
@@ -174,8 +224,14 @@ export function baueSpielerZeilen(
        hier zu filtern hiesse, sie an zwei Orten zu führen. */
     z.stammZeilen.push({ sfv_team_id: a.sfv_team_id, spielzeit: a.spielzeit });
     if (a.sfv_team_id !== null) z.teamIds.add(a.sfv_team_id);
-    if (a.rueckennr !== null && !z.rueckennummern.includes(a.rueckennr)) {
-      z.rueckennummern.push(a.rueckennr);
+    if (a.rueckennr !== null) {
+      if (!z.rueckennummern.includes(a.rueckennr)) z.rueckennummern.push(a.rueckennr);
+      /* ⚠ Dieselbe Nummer in zwei Mannschaften ist ZWEI Einträge, einer je
+         Mannschaft — entdoppelt wird nur innerhalb einer. Wer hier über
+         beide entdoppelte, verlöre die Nummer in der zweiten Liste. */
+      const je = z.nummernJeTeam.get(a.sfv_team_id);
+      if (!je) z.nummernJeTeam.set(a.sfv_team_id, [a.rueckennr]);
+      else if (!je.includes(a.rueckennr)) je.push(a.rueckennr);
     }
   }
 
@@ -245,6 +301,16 @@ export function baueSpielerZeilen(
        nicht nach. Dieser hier hat genau das bewirkt. */
     teamSchluessel: [...z.teamIds].map(String).sort(),
     rueckennummern: [...z.rueckennummern].sort((a, b) => a - b),
+    /* ⚠ Nachgeschlagen mit `st.sfv_team_id`, also mit dem Wert, den die
+       Regel gerade zurückgegeben hat — nicht mit `z.teamIds` und nicht mit
+       dem Auswahl-Schlüssel. Damit sind „welche Mannschaft steht in der
+       Zeile" und „welche Nummern stehen daneben" derselbe Wert, und keine
+       zweite Ableitung kann dazwischengeraten.
+       ⚠ Der Rückfall auf `[]` ist kein stiller Ersatz: hat das Stammteam
+       keine Nummer, ist die Zelle LEER, und genau das ist die Auskunft —
+       siehe `stammteamNummern` am Typ. */
+    stammteamNummern:
+      [...(z.nummernJeTeam.get(st.sfv_team_id) ?? [])].sort((a, b) => a - b),
     einsaetze: z.einsaetze,
     };
   });
@@ -379,9 +445,20 @@ ${items}
 
    ⚠ Der Preis ist benannt und bleibt: eine Person, die für zwei
    Mannschaften gespielt hat, erscheint in der Liste der anderen
-   Mannschaft NICHT. Deshalb sagt die Spalte `Stammteam laut`, nach
-   welcher Regel die eine gewählt wurde — sonst wäre die Zuordnung eine
+   Mannschaft NICHT. Deshalb sagt die Spalte `Stammteam laut`, wie
+   eindeutig die eine gewählt wurde — sonst wäre die Zuordnung eine
    Behauptung ohne Herkunft.
+
+   ⚠ ⚠  UND DIE SPALTE SAGT SEIT DEM 24.09.2026 DIE EINDEUTIGKEIT, NICHT
+   DEN KADER. Einen Kader je Mannschaft gibt es beim Verband nicht
+   (gemessen, siehe `stammteam.ts`), also gilt immer „meiste Einsätze" —
+   und was zu wissen bleibt, ist, WIE eindeutig das war: nur dieses Team ·
+   meiste Einsätze · Gleichstand · keine Team-Angabe. Der Gleichstand ist
+   dabei neu und steckte vorher unsichtbar in „mehrere Kader".
+
+   ⚠ Ebenfalls seit dem 24.09.2026: die Nummern-Zelle trägt nur die
+   Nummern des STAMMTEAMS. Der Preis dafür steht an `stammteamNummern`
+   und an der Zuweisung — er ist real, und er ist gewollt.
 
    ⚠ EIGENER CSV-SCHREIBER, OBWOHL `shared/list/exportUtils.ts` EINEN
    HAT — und das ist keine vergessene Dublette. `csvDownload()` dort
@@ -457,7 +534,16 @@ interface MannschaftsZeile {
   team: string;
   /** Nach welcher Regel es bestimmt wurde — der Text aus `STAMMTEAM_LAUT`. */
   stammteamLaut: string;
-  /** Alle Nummern in EINER Zelle, mit `, ` — wie die Maske sie zeigt. */
+  /**
+   * Die Nummern DES STAMMTEAMS in EINER Zelle, mit `, `.
+   *
+   * ⚠ Die Form ist die der Maske (Komma, Leerzeichen), die MENGE ist es
+   * nicht: die Maske zeigt alle Nummern der Person, diese Zelle nur die der
+   * Mannschaft daneben (24.09.2026). Eine Spalte je Nummer wäre die
+   * Alternative und hätte eine Spaltenzahl, die von den Daten abhängt.
+   *
+   * ⚠ LEER ist eine Auskunft: die Person trug in diesem Team keine Nummer.
+   */
   nummern: string;
   sfvPersonId: number;
 }
@@ -503,25 +589,29 @@ export function alsMannschaftsliste(
        nicht. Gemessen am 24.09.2026: Kaestchen setzbar, Download laeuft,
        Datei mit nur der Kopfzeile.
 
-       ⚠ ⚠  UND EINE FOLGE, DIE HIER NUR VERMERKT UND NICHT BEHOBEN WIRD —
-       sie ist SCHAERFER, als sie beim Planen aussah.
+       ⚠ ⚠  DIESER FILTER UND DIE KAESTCHEN DER MASKE FOLGEN SEIT DEM
+       24.09.2026 DERSELBEN REGEL — und das ist der Grund, warum hier
+       ueberhaupt ein Kommentar steht.
 
-       Die Kaestchen der Maske kommen aus `gruppiereNachTeam()`, und das
-       arbeitet auf `offeneZuordnungen()` — das je Person nur die ERSTE
-       `sfv_team_id` behaelt. Erwartet war deshalb: eine Person ist nur
-       ueber das Kaestchen ihrer anderen Mannschaft zu bekommen.
+       Bis dahin behielt `offeneZuordnungen()` je Person nur die ERSTE
+       geschriebene `sfv_team_id`, der Export nahm das Stammteam, und die
+       zwei gingen auseinander. Gemessen im Einbau war es schaerfer als
+       erwartet: eine Gruppe entstand nur, wenn irgendeine Person dort ihre
+       erste Zeile hatte — war das Stammteam eine Mannschaft, in der sonst
+       niemand zuerst auflief, gab es dafuer KEIN Kaestchen, und die Person
+       war ueber keines erreichbar. Die Meldung sagte dann wahrheitsgemaess
+       „0 Spieler".
 
-       ⚠ Gemessen am 24.09.2026 im Einbau (`spielerVorschlagEinbau.test.jsx`):
-       das andere Kaestchen gibt es unter Umstaenden GAR NICHT. Eine Gruppe
-       entsteht nur, wenn irgendeine Person dort ihre erste Zeile hat. Ist
-       das Stammteam einer Person eine Mannschaft, in der sonst niemand
-       zuerst auflaeuft, ist sie ueber KEIN Kaestchen erreichbar — und die
-       Meldung sagt dann wahrheitsgemaess „0 Spieler".
+       ✅ Behoben: `offeneZuordnungen()` ruft jetzt `bestimmeStammteam()`,
+       dieselbe Funktion wie dieser Filter. Eine Person ist damit ueber
+       genau ein Kaestchen erreichbar — das ihres Stammteams —, und
+       Personen ohne Team-Angabe stehen unter `"-"`. Ein Fall in
+       `spielerVorschlagEinbau.test.jsx` haelt es fest.
 
-       Gemessen: 27 der 287 laufen in zwei Mannschaften auf; die Menge ist
-       real, wie viele davon betroffen sind, ist ungemessen. Die Maske wird
-       in diesem Auftrag ausdruecklich nicht geaendert; wer sie anfasst,
-       faengt bei `offeneZuordnungen()` an, nicht hier. */
+       ⚠ Der Vermerk bleibt stehen, weil er die Naht benennt: wer eine der
+       beiden Seiten aendert, aendert beide oder keine. Zwei Fassungen
+       derselben Regel laufen still auseinander, und genau das war der
+       Zustand fuer einen halben Tag. */
     if (!teamsGewaehlt.has(z.stammteamSchluessel)) continue;
     daten.push({
       /* ⚠ Leer, wenn der Verband keinen Namen liefert — und hier NICHT
@@ -534,23 +624,30 @@ export function alsMannschaftsliste(
       /* ⚠ Nachgeschlagen, nicht an der Zeile geführt: die Formulierung
          lebt an EINER Stelle, in `stammteam.ts`. */
       stammteamLaut: STAMMTEAM_LAUT[z.stammteamRegel],
-      /* ⚠ ⚠  ALLE Rückennummern der PERSON, nicht nur die des Stammteams —
-         und das ist unverändert gegenüber der Fassung mit einer Zeile je
-         Mannschaft: die Zelle war nie teambezogen (`z.rueckennummern` ohne
-         Filter), auch nicht in den Zeilen der anderen Mannschaft.
+      /* ⚠ ⚠  NUR DIE NUMMERN DES STAMMTEAMS (Entscheidung Didi, 24.09.2026)
+         — und das ist die UMGEKEHRTE Zusage gegenüber dem Stand vom Morgen
+         desselben Tages. Dort stand `z.rueckennummern`, also alle, mit der
+         Begründung, die Zelle sei personenbezogen wie Name und personId.
 
-         Der Grund, sie so zu lassen: die Zeile IST jetzt die Person, und
-         jede andere Zelle ist personenbezogen (Name, Vorname, personId).
-         Eine Nummer ist an der KADERZEILE vergeben, nicht an der Person —
-         wer hier auf das Stammteam einengte, liesse die Nummern der anderen
-         Mannschaft nirgends mehr erscheinen, und genau diese Nummern sind
-         das Wiedererkennungsmerkmal, für das die Liste da ist.
+         Der Grund für die Umkehr: die Zeile nennt EINE Mannschaft, und eine
+         Nummer aus einer anderen ist in dieser Zeile eine falsche Auskunft.
+         Ein Leser, der abhakt, vergleicht die Zelle mit dem Trikot vor sich.
 
-         ⚠ Der Preis, und er gehört genannt: eine Nummer in dieser Zeile
-         kann zu einer anderen Mannschaft gehören als die daneben genannte.
-         Der Spaltenkopf heisst deshalb `Rückennummer` und nicht
-         „Nummer in diesem Team". */
-      nummern: z.rueckennummern.join(", "),
+         ⚠ DER PREIS, festgehalten statt verschwiegen: eine Nummer, unter
+         der die Person in einer anderen Mannschaft aufgelaufen ist,
+         erscheint in DIESER Liste nirgends mehr — auch nicht in der Liste
+         jener Mannschaft, denn dort steht die Person gar nicht (sie steht
+         nur unter ihrem Stammteam). In der TEXTLISTE erscheint sie
+         weiterhin; die ist nicht mannschaftsweise geschnitten.
+
+         ⚠ UND DER SPALTENKOPF TRÄGT DIE EINSCHRÄNKUNG NICHT. Er heisst
+         `Rückennummer`, und bis heute Morgen war das die richtige
+         Beschriftung — der Kommentar hier begründete sie ausdrücklich mit
+         „und nicht «Nummer in diesem Team»". Genau diese Begründung ist
+         jetzt weg: die Zelle IST teambezogen, der Kopf sagt es nicht. Der
+         Kopf bleibt auf Anweisung unverändert (die sechs Spalten sind
+         bestellt); das ist ein offener Punkt und keine Absicht. */
+      nummern: z.stammteamNummern.join(", "),
       sfvPersonId: z.sfv_person_id,
     });
   }

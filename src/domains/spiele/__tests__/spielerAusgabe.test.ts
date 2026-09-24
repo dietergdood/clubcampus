@@ -100,6 +100,29 @@ describe("alsTextliste", () => {
     expect(text).toContain("200");
   });
 
+  /* ⚠ ⚠  DIESER FALL IST DURCH EINE SABOTAGE ENTSTANDEN (24.09.2026), und
+     er hält die GEGENSEITE einer Entscheidung.
+
+     Die Excel-Liste zeigt seit dem 24.09.2026 nur die Nummern des
+     STAMMTEAMS. Die Begründung dafür, `rueckennummern` trotzdem
+     vollständig zu führen, lautet: **in der Textliste erscheinen beide
+     weiterhin** — sie ist nicht mannschaftsweise geschnitten, sie
+     gruppiert nach allen Mannschaften der Person.
+
+     ⚠ Diese Begründung war UNGEDECKT. Eine Sabotage, die auch hier auf
+     `stammteamNummern` umstellte, lief grün: kein Fall hätte gemeldet,
+     dass die zweite Nummer plötzlich nirgends mehr steht. Ein Satz, der
+     eine Entscheidung rechtfertigt, gehört an einen Fall — sonst ist er
+     eine Behauptung über eine andere Stelle. */
+  it("⚠ zeigt ALLE Nummern, auch die aus der anderen Mannschaft", () => {
+    /* Je ein Einsatz, also ein Gleichstand: Stammteam ist Team 1 (kleinere
+       Nummer), die 13 gehört zu Team 2. In der Excel-Liste fällt sie weg. */
+    const zeilen = bauen([z(100, 1, 7, "a"), z(100, 2, 13, "b")], { 100: "Adrian Schmid" });
+    expect(zeilen[0].stammteamNummern).toEqual([7]);
+    const text = alsTextliste(zeilen);
+    expect(text).toContain("Nr. 7, 13");
+  });
+
   it("gruppiert nach Mannschaft", () => {
     const text = alsTextliste(bauen([z(1, 1, null), z(2, 2, null)], { 1: "Eins", 2: "Zwei" }));
     expect(text).toContain("1. Mannschaft");

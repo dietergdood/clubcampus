@@ -4,51 +4,89 @@
    einer je Mannschaft, fuer die sie je aufgestellt war.
    ═══════════════════════════════════════════════════════════════ */
 
-/* ── Was bestellt war, und was daraus messbar ist ─────────────────────────
+/* ── Warum die Spalte die EINDEUTIGKEIT nennt und nicht den Kader ─────────
 
-   Bestellt waren drei Stufen: (1) das Team, in dessen KADER der Verband
-   die Person fuehrt; (2) bei mehreren Kadern das mit den meisten
-   Einsaetzen; (3) ohne Kader das mit den meisten Einsaetzen.
+   Bestellt waren ursprünglich drei Stufen: (1) das Team, in dessen KADER
+   der Verband die Person fuehrt; (2) bei mehreren Kadern das mit den
+   meisten Einsaetzen; (3) ohne Kader das mit den meisten Einsaetzen.
 
    ⚠ DEN KADER ALS MANNSCHAFTSLISTE GIBT ES BEIM VERBAND NICHT.
-   Gemessen am 24.09.2026 gegen `docs/sfv/swagger_2026-08-28.json`:
+   Gemessen gegen `docs/sfv/swagger_2026-08-28.json`, und am 24.09.2026 ein
+   zweites Mal nachgezaehlt statt aus dem Papier zitiert:
 
      /api/club/{clubId}/players  → ClubPlayer, 21 Felder.
-       Mannschaftskennung: KEINE. Es gibt nur `clubOwnerId`,
-       `clubOwnerName`, `clubOwnerNumber` — und das ist der KLUB.
+       Mannschaftskennung: KEINE — kein einziges Feld traegt „team" im
+       Namen. Es gibt nur `clubOwnerId`, `clubOwnerName`,
+       `clubOwnerNumber`, und das ist der KLUB.
      /api/match/{matchId}/players → Player, 23 Felder.
-       Mit `teamId`, `teamName`, `teamFullname`.
+       Mit `teamId`, `teamName`, `teamFullname`, `isHomeTeam`.
 
    Nur der SPIELBERICHT nennt eine Mannschaft, und genau den speichern wir
    in `spiel_aufstellung`. Es gibt also keine zweite Quelle: „Kader" und
-   „Einsaetze" kommen aus DERSELBEN Tabelle.
+   „Einsaetze" kaemen aus DERSELBEN Tabelle.
 
-   Die Unterscheidung, die in dieser Tabelle sehr wohl steckt:
+   ⚠ ⚠  UND DARAUS FOLGT, WAS DIE SPALTE SAGEN KANN (Entscheidung Didi,
+   24.09.2026). Es gilt IMMER „meiste Einsaetze" — eine Stufe „laut Kader"
+   kann es nicht geben, weil die Quelle keinen Kader kennt. Die drei alten
+   Kennungen hiessen `kader` · `mehrere_kader` · `kein_kader` und
+   behaupteten damit eine Herkunft, die es nicht gibt: genau die
+   Beschriftung, die mehr sagt als der Inhalt haelt.
 
-     im Kader  → eine Zeile in `spiel_aufstellung`, gleich ob gespielt
-     Einsatz   → `spielzeit` ist nicht die gemessene Null
+   Was die Spalte stattdessen sagt, ist die EINDEUTIGKEIT der Wahl:
 
-   Damit sind die drei Stufen umsetzbar, ohne dass eine davon etwas
-   behauptet, das wir nicht wissen: „Kader" heisst hier „genau eine
-   Mannschaft hat sie auf einem Spielbericht gefuehrt".
+     nur dieses Team    alle Aufstellungszeilen nennen dieselbe Mannschaft
+     meiste Einsaetze   mehrere Mannschaften, eine hat STRENG mehr
+     Gleichstand        mehrere haben gleich viele — gewaehlt nach der
+                        kleineren Team-Id, also willkuerlich
+     keine Team-Angabe  keine einzige Zeile nennt eine Mannschaft
 
-   ⚠ ⚠ UND STUFE 3 IST ERREICHBAR — anders als im Auftrag angenommen.
-   Zwei Wege muss man auseinanderhalten:
+   ⚠ DER GLEICHSTAND IST NEU, und er ist keine Umformulierung. Er steckte
+   bis zum 24.09.2026 UNSICHTBAR in `mehrere_kader`: eine Mannschaft, die
+   allein aus der kleineren Nummer hervorging, war von einer mit klarem
+   Vorsprung nicht zu unterscheiden. Genau diese Unterscheidung ist der
+   Zweck der Spalte — sie steht jetzt drin statt daneben. */
 
-     · eine Person OHNE jede Aufstellungszeile. Die kommt in dieser Liste
-       nicht vor, WEIL die Menge aus `spiel_aufstellung` stammt. Dieser
-       Weg ist zu, und er war der gemeinte.
-     · eine Person, deren Zeilen ALLE `sfv_team_id = null` tragen. Dieser
-       Weg ist OFFEN: die Spalte ist nullable (`schema.sql`), `zahl(p.teamId)`
-       in `matchdaten.ts:142` gibt `null` bei fehlendem oder unlesbarem
-       Wert, und die Swagger-Datei deklariert fuer `Player` ueberhaupt
-       KEIN Pflichtfeld — `required` fehlt dort ganz.
+/* ── Die vierte Kennung, und warum sie eine bleibt ────────────────────────
 
-   Ob es solche Zeilen im Bestand gibt, ist UNGEMESSEN und von hier aus
-   nicht messbar (die Datenbank ist ohne Passwort nicht erreichbar).
-   Stufe 3 ist damit kein Vorgriff auf einen kuenftigen Aufrufer, sondern
-   ein moeglicher Zustand von heute. Sie wird gebaut und nicht
-   weggelassen. */
+   Bestellt waren DREI Texte. Es gibt VIER Lagen.
+
+   Eine Person, deren Zeilen ALLE `sfv_team_id = null` tragen, hat keine
+   Mannschaft, die genannt werden koennte. Die drei bestellten Texte sagen
+   alle etwas darueber, WIE eindeutig die gewaehlte Mannschaft ist — und
+   hier ist keine gewaehlt worden. Jeder der drei waere eine Behauptung:
+
+     „nur dieses Team"   es gibt kein Team
+     „Gleichstand"       es gab keinen Vergleich
+     „meiste Einsaetze"  es wurde nichts gezaehlt
+
+   ⚠ Sie stillschweigend in einen der drei fallen zu lassen ist deshalb
+   nicht Sparsamkeit, sondern eine falsche Auskunft in der einen Spalte,
+   die die Herkunft der daneben genannten Mannschaft erklaeren soll. Eine
+   Person ohne Team ist etwas anderes als eine mit genau einem.
+
+   ⚠ ⚠  UND DER FALL IST ERREICHBAR — gemessen am 24.09.2026 am Code und
+   an der Spezifikation, nicht vermutet:
+
+     · `bildeAufstellung` hat genau ZWEI Ausschluesse (`eigen &&
+       personId === null`, `!eigen && nummer === null`). Keiner davon
+       sieht `teamId` an.
+     · `zahl(p.teamId)` in `matchdaten.ts:142` gibt `null`, wenn der Wert
+       fehlt oder unlesbar ist.
+     · `spiel_aufstellung` hat KEINEN CHECK auf `sfv_team_id`.
+     · Das Schema `Player` hat GAR KEINE `required`-Liste — `teamId` ist
+       als `integer` deklariert, seine ANWESENHEIT nirgends zugesagt. Ein
+       fehlender Schluessel im JSON ergibt `undefined` und damit `null`.
+
+   Ob solche Zeilen im Bestand stehen, ist UNGEMESSEN (die Datenbank ist
+   von hier aus ohne Passwort nicht erreichbar); die Abfrage dazu liegt in
+   `supabase/abfragen_2026-09-24_stammteam.sql` (Nr. 6). Die Kennung wird
+   deshalb getragen und nicht weggelassen — ein moeglicher Zustand von
+   heute, kein Vorgriff auf einen kuenftigen Aufrufer.
+
+   ⚠ Der Text heisst `keine Team-Angabe` und nicht „kein Team": die Person
+   hat gespielt, es fehlt die ANGABE, fuer wen. Das ist eine fehlende
+   Messung und keine Eigenschaft der Person — dieselbe Unterscheidung wie
+   `null` gegen `0` bei der Spielzeit eine Ebene tiefer. */
 
 /* ── Drei Entscheidungen, und ihre Gruende ────────────────────────────────
 
@@ -80,12 +118,22 @@
        eine andere Mannschaft nennt, ist von einem Fehler nicht zu
        unterscheiden.
 
-   3 · ZEILEN OHNE `sfv_team_id` ZAEHLEN BEI DER KADER-ZAEHLUNG NICHT MIT.
-       Sie sagen nichts ueber eine Mannschaft. Hat eine Person nur solche
-       Zeilen, ist das Ergebnis `{ sfv_team_id: null, regel: "kein_kader" }`
-       — siehe den zweiten Weg oben. */
+       ⚠ ⚠  SEIT DEM 24.09.2026 STEHT DIE WILLKUER IN DER SPALTE. Bis dahin
+       war sie nur hier begruendet, und wer die Datei las, konnte eine so
+       gewaehlte Mannschaft von einer eindeutigen nicht unterscheiden. Die
+       Kennung `gleichstand` ist deshalb keine Verfeinerung, sondern das
+       Einloesen genau dieser Zusage.
 
-export type StammteamRegel = "kader" | "mehrere_kader" | "kein_kader";
+   3 · ZEILEN OHNE `sfv_team_id` ZAEHLEN BEI DER ZAEHLUNG NICHT MIT.
+       Sie sagen nichts ueber eine Mannschaft. Hat eine Person nur solche
+       Zeilen, ist das Ergebnis `{ sfv_team_id: null, regel: "ohne_team" }`
+       — siehe den Abschnitt zur vierten Kennung. */
+
+export type StammteamRegel =
+  | "nur_dieses_team"
+  | "meiste_einsaetze"
+  | "gleichstand"
+  | "ohne_team";
 
 export interface Stammteam {
   sfv_team_id: number | null;
@@ -95,7 +143,13 @@ export interface Stammteam {
 /** Nur diese zwei Felder werden gelesen — absichtlich schmal. Was die
     Regel nicht sieht, kann sie nicht heimlich mitverwenden; und der
     Aufrufer muss keine ganze Aufstellungszeile beschaffen. Beide Namen
-    und beide Typen sind die der Spalten in `spiel_aufstellung`. */
+    und beide Typen sind die der Spalten in `spiel_aufstellung`.
+
+    ⚠ Und die Rueckennummer gehoert ausdruecklich NICHT dazu, obwohl die
+    Excel-Liste sie seit dem 24.09.2026 je Stammteam schneidet: das ist
+    eine Frage der AUSGABE, nicht der Wahl der Mannschaft. Sie hier
+    mitzufuehren hiesse, der Regel ein Feld zu geben, das sie nicht
+    braucht — und dann kann sie es eines Tages mitverwenden. */
 export interface StammteamZeile {
   sfv_team_id: number | null;
   spielzeit: number | null;
@@ -113,9 +167,9 @@ function istEinsatz(spielzeit: number | null): boolean {
 /** Das Stammteam aus den Aufstellungszeilen EINER Person. */
 export function bestimmeStammteam(zeilen: StammteamZeile[]): Stammteam {
   /* Einsaetze je Mannschaft. Eine Mannschaft steht hier, sobald sie EINE
-     Zeile hat — auch mit null Einsaetzen: dann ist die Person in ihrem
-     Kader gefuehrt worden und hat nicht gespielt, und das bleibt eine
-     Kaderzugehoerigkeit. */
+     Zeile hat — auch mit null Einsaetzen: dann hat der Verband die Person
+     auf einem Spielbericht dieser Mannschaft gefuehrt und sie hat nicht
+     gespielt, und das bleibt eine Zugehoerigkeit. */
   const einsaetze = new Map<number, number>();
   for (const z of zeilen) {
     if (z.sfv_team_id === null) continue;
@@ -140,22 +194,49 @@ export function bestimmeStammteam(zeilen: StammteamZeile[]): Stammteam {
   }
 
   /* `beste === null` heisst genau: keine einzige Zeile mit Mannschaft. */
-  if (beste === null) return { sfv_team_id: null, regel: "kein_kader" };
+  if (beste === null) return { sfv_team_id: null, regel: "ohne_team" };
 
-  /* Die Wahl der Mannschaft ist in beiden Faellen dieselbe — bei genau
-     einer ist sie trivial. Unterschiedlich ist nur, was wir darueber
-     sagen duerfen. */
+  /* ⚠ ⚠  GEZAEHLT WIRD DER GLEICHSTAND AN DER SPITZE, NICHT IRGENDEINER.
+     5 · 2 · 2 ist KEIN Gleichstand fuer die Wahl: die 5 gewinnt streng, und
+     was die beiden Zweier untereinander machen, sagt darueber nichts. Wer
+     hier „irgendwo gleich viele" zaehlte, meldete Gleichstand fuer eine
+     eindeutige Wahl — und die Spalte behauptete eine Willkuer, die es nicht
+     gab. Das ist die teurere der beiden Fehlrichtungen: ein Gleichstand, der
+     als eindeutig gemeldet wird, faellt niemandem auf; einer, der zu oft
+     gemeldet wird, macht die Spalte wertlos. */
+  let anDerSpitze = 0;
+  for (const anzahl of einsaetze.values()) {
+    if (anzahl === beste.anzahl) anDerSpitze += 1;
+  }
+
+  /* ⚠ Die Wahl der Mannschaft ist in allen drei Faellen dieselbe — bei
+     genau einer ist sie trivial, bei einem Gleichstand willkuerlich.
+     Unterschiedlich ist nur, was wir darueber sagen duerfen.
+
+     ⚠ Die Reihenfolge der Zweige ist die Aussage: der Gleichstand gewinnt
+     gegen `einsaetze.size === 1` nicht (dort ist `anDerSpitze` immer 1),
+     aber gegen „mehrere" schon — sonst verschwaende er wieder in
+     `meiste_einsaetze`, so wie bis zum 24.09.2026. */
   return {
     sfv_team_id: beste.id,
-    regel: einsaetze.size === 1 ? "kader" : "mehrere_kader",
+    regel: anDerSpitze > 1
+      ? "gleichstand"
+      : einsaetze.size === 1 ? "nur_dieses_team" : "meiste_einsaetze",
   };
 }
 
-/** Die Spalte „Stammteam laut" im Export. Sie sagt, welche Regel gegriffen
-    hat — ohne sie waere eine Mannschaft, die aus einem Gleichstand
-    hervorgegangen ist, von einer eindeutigen nicht zu unterscheiden. */
+/** Die Spalte „Stammteam laut" im Export. Sie sagt, wie EINDEUTIG die
+    Mannschaft daneben ist — ohne sie waere eine, die allein aus der
+    kleineren Teamnummer hervorging, von einer eindeutigen nicht zu
+    unterscheiden.
+
+    ⚠ Der Text lebt NUR hier. `spielerAusgabe.ts` schlaegt ihn erst beim
+    Schreiben der Datei nach und fuehrt ihn nicht an der Zeile mit — sonst
+    gaebe es zwei Orte, an denen die Formulierung lebt, und sie liefen
+    auseinander. */
 export const STAMMTEAM_LAUT: Record<StammteamRegel, string> = {
-  kader: "Kader",
-  mehrere_kader: "mehrere Kader, meiste Einsätze",
-  kein_kader: "kein Kader, meiste Einsätze",
+  nur_dieses_team: "nur dieses Team",
+  meiste_einsaetze: "meiste Einsätze",
+  gleichstand: "Gleichstand",
+  ohne_team: "keine Team-Angabe",
 };

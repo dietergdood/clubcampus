@@ -3,8 +3,12 @@ import {
   baueStatistik, gruppiereNachTeam, hatVerlauf, mischeEreignisse,
   offeneZuordnungen, TYP_AUSSCHLUSS, TYP_TOR, TYP_VERWARNUNG,
   beschreibeEreignis, geaenderteFelder, unzugeordnetLabel, SUBTYP_EIGENTOR,
+  OHNE_MANNSCHAFT,
 } from "../matchdatenAnzeige.ts";
 import type { EreignisZeile } from "../matchdatenAnzeige.ts";
+/* ⚠ NUR LESEND. Die Regel lebt in `stammteam.ts`; hier wird sie als
+   unabhängige Autorität befragt und nicht nachgebaut. */
+import { bestimmeStammteam } from "../stammteam.ts";
 
 const e = (p: Partial<EreignisZeile> & { id: string }): EreignisZeile => ({
   herkunft: "sfv", ersetzt_ereignis_id: null, verworfen_am: null,
@@ -99,8 +103,14 @@ describe("hatVerlauf", () => {
 });
 
 describe("offeneZuordnungen", () => {
-  const a = (person: number, spiel: string, nr: number | null, team = 1) =>
-    ({ sfv_person_id: person, sfv_team_id: team, rueckennr: nr, spiel_id: spiel });
+  /* ⚠ `spielzeit` gehört dazu, seit das Team über `bestimmeStammteam()`
+     entschieden wird (24.09.2026). Der Dienst liefert sie immer
+     (`select("*")` auf `spiel_aufstellung`); eine Attrappe ohne sie prüfte
+     eine Form, die es nicht gibt — und sie wäre nicht harmlos: ohne
+     Spielzeit zählt jede Zeile gleich, also stünde überall Gleichstand,
+     und das Stammteam fiele auf die kleinste Teamnummer. */
+  const a = (person: number, spiel: string, nr: number | null, team = 1, spielzeit = 90) =>
+    ({ sfv_person_id: person, sfv_team_id: team, rueckennr: nr, spiel_id: spiel, spielzeit });
 
   it("lässt bereits zugeordnete Personen weg", () => {
     const raus = offeneZuordnungen([a(111, "s1", 9), a(222, "s1", 7)], new Set([111]));
@@ -119,23 +129,162 @@ describe("offeneZuordnungen", () => {
     const raus = offeneZuordnungen([a(111, "s1", 9), a(222, "s1", 7), a(222, "s2", 7)], new Set());
     expect(raus.map(o => o.sfv_person_id)).toEqual([222, 111]);
   });
+
+  /* ══════════════════════════════════════════════════════════════════
+     ⚠ ⚠  DAS TEAM IST DAS STAMMTEAM, NICHT DAS DER ERSTEN ZEILE
+
+     Bis zum 24.09.2026 behielt diese Funktion die `sfv_team_id` der
+     ERSTEN Zeile, die sie sah — und die Reihenfolge kam aus
+     `.order("id")`, also aus der Einfügereihenfolge in die Datenbank.
+
+     Der Schaden lag nicht in der Willkür selbst, sondern daneben: die
+     Excel-Liste nimmt seit demselben Tag das Stammteam. Kästchen und
+     Datei gruppierten nach zwei verschiedenen Regeln, und gemessen
+     konnte eine Person dadurch über KEIN Kästchen erreichbar sein.
+     ══════════════════════════════════════════════════════════════════ */
+  it("⚠ ⚠ nimmt das Team mit den meisten Einsätzen — nicht das der ersten Zeile", () => {
+    /* Erste Zeile: Mannschaft 20. Stammteam: 10, mit vier Einsätzen
+       gegen einen. Die alte Regel hätte 20 gesagt. */
+    const zeilen = [
+      a(111, "s0", 7, 20),
+      a(111, "s1", 9, 10), a(111, "s2", 9, 10), a(111, "s3", 9, 10), a(111, "s4", 9, 10),
+    ];
+    expect(offeneZuordnungen(zeilen, new Set())[0].sfv_team_id).toBe(10);
+
+    /* ⚠ ⚠  UND DASSELBE MIT UMGEDREHTER EINGABE. Das ist der Kern: die
+       alte Fassung hing an der Reihenfolge, die neue darf es nicht. Ein
+       Fall mit nur EINER Reihenfolge wäre auch dann grün, wenn jemand
+       „nimm die LETZTE Zeile" einbaut — und das wäre dieselbe Willkür in
+       neuer Verkleidung. */
+    expect(offeneZuordnungen([...zeilen].reverse(), new Set())[0].sfv_team_id).toBe(10);
+  });
+
+  it("zählt eine gemessene Null nicht als Einsatz — die Mannschaft mit Spielzeit gewinnt", () => {
+    /* ⚠ Die Regel dazu steht in `stammteam.ts` und wird hier nicht
+       nachgebaut, nur ihre Wirkung an der Naht geprüft: `spielzeit = 0`
+       ist ein gemessener Wert („Kein Einsatz"), `null` eine fehlende
+       Messung. Käme die Spielzeit hier nicht durch, stünden beide
+       Mannschaften auf eins und die kleinere Nummer (10) gewänne. */
+    const raus = offeneZuordnungen([
+      a(111, "s1", 9, 10, 0), a(111, "s2", 9, 10, 0),
+      a(111, "s3", 7, 20, 90),
+    ], new Set());
+    expect(raus[0].sfv_team_id).toBe(20);
+  });
+
+  it("⚠ der Zähler „offen“ zählt jede Person genau einmal", () => {
+    /* Die Maske summiert `g.offen.length` über die Gruppen. Eine Person
+       in zwei Mannschaften darf diese Summe nicht erhöhen — sonst nennt
+       die Karte mehr offene Spieler, als es Menschen gibt, und die Zahl
+       ist von einem echten Rückstand nicht zu unterscheiden. */
+    const zeilen = [
+      a(111, "s1", 9, 10), a(111, "s2", 7, 20), a(111, "s3", 7, 20),
+      a(222, "s1", 4, 10),
+      a(333, "s9", 5, null as unknown as number),
+    ];
+    const offen = offeneZuordnungen(zeilen, new Set());
+    expect(offen).toHaveLength(3);
+    const gruppen = gruppiereNachTeam(offen, new Map());
+    expect(gruppen.reduce((n, g) => n + g.offen.length, 0)).toBe(3);
+  });
 });
 
 describe("gruppiereNachTeam", () => {
+  /* Dieselbe Attrappe wie oben — mit `spielzeit`, weil `spiel_aufstellung`
+     sie führt. */
+  const a = (person: number, team: number | null, nr: number, spielzeit = 90) =>
+    ({ sfv_person_id: person, sfv_team_id: team, rueckennr: nr, spiel_id: "s", spielzeit });
+
   it("gruppiert und nennt die Mannschaft beim Namen", () => {
-    const offen = offeneZuordnungen([
-      { sfv_person_id: 1, sfv_team_id: 10, rueckennr: 1, spiel_id: "s" },
-      { sfv_person_id: 2, sfv_team_id: 10, rueckennr: 2, spiel_id: "s" },
-      { sfv_person_id: 3, sfv_team_id: 20, rueckennr: 3, spiel_id: "s" },
-    ], new Set());
+    const offen = offeneZuordnungen([a(1, 10, 1), a(2, 10, 2), a(3, 20, 3)], new Set());
     const g = gruppiereNachTeam(offen, new Map([[10, "Herren 1"], [20, "Junioren B"]]));
     expect(g.map(x => [x.teamName, x.offen.length])).toEqual([["Herren 1", 2], ["Junioren B", 1]]);
   });
 
-  it("fängt eine unbekannte Mannschaft ab", () => {
-    const offen = offeneZuordnungen(
-      [{ sfv_person_id: 1, sfv_team_id: null, rueckennr: 1, spiel_id: "s" }], new Set());
-    expect(gruppiereNachTeam(offen, new Map())[0].teamName).toBe("Ohne Mannschaft");
+  it("fängt eine Mannschaft ab, die `teams` nicht kennt", () => {
+    /* ⚠ Eine Teamnummer OHNE Namen — nicht dasselbe wie keine Nummer.
+       Der Schlüssel bleibt hier `"99999"`, nur der Anzeigename fehlt:
+       das ist eine fehlende Team-Zuordnung bei uns, kein fehlender Wert
+       beim Verband. Die Gruppe darunter prüft den anderen Fall. */
+    const g = gruppiereNachTeam(offeneZuordnungen([a(1, 99999, 1)], new Set()), new Map());
+    expect(g[0].teamName).toBe(OHNE_MANNSCHAFT);
+    expect(g[0].sfv_team_id).toBe(99999);
+  });
+
+  it("⚠ ⚠ eine Person ohne jede Team-Id steht in der Gruppe „-“ — und die hat ein Kästchen", () => {
+    /* ⚠ ⚠  DER SCHLÜSSEL IST DIE ZUSAGE, NICHT DER NAME. Das Kästchen der
+       Maske trägt `String(g.sfv_team_id ?? "-")`, und
+       `alsMannschaftsliste()` filtert gegen genau diese Form. Fiele diese
+       Gruppe weg oder hiesse ihr Schlüssel anders, wäre jede Person ohne
+       Team-Id unerreichbar — nicht zuzuordnen und nicht zu exportieren,
+       und nichts schlüge fehl.
+
+       ⚠ `null` steht hier über einen Cast, weil `sfv_team_id` in
+       `spiel_aufstellung` nullable ist (`schema.sql`): `zahl(p.teamId)`
+       gibt `null`, wenn der Verband keine Mannschaft nennt — und die
+       Swagger-Datei erklärt für `Player` kein einziges Pflichtfeld. */
+    const offen = offeneZuordnungen([a(1, null, 3), a(1, null, 3)], new Set());
+    expect(offen[0].sfv_team_id).toBeNull();
+
+    const g = gruppiereNachTeam(offen, new Map([[10, "Herren 1"]]));
+    expect(g).toHaveLength(1);
+    expect(String(g[0].sfv_team_id ?? "-")).toBe("-");
+    expect(g[0].teamName).toBe(OHNE_MANNSCHAFT);
+  });
+
+  /* ══════════════════════════════════════════════════════════════════
+     ⚠ ⚠  JEDE PERSON IST ÜBER GENAU EIN KÄSTCHEN ERREICHBAR
+
+     Das ist der Befund, der den Umbau ausgelöst hat — und er war nicht
+     der vermutete. Erwartet war: eine Person in zwei Mannschaften steht
+     unter der falschen und ist nur über das andere Kästchen zu bekommen.
+     Gemessen am 24.09.2026 im Einbau: **es gibt das andere Kästchen
+     unter Umständen gar nicht.** Eine Gruppe entstand nur, wenn
+     irgendjemand dort seine ERSTE Zeile hatte.
+
+     ⚠ Geprüft wird gegen `bestimmeStammteam()` — eine ZWEITE, unabhängige
+     Rechnung über dieselben Zeilen. Eine Erwartung, die den Schlüssel aus
+     `offeneZuordnungen()` selbst zieht, wäre nicht zu brechen: sie
+     verglich die Funktion mit sich. So nennt der Fall die Autorität, und
+     wer die Regel in der Warteschlange ändert, macht ihn rot.
+
+     ⚠ Und positiv über ALLE Personen, nicht an einem Beispiel: eine
+     Stichprobe an einer Person ist grün, egal welche Regel der Code
+     anwendet — sie trifft zufällig in der Hälfte der Fälle.
+     ══════════════════════════════════════════════════════════════════ */
+  it("⚠ ⚠ jede Person der Liste steht in genau einer Gruppe, und zwar der ihres Stammteams", () => {
+    /* Eine Lage, in der die alte Regel nachweislich umfällt: Person 1
+       hat ihre erste Zeile bei 10 und ihr Stammteam bei 20 — und bei 20
+       läuft sonst NIEMAND zuerst auf. Vorher entstand für 20 also keine
+       Gruppe, und Person 1 war über kein Kästchen erreichbar. */
+    const zeilen = [
+      a(1, 10, 9), a(1, 20, 7), a(1, 20, 7),
+      a(2, 10, 4), a(2, 10, 4),
+      a(3, null, 5),
+      a(4, 30, 2),
+    ];
+    const gruppen = gruppiereNachTeam(
+      offeneZuordnungen(zeilen, new Set()),
+      new Map([[10, "Herren 1"], [20, "Herren 2"], [30, "Junioren A"]]));
+
+    /* Die Kästchen, genau in der Form, die die Maske bildet. */
+    const kaestchen = gruppen.map(g => String(g.sfv_team_id ?? "-"));
+    /* ⚠ Keine Dublette: zwei Gruppen mit demselben Schlüssel gäben zwei
+       Kästchen für dieselbe Mannschaft, und „n von m gewählt" behauptete
+       eine unvollständige Auswahl. */
+    expect(new Set(kaestchen).size).toBe(kaestchen.length);
+
+    for (const person of [1, 2, 3, 4]) {
+      const meine = zeilen.filter(z => z.sfv_person_id === person);
+      /* Die unabhängige Rechnung — die Autorität steht in `stammteam.ts`. */
+      const erwartet = String(bestimmeStammteam(meine).sfv_team_id ?? "-");
+
+      const drin = gruppen.filter(g => g.offen.some(o => o.sfv_person_id === person));
+      expect(drin.map(g => String(g.sfv_team_id ?? "-")),
+        `Person ${person} muss in GENAU EINER Gruppe stehen, und zwar in ${erwartet}`)
+        .toEqual([erwartet]);
+      expect(kaestchen).toContain(erwartet);
+    }
   });
 });
 

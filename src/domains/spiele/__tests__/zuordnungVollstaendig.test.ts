@@ -37,6 +37,7 @@ import { describe, it, expect } from "vitest";
 import { makeSb } from "../../members/__tests__/_mockSb.ts";
 import { fetchAlleAufstellungen, fetchZuordnungen } from "../matchdatenService.ts";
 import { offeneZuordnungen, gruppiereNachTeam, OHNE_MANNSCHAFT } from "../matchdatenAnzeige.ts";
+import type { AufstellungFuerWarteschlange } from "../matchdatenAnzeige.ts";
 import ts from "typescript";
 import { suche, jederKnoten, zeileVon } from "../../../test-helpers/quelltext.ts";
 
@@ -108,9 +109,24 @@ describe("fetchAlleAufstellungen — es kommt alles an", () => {
 });
 
 describe("⚠ Kein Kaderfilter — die bestellte Zusage", () => {
-  const OHNE_KADER = {
+  /* ⚠ ⚠  `spielzeit` UND `spiel_id` GEHOEREN DAZU, und beide standen hier
+     nicht — `as never` an den drei Aufrufen nahm dem Compiler die Pruefung
+     ab. Seit dem 24.09.2026 verlangt `offeneZuordnungen()` `spielzeit`,
+     weil es das Stammteam ueber die Einsaetze bestimmt; die Attrappe pruefte
+     also eine Form, die es nicht gibt.
+
+     ⚠ Und die Richtung war die stille: `istEinsatz(undefined)` ist **true**,
+     die fehlende Angabe haette also jede Mannschaft gleich gezaehlt — Gleich-
+     stand, und das Stammteam fiele auf die kleinste Teamnummer. Bei EINER
+     Mannschaft ist das Ergebnis dasselbe, der Fall waere gruen geblieben,
+     und niemand haette gemerkt, dass er die Regel nicht mehr trifft.
+
+     Gemeldet von einem Subagenten, der die Datei nicht anfassen durfte —
+     der `as never`-Umweg ist genau das Loch, gegen das das Pflichtfeld
+     gebaut ist. Die drei Aufrufe brauchen ihn jetzt nicht mehr. */
+  const OHNE_KADER: AufstellungFuerWarteschlange = {
     sfv_person_id: 1132270, sfv_team_id: 58655, rueckennr: 13,
-    name: "Nur in einer Aufstellung", ist_eigener: true,
+    spiel_id: "s1", spielzeit: 90,
   };
 
   it("eine Person, die nur in einer Aufstellung steht und in keinem Kader, ist offen", () => {
@@ -118,7 +134,7 @@ describe("⚠ Kein Kaderfilter — die bestellte Zusage", () => {
        kennt nur die Aufstellung und die bekannten Zuordnungen. Genau das
        hält dieser Fall fest: eine Kaderprüfung liesse sich hier nur
        einbauen, indem jemand der Funktion ein neues Argument gibt. */
-    const offen = offeneZuordnungen([OHNE_KADER] as never, new Set<number>());
+    const offen = offeneZuordnungen([OHNE_KADER], new Set<number>());
     expect(offen.length).toBe(1);
     expect(offen[0].sfv_person_id).toBe(1132270);
   });
@@ -126,7 +142,7 @@ describe("⚠ Kein Kaderfilter — die bestellte Zusage", () => {
   it("sie verschwindet auch dann nicht, wenn ihr Team unbekannt ist", () => {
     /* Eine Aufstellungszeile mit einer Teamnummer, die `teams` nicht
        kennt, landet unter „Ohne Mannschaft" — sie fällt NICHT weg. */
-    const offen = offeneZuordnungen([{ ...OHNE_KADER, sfv_team_id: 99999 }] as never,
+    const offen = offeneZuordnungen([{ ...OHNE_KADER, sfv_team_id: 99999 }],
       new Set<number>());
     const gruppen = gruppiereNachTeam(offen, new Map());
     expect(gruppen.length).toBe(1);
@@ -135,7 +151,7 @@ describe("⚠ Kein Kaderfilter — die bestellte Zusage", () => {
   });
 
   it("nur eine bereits zugeordnete Person fällt heraus — und sonst nichts", () => {
-    const offen = offeneZuordnungen([OHNE_KADER] as never, new Set([1132270]));
+    const offen = offeneZuordnungen([OHNE_KADER], new Set([1132270]));
     expect(offen.length).toBe(0);
   });
 });

@@ -148,12 +148,20 @@ export function SfvSpielerZuordnung({ sb, vereinId, benutzerId, dbMitglieder, db
 
      ⚠ ⚠  UND SEIT DEM 24.09.2026 TRIFFT DIE AUSWAHL DAS STAMMTEAM. Die
      Liste führt eine Zeile je Person, nicht je Person und Mannschaft;
-     `alsMannschaftsliste()` filtert gegen `stammteamSchluessel`. Die
-     Kästchen kommen aber weiter aus `gruppiereNachTeam()`, das je Person
-     nur die ERSTE `sfv_team_id` kennt — die beiden können also
-     auseinanderfallen, und gemessen kann eine Person dann über KEIN
-     Kästchen erreichbar sein. Der Befund steht ausführlich an
-     `alsMannschaftsliste()`; die Maske wird hier nicht geändert. */
+     `alsMannschaftsliste()` filtert gegen `stammteamSchluessel`.
+
+     ⚠ ⚠  HIER STAND BIS ZUM NACHMITTAG DESSELBEN TAGES, DIE KÄSTCHEN
+     KÄMEN WEITER AUS DER ERSTEN GESCHRIEBENEN ZEILE — und dass die zwei
+     deshalb auseinanderfallen können. Das galt für einen halben Tag und
+     ist behoben: `offeneZuordnungen()` bestimmt das Team seither über
+     `bestimmeStammteam()`, also über DIESELBE Regel wie die Ausgabe. Die
+     Kästchen und die Datei gruppieren damit gleich, und jede Person der
+     Liste ist über genau ein Kästchen erreichbar — auch die ohne
+     Team-Id, über `"-"`.
+
+     ⚠ Der Satz bleibt als Verlauf stehen und nicht als Warnung: im
+     Präsens gelesen behauptete er eine Lücke, die es nicht mehr gibt,
+     und wer ihn liest, sucht dann nach etwas, das behoben ist. */
   const [teamsGewaehlt, setTeamsGewaehlt] = useState<ReadonlySet<string>>(new Set());
 
   async function laden() {

@@ -26,9 +26,23 @@
       tritt, ist die Gegenaussage: sie steht EINMAL da. Hätte ich ihn
       gelöscht, wäre mit ihm der Grund verschwunden.
 
-   5. ⚠ Die Spalte `Stammteam laut` sagt, nach welcher Regel gewählt
-      wurde. Ohne sie wäre eine Mannschaft, die aus einem Gleichstand
+   5. ⚠ Die Spalte `Stammteam laut` sagt, wie EINDEUTIG gewählt wurde.
+      Ohne sie wäre eine Mannschaft, die aus einem Gleichstand
       hervorgeht, von einer eindeutigen nicht zu unterscheiden.
+
+      ⚠ ⚠  UND SIE SAGT SEIT DEM 24.09.2026 NICHT MEHR DEN KADER. Einen
+      Kader je Mannschaft gibt es beim Verband nicht (gemessen, siehe
+      `stammteam.ts`), also gilt immer „meiste Einsätze". Aus drei
+      Kennungen wurden vier: nur dieses Team · meiste Einsätze ·
+      Gleichstand · keine Team-Angabe. Der Gleichstand ist eine NEUE
+      Stufe, keine Umbenennung — er steckte vorher unsichtbar in
+      „mehrere Kader" und trug denselben Text wie ein klarer Vorsprung.
+
+   6. ⚠ ⚠  DIE NUMMERN-ZELLE TRÄGT NUR DIE NUMMERN DES STAMMTEAMS
+      (24.09.2026) — und das ist ebenfalls die umgekehrte Zusage. Der
+      Fall dazu ist UMGEDREHT, nicht gelöscht, und der Preis steht bei
+      ihm: eine Nummer aus der anderen Mannschaft erscheint in dieser
+      Liste nirgends mehr. In der Textliste erscheint sie weiterhin.
    ═══════════════════════════════════════════════════════════════ */
 import { describe, it, expect } from "vitest";
 import {
@@ -39,15 +53,23 @@ import { STAMMTEAM_LAUT } from "../stammteam.ts";
 import type { StammteamRegel } from "../stammteam.ts";
 import type { SpielerZeile, AufstellungFuerListe } from "../spielerAusgabe.ts";
 
-/* Die drei Texte der Spalte `Stammteam laut` — abgekürzt, weil sie in fast
+/* Die VIER Texte der Spalte `Stammteam laut` — abgekürzt, weil sie in fast
    jeder Erwartung vorkommen.
    ⚠ Aus `STAMMTEAM_LAUT` gelesen und nicht getippt: die Formulierung lebt
    an einer Stelle. Dass sie WÖRTLICH so bestellt war, hält der eigene Fall
-   „die drei Texte sind die bestellten" weiter unten fest — sonst könnte
-   jemand die Map umformulieren und alle Fälle blieben grün. */
-const L_KADER = STAMMTEAM_LAUT.kader;
-const L_MEHRERE = STAMMTEAM_LAUT.mehrere_kader;
-const L_OHNE = STAMMTEAM_LAUT.kein_kader;
+   „die vier Texte sind die bestellten" weiter unten fest — sonst könnte
+   jemand die Map umformulieren und alle Fälle blieben grün.
+
+   ⚠ ⚠  ES WAREN BIS ZUM 24.09.2026 DREI, und sie hiessen nach dem KADER.
+   Den gibt es beim Verband nicht (gemessen, siehe `stammteam.ts`), also
+   gilt immer „meiste Einsätze", und die Spalte sagt jetzt die
+   EINDEUTIGKEIT. `L_GLEICH` ist dabei neu: der Gleichstand steckte vorher
+   unsichtbar in `mehrere_kader` und trug denselben Text wie ein klarer
+   Vorsprung. */
+const L_EIN = STAMMTEAM_LAUT.nur_dieses_team;
+const L_MEHR = STAMMTEAM_LAUT.meiste_einsaetze;
+const L_GLEICH = STAMMTEAM_LAUT.gleichstand;
+const L_OHNE = STAMMTEAM_LAUT.ohne_team;
 
 /* ⚠ Über `fromCharCode`, nicht als Escape im Quelltext: ein rohes BOM in
    einer eingecheckten Datei ist genau das, was check:encoding abweist. */
@@ -93,8 +115,22 @@ const sp = (
   stammteamSchluessel: stamm ? stamm.schluessel : (teams.length ? `k:${teams[0]}` : "-"),
   stammteam: stamm ? stamm.name : (teams[0] ?? OHNE_MANNSCHAFT),
   stammteamRegel: stamm ? stamm.regel
-    : (teams.length === 0 ? "kein_kader" : teams.length === 1 ? "kader" : "mehrere_kader"),
-  rueckennummern, einsaetze: 1,
+    : (teams.length === 0 ? "ohne_team"
+      : teams.length === 1 ? "nur_dieses_team" : "meiste_einsaetze"),
+  rueckennummern,
+  /* ⚠ ⚠  DIESELBEN NUMMERN WIE `rueckennummern` — UND DAS IST KEINE
+     Vereinfachung, sondern die einzige Menge, die die Attrappe kennen kann.
+     Welche Nummer zu welcher Mannschaft gehört, steht in den
+     AUFSTELLUNGSZEILEN; `sp()` hat keine. Für eine Person mit EINER
+     Mannschaft sind die beiden Mengen ohnehin gleich, und genau solche
+     Personen führen die Fälle, die von der Nummer nicht handeln.
+
+     ⚠ Wer den SCHNITT selbst prüfen will, muss über `baueSpielerZeilen`
+     gehen — dort entsteht er. Ein setzbares Feld hier hiesse: der Fall
+     prüft, was der Fall selbst hineingeschrieben hat. Die Fälle dazu
+     stehen unter „Das Stammteam". */
+  stammteamNummern: rueckennummern,
+  einsaetze: 1,
   /* ⚠ Am LETZTEN Leerzeichen, und das ist NICHT die Regel des Codes — der
      trennt nie selbst, er nimmt `firstname` und `name` des Verbands. Hier
      steht sie nur, damit `name` und die Teile zusammenpassen; im
@@ -151,16 +187,19 @@ describe("alsMannschaftsliste — Form der Datei", () => {
       ["Name", "Vorname", "Team", "Stammteam laut", "Rückennummer", "SFV-personId"]);
   });
 
-  it("⚠ die drei Texte der Spalte `Stammteam laut` sind die bestellten", () => {
-    /* ⚠ DIE EINZIGE STELLE, DIE DEN WORTLAUT FESTHÄLT. Alle anderen Fälle
-       lesen ihn aus `STAMMTEAM_LAUT` — die prüfen die Verdrahtung und
-       blieben grün, wenn jemand die Map umformuliert. Bestellt waren
-       „Kader" und „mehrere Kader, meiste Einsätze"; der dritte Text ist
-       nicht bestellt worden und steht hier, damit eine Änderung daran
-       nicht unbemerkt bleibt. */
-    expect(STAMMTEAM_LAUT.kader).toBe("Kader");
-    expect(STAMMTEAM_LAUT.mehrere_kader).toBe("mehrere Kader, meiste Einsätze");
-    expect(STAMMTEAM_LAUT.kein_kader).toBe("kein Kader, meiste Einsätze");
+  it("⚠ die vier Texte der Spalte `Stammteam laut` sind die bestellten", () => {
+    /* ⚠ DIE EINZIGE STELLE DIESER DATEI, DIE DEN WORTLAUT FESTHÄLT. Alle
+       anderen Fälle lesen ihn aus `STAMMTEAM_LAUT` — die prüfen die
+       Verdrahtung und blieben grün, wenn jemand die Map umformuliert.
+
+       Bestellt waren am 24.09.2026 „nur dieses Team", „meiste Einsätze"
+       und „Gleichstand"; der vierte Text ist nicht bestellt worden und
+       steht hier, damit eine Änderung daran nicht unbemerkt bleibt.
+       Warum es einen vierten gibt, steht in `stammteam.ts`. */
+    expect(STAMMTEAM_LAUT.nur_dieses_team).toBe("nur dieses Team");
+    expect(STAMMTEAM_LAUT.meiste_einsaetze).toBe("meiste Einsätze");
+    expect(STAMMTEAM_LAUT.gleichstand).toBe("Gleichstand");
+    expect(STAMMTEAM_LAUT.ohne_team).toBe("keine Team-Angabe");
   });
 
   it("⚠ das BOM ist das erste Zeichen — ohne es liest Excel die Umlaute als Latin-1", () => {
@@ -186,13 +225,13 @@ describe("alsMannschaftsliste — Spalteninhalte", () => {
        eine Spalte je Nummer wäre eine Spaltenzahl, die von den Daten abhängt. */
     const zeilen = [sp(100, "Adrian Schmid", ["1. Mannschaft"], [9, 18, 21])];
     const [zeile] = datenzeilen(alsMannschaftsliste(zeilen, alleTeams(zeilen)));
-    expect(zeile).toBe(`Schmid;Adrian;1. Mannschaft;${L_KADER};9, 18, 21;="100"`);
+    expect(zeile).toBe(`Schmid;Adrian;1. Mannschaft;${L_EIN};9, 18, 21;="100"`);
   });
 
   it("keine Rückennummer ergibt eine leere Zelle, nicht eine Null", () => {
     const zeilen = [sp(100, "Adrian Schmid", ["1. Mannschaft"], [])];
     const [zeile] = datenzeilen(alsMannschaftsliste(zeilen, alleTeams(zeilen)));
-    expect(zeile).toBe(`Schmid;Adrian;1. Mannschaft;${L_KADER};;="100"`);
+    expect(zeile).toBe(`Schmid;Adrian;1. Mannschaft;${L_EIN};;="100"`);
   });
 
   it('⚠ ein fehlender Name bleibt LEER — nicht „Nr. 13“ und nicht OHNE_NAMEN', () => {
@@ -200,7 +239,7 @@ describe("alsMannschaftsliste — Spalteninhalte", () => {
        Datenfeld, und ein Warntext würde sortiert und gefiltert wie ein Name. */
     const zeilen = [sp(100, "", ["1. Mannschaft"], [13])];
     const [zeile] = datenzeilen(alsMannschaftsliste(zeilen, alleTeams(zeilen)));
-    expect(zeile).toBe(`;;1. Mannschaft;${L_KADER};13;="100"`);
+    expect(zeile).toBe(`;;1. Mannschaft;${L_EIN};13;="100"`);
     expect(zeile).not.toContain(OHNE_NAMEN);
     expect(zeile).not.toContain("Nr.");
   });
@@ -212,8 +251,9 @@ describe("alsMannschaftsliste — Spalteninhalte", () => {
        ANZEIGENAME daneben ist `OHNE_MANNSCHAFT`, und die beiden sind
        absichtlich nicht dasselbe. */
     const csv = alsMannschaftsliste(zeilen, new Set(["-"]));
-    /* ⚠ Und die Regel daneben ist `kein_kader` — die Person hat keine
-       Mannschaft, und die Spalte sagt das, statt „Kader" zu behaupten. */
+    /* ⚠ Und die Regel daneben ist `ohne_team` — die Person hat keine
+       Mannschaft, und die Spalte sagt das, statt „nur dieses Team" zu
+       behaupten, wo es kein Team gibt. */
     expect(datenzeilen(csv)[0]).toBe(`Schmid;Adrian;${OHNE_MANNSCHAFT};${L_OHNE};;="100"`);
   });
 });
@@ -302,7 +342,7 @@ describe("alsMannschaftsliste — die Auswahl", () => {
        einsetzt, bekommt eine Datei mit nur der Kopfzeile — genau der
        Fehler vom 24.09.2026. */
     const csv = alsMannschaftsliste(zeilen, new Set(["k:2. Mannschaft"]));
-    expect(datenzeilen(csv)).toEqual([`B;;2. Mannschaft;${L_KADER};;="2"`]);
+    expect(datenzeilen(csv)).toEqual([`B;;2. Mannschaft;${L_EIN};;="2"`]);
   });
 
   it("⚠ ⚠  eine Person in ZWEI gewählten Mannschaften steht EINMAL da", () => {
@@ -318,7 +358,7 @@ describe("alsMannschaftsliste — die Auswahl", () => {
        es keine zweite gibt. */
     const zeilen = [sp(100, "Adrian Schmid", ["Ca-Junioren", "Cb-Junioren"], [9])];
     const daten = datenzeilen(alsMannschaftsliste(zeilen, alleTeams(zeilen)));
-    expect(daten).toEqual([`Schmid;Adrian;Ca-Junioren;${L_MEHRERE};9;="100"`]);
+    expect(daten).toEqual([`Schmid;Adrian;Ca-Junioren;${L_MEHR};9;="100"`]);
     /* Die Gegenprobe: die andere Mannschaft kommt in der Datei NICHT vor.
        Ohne sie wäre der Fall auch grün, wenn zwei Zeilen entstünden und die
        erste zufällig passte. */
@@ -332,15 +372,17 @@ describe("alsMannschaftsliste — die Auswahl", () => {
        Wer die Cb-Liste zieht, bekommt sie nicht — und das ist die Folge,
        nicht ein Defekt.
 
-       ⚠ ⚠  UND ES IST DIE STELLE, AN DER MASKE UND AUSGABE AUSEINANDER
-       LAUFEN — schärfer, als es beim Planen aussah: die Kästchen kommen aus
-       `gruppiereNachTeam()`, das auf `offeneZuordnungen()` arbeitet, und das
-       behält je Person nur die ERSTE `sfv_team_id`. Gemessen am 24.09.2026
-       im Einbau: das Kästchen des Stammteams gibt es unter Umständen GAR
-       NICHT, und dann ist die Person über keines erreichbar. Der Fall dazu
-       steht in `spielerVorschlagEinbau.test.jsx`. Die Maske wird in diesem
-       Auftrag ausdrücklich nicht geändert; dieser Fall hält fest, was dabei
-       offen bleibt.
+       ⚠ ⚠  HIER STAND, MASKE UND AUSGABE LIEFEN AN DIESER STELLE
+       AUSEINANDER — das galt fuer einen halben Tag und ist behoben.
+       `offeneZuordnungen()` ruft seit dem 24.09.2026 `bestimmeStammteam()`,
+       also dieselbe Regel wie dieser Filter. Eine Person ist damit ueber
+       genau ein Kaestchen erreichbar, und der Fall dazu steht in
+       `spielerVorschlagEinbau.test.jsx`.
+
+       ⚠ Was dieser Fall prueft, gilt unveraendert: die Auswahl trifft das
+       STAMMTEAM und nicht jede Mannschaft, in der die Person gespielt hat.
+       Wer die Cb-Liste zieht, bekommt sie nicht — und das ist die Folge der
+       Regel, kein Defekt.
 
        Dieser Fall hiess vorher „erscheint nur einmal, wenn nur eine ihrer
        Mannschaften gewählt ist" und erwartete eine Cb-Zeile. */
@@ -351,25 +393,119 @@ describe("alsMannschaftsliste — die Auswahl", () => {
        erreichen. Ohne diese Hälfte wäre der Fall auch grün, wenn die
        Auswahl gar nichts mehr träfe. */
     const ueberStamm = datenzeilen(alsMannschaftsliste(zeilen, new Set(["k:Ca-Junioren"])));
-    expect(ueberStamm).toEqual([`Schmid;Adrian;Ca-Junioren;${L_MEHRERE};9;="100"`]);
+    expect(ueberStamm).toEqual([`Schmid;Adrian;Ca-Junioren;${L_MEHR};9;="100"`]);
   });
 
-  it("⚠ die Rückennummern BEIDER Mannschaften stehen in der einen Zeile", () => {
-    /* ⚠ DIE ENTSCHEIDUNG ZUR ZELLE, und sie ist gegenüber der Fassung mit
-       einer Zeile je Mannschaft UNVERÄNDERT: die Zelle war nie teambezogen.
+  /* ⚠ ⚠  DIESER FALL IST AM 24.09.2026 UMGEDREHT WORDEN, NICHT GELÖSCHT.
+     Er hiess „die Rückennummern BEIDER Mannschaften stehen in der einen
+     Zeile" und erwartete `9, 13`. Die Entscheidung dahinter war: die Zelle
+     ist personenbezogen wie Name und personId, und eine Nummer, die nur in
+     der anderen Mannschaft vergeben wurde, soll nicht verloren gehen.
 
-       Der Grund, sie so zu lassen: die Zeile IST jetzt die Person, und jede
-       andere Zelle ist personenbezogen. Eine Nummer ist an der KADERZEILE
-       vergeben — engte man auf das Stammteam ein, erschiene die Nummer der
-       anderen Mannschaft NIRGENDS mehr, und genau die Nummern sind das
-       Wiedererkennungsmerkmal, für das die Liste da ist.
+     Die Entscheidung ist zurückgenommen (Didi, 24.09.2026): die Zeile nennt
+     EINE Mannschaft, und eine Nummer aus einer anderen ist in dieser Zeile
+     eine falsche Auskunft — wer abhakt, vergleicht die Zelle mit dem Trikot
+     vor sich.
 
-       ⚠ Der Preis: eine Nummer hier kann zu einer anderen Mannschaft
-       gehören als die daneben genannte. Deshalb heisst der Spaltenkopf
-       `Rückennummer` und nicht „Nummer in diesem Team". */
-    const zeilen = [sp(100, "Adrian Schmid", ["Ca-Junioren", "Cb-Junioren"], [9, 13])];
+     ⚠ Der alte Fall war kein falscher Test, sondern der Test einer anderen
+     Entscheidung; was an seine Stelle tritt, ist die Gegenaussage. Und der
+     PREIS steht mit ihm da statt verschwiegen zu werden: die 13 erscheint
+     ab jetzt in dieser Liste NIRGENDS — auch nicht in der Cb-Liste, denn
+     dort steht die Person gar nicht. In der TEXTLISTE erscheint sie
+     weiterhin; die ist nicht mannschaftsweise geschnitten.
+
+     ⚠ Über `baueSpielerZeilen` mit echten Zeilen, nicht über `sp()`: die
+     Attrappe kennt die Zuordnung Nummer→Mannschaft nicht, und ein Fall auf
+     ihr prüfte, was er selbst hineingeschrieben hat. */
+  it("⚠ NUR die Nummern des Stammteams stehen in der Zeile", () => {
+    const zeilen = baueSpielerZeilen(
+      /* Ca (Team 1) hat zwei Einsätze und ist damit Stammteam; in Cb
+         (Team 2) trug die Person die 13. */
+      [a(100, 1, 9, "s1"), a(100, 1, 9, "s2"), a(100, 2, 13, "s3")],
+      { 100: "Adrian Schmid" },
+      new Map([[1, "Ca-Junioren"], [2, "Cb-Junioren"]]),
+      teileAus({ 100: "Adrian Schmid" }),
+    );
     const [zeile] = datenzeilen(alsMannschaftsliste(zeilen, alleTeams(zeilen)));
-    expect(zeile).toBe(`Schmid;Adrian;Ca-Junioren;${L_MEHRERE};9, 13;="100"`);
+    expect(zeile).toBe(`Schmid;Adrian;Ca-Junioren;${L_MEHR};9;="100"`);
+
+    /* ⚠ ⚠  DIE ZWEITE HÄLFTE, UND SIE IST DIE TRAGENDE. Ohne sie wäre der
+       Fall auch grün, wenn weiterhin ALLE Nummern erschienen — `9` steht in
+       `9, 13` ja drin. Geprüft wird die ganze Zelle und ausdrücklich, dass
+       die 13 fehlt. */
+    expect(zeile).not.toContain("13");
+    expect(zeile.split(";")[4]).toBe("9");
+
+    /* ⚠ Und die Gegenrichtung zur Vollständigkeit: an der PERSON stehen
+       beide Nummern weiterhin. Der Schnitt ist eine Entscheidung der
+       Ausgabe, kein Datenverlust in `baueSpielerZeilen` — sonst verlöre
+       auch die Textliste die 13. */
+    expect(zeilen[0].rueckennummern).toEqual([9, 13]);
+    expect(zeilen[0].stammteamNummern).toEqual([9]);
+  });
+
+  /* ⚠ ⚠  DIESER FALL IST DURCH EINE SABOTAGE ENTSTANDEN, NICHT DURCH DIE
+     VORGABE. Beim Gegenproben des Schnitts lief eine Sabotage GRÜN: die
+     Entdopplung je Mannschaft gegen die GESAMTLISTE der Person geprüft
+     (`!z.rueckennummern.includes(...)` statt `!je.includes(...)`) — dann
+     bekommt jede Mannschaft nur ihre ERSTE Nummer, und die zweite fällt
+     wortlos weg. Kein Fall hat das gemeldet.
+
+     ⚠ Der Grund für die Lücke: alle Fälle des Schnitts gaben jeder
+     Mannschaft genau EINE Nummer. Innerhalb einer Mannschaft mehrere zu
+     tragen ist aber der gemessene Normalfall — 58 der 287 laufen unter mehr
+     als einer Nummer, und über eine Saison wechselt die Nummer auch im
+     selben Team.
+
+     Eine Sabotage, die grün bleibt, ist ein fehlender Fall — nicht ein
+     harmloser Code. */
+  it("⚠ ZWEI Nummern in DERSELBEN Mannschaft stehen beide da", () => {
+    const zeilen = baueSpielerZeilen(
+      /* Dieselbe Mannschaft, zwei Nummern — und in der anderen noch eine
+         dritte, die nicht erscheinen darf. */
+      [a(100, 1, 7, "s1"), a(100, 1, 21, "s2"), a(100, 2, 13, "s3")],
+      { 100: "Adrian Schmid" },
+      new Map([[1, "Ca-Junioren"], [2, "Cb-Junioren"]]),
+      teileAus({ 100: "Adrian Schmid" }),
+    );
+    const [zeile] = datenzeilen(alsMannschaftsliste(zeilen, alleTeams(zeilen)));
+    expect(zeile).toBe(`Schmid;Adrian;Ca-Junioren;${L_MEHR};7, 21;="100"`);
+    /* Die zwei Hälften einzeln, damit man beim Rotwerden sieht, welche: die
+       eigene Mannschaft vollständig, die andere gar nicht. */
+    expect(zeilen[0].stammteamNummern).toEqual([7, 21]);
+    expect(zeile).not.toContain("13");
+  });
+
+  it("⚠ keine Nummer im Stammteam ergibt eine LEERE Zelle, auch wenn die andere Mannschaft eine hat", () => {
+    /* ⚠ DIE FOLGE DER ENTSCHEIDUNG, und sie ist ausdrücklich so gewollt
+       (Didi, 24.09.2026). Die Person trug im Stammteam keine Nummer und in
+       der anderen Mannschaft die 13. Die Zelle bleibt LEER.
+
+       Der Grund: die Zelle bedeutet seit heute „die Nummer in DIESER
+       Mannschaft". Stünde bei fehlender Nummer die der anderen drin,
+       bedeutete dieselbe Zelle je nach Datenlage zweierlei — und niemand
+       könnte ihr ansehen, welches von beiden. Eine leere Zelle ist eine
+       Auskunft; eine Nummer aus einem anderen Team ist eine Behauptung.
+
+       ⚠ UND DER MANGEL DARAN GEHÖRT DAZU: eine leere Zelle sieht aus wie
+       ein Ausfall. Im Feld selbst ist das nicht zu heilen — ein Merktext
+       würde sortiert und gefiltert, als wäre er eine Nummer (dieselbe
+       Entscheidung wie für `OHNE_NAMEN` in der Namensspalte, siehe oben).
+       Was es heilen würde, wäre ein Spaltenkopf „Nummer in diesem Team";
+       die sechs Köpfe sind bestellt und bleiben. Offener Punkt. */
+    const zeilen = baueSpielerZeilen(
+      [a(100, 1, null, "s1"), a(100, 1, null, "s2"), a(100, 2, 13, "s3")],
+      { 100: "Adrian Schmid" },
+      new Map([[1, "Ca-Junioren"], [2, "Cb-Junioren"]]),
+      teileAus({ 100: "Adrian Schmid" }),
+    );
+    const [zeile] = datenzeilen(alsMannschaftsliste(zeilen, alleTeams(zeilen)));
+    expect(zeile).toBe(`Schmid;Adrian;Ca-Junioren;${L_MEHR};;="100"`);
+    expect(zeile).not.toContain("13");
+    /* Und an der Person steht die 13 weiterhin — die Zelle ist leer, die
+       Daten sind es nicht. */
+    expect(zeilen[0].rueckennummern).toEqual([13]);
+    expect(zeilen[0].stammteamNummern).toEqual([]);
   });
 });
 
@@ -384,7 +520,7 @@ describe("alsMannschaftsliste — Maskierung", () => {
     const zeilen = [sp(1, "Meier; Hans", ["1. Mannschaft; B"], [],
       { vorname: "Hans", nachname: "Meier;" })];
     const [zeile] = datenzeilen(alsMannschaftsliste(zeilen, alleTeams(zeilen)));
-    expect(zeile).toBe(`"Meier;";Hans;"1. Mannschaft; B";${L_KADER};;="1"`);
+    expect(zeile).toBe(`"Meier;";Hans;"1. Mannschaft; B";${L_EIN};;="1"`);
   });
 
   it("ein inneres Anführungszeichen wird verdoppelt", () => {
@@ -429,7 +565,7 @@ const a = (
   ({ sfv_person_id: person, sfv_team_id: team, rueckennr: nr, spiel_id: spiel, spielzeit });
 
 describe("Das Stammteam — gegen baueSpielerZeilen", () => {
-  it("⚠ bei GENAU EINER Mannschaft sagt die Spalte „Kader“", () => {
+  it("⚠ bei GENAU EINER Mannschaft sagt die Spalte „nur dieses Team“", () => {
     const zeilen = baueSpielerZeilen(
       [a(100, 1, 7, "s1"), a(100, 1, 7, "s2")],
       { 100: "Adrian Schmid" },
@@ -438,10 +574,10 @@ describe("Das Stammteam — gegen baueSpielerZeilen", () => {
     );
     expect(zeilen[0].stammteam).toBe("1. Mannschaft");
     const daten = datenzeilen(alsMannschaftsliste(zeilen, alleTeams(zeilen)));
-    expect(daten).toEqual([`Schmid;Adrian;1. Mannschaft;${L_KADER};7;="100"`]);
+    expect(daten).toEqual([`Schmid;Adrian;1. Mannschaft;${L_EIN};7;="100"`]);
   });
 
-  it("⚠ bei ZWEI Mannschaften sagt sie „mehrere Kader, meiste Einsätze“", () => {
+  it("⚠ bei ZWEI Mannschaften mit Vorsprung sagt sie „meiste Einsätze“", () => {
     /* Der gemessene Fall: 27 von 287 laufen in zwei Mannschaften auf. Der
        Weg von der Aufstellung bis in die Datei gehört einmal ganz geprüft —
        und er ergibt seit dem 24.09.2026 EINE Zeile statt zwei. */
@@ -457,7 +593,35 @@ describe("Das Stammteam — gegen baueSpielerZeilen", () => {
     );
     expect(zeilen[0].stammteam).toBe("2. Mannschaft");
     const daten = datenzeilen(alsMannschaftsliste(zeilen, alleTeams(zeilen)));
-    expect(daten).toEqual([`Schmid;Adrian;2. Mannschaft;${L_MEHRERE};7, 13;="100"`]);
+    /* ⚠ `13` und nicht `7, 13` — die Nummer der 1. Mannschaft fällt seit dem
+       24.09.2026 weg. Dieser Fall handelt von der Mannschaftswahl, die
+       Nummer war nur Beifang; die Zusage zum Schnitt hat ihre eigenen zwei
+       Fälle weiter oben. */
+    expect(daten).toEqual([`Schmid;Adrian;2. Mannschaft;${L_MEHR};13;="100"`]);
+  });
+
+  /* ⚠ ⚠  DER GLEICHSTAND BIS IN DIE ZELLE — und er ist der Grund, aus dem
+     die Spalte überhaupt existiert. Bis zum 24.09.2026 stand hier derselbe
+     Text wie beim Fall darüber, und eine willkürlich gewählte Mannschaft war
+     von einer mit klarem Vorsprung nicht zu unterscheiden.
+
+     ⚠ Je EIN Einsatz, also Gleichstand — gewählt wird Team 1, weil seine
+     Nummer die kleinere ist, nicht weil es zuerst kommt. Die Eingabe ist
+     deshalb absichtlich mit Team 2 VORNE geschrieben. */
+  it("⚠ bei einem GLEICHSTAND sagt die Spalte „Gleichstand“, nicht „meiste Einsätze“", () => {
+    const zeilen = baueSpielerZeilen(
+      [a(100, 2, 13, "s1"), a(100, 1, 7, "s2")],
+      { 100: "Adrian Schmid" },
+      new Map([[1, "1. Mannschaft"], [2, "2. Mannschaft"]]),
+      teileAus({ 100: "Adrian Schmid" }),
+    );
+    expect(zeilen[0].stammteam).toBe("1. Mannschaft");
+    const daten = datenzeilen(alsMannschaftsliste(zeilen, alleTeams(zeilen)));
+    expect(daten).toEqual([`Schmid;Adrian;1. Mannschaft;${L_GLEICH};7;="100"`]);
+    /* ⚠ Die tragende Hälfte: der Text ist ein ANDERER als bei einem echten
+       Vorsprung. Ohne sie wäre der Fall grün, wenn beide Lagen wieder
+       denselben Text bekämen — also genau im Zustand von vorher. */
+    expect(daten[0]).not.toContain(L_MEHR);
   });
 
   it("⚠ eine Zeile ohne Spielzeit zählt als Einsatz — 12 von 14 Trainingsspielen haben keine", () => {
@@ -488,11 +652,11 @@ describe("Das Stammteam — gegen baueSpielerZeilen", () => {
     expect(zeilen[0].stammteam).toBe("Team 58655");
     expect(zeilen[0].stammteamSchluessel).toBe("58655");
     const daten = datenzeilen(alsMannschaftsliste(zeilen, new Set(["58655"])));
-    expect(daten).toEqual([`Weber;Wilma;Team 58655;${L_KADER};7;="700"`]);
+    expect(daten).toEqual([`Weber;Wilma;Team 58655;${L_EIN};7;="700"`]);
   });
 
   it("⚠ eine Person, deren Zeilen ALLE keine Team-Id tragen, steht unter „-“", () => {
-    /* Der zweite Weg zu `kein_kader`: nicht „keine Aufstellungszeile" (die
+    /* Der zweite Weg zu `ohne_team`: nicht „keine Aufstellungszeile" (die
        Person käme in dieser Liste gar nicht vor), sondern Zeilen, deren
        `sfv_team_id` null ist. Die Spalte ist nullable, und ob es solche
        Zeilen im Bestand gibt, ist ungemessen — der Fall hält fest, was
@@ -631,7 +795,7 @@ describe("⚠ Vorname und Name kommen aus den TEILEN, nie aus einer Trennung", (
         { 1: { vorname, nachname } },
       );
       const [zeile] = datenzeilen(alsMannschaftsliste(zeilen, new Set(["1"])));
-      expect(zeile).toBe(`${erwartet};T;${L_KADER};7;="1"`);
+      expect(zeile).toBe(`${erwartet};T;${L_EIN};7;="1"`);
     });
   }
 
@@ -646,7 +810,7 @@ describe("⚠ Vorname und Name kommen aus den TEILEN, nie aus einer Trennung", (
       {},                                  // ⚠ keine Teile bekannt
     );
     const [zeile] = datenzeilen(alsMannschaftsliste(zeilen, new Set(["1"])));
-    expect(zeile).toBe(`Lorena Sara Hug;;T;${L_KADER};7;="1"`);
+    expect(zeile).toBe(`Lorena Sara Hug;;T;${L_EIN};7;="1"`);
   });
 
   it("⚠ und die Sortierung folgt dem NACHNAMEN, nicht dem ganzen Namen", () => {
@@ -656,8 +820,8 @@ describe("⚠ Vorname und Name kommen aus den TEILEN, nie aus einer Trennung", (
     const z = (id: number, vorname: string, nachname: string): SpielerZeile => ({
       sfv_person_id: id, name: `${vorname} ${nachname}`, teams: ["T"],
       teamSchluessel: ["k"], stammteamSchluessel: "k", stammteam: "T",
-      stammteamRegel: "kader",
-      rueckennummern: [], einsaetze: 1, vorname, nachname,
+      stammteamRegel: "nur_dieses_team",
+      rueckennummern: [], stammteamNummern: [], einsaetze: 1, vorname, nachname,
     });
     const zeilen = [z(1, "Anna", "Zeller"), z(2, "Bruno", "Amrein")];
     const daten = datenzeilen(alsMannschaftsliste(zeilen, new Set(["k"])));
