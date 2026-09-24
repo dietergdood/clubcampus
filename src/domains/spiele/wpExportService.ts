@@ -24,6 +24,9 @@ export interface ExportAntwort {
   zahlen?: Record<string, unknown>;
   je_team?: Record<string, unknown>[];
   ohne_teamnummer?: string[];
+  /** Mannschaften, die dieser Lauf nicht mehr geschafft hat. Sie gehen
+      beim nächsten Lauf zuerst hinaus — kein Verlust, ein Halt. */
+  offen_teams?: string[];
   protokolliert?: boolean;
   fehler?: string;
 }
@@ -94,12 +97,44 @@ export function fasseExportZusammen(daten: ExportAntwort | null): string {
     + `${Number(z.zurueckgezogen ?? 0)} zurückgezogen, `
     + `${Number(z.verlauf_zeilen ?? 0)} Verlaufszeilen`,
   );
-  /* ⚠ Gebaut ≠ gesendet ist ein Befund, kein Detail: die Differenz sind
-     Spiele ohne SFV-Teamnummer, die niemand auf der Website suchen wird. */
+  /* ⚠ ⚠  GEBAUT ≠ GESENDET HAT ZWEI URSACHEN, UND SIE BEDEUTEN
+     GEGENSÄTZLICHES. Bis zum 24.09.2026 nannte diese Zeile nur die eine.
+     Nach einem Etappenlauf stand dort:
+
+         ⚠ 275 gebaut, aber nur 76 gesendet — 0 Spiel(e) ohne SFV-Teamnummer
+
+     Ein planmässiger Halt, gemeldet als Befund — und als Begründung eine
+     Null, die gar nichts erklärt. Wer das liest, sucht 199 verlorene
+     Spiele. Verloren ist keines: sie stehen als `offen_teams` im
+     Protokoll und gehen beim nächsten Lauf zuerst hinaus.
+
+     Getrennt statt zusammengezogen, weil das eine ein Zwischenstand ist
+     und das andere ein Defekt. */
+  const offen = daten.offen_teams ?? [];
+  const heimatlos = daten.ohne_teamnummer ?? [];
   const gebaut = Number(daten.gebaut ?? 0);
-  if (gebaut && gebaut !== Number(daten.gesendet ?? 0)) {
-    zeilen.push(`⚠ ${gebaut} gebaut, aber nur ${Number(daten.gesendet ?? 0)} gesendet — `
-      + `${(daten.ohne_teamnummer ?? []).length} Spiel(e) ohne SFV-Teamnummer`);
+  const gesendet = Number(daten.gesendet ?? 0);
+
+  if (offen.length) {
+    zeilen.push(
+      `${offen.length} Mannschaft(en) offen — das Zeitbudget war erreicht. `
+      + `Sie gehen beim nächsten Lauf zuerst hinaus: ${offen.join(", ")}`,
+    );
+  }
+  if (heimatlos.length) {
+    zeilen.push(
+      `⚠ ${heimatlos.length} Spiel(e) ohne SFV-Teamnummer — nicht gesendet, und `
+      + "sie holt auch kein nächster Lauf",
+    );
+  }
+  /* ⚠ Die Differenz, die KEINE der beiden erklärt. Ohne diese Zeile
+     wäre ein dritter Grund unsichtbar: nur die zwei bekannten zu melden
+     hiesse, jede andere Ursache als „nichts Besonderes" auszugeben. */
+  if (gebaut && gebaut !== gesendet && !offen.length && !heimatlos.length) {
+    zeilen.push(
+      `⚠ ${gebaut} gebaut, aber ${gesendet} gesendet — und weder offene `
+      + "Mannschaften noch fehlende Teamnummern erklären die Differenz",
+    );
   }
   if (daten.protokolliert === false) {
     zeilen.push("⚠ Nicht protokolliert — api_verbindungen hat keine Zeile «wordpress»");
