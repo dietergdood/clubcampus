@@ -53,6 +53,23 @@ export interface LaufZahlen {
   neu: number;
   aktualisiert: number;
   zurueckgezogen: number;
+  /**
+   * Spiele, die der Empfaenger als GLEICH erkannt und nicht neu
+   * geschrieben hat (seit seiner Fassung 0.9.39).
+   *
+   * ⚠ ⚠ NICHT ZU VERWECHSELN MIT `uebersprungen` — die Namen aehneln
+   * sich, die Bedeutungen sind entgegengesetzt:
+   *
+   *   unveraendert   gleich geblieben, nichts zu tun   → der ERFOLG
+   *   uebersprungen  keiner Mannschaft zuzuordnen      → ein BEFUND
+   *
+   * ⚠ Und daraus folgt, wie `aktualisiert` zu lesen ist: die Zahl zaehlt
+   * seit 0.9.39 nur noch WIRKLICH geschriebene Spiele und faellt deshalb
+   * von ~63 auf nahe null. Ein Rueckgang ist hier der Erfolg und kein
+   * Verlust — ohne `unveraendert` daneben saehe jeder Lauf aus, als
+   * haette er nichts getan.
+   */
+  unveraendert: number;
   uebersprungen: number;
   verlauf_zeilen: number;
   /**
@@ -185,6 +202,7 @@ export function fasseLauf(teile: TeilErgebnis[]): { status: LaufStatus; zahlen: 
     neu: 0,
     aktualisiert: 0,
     zurueckgezogen: 0,
+    unveraendert: 0,
     uebersprungen: 0,
     verlauf_zeilen: 0,
     aufstellung_zeilen: 0,
@@ -214,6 +232,7 @@ export function fasseLauf(teile: TeilErgebnis[]): { status: LaufStatus; zahlen: 
     zahlen.neu += zahl(t.wp, "neu");
     zahlen.aktualisiert += zahl(t.wp, "aktualisiert");
     zahlen.zurueckgezogen += zahl(t.wp, "zurueckgezogen");
+    zahlen.unveraendert += zahl(t.wp, "unveraendert");
     zahlen.uebersprungen += zahl(t.wp, "uebersprungen");
     zahlen.verlauf_zeilen += zahl(t.wp, "verlauf_zeilen");
     zahlen.aufstellung_zeilen += zahl(t.wp, "aufstellung_zeilen");
@@ -342,7 +361,8 @@ export function laufMeldung(
   const dauer = typeof dauerMs === "number" ? ` · ${Math.round(dauerMs / 1000)} s` : "";
   const zeile = `${host} · ${zahlen.teams_gesendet} Mannschaft(en) · `
     + `${zahlen.spiele_gesendet} Spiel(e)${dauer} · ${zahlen.neu} neu, `
-    + `${zahlen.aktualisiert} aktualisiert, ${zahlen.zurueckgezogen} zurückgezogen, `
+    + `${zahlen.aktualisiert} aktualisiert, ${zahlen.unveraendert} unverändert, `
+    + `${zahlen.zurueckgezogen} zurückgezogen, `
     + `${zahlen.verlauf_zeilen} Verlaufszeilen`
     /* ⚠ IMMER, AUCH ALS NULL — und immer beide Seiten. Genau diese Zeile
        hat am 11.09.2026 gefehlt; ohne sie war „ist die Aufstellung
@@ -387,6 +407,10 @@ export function fuersProtokoll(
       aktualisiert: zahl(t.wp, "aktualisiert"),
       zurueckgezogen: zahl(t.wp, "zurueckgezogen"),
       aufstellung_zeilen: zahl(t.wp, "aufstellung_zeilen"),
+      /* ⚠ `zahl()` und nicht `zahlOderNull()`: eine Gegenstelle vor
+         0.9.39 ueberspringt nichts, da ist die 0 die wahre Antwort und
+         keine Behauptung. */
+      unveraendert: zahl(t.wp, "unveraendert"),
       /* ⚠ ⚠  ZWEI DAUERN, UND SIE MESSEN VERSCHIEDENES — nicht verwechseln.
          `dauer_ms` ist UNSERE Wanduhr um den POST: Nutzlast serialisieren,
          Netz hin, WordPress, Netz zurueck. `laufzeit_ms` ist, was der
@@ -408,6 +432,7 @@ export function fuersProtokoll(
     neu: zahlen.neu,
     aktualisiert: zahlen.aktualisiert,
     zurueckgezogen: zahlen.zurueckgezogen,
+    unveraendert: zahlen.unveraendert,
     uebersprungen: zahlen.uebersprungen,
     verlauf_zeilen: zahlen.verlauf_zeilen,
     /* ⚠ Beide Seiten, beide immer da. Siehe GesendeteAufstellung. */

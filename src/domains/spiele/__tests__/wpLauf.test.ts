@@ -287,13 +287,13 @@ describe("fuersProtokoll — die Allowlist", () => {
          brauchte nichts" und waere von einer gemessenen nicht zu
          unterscheiden. */
       { team: "38309", gesendet: 2, dauer_ms: 1200, neu: 1, aktualisiert: 1,
-        zurueckgezogen: 0, aufstellung_zeilen: 0, laufzeit_ms: null,
-        gescheitert: false },
+        zurueckgezogen: 0, aufstellung_zeilen: 0, unveraendert: 0,
+        laufzeit_ms: null, gescheitert: false },
       /* ⚠ Auch die gescheiterte Mannschaft traegt ihre Dauer — sie sagt, ob
          der Teil sofort abgewiesen wurde oder in ein Zeitlimit lief. */
       { team: "38310", gesendet: 3, dauer_ms: 31000, neu: 0, aktualisiert: 0,
-        zurueckgezogen: 0, aufstellung_zeilen: 0, laufzeit_ms: null,
-        gescheitert: true },
+        zurueckgezogen: 0, aufstellung_zeilen: 0, unveraendert: 0,
+        laufzeit_ms: null, gescheitert: true },
     ]);
     expect(d.ziel_host).toBe("dev.fcherrliberg.ch");
     expect(d.teams_gescheitert).toBe(1);

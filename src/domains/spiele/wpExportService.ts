@@ -94,6 +94,15 @@ export function fasseExportZusammen(daten: ExportAntwort | null): string {
   );
   zeilen.push(
     `${Number(z.neu ?? 0)} neu, ${Number(z.aktualisiert ?? 0)} aktualisiert, `
+    /* ⚠ `unveraendert` gehoert NEBEN `aktualisiert`, nicht ans Ende.
+       Seit Empfaenger 0.9.39 zaehlt `aktualisiert` nur noch wirklich
+       geschriebene Spiele und faellt von ~63 auf nahe null; wer die zwei
+       Zahlen nicht nebeneinander sieht, liest den Erfolg als Ausfall.
+
+       ⚠ Und NICHT mit `uebersprungen` verwechseln, das eine Zeile
+       tiefer stehen koennte: das sind Spiele ohne Mannschaftszuordnung
+       — ein Befund, waehrend dies der Spareffekt ist. */
+    + `${Number(z.unveraendert ?? 0)} unverändert, `
     + `${Number(z.zurueckgezogen ?? 0)} zurückgezogen, `
     + `${Number(z.verlauf_zeilen ?? 0)} Verlaufszeilen`,
   );
