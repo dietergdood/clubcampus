@@ -67,6 +67,11 @@ begin
   if to_regprocedure('public.export_wartet(uuid)') is null then
     raise exception 'ABBRUCH: export_wartet() fehlt — erst migration_export_wartet.sql.';
   end if;
+  -- ⚠ Ohne sie feuerte der Abholer nur bei geaenderten Daten und liesse
+  --   den Rest der Rotation liegen — genau der Defekt vom 26.09.2026.
+  if to_regprocedure('public.export_nachlauf_faellig(uuid)') is null then
+    raise exception 'ABBRUCH: export_nachlauf_faellig() fehlt — erst migration_export_nachlauf.sql.';
+  end if;
 
   -- cron.schedule ersetzt einen gleichnamigen Auftrag, ist also wiederholbar.
   perform cron.schedule(
@@ -95,7 +100,24 @@ begin
        where v.key = 'wordpress'
          and v.active is true
          and v.auto_sync is true
-         and public.export_wartet(v.verein_id) > 0;
+         -- ⚠ ⚠  ZWEI GRUENDE ZU LAUFEN, UND SIE SIND VERSCHIEDEN.
+         --
+         --   `export_wartet()` fragt nach DATEN: hat sich seit dem letzten
+         --   Lauf etwas geaendert? `export_nachlauf_faellig()` fragt nach
+         --   dem letzten LAUF: war seit dieser Aenderung jede Mannschaft
+         --   einmal an der Reihe?
+         --
+         --   Ohne die zweite Frage bleibt der Rest der Rotation liegen:
+         --   ein Lauf schafft ~7 von 21, setzt trotzdem `letzter_sync`,
+         --   und `export_wartet()` steht danach auf 0. Die uebrigen 14
+         --   warteten auf die naechste Datenaenderung statt auf den
+         --   naechsten Takt — der Defekt vom 26.09.2026.
+         --
+         -- ⚠ NICHT „solange offen_teams nicht leer ist": die Liste leert
+         --   sich nie (sie rotiert, siehe migration_export_nachlauf.sql).
+         --   Eine solche Bedingung feuerte alle 15 Minuten, fuer immer.
+         and ( public.export_wartet(v.verein_id) > 0
+               or public.export_nachlauf_faellig(v.verein_id) );
     $job$);
 
   select count(*) into gefunden from cron.job where jobname = 'wp-export-abholer';
@@ -107,6 +129,12 @@ begin
   end if;
   if befehl not ilike '%export_wartet%' then
     raise exception 'UNVOLLSTAENDIG: der Befehl fragt nicht, ob etwas wartet — er waere ein Takt';
+  end if;
+  -- ⚠ Die zweite Frage eigens pruefen. Ohne sie ist der Auftrag angelegt,
+  --   laeuft, und laesst den Rest der Rotation liegen — ein Ausfall, der
+  --   wie eine ruhige Datenlage aussieht.
+  if befehl not ilike '%export_nachlauf_faellig%' then
+    raise exception 'UNVOLLSTAENDIG: der Befehl fragt nicht nach dem Nachlauf — 14 von 21 Mannschaften blieben liegen';
   end if;
   if befehl ilike '%"probe"%' then
     raise exception 'UNVOLLSTAENDIG: der Zeitplan darf nur "export" rufen';

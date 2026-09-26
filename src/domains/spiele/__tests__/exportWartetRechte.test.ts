@@ -123,6 +123,30 @@ const REGISTER: Stelle[] = [
     wirkung: "betrieb",
   },
   {
+    datei: "supabase/migration_export_nachlauf.sql",
+    rolle: "unbekannt",
+    stand: "offen",
+    beleg:
+      "migration_export_nachlauf.sql, im Schlussbericht — ein `select`, der "
+      + "`export_wartet()` neben `export_nachlauf_faellig()` stellt, damit "
+      + "beim Einspielen beide Zahlen nebeneinander stehen. Von Hand im "
+      + "SQL-Editor ausgefuehrt; dieselbe Lage wie migration_export_scharf.sql. "
+      + "⚠ Die Funktion, die diese Migration ANLEGT, bekommt dieselben Rechte "
+      + "wie export_wartet() (revoke public/anon, grant authenticated) — eine "
+      + "security-definer-Funktion ohne Rechtezeile wäre sonst für anon offen.",
+    wirkung: "handgriff",
+  },
+  {
+    datei: "supabase/probe_export_abholer.sql",
+    rolle: "unbekannt",
+    stand: "offen",
+    beleg:
+      "probe_export_abholer.sql, Fall 3 — die alte Bedingung als Gegenprobe, "
+      + "damit belegt ist, dass die Probe den Unterschied überhaupt sieht. "
+      + "Läuft zwischen begin und rollback, von Hand im SQL-Editor.",
+    wirkung: "handgriff",
+  },
+  {
     datei: "supabase/migration_export_scharf.sql",
     rolle: "unbekannt",
     stand: "offen",
