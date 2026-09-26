@@ -110,7 +110,8 @@ export interface TeilMitTeam { sfv_team_id: string }
 
 /**
  * Die Mannschaften, die der letzte Lauf nicht mehr geschafft hat, nach
- * vorn — der Rest behaelt seine Reihenfolge.
+ * vorn — **in DEREN Reihenfolge**, nicht in der der Teamnummern. Der Rest
+ * bleibt hinten und behaelt seine Reihenfolge.
  *
  * ⚠ ⚠  OHNE DAS WAERE DAS BUDGET EIN DAUERHAFTER BLINDER FLECK, UND ZWAR
  * EIN SCHLIMMERER ALS DER ABBRUCH.
@@ -121,6 +122,32 @@ export interface TeilMitTeam { sfv_team_id: string }
  * hinaus. Auf der Website staende fuer sie dauerhaft der Stand von
  * damals, und nichts sagte warum: **ein Ausfall in der Verkleidung einer
  * Datenlage.**
+ *
+ * ── ⚠ ⚠  WARUM DIE REIHENFOLGE VON `offen` UND NICHT DIE VON `teile` ──
+ *
+ * Bis zum 26.09.2026 lief diese Funktion ueber `teile` und teilte in zwei
+ * Toepfe. Das stellte die offenen zwar nach vorn — **sortierte sie dabei
+ * aber zurueck in die globale Nummernfolge** und warf damit genau die
+ * Auskunft weg, um die es geht: welche von ihnen am laengsten warten.
+ *
+ * Gemessen am 26.09.2026, 21 Mannschaften, 7 je Lauf:
+ *
+ *     Lauf 1 sendet  s1..s7    offen: s8..s21
+ *     Lauf 2 sendet  s8..s14   offen: s15..s21, s1..s7
+ *     Lauf 3 sendet  s1..s7    ⚠ wieder die ersten
+ *     Lauf 4 sendet  s8..s14   ⚠ Zweierkreis
+ *
+ * **`s15..s21` gingen NIE hinaus** — sieben Mannschaften dauerhaft auf dem
+ * Stand von damals. Der Beleg ist die Meldung selbst: `offen_teams` stand
+ * bei jedem Lauf als `[s15..s21] ++ [s1..s7]` da, also mit denselben
+ * sieben Nummern vorn. Das ist keine Herleitung — der Zweierkreis ist
+ * nachgestellt und liefert diese Liste zeichengleich.
+ *
+ * Die offene Liste ist eine **Warteschlange**, und eine Warteschlange, die
+ * man vor jedem Zugriff neu sortiert, ist keine. Mit ihrer Reihenfolge
+ * geht jede Mannschaft nach spaetestens `ceil(n / pro Lauf)` Laeufen
+ * hinaus; das haelt `wpExportReihenfolge.test.ts` fest, nicht dieser
+ * Kommentar.
  *
  * ⚠ Die Nutzlast je Mannschaft bleibt dabei unangetastet. Umgeordnet wird
  * die REIHENFOLGE der POSTs, nicht ihr Inhalt — jeder POST traegt
@@ -136,11 +163,28 @@ export function ordneOffeneNachVorn<T extends TeilMitTeam>(
   teile: readonly T[], offen: readonly string[],
 ): T[] {
   if (!offen.length) return [...teile];
-  const menge = new Set(offen.map((t) => String(t)));
-  const vorn: T[] = [];
-  const rest: T[] = [];
-  for (const t of teile) (menge.has(t.sfv_team_id) ? vorn : rest).push(t);
-  return [...vorn, ...rest];
+  /* Der Rang einer Nummer in der Warteschlange. Die ERSTE Nennung gilt —
+     steht eine Nummer zweimal darin, ist die zweite kein zweiter Platz. */
+  const rang = new Map<string, number>();
+  offen.forEach((roh, i) => {
+    const id = String(roh);
+    if (!rang.has(id)) rang.set(id, i);
+  });
+  /* ⚠ SORTIEREN STATT IN ZWEI TOEPFE TEILEN, und zwar weil das Ergebnis
+     dadurch nachweislich eine UMORDNUNG ist: jedes Element kommt genau
+     einmal vor, auch wenn `teile` dieselbe Nummer zweimal fuehrte. Ein
+     Aufbau ueber eine Nachschlagekarte muesste denselben Fall von Hand
+     abfangen und verloere ihn sonst still. */
+  return teile
+    .map((t, i) => ({ t, i, rang: rang.get(t.sfv_team_id) }))
+    .sort((a, b) => {
+      /* Wer nicht in der Warteschlange steht, kommt ganz nach hinten —
+         und dort in seiner urspruenglichen Reihenfolge. */
+      const ar = a.rang ?? Number.POSITIVE_INFINITY;
+      const br = b.rang ?? Number.POSITIVE_INFINITY;
+      return ar !== br ? ar - br : a.i - b.i;
+    })
+    .map((x) => x.t);
 }
 
 /**

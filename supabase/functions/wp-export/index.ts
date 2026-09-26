@@ -919,6 +919,10 @@ async function sendeAnWordpress(
       offenVorher = leseOffeneTeams((letzte as { details?: unknown } | null)?.details);
     }
   }
+  /* ⚠ `offenVorher` ist eine WARTESCHLANGE, keine Menge — die Reihenfolge
+     darin entscheidet, wer als naechstes hinausgeht, und sie wird
+     uebernommen. Wer sie hier sortiert, stellt den Defekt vom 26.09.2026
+     wieder her: sieben Mannschaften gingen dauerhaft nicht hinaus. */
   const teile = ordneOffeneNachVorn(teileRoh, offenVorher);
 
   /* ⚠ DER LAUF SAGT, DASS ER LAEUFT — sonst steht bis zum Ende NIRGENDS
@@ -984,6 +988,13 @@ async function sendeAnWordpress(
          `laeuft`, fuer immer. Genau diese Ununterscheidbarkeit ist der
          Grund, aus dem es dieses Budget gibt. */
       if (!nochZeit(anfrageBeginnMs, Date.now(), EXPORT_BUDGET_MS)) {
+        /* ⚠ ⚠  DIE REIHENFOLGE DIESER LISTE IST DIE AUSSAGE, NICHT NUR
+           IHR INHALT. Sie wird als `details.offen_teams` abgelegt und ist
+           die WARTESCHLANGE des naechsten Laufs: wer hier vorn steht, geht
+           dort zuerst hinaus. Wer sie sortiert — auch „nur zum Lesen" —,
+           macht aus der Schlange eine Menge, und dann entscheidet wieder
+           die Teamnummer statt der Wartezeit. Genau das war der Defekt vom
+           26.09.2026; die Begruendung steht an `ordneOffeneNachVorn()`. */
         for (let r = ix; r < teile.length; r++) offenTeams.push(teile[r].sfv_team_id);
         break;
       }
