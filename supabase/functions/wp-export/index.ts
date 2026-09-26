@@ -98,6 +98,7 @@ import {
   teileNachTeam, ohneTeamnummer, fasseLauf, laufMeldung, fuersProtokoll,
 } from "../../../src/domains/spiele/wpLauf.ts";
 import type { TeilErgebnis, WpAntwort } from "../../../src/domains/spiele/wpLauf.ts";
+import { EMPFAENGER_DIAGNOSE } from "../../../src/domains/spiele/empfaengerFelder.ts";
 /* Die Ranglisten: Form und Gewicht. Dieselbe Begruendung wie oben — was
    entscheidet, gehoert dorthin, wo tsc und vitest es lesen. */
 import { baueGruppen, wiegeGruppen, beurteileBestand } from "../../../src/domains/spiele/wpRangliste.ts";
@@ -2222,6 +2223,34 @@ async function holeStatus() {
     spiele_des_exports: Number(wp.spiele_abgleich ?? 0),
     als_benutzer: String(wp.benutzer ?? ""),
     /* ⚠ Auch hier — dieselbe Luecke hat hier zweimal zugeschlagen. */
+    /* ⚠ ⚠  UND HIER HAT DIESELBE LUECKE ZUM DRITTEN MAL ZUGESCHLAGEN,
+       mit elf Feldern auf einmal: die Kachel meldete „0 veroeffentlichte
+       Spiel-Beitraege", „Kein Bericht abgelegt" und „Feldnamen NICHT
+       geprueft", waehrend die Rohantwort 275 Spiele nannte. Jedes Mal sah
+       es aus wie ein Befund ueber die GEGENSTELLE, und jedes Mal lag es an
+       dieser Liste hier.
+
+       Deshalb kommen die Diagnosefelder jetzt aus EINER Liste, die auch
+       die Kachel liest (`src/domains/spiele/empfaengerFelder.ts`). Was
+       angezeigt wird und was durchgereicht wird, KANN nicht mehr
+       auseinanderlaufen.
+
+       ⚠ DAS IST KEIN SPREAD UEBER `wp`. Eine Schleife ueber eine feste
+       Namensliste ist sein Gegenteil: ein Spread nimmt alles, was die
+       Gegenseite schickt, diese Liste nimmt nur, was jemand hingeschrieben
+       hat. Der Empfaenger 0.9.39 liefert acht weitere Diagnosefelder, und
+       keines kommt hier durch — sie stehen weiterhin in
+       `nicht_durchgereicht`.
+
+       ⚠ `!== undefined` und nicht `?? 0`: ein Feld, das die Gegenstelle
+       nicht schickt, bleibt WEG statt als Null anzukommen. Die Kachel
+       unterscheidet beides — aber nur, wenn wir es nicht vorher
+       einebnen. */
+    ...Object.fromEntries(
+      EMPFAENGER_DIAGNOSE
+        .filter((f) => wp[f] !== undefined)
+        .map((f) => [f, wp[f]]),
+    ),
     nicht_durchgereicht: [] as string[],
   };
   return { ...ergebnis, nicht_durchgereicht: nichtDurchgereicht(wp, ergebnis) };

@@ -312,6 +312,26 @@ export function ApiTab({loading,isMobile,mobileKachel,apiVerbindungen,tab,sb=nul
      welchen Schluessel. Genau die vier Angaben, die am 09.09.2026 drei
      Anlaeufe gekostet haben. */
   function deuteEmpfaenger(d: Record<string, unknown>): string[] {
+    /* ⚠ ⚠  EIN FELD, DAS NICHT ANKOMMT, IST KEINE NULL.
+       Am 26.09.2026 meldete diese Kachel „0 veroeffentlichte
+       Spiel-Beitraege", „Kein Bericht abgelegt" und „Feldnamen NICHT
+       geprueft" — waehrend die Rohantwort 275 Spiele nannte. Elf Felder
+       standen unter `nicht_durchgereicht`; jedes `??0` daneben machte
+       daraus eine Aussage ueber die Gegenstelle.
+
+       Die Ironie steht in den Kommentaren darunter: diese Kachel
+       unterscheidet an drei Stellen sorgfaeltig zwischen „gemessen 0"
+       und „nicht gemessen" — aber nur fuer Felder, die ANKOMMEN. Kommt
+       eines gar nicht erst an, faellt sie in genau den Fehler, gegen den
+       sie gebaut ist.
+
+       `fehlt()` fragt deshalb vor jeder Deutung, ob die Angabe ueberhaupt
+       da ist. Sie kann aus zwei Gruenden fehlen — eine aeltere
+       Gegenstelle, oder unsere Durchreichliste —, und die Zeile nennt
+       beide, weil wir sie hier nicht unterscheiden koennen. */
+    const fehlt=(k:string)=>d[k]===undefined;
+    const NICHT="⚠ nicht übermittelt — ältere Gegenstelle, oder das Feld "
+      +"steht nicht in EMPFAENGER_DIAGNOSE";
     const sf=(d.spielfelder??{}) as Record<string,string>;
     const ohneFeld=Object.entries(sf).filter(([,v])=>v!=="feld");
     const zeilen=[
@@ -319,8 +339,16 @@ export function ApiTab({loading,isMobile,mobileKachel,apiVerbindungen,tab,sb=nul
       `Sucht Teams über: ${String(d.meta_schluessel??"?")}`,
       `WordPress: ${Number(d.wp_teams??0)} Team-Beiträge, davon ${Number(d.wp_teams_mit_sfv_id??0)} mit SFV-Nummer`
         +`${Number(d.wp_teams_sfv_id_doppelt??0)?` · ⚠ ${Number(d.wp_teams_sfv_id_doppelt)} doppelt`:""}`,
-      `${Number(d.spiele_gesamt??0)} veröffentlichte Spiel-Beiträge, `
-        +`${Number(d.spiele_abgleich??0)} davon vom Abgleich`,
+      /* ⚠ UNSERE Namen, nicht die der Gegenstelle. `holeStatus()` reicht
+         `wp.spiele_gesamt` als `spiele_veroeffentlicht` durch und
+         `wp.spiele_abgleich` als `spiele_des_exports`. Bis zum 26.09.2026
+         las diese Zeile die Namen von DRUEBEN und fand nichts — die Zahl
+         kam an, nur unter anderem Namen. Zwei Namen fuer dieselbe Sache,
+         und wer den falschen liest, bekommt eine Null. */
+      fehlt("spiele_veroeffentlicht")
+        ? `Spiel-Beiträge: ${NICHT}`
+        : `${Number(d.spiele_veroeffentlicht)} veröffentlichte Spiel-Beiträge, `
+          +`${Number(d.spiele_des_exports??0)} davon vom Abgleich`,
     ];
     /* ⚠ ⚠  NACH ZUSTAND, weil eine einzelne Zahl am 10.09.2026 „0"
        meldete, während auf dev 270 Spiele lagen. Die Zahl war nicht
@@ -329,7 +357,9 @@ export function ApiTab({loading,isMobile,mobileKachel,apiVerbindungen,tab,sb=nul
        nicht zu unterscheiden.** */
     const nz=(d.spiele_nach_zustand??{}) as Record<string,unknown>;
     const zust=Object.entries(nz).filter(([k])=>!k.startsWith("_"));
-    zeilen.push(zust.length
+    zeilen.push(fehlt("spiele_nach_zustand")
+      ? `Nach Zustand: ${NICHT}`
+      : zust.length
       ? `Nach Zustand: ${zust.map(([k,v])=>`${k} ${Number(v)}`).join(" · ")}`
       : `⚠ ${String(nz._hinweis??"Kein einziger Spiel-Beitrag, auch kein Entwurf.")}`);
 
@@ -352,6 +382,8 @@ export function ApiTab({loading,isMobile,mobileKachel,apiVerbindungen,tab,sb=nul
       zeilen.push(uf.length
         ? `⚠ Angekommen und verworfen: ${uf.join(", ")} — nicht in CC_FELDER`
         : `Nichts verworfen — jedes gelieferte Feld hat eine Allowlist`);
+    } else if(fehlt("letzter_bericht")){
+      zeilen.push(`Letzter Lauf: ${NICHT}`);
     } else {
       zeilen.push(`⚠ Kein Bericht abgelegt — es hat noch kein Lauf `
         +`stattgefunden, oder der Empfänger ist älter als 0.9.6.`);
@@ -369,7 +401,9 @@ export function ApiTab({loading,isMobile,mobileKachel,apiVerbindungen,tab,sb=nul
        geprüften Namen unterscheidet sie. Ohne sie stand hier „jeder
        Schlüssel eindeutig auflösbar" über einer Messung, die nie
        stattgefunden hatte. */
-    zeilen.push(mdN.length
+    zeilen.push(fehlt("feldnamen_geprueft")&&fehlt("feld_mehrdeutig")
+      ? `Mehrdeutige Feldnamen: ${NICHT}`
+      : mdN.length
       ? `⚠ MEHRDEUTIG, deshalb NICHT geschrieben: `
         +mdN.map((k)=>`${k} (${(md[k]||[]).join(" / ")})`).join(", ")
       : geprueft>0
@@ -381,8 +415,17 @@ export function ApiTab({loading,isMobile,mobileKachel,apiVerbindungen,tab,sb=nul
       zeilen.push(`⚠ Kein Feldschlüssel am fch_spiel: ${of.join(", ")} — `
         +`nicht geschrieben, statt über den Namen zu raten`);
     }
-    zeilen.push(`Der Abgleich findet: ${Number(d.abgleich_findet??0)} Spiele `
-      +`(dieselbe Abfrage wie beim Export)`);
+    zeilen.push(fehlt("abgleich_findet")
+      ? `Der Abgleich findet: ${NICHT}`
+      : `Der Abgleich findet: ${Number(d.abgleich_findet)} Spiele `
+        +`(dieselbe Abfrage wie beim Export)`);
+    /* ⚠ Die Laufzeit der Gegenstelle — neben unserer eigenen Wanduhr
+       gelesen trennt sie Netz von PHP. Immer da, auch wenn sie fehlt: sonst
+       ist „sie hat nichts gesagt" von „sie war sofort fertig" nicht zu
+       unterscheiden. */
+    zeilen.push(fehlt("laufzeit_ms")
+      ? `Laufzeit drüben: ${NICHT}`
+      : `Laufzeit drüben: ${Number(d.laufzeit_ms)} ms`);
     const mt=d.match_id_typen;
     if(Array.isArray(mt)&&mt.length){
       const t=mt as {typ:string;zustand:string;anzahl:number}[];
