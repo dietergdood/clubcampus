@@ -152,6 +152,23 @@ function zahl(wp: WpAntwort | null, feld: string): number {
 }
 
 /**
+ * Wie `zahl()`, aber das FEHLEN bleibt erhalten.
+ *
+ * ⚠ `zahl()` macht aus einem fehlenden Feld eine 0, und das ist hier die
+ * falsche Auskunft: eine Gegenstelle vor 0.9.38 meldet keine `laufzeit_ms`
+ * — „sie hat nichts gesagt" wuerde dann als „sie brauchte 0 ms" im
+ * Protokoll stehen. Nicht feststellbar ist nicht dasselbe wie nichts
+ * gefunden; fuer die Zaehler daneben (`neu`, `aktualisiert`) ist die 0
+ * dagegen richtig, weil der Empfaenger sie immer schickt.
+ */
+function zahlOderNull(wp: WpAntwort | null, feld: string): number | null {
+  const roh = wp?.[feld];
+  if (roh === undefined || roh === null) return null;
+  const n = Number(roh);
+  return Number.isFinite(n) ? n : null;
+}
+
+/**
  * Die Teile zu einem Lauf zusammenfassen.
  *
  * ⚠ EINE GESCHEITERTE MANNSCHAFT IST `fehler`, KEINE `warnung`. Der
@@ -370,6 +387,19 @@ export function fuersProtokoll(
       aktualisiert: zahl(t.wp, "aktualisiert"),
       zurueckgezogen: zahl(t.wp, "zurueckgezogen"),
       aufstellung_zeilen: zahl(t.wp, "aufstellung_zeilen"),
+      /* ⚠ ⚠  ZWEI DAUERN, UND SIE MESSEN VERSCHIEDENES — nicht verwechseln.
+         `dauer_ms` ist UNSERE Wanduhr um den POST: Nutzlast serialisieren,
+         Netz hin, WordPress, Netz zurueck. `laufzeit_ms` ist, was der
+         Empfaenger fuer SICH selbst misst (seit 0.9.38 in jeder Antwort
+         des Namensraums).
+
+         Erst beide zusammen trennen Netz von PHP — die Differenz ist die
+         Leitung. Genau diese Trennung fehlte am 26.09.2026, als niemand
+         sagen konnte, wohin die 90 Sekunden eines Laufs gehen.
+
+         ⚠ `null` heisst „die Gegenstelle hat nichts gemeldet" (aeltere
+         Fassung), nicht „null Millisekunden". Deshalb `zahlOderNull`. */
+      laufzeit_ms: zahlOderNull(t.wp, "laufzeit_ms"),
       gescheitert: t.wp === null,
     })),
     teams_gesendet: zahlen.teams_gesendet,
