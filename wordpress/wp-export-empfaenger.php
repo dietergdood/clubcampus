@@ -1,10 +1,51 @@
 <?php
+/* ═══════════════════════════════════════════════════════════════════════
+   ⚠ ⚠  ABSCHRIFT — NICHT DIE LAUFENDE DATEI, UND VON HIER GEHT NICHTS RAUS
+
+   Die Wahrheit liegt im Theme-Repository:
+
+       fch-theme/mu-plugins/wp-export-empfaenger.php
+
+   Dort wird sie geaendert, dort wird sie ausgeliefert. Dieses Repository
+   hat keinen Weg auf den Server: kein Deploy-Skript fasst `wordpress/`
+   an, und `npm run deploy` kennt nur die vier Edge Functions.
+
+   ── Wozu sie hier dann liegt ─────────────────────────────────────────
+
+   Damit `npm run check:plugin` die Zusagen der Gegenstelle gegen unsere
+   Nutzlast halten kann — 29 Regeln, die sonst nichts zu lesen haetten.
+   Sie ist ein Pruefgegenstand, keine Quelle.
+
+   ── ⚠ WAS DARAUS FOLGT, WENN SIE VERALTET ────────────────────────────
+
+   Am 26.09.2026 stand hier 0.9.26, waehrend drueben 0.9.39 lief: zwoelf
+   Fassungen Abstand. Unsere Kopie kannte die Route `/wappen` nicht, die
+   unsere eigene Function aufruft — wer hier nachsah, um zu verstehen,
+   was drueben passiert, las einen Stand von zwei Wochen zuvor.
+
+   **Eine Abschrift, die niemand nachzieht, ist schlimmer als keine:**
+   sie sieht aus wie eine Auskunft und ist eine Erinnerung.
+
+   ── ⚠ BEIM NAECHSTEN ABGLEICH ────────────────────────────────────────
+
+       cp <theme-repo>/mu-plugins/wp-export-empfaenger.php \
+          wordpress/wp-export-empfaenger.php
+
+   ⚠ **DIESER BLOCK GEHOERT NICHT ZUR QUELLE UND WIRD DABEI
+   UEBERSCHRIEBEN.** Er ist danach von Hand wieder einzusetzen — sonst
+   liest der Naechste den Satz gleich darunter („DIESE DATEI IST DER
+   EMPFAENGER“), der im Theme-Repo stimmt und hier das Gegenteil sagt.
+
+   Uebernommen am 26.09.2026 aus Commit b2c94ae, Fassung 0.9.39,
+   byteweise (`cp`, mit `cmp` gegengeprueft). Ausser diesem Block ist
+   die Datei Zeichen fuer Zeichen die des Theme-Repos.
+   ═══════════════════════════════════════════════════════════════════ */
 /**
  * ClubCampus-Abgleich — Empfaenger auf WordPress-Seite
  *
  * Plugin Name: ClubCampus Export
  * Description: Nimmt Spielplan, Verlauf und Ranglisten aus ClubCampus entgegen.
- * Version:     0.9.26
+ * Version:     0.9.39
  *
  * ⚠ ⚠  STAND 10.09.2026: DIESE DATEI **IST** DER EMPFAENGER  ⚠ ⚠
  *
@@ -141,6 +182,462 @@ const CC_ROUTE      = 'clubcampus/v1';
    `/status` fuer zwei verschiedene Fassungen dieselbe Zahl, und die eine
    Auskunft, die „laeuft drueben der neue Empfaenger?" beantworten koennte,
    beantwortet sie nicht mehr.
+
+   0.9.39 (26.09.2026): unveraenderte Spiele werden nicht neu geschrieben.
+   ⚠ ANLASS, gemessen mit 0.9.38: `laufzeit_ms` 14–19 s je Mannschaft,
+      rund 1,6 s je Spiel — und **alle 63 Spiele meldeten
+      «aktualisiert», obwohl sich nichts geaendert hatte.** Ein Lauf
+      schaffte so 6 von 21 Mannschaften.
+   ⚠ NEU AN DER NUTZLAST: nichts. Der Empfaenger entscheidet allein aus
+      dem, was ohnehin geliefert wird.
+   ⚠ NEUES META: `_cc_pruefsumme` (Konstante CC_META_PRUEFSUMME) —
+      sha256 ueber die GELIEFERTEN Daten des Spiels plus CC_VERSION.
+      Maps werden vor dem Serialisieren rekursiv nach Schluessel
+      sortiert, Listen (`verlauf`, Aufstellung) NICHT — dort ist die
+      Reihenfolge Inhalt. Dass CC_VERSION eingeht, ist Absicht: Jede
+      neue Empfaengerfassung schreibt jedes Spiel einmal neu.
+   ⚠ NEUER ZAEHLER: `unveraendert`, in der Antwort und im Bericht.
+      **`aktualisiert` zaehlt ab jetzt nur noch wirklich geschriebene
+      Spiele** — ein Rueckgang dieser Zahl ist der Erfolg und kein
+      Verlust. Dasselbe gilt fuer `verlauf_zeilen` und
+      `aufstellung_zeilen`.
+   ⚠ Ein uebersprungenes Spiel gilt weiterhin als GELIEFERT. Stuende
+      `$geliefert[ $mid ] = true;` hinter dem Sparschalter, zoege der
+      Rueckzug genau die Spiele zurueck, die man gerade gespart hat.
+   ⚠ Ein zurueckgezogener Beitrag wird bei gleicher Pruefsumme wieder
+      VEROEFFENTLICHT — sonst schriebe die Ersparnis den Rueckzug fest.
+   ⚠ Der Laufstempel `cc_stempel()` laeuft auf JEDEM Weg weiter. Ohne
+      ihn saehe ein unveraendertes Spiel aus wie eines, das gar nicht
+      geliefert wurde.
+
+   0.9.38 (26.09.2026): der Rueckzug sieht nur noch die gelieferte
+   Mannschaft an, und JEDE Antwort nennt ihre Laufzeit.
+   ⚠ ANLASS: sieben Mannschaften brauchten rund 90 s bei einem Zeitlimit
+      von 150 s. Die Rueckzugsschleife lief ueber ALLE Beitraege mit
+      `sfv_match_id` — im Pruefstapel 271 — und rief fuer jeden
+      `get_field( 'fch_team', … )`. Gemessen am 26.09.2026 bei einer
+      Lieferung fuer EINE Mannschaft: 268 Aufrufe, 48 ms; mit der
+      Vorauswahl 0 Aufrufe und 2 ms. Die Kriterien darunter sind
+      unveraendert — die Abfrage entscheidet nichts, sie verkleinert nur
+      die Menge.
+   ⚠ Die Vorauswahl sucht BEIDE Formen, in denen `fch_team` im Postmeta
+      stehen kann: die nackte Id (`post_object`) und die serialisierte
+      Liste (`relationship`). Eine Abfrage mit `IN` auf die nackte Id
+      uebersieht die zweite — gemessen am selben Tag: 7 Treffer statt 8,
+      und der fehlende Beitrag waere NIE zurueckgezogen worden, stumm,
+      mit einer Antwort, die Erfolg meldet. Dieselbe Klasse wie der
+      Fehler von 0.9.31.
+   ⚠ `laufzeit_ms` steht neu in jeder Antwort des Namensraums, auch in
+      Fehlerantworten — bisher gab es die Zahl nur im Abbruchbericht,
+      also genau dann, wenn es zu spaet war. Einheit im Namen, weil das
+      Feld `laufzeit` des Abbruchberichts SEKUNDEN fuehrt.
+
+   0.9.37 (24.09.2026): `rolle` im Repeater `verlauf` — der Rollenvermerk
+   des Verbands als eigenes Feld statt als Wort im Satz. Nutzlast-Fassung 6.
+   ⚠  Ohne den Namen in CC_VERLAUF_FELDER faellt der Wert an der EIGENEN
+      Allowlist weg, eine Stufe VOR ACF: `cc_schreibe_verlauf()` baut jede
+      Zeile aus dieser Liste. `unbeachtete_unterfelder` meldete dann
+      `verlauf.rolle`, und `unterfelder_geprueft["verlauf"]` stand auf
+      12:11:11. Mit dem Namen hier und dem Unterfeld drueben sind es 12:12:12.
+   ⚠  Das ACF-Unterfeld ist am selben Tag angelegt (`f_s_v_rolle`,
+      `fch-core/src/Fields/spiel.php`) — beide Haelften, sonst verwirft
+      `update_field()` den Wert wortlos, und `unterfelder_ohne_acf` meldet es.
+      Genau der `ein_nummer`-Fall.
+   ⚠  Der Name `rolle` gibt es zweimal: `aufstellung.rolle` (`f_s_a_rolle`)
+      fuehrt `start`/`eingewechselt`/`nicht_eingesetzt`. Als UNTERFELD ist das
+      keine Falle — `update_field('verlauf', …)` ordnet die Schluessel diesem
+      Wiederholer zu —, aber fuer einen Menschen, der beide Listen liest,
+      schon. Beide tragen `text`.
+   ⚠  Die Website gibt das Feld HEUTE NICHT aus: `text` traegt die Rolle
+      bereits mit («Trainer/in Hans Meier»), und ein zweites Mal waere sie
+      doppelt. Der Wert wird gespeichert, damit `text` spaeter schrumpfen
+      kann, ohne dass die Angabe verschwindet.
+
+   0.9.36 (23.09.2026): ein ZWEITER Durchlauf fuer weisse Wappen auf
+   durchsichtigem Grund. Findet der erste keinen Inhaltspunkt, zaehlt der
+   zweite nur noch die Durchsichtigkeit: **was nicht durchsichtig ist, ist
+   Inhalt.**
+   ⚠  ANLASS ist ein Befund aus 0.9.35, gemeldet und damals ausdruecklich
+      NICHT gebaut, weil er die Semantik aendert — Didis Entscheid vom
+      selben Tag hat ihn dann bestellt. **Ein weisser Schriftzug auf
+      durchsichtigem Grund hat nach der Regel des ersten Durchlaufs keinen
+      einzigen Inhaltspunkt**: jeder seiner Punkte ist weiss, also «leer».
+      Er ging unbeschnitten zurueck — und das war ausgerechnet die Datei,
+      die den Beschnitt am noetigsten hatte.
+   ⚠  **Die zweite Regel ist die zweite Wahl und nicht die bessere.** Sie
+      kann einen weissen Grund nicht von weisser Schrift unterscheiden; auf
+      einem Bild OHNE Durchsichtigkeit haelt sie alles fuer Inhalt und
+      schneidet nichts. Genau darum laeuft sie NUR, wenn der erste
+      Durchlauf leer ausgeht, und nicht als Ersatz. Ein ganz weisses Bild
+      ohne Alphakanal kommt darueber unveraendert zurueck — richtig, denn
+      dort ist nichts zu unterscheiden.
+   ⚠  **Zwei Schleifen und kein Schalter im Rumpf der ersten.** Der Vermerk
+      an Schritt 6 ist gemessen: ein Funktionsruf je Bildpunkt kostet bei
+      512px rund 5 ms von 20. Ein Test je Bildpunkt waere billiger, liefe
+      aber auf JEDEM Bild mit, um einem seltenen Fall zu dienen.
+   ⚠  **`grund` hat damit zwei Bedeutungen bekommen, und `weg` trennt sie.**
+      Bisher hiess ein gefuellter `grund` immer «wir wollten und konnten
+      nicht». Jetzt gibt es einen Erfolg, der erklaert gehoert. Gelesen
+      wird das Paar (`beschnitten`, `grund`); `weg` sagt dasselbe
+      maschinenlesbar: 0 kein Inhalt, 1 erster Durchlauf, 2 zweiter.
+      In der Antwort der Route steht `beschnitt_weg` NUR beim zweiten Weg.
+   ⚠  Der Text in `grund` wird erst gesetzt, wenn wirklich geschnitten
+      wird. Stuende er frueher, traege das ganz weisse Bild — das ueber den
+      zweiten Weg laeuft und dort nichts wegzuschneiden findet — einen
+      gefuellten `grund` bei `beschnitten === false`, und das liest sich
+      als Fehlschlag.
+
+   0.9.35 (23.09.2026): beim ANNEHMEN faellt der leere Rand weg. Die
+   abgelegte Datei ist das beschnittene Bild — die Pruefsumme bleibt die
+   der Lieferung.
+   ⚠  ANLASS ist ein optischer, und er ist Didis: Viele Logodateien tragen
+      rundum weissen oder durchsichtigen Rand. Die Anzeige setzt jedes
+      Wappen in denselben Kreis; das eigentliche Wappen sitzt darin dann
+      klein, und **zwei Wappen nebeneinander wirken ungleich gross, obwohl
+      beide Dateien dieselbe Kantenlaenge haben.** Der Rand ist eine
+      Eigenschaft der DATEI und keine des Wappens.
+   ⚠  Die Regel ist ein umschliessendes Rechteck ueber alle Bildpunkte, die
+      weder nahezu weiss noch nahezu durchsichtig sind. **Sie erfuellt
+      Didis zwei Bedingungen von selbst und ohne Fuellalgorithmus:** Der
+      Inhalt kann per Konstruktion nicht angeschnitten werden (das Rechteck
+      IST die Huelle aller Inhaltspunkte), und Weiss innerhalb des Wappens
+      liegt darin und bleibt darum unberuehrt. Ausfuehrlich begruendet an
+      `cc_wappen_beschnitt()`, samt der Stelle, an der ein spaeterer
+      Flood-Fill nichts verbessern wuerde.
+   ⚠ ⚠ **GD und nicht Imagick**, obwohl beide im Container stehen (gemessen:
+      GD bundled 2.1.0, ImageMagick 7.1.1-43 mit `trimImage`). GD ist
+      gebuendelt und dieser Weg benutzt es schon; was auf dem ENTWICKLUNGS-
+      Container steht, sagt ueber den Server nichts. Und
+      `Imagick::trimImage()` haette die falsche Semantik: Es beschneidet
+      gegen die ECKFARBE mit Unschaerfe, nicht gegen «weiss ODER
+      durchsichtig» — eine Datei mit durchsichtiger Ecke und weissem Rand
+      traefe es nur halb, und zwar ohne dass es auffiele.
+   ⚠ ⚠ **`imagecrop()` ZERSTOERT ein Palettenbild mit durchsichtigem Index**
+      — gemessen an einem GIF mit drei Farben: danach `transidx=-1,
+      farben=1`, und die Ecke, die durchsichtiges Weiss war, liest sich als
+      deckendes Rot. Palettenbilder gehen darum ueber `imagecreate()` +
+      `imagecopy()` mit dem durchsichtigen Ton vorab als Index 0. **Der
+      naheliegende Ausweg waere der falsche gewesen:**
+      `imagepalettetotruecolor()` uebertraegt die Durchsichtigkeit zwar
+      richtig, aber `imagegif()` flacht Alpha beim Zurueckschreiben auf
+      SCHWARZ (`rgb=4,2,4` gemessen). Unser eigenes Wappen ist ein GIF.
+   ⚠  Die Schwellen sind eng und das ist begruendet: **Die zwei Fehler sind
+      nicht gleich teuer.** Zu locker heisst, blasse Inhaltspunkte fuer Rand
+      zu halten und genau das wegzuschneiden, was geschuetzt gehoert; zu
+      streng heisst, einen Saum stehen zu lassen, den niemand sieht.
+      Gemessen an einem 200px-Bild mit 60px Rand (wahr ist `[60,60,140,140]`):
+      PNG und GIF zeichengenau, WebP q92 vier Punkte Saum, JPEG q92 zwoelf.
+      **Der JPEG-Saum ist der bezahlte Preis und kein Versehen.**
+   ⚠  `CC_WAPPEN_PUNKTE` (2048x2048) bremst die Flaeche und **wiederholt
+      CC_WAPPEN_BYTES nicht**: Ein weisses GIF von 2000x2000 wiegt gemessen
+      10 288 Bytes und kaeme glatt durch die 512 KiB. Geprueft wird am
+      DATEIKOPF, vor dem Dekodieren — eine Grenze, die erst nach
+      `imagecreatefromstring()` greift, hat den Speicher schon ausgegeben,
+      gegen den sie schuetzen soll.
+   ⚠ ⚠ **DIE PRUEFSUMME BLEIBT DIE DER LIEFERUNG**, genau wie beim
+      Standbild. Sie quittiert den EMPFANG und nicht das Ergebnis. Stuende
+      dort die Summe der beschnittenen Datei, faende der Zweig
+      `unveraendert` nie wieder eine Uebereinstimmung — ClubCampus schickte
+      jedes Wappen bei jedem Lauf neu, der Anhang wuerde jedes Mal ersetzt,
+      **und nichts davon saehe nach einem Fehler aus.** Gemessen: derselbe
+      Bestand ein zweites Mal geschickt ergibt `unveraendert`, derselbe
+      Anhang.
+   ⚠  **Die Antwort sagt es**, wie beim Standbild: `beschnitt` («200x200 →
+      81x81») steht da, wenn geschnitten wurde, `beschnitt_grund`, wenn es
+      versucht wurde und nicht ging. Fehlen beide, war nichts wegzuschneiden.
+      `bytes` und `sha256` daneben beschreiben weiterhin die LIEFERUNG.
+   ⚠  Reihenfolge **Standbild → Beschnitt**, und das ist keine Laune: GD
+      liest aus einem animierten GIF nur das erste Bild. Andersherum machte
+      der Beschnitt aus der Lieferung stillschweigend ein Standbild, und
+      `standbild` meldete trotzdem 0. `cc_wappen_beschnitt()` weigert sich
+      bei einem animierten GIF ausserdem von sich aus — **fuer jeden
+      anderen Aufrufer**, der ihr eine beliebige abgelegte Datei reicht.
+   ⚠  `cc_wappen_mangel()` urteilt deswegen NICHT anders — gemessen und
+      nicht vermutet: Es prueft Beitrag, Anhangstyp, hinterlegten Pfad,
+      Dasein auf der Platte und gesetzte Summe. Keines davon beruehrt der
+      Beschnitt; nach dem Lauf meldet es leer.
+   ⚠  Jeder Fehlweg endet in «Original zurueck», und `$masse` traegt dabei
+      **immer die wahren Kantenlaengen** — ~~die frueheren Rueckkehrpfade
+      standen vor der Messung~~ (Stand 23.09.2026, noch am selben Tag
+      abgeloest, gemeldet von der Seite der Einmal-Routine: ein animiertes
+      GIF von 160x160 kam mit `breite=0` zurueck). **`0x0` liest sich wie
+      ein kaputtes Bild und nicht wie «nicht beschnitten, und hier ist der
+      Grund».** Wo die Groesse wirklich nicht zu ermitteln war, steht die 0
+      heute zusammen mit einem Grund, der das sagt.
+   ⚠  Gegenprobe in `pruef/wappenempfang.py`, B1 bis B6 — **und der
+      Nachweis «kein Inhalt verloren» ist eine ZAHL**: gezaehlt werden die
+      Inhaltspunkte vorher und nachher, nicht die Kantenlaengen. 200x200 →
+      80x80 und 200x200 → 81x81 sehen beide nach «kleiner geworden» aus.
+      Gemessen: B1 weisser Rand 200x200 → 81x81 (Inhalt 5089 → 5089),
+      B2 randlos 200x200 → 200x200 und Byte fuer Byte derselbe String,
+      B3 weisse Insel innen 200x200 → 80x80 (Inhalt 4800 → 4800, die Insel
+      von 1600 Punkten ueberlebt vollstaendig), B4 durchsichtiger Rand
+      200x200 → 81x81 (durchsichtig 34911 → 1472), B5 dasselbe als GIF,
+      B6 der Einbau. Zwei neue Mutanten (E6 schneidet eine Spalte zu eng,
+      E7 kodiert auch randlos neu) — **7 von 7 gemeldet, Referenzlauf 0.**
+      Laufzeit fuer ein 512px-Wappen im Lauf gemessen: 32 ms.
+
+   0.9.34 (23.09.2026): drei Map-Schluessel bleiben auch leer ein Objekt.
+   ⚠  `spiele.aufstellung_je_spiel`, `spiele.unterfelder_geprueft` und
+      `status.feld_mehrdeutig` sind **ueber einen NAMEN indiziert** — eine
+      Spiel-Id, ein Repeatername, ein Feldname. Gefuellt waren sie darum
+      `{…}`, leer aber `[]`, weil `json_encode()` ein leeres Array als Liste
+      schreibt. **Ein Leser, der `for k, v in x.items()` schreibt, bricht am
+      leeren Lauf** — und zwar nur dann, also genau beim ersten stillen Tag.
+   ⚠  `cc_als_objekt()` steht mit Absicht direkt ueber `cc_verlust_bericht()`:
+      Dort wird eine Map zur LISTE umgebaut, hier bleibt sie Map. **Die zwei
+      entgegengesetzten Entscheide stehen nebeneinander**, damit niemand den
+      einen fuer den ganzen Fall haelt. Der tragende Satz ist derselbe: Ein
+      Schluessel, dessen Typ sich mit dem Inhalt aendert, ist beim Auswerten
+      teurer als ein paar Zeichen mehr.
+   ⚠  **`(object)` und nicht `JSON_FORCE_OBJECT`.** Das Flag gilt fuer die
+      GANZE Antwort: Aus `"fehler":[]` wuerde `{}`, aus `beitraege` eine Map
+      mit Zaehlnummern als Schluesseln. Ein Flaechenbrand fuer drei
+      Schluessel. `(object)` fasst nur die oberste Ebene — die Listen INNEN
+      bleiben Listen, gemessen an
+      `"feld_mehrdeutig":{"liga":["text:f_tm_liga","text:f_s_liga"]}`.
+   ⚠  Der Wurf `(array)` davor bleibt: `(object) 'x'` ergaebe
+      `{"scalar":"x"}` — eine Form, die wie ein Feldname aussieht. Ueber
+      `(array)` wird `{"0":"x"}` daraus: **sichtbar falsch statt still
+      plausibel.**
+   ⚠  **Der gefuellte Fall ist Zeichen fuer Zeichen unveraendert** — 12 von
+      16 verglichenen Antworttexten byteweise gleich, und die vier
+      Unterschiede sind genau die vier leeren Faelle.
+   ⚠  Danach alle **58 Containerpfade** noch einmal durchgesehen, diesmal auf
+      den Typ: **0 kippen noch** (vorher 3). Die 23, die in keinem Lauf
+      gefuellt waren und am JSON darum nicht zu entscheiden sind, einzeln im
+      Code gelesen — alle gegen das Kippen geschuetzt.
+   ⚠  Gemeldet und NICHT gebaut: Zwei Schluessel wechseln zwischen `null` und
+      Container (`status.letzter_bericht`, `status.unterfelder.*`). Andere
+      Klasse — ein Leser unterscheidet `null` von beidem, und «nicht
+      feststellbar ist KEINE leere Liste» steht dort schon als Begruendung.
+
+   0.9.33 (23.09.2026): `bestand.wappen` ist eine LISTE. Vorher war es ein
+   Objekt — und darum ist der erste echte Wappenlauf ins Leere gelaufen.
+   ⚠⚠ **Der Befund kam von drueben, nicht von hier.** ClubCampus meldete:
+      «Die Gegenstelle meldet unter «wappen» keine Liste.» `bestand_lage`
+      unlesbar, 0 Eintraege empfangen. Erwartet wird
+      `"wappen": [ { "sfv_team_id": "39010", "sha256": "…" } ]`; geliefert
+      wurde der Zaehlerblock von `cc_wappen_lage()`, in dem die Liste eine
+      Ebene tiefer unter `teams` steckte.
+   ⚠  **Der Fehler steht seit 0.9.29 und hat sich vier Fassungen lang nicht
+      gemeldet.** Nichts schlug fehl: Die Route antwortete mit 200, die
+      Zeilen trugen die richtigen Felder, alle Pruefstaende waren gruen.
+      Sie lasen den INHALT der Zeilen und nie die Klammer davor.
+
+      > **Eine Pruefung, die `is_array()` fragt, sieht diesen Fehler nie.**
+      > In PHP ist beides ein Array; der Unterschied entsteht erst im
+      > `json_encode`, und nur dort ist er messbar.
+
+      Der neue Pruefpunkt in `pruef/wappenempfang.py` misst darum das erste
+      Zeichen des erzeugten JSON-Textes.
+   ⚠  **Kein Zaehler ist verlorengegangen, kein Zeilenfeld umbenannt.** Die
+      sechs Zahlen stehen im Geschwisterschluessel `wappen_lage`
+      (`teams_gesamt`, `teams_ohne_sfv_id`, `mit_wappen`, `ohne_wappen`,
+      `wappen_verloren`, `ohne_team`). Sie gehoeren nicht in die Liste:
+      `teams_ohne_sfv_id` zaehlt Teams, die in KEINER Zeile vorkommen — eine
+      Zahl ueber Abwesende hat in keiner Zeile Platz.
+   ⚠  `cc_wappen_lage()` selbst ist unveraendert; sie hat weitere Leser. Die
+      Aufteilung geschieht in `cc_route_bestand()`.
+   ⚠  **Leer ist `[]` und nicht `{}`** — und das ist nicht von selbst so:
+      Ein Array mit Luecken in den Schluesseln wird beim `json_encode` still
+      zum Objekt (`array( 0 => …, 2 => … )` → `{"0":…,"2":…}`). Heute
+      entstehen hier keine Luecken; `array_values()` steht trotzdem da,
+      **weil die naechste Filterzeile sie erzeugt und niemand es merkt.**
+   ⚠  ~~«Gemeldet und NICHT gebaut: Drei Schluessel kippen ihren JSON-Typ
+      mit dem Inhalt — leer `[]`, gefuellt `{}`.»~~ — Stand 23.09.2026,
+      **noch am selben Tag entschieden und gebaut, siehe 0.9.34.** Der Satz
+      bleibt stehen, weil er die Reihenfolge belegt: erst gemeldet, dann
+      entschieden, dann gebaut.
+
+   0.9.32 (23.09.2026): ein animiertes Wappen wird ruhig gestellt, nicht
+   abgelehnt.
+   ⚠  **Didis Bedingung zuerst: das Wappen soll erscheinen, nur ruhig.**
+      Ein zappelndes Wappen in Spielplanzeile und Rangliste ist unruhig —
+      aber ablehnen hiesse, dass gar keines erscheint. Ein animiertes GIF
+      wird darum beim ANNEHMEN auf sein erstes Bild zurueckgefuehrt.
+   ⚠⚠ **Hier stand bis heute, das sei an der ANZEIGE zu entscheiden und
+      nicht an der Allowlist** (0.9.31, 23.09.2026). Der Satz war falsch,
+      und zwar nicht knapp: **Die Anzeige kann es gar nicht.** Gemessen im
+      wp-Container —
+      `make_subsize( 64x64 )` auf eine 64px-Quelle: `image_subsize_create_error`
+      («hat bereits die Groesse»); `make_subsize( 96x96, ohne Beschnitt )`:
+      `error_getting_dimensions`; `image_resize_dimensions( 64,64,96,96,false )`:
+      `false`. **WordPress legt weder eine Zwischengroesse in Originalgroesse
+      an noch vergroessert es.** Der Weg ueber die Anzeige haette einen
+      Filter gebraucht, der ein 64er Wappen auf 96 aufblaest — Schaerfe
+      weggeworfen fuer Ruhe, und ein Filter, der jedes Bild der Website
+      sieht.
+   ⚠  `cc_gif_bilder()` zaehlt die Bilder **ohne Imagick und ohne GD**,
+      direkt an den Bytes. Die Entscheidung «anfassen ja/nein» faellt damit
+      auf jedem Server gleich aus — anders als die Umrechnung selbst, die
+      nimmt, was da ist (Imagick, sonst GD). Gegen `getNumberImages()`
+      geprueft: 8 von 8 gleich.
+   ⚠  **Jeder Fehlweg gibt die Original-Bytes zurueck.** Ein Server ohne
+      Bildbibliothek legt das animierte GIF ab, statt das Wappen zu
+      verlieren. Ruhe ist der Wunsch, Erscheinen ist die Bedingung.
+   ⚠⚠ **`sha256` bleibt die Summe der LIEFERUNG, nicht der abgelegten
+      Datei.** Das ist die Falle an diesem Umbau, und sie ist geprueft:
+      Wuerde die Summe nachgerechnet, passte sie nie mehr zu dem, was
+      ClubCampus geschickt hat — der Zweig `unveraendert` traefe nicht
+      mehr, **die Gegenstelle schickte jedes animierte Wappen bei jedem
+      Lauf neu und bekaeme brav `ersetzt` zurueck.** Gemessen: zweite
+      Lieferung desselben animierten GIF ergibt `unveraendert`.
+   ⚠  Neues Antwortfeld `standbild` je Urteil (die Zahl der Bilder, die das
+      gelieferte GIF trug; fehlt, wenn nichts umgerechnet wurde). **Die
+      abgelegte Datei ist dann nicht die gelieferte, und das soll sichtbar
+      sein** statt stillschweigend zu geschehen.
+   ⚠  PNG, WebP, JPEG und einbildriges GIF gehen **Byte fuer Byte**
+      unveraendert durch — nicht «gleich gross», sondern derselbe String.
+
+   0.9.31 (23.09.2026): GIF gehoert dazu, und eine Pruefsumme darf nie
+   ohne ihren Anhang dastehen.
+   ⚠  **`image/gif` ist neu erlaubt** (CC_WAPPEN_MIME). Der Grund ist
+      nicht Vollstaendigkeit, sondern Bedarf: Der Verband liefert GIF,
+      und unser eigenes Wappen ist eines. Die Aufnahme kostet nichts —
+      WordPress fuehrt `gif` von Haus aus (nachgemessen: 98 Typen, `gif`
+      darunter). **SVG bleibt abgelehnt**, und die Begruendung dafuer
+      haengt nicht an der Laenge der Liste, sondern an ausfuehrbarem
+      Markup aus fremder Herkunft.
+   ⚠  **Der Fund schlaegt weiterhin die Angabe.** Ein PNG, das als
+      `image/gif` angekuendigt wird, ist abgelehnt — gemessen. Und die
+      Grenze von 512 KiB gilt fuer GIF wie fuer alles andere.
+   ⚠  **Die Fehlermeldung liest jetzt aus der Konstante**
+      (`implode(', ', array_keys(CC_WAPPEN_MIME))`) statt eine Liste von
+      Hand zu fuehren. Der handgeschriebene Satz «bitte PNG oder WebP
+      schicken» war nach einer Zeile Aenderung falsch, und niemand haette
+      es gemerkt — die Gegenstelle liest ihn, nicht wir.
+   ⚠  ~~«**Offen fuer Didi, gemeldet und nicht gebaut:** Ein animiertes
+      GIF wird angenommen. … **Ein animiertes Wappen unter 96px laeuft
+      also auf der Seite.** Das ist an der ANZEIGE zu entscheiden, nicht
+      an der Allowlist.»~~ — Stand 23.09.2026, **entschieden und
+      gebaut:** Ein animiertes GIF wird beim ANNEHMEN auf sein erstes Bild
+      zurueckgefuehrt (`cc_wappen_standbild()`), und die Anzeige bekommt
+      ein stilles Bild in voller Kantenlaenge. Die Anzeige selbst kam
+      nicht in Frage — WordPress legt keine Zwischengroesse in der
+      Originalgroesse an und vergroessert nicht; beide Wege sind dort
+      gemessen zu. **Die Pruefsumme bleibt die der Lieferung**, sonst
+      faende `unveraendert` nie wieder eine Uebereinstimmung. Neu in der
+      Antwort: `standbild` je Urteil, damit die Gegenstelle erfaehrt, dass
+      die abgelegte Datei nicht die gelieferte ist.
+
+   ⚠⚠ **`bestand` meldet eine Pruefsumme nur noch mit tragendem
+      Anhang.** Bisher las `cc_wappen_lage()` die Summe aus dem Postmeta
+      und fragte nicht, ob das Bild noch daliegt. **Fehlt die Datei im
+      Uploads-Ordner** — von Hand geloescht, Serverumzug, halbe
+      Uebertragung —, dann meldete der Bestand weiter ihre Summe,
+      ClubCampus sah «ist schon da» und schickte nie wieder, und die
+      Seite zeigte stumm den Platzhalter. **Nichts schlug fehl.** Genau
+      das ist die gefaehrlichste Sorte Fehler.
+      Neu entscheidet `cc_wappen_mangel()` an EINER Stelle, ob ein Anhang
+      traegt: Beitrag da, Anhang, Datei hinterlegt, Datei auf der Platte,
+      Summe gesetzt.
+   ⚠  **Zwei neue Auskuenfte, und sie sind ein Vertrag:** je Teamzeile
+      `mangel` (Text, leer = in Ordnung) und oben `wappen_verloren`.
+      **«Nie geliefert» und «geliefert, aber verloren» saehen sonst
+      gleich aus** — das zweite ist ein Befund, dem jemand nachgeht. Wer
+      `mangel` nicht kennt, sieht eine leere `sha256` und schickt nach;
+      das ist gewollt. Bestehende Felder behalten Name und Bedeutung.
+   ⚠  Der Zweig `unveraendert` verlangt jetzt zusaetzlich einen
+      tragenden Anhang. Ohne das waere die Selbstheilung an der zweiten
+      Tuer gescheitert: Die Gegenstelle haette nachgeliefert und ein
+      «unveraendert» zurueckbekommen.
+   ⚠⚠ **Und genau dabei kam ein zweiter Fehler zum Vorschein, der
+      sich selbst versteckte.** Die erste Heilung meldete `ersetzt` — und
+      die Datei fehlte danach weiter. Grund: `wp_unique_filename()` haengt
+      nur dann `-1` an, wenn die Datei daliegt. Fehlt sie, bekommt das
+      NEUE Bild denselben Pfad, und `wp_delete_attachment( $alt, true )`
+      loescht exakt die eben geschriebenen Dateien. **Die Heilung hob sich
+      still selbst auf, beliebig oft.** Der Ersetzen-Zweig schuetzt die
+      Pfade des neuen Anhangs jetzt ausdruecklich.
+   ⚠  **Die Pruefsumme wird ZULETZT geschrieben.** Ihre Anwesenheit ist
+      damit die Quittung dafuer, dass alles davor gelungen ist — die
+      Team-Nummer bleibt vorne, sie ist die Besitzmarke. Bricht der Lauf
+      mittendrin ab (Zeitueberschreitung, Speicher, fataler Fehler),
+      raeumt `register_shutdown_function()` Anhang UND Datei weg. Vorher
+      blieb eine Waise im Uploads-Ordner liegen, die niemand mehr
+      zuordnen konnte.
+
+   0.9.30 (23.09.2026): zwei FREIWILLIGE Felder fuer die Wappen der
+   Gegner und der Ranglistenzeilen.
+   ⚠  `sfv_gegner_team_id` am fch_spiel (Schluessel `f_s_gtid`) steht neu
+      in CC_FELDER. Damit bekommt die Gegnerhaelfte der Spielseite zum
+      ersten Mal eine Nummer — bis heute fuehrte das Spiel den Gegner
+      allein als TEXT, und aus einem Klubnamen eine Nummer zu erraten
+      waere das Zurueckparsen, das neunmal gutgeht.
+   ⚠  **`sfv_team_id` je Ranglistenzeile braucht hier NICHTS.** Der
+      Ranglisten-Weg legt die Gruppenobjekte UNVERAENDERT in die Option
+      CC_OPT_RANG (`$alle[ $id ] = $g;`) — ein neuer Schluessel in der
+      Zeile kommt also von selbst an und wird von selbst gelesen. Nur die
+      HANDGEPFLEGTE Rueckfallquelle, der Wiederholer `rangliste` am
+      Team-Beitrag, brauchte ein Feld dafuer (`f_t_r_tid`, gebaut in
+      `Fields/team.php`); der Empfaenger schreibt es nie.
+      **Wer hier eine Schreibstelle sucht und keine findet, hat nichts
+      uebersehen.**
+   ⚠  FREIWILLIG heisst zweierlei, und das zweite ist die Falle: Ein
+      fehlendes Feld lehnt keinen Eintrag ab UND leert keinen
+      bestehenden Wert. Beides traegt `cc_schreibe_felder()` schon —
+      `array_key_exists()` ueberspringt, was die Nutzlast nicht fuehrt.
+      **Weggelassen ist nicht leer:** kommt das Feld leer MIT, ist das
+      eine Aussage und wird geschrieben.
+   ⚠  Die Nummer wird als TEXT normalisiert (`cc_wappen_tid()`), damit
+      `39010` und `"39010"` dasselbe treffen — dieselbe Funktion wie beim
+      Wappen, keine zweite eigene.
+   ⚠  `bestand` meldet neu `sfv_nummern`: wie viele Spiele eine
+      Gegnernummer tragen und wie viele Ranglistenzeilen eine Nummer.
+      **Heute ist beides null, und null ist hier eine Auskunft** — die
+      Gegenstelle schickt die Felder erst ab ihrem naechsten Deploy.
+
+   0.9.29 (23.09.2026): neue Aktion `wappen` — ClubCampus schickt die
+   Vereinswappen in die Mediathek. Je Eintrag `{sfv_team_id, sha256,
+   mime, daten}`, `daten` als base64, hoechstens CC_WAPPEN_JE_AUFRUF (20)
+   je Aufruf. Jedes Bild wird ein Anhang mit den Metafeldern
+   `sfv_team_id` und `sha256`. Die Antwort zaehlt `angelegt`, `ersetzt`,
+   `unveraendert` und `fehler`. `bestand` meldet zusaetzlich je Team
+   `sfv_team_id` und `sha256`.
+   ⚠  **Die Pruefsumme wird NACHGERECHNET, nicht geglaubt.** Stimmt sie
+      nicht zu den Bytes, ist der Eintrag `fehler` — nichts angelegt,
+      nichts geloescht. Ebenso der Typ: `finfo_buffer()` auf die
+      dekodierten Bytes entscheidet, nicht die Angabe in `mime`.
+   ⚠  **SVG wird ABGELEHNT, nicht gesaeubert** — Begruendung an
+      `cc_wappen_pruefe()`. Kurz: WordPress erlaubt den Typ von Haus aus
+      gar nicht, und ein selbstgebauter Saeuberer fuer ausfuehrbares
+      Markup ist gefaehrlicher als die Luecke.
+      ~~«gemessen am 23.09.2026: `wp_get_mime_types()` fuehrt png, jpeg
+      und webp, svg NICHT»~~ — Stand 23.09.2026, ueberholt. Der Satz war
+      nicht falsch, aber er las sich wie eine vollstaendige Liste, und
+      genau diese Kuerze hat GIF uebersehen lassen. Nachgemessen am
+      23.09.2026 im lokalen Stapel: `wp_get_mime_types()` fuehrt **98**
+      Eintraege, darunter `jpg|jpeg|jpe`, **`gif`**, `png`, `bmp`,
+      `tiff|tif`, `webp`, `avif`, `ico`, `heic`. `svg` kommt **null Mal**
+      vor — weder als Schluessel noch als Wert. Die SVG-Begruendung
+      traegt also unveraendert; sie haengt nicht daran, wie kurz die
+      Liste ist.
+   ⚠  **Grenze je Bild: CC_WAPPEN_BYTES (512 KiB) auf die DEKODIERTEN
+      Bytes.** Gemessen am 23.09.2026 an einem 512px-Wappen: png 2,7 KB,
+      webp 3,9 KB, jpeg 12,7 KB. Die Grenze laesst also auch ein
+      detailreiches 1024px-Bild durch und schliesst nur das aus, was
+      kein Wappen mehr ist.
+
+   0.9.28 (23.09.2026): die WERTPRUEFUNG von 0.9.27 ist ZURUECKGEBAUT. Der
+   Empfaenger nimmt Werte wieder an wie vor 0.9.27 — keine Pruefung gegen
+   erlaubte Werte, kein Ablehnen, kein Protokoll. Didis Entscheid.
+   ⚠  **Der Eintrag bleibt stehen, damit niemand die Pruefung fuer ungebaut
+      haelt und sie ein zweites Mal baut.** Sie war gebaut und gemessen —
+      null Ablehnungen an 1468 `verlauf`-, 3373 `aufstellung`- und 738
+      Markenzeilen — und ist gefallen, weil der Anlass zu klein war: eine
+      leere Zeile auf EINER Spielseite, deren Ursache ein Datenfehler ist,
+      den Didi selbst korrigiert.
+   ⚠  **Und was damit wieder offen ist:** Ein unbekanntes `art` landet
+      unbeanstandet in der Datenbank und erscheint auf der Spielseite ohne
+      Zeichen — Minute und Text da, kein Symbol, und in Zwischenstand und
+      Torschuetzenliste zaehlt es nicht mit. Keine Meldung. Heute ist der
+      Bestand sauber (nur die erwarteten Werte); es ist eine Luecke auf
+      Vorrat, kein Fehler von heute.
+
+   > ~~«0.9.27 (23.09.2026): WERTE werden geprueft, nicht mehr nur
+   > Feldnamen. Geprueft wird gegen CC_WERTE; eine Zeile mit unbekanntem
+   > Wert wird ABGELEHNT.»~~ — abgeloest am selben Tag, siehe oben.
 
    0.9.26 (13.09.2026): `ohne_person` im Repeater `verlauf` — das Merkmal
    statt des Rueckfalltexts „Unser Team“. Nutzlast-Fassung 4.
@@ -523,7 +1020,7 @@ const CC_ROUTE      = 'clubcampus/v1';
    einander), `autoload` wird nach dem Schreiben geprueft und notfalls
    berichtigt, `/status` nennt Empfaenger, Version, Metaschluessel und die
    Team-Zuordnung. */
-const CC_VERSION    = '0.9.26';
+const CC_VERSION    = '0.9.39';
 const CC_TYP_SPIEL  = 'fch_spiel';
 const CC_TYP_TEAM   = 'fch_team';
 /* ⚠ NUR ZUM ZAEHLEN. Dieses Plugin legt keine Person an und aendert
@@ -590,6 +1087,42 @@ const CC_QUELLE     = 'clubcampus';   // ⚠ klein — der WERT, nicht die Besch
  */
 const CC_META_LAUF  = '_cc_lauf';      // Zeitstempel des LETZTEN Laufs
 const CC_META_ERST  = '_cc_lauf_erst'; // Zeitstempel des ersten — nie ueberschrieben
+
+/* ⚠ ⚠  DIE PRUEFSUMME JE SPIEL — NEU AM 26.09.2026, ANLASS LAUFZEIT  ⚠ ⚠
+   ─────────────────────────────────────────────────────────────────────
+   Gemessen mit 0.9.38: `laufzeit_ms` 14–19 s je Mannschaft, rund 1,6 s
+   je Spiel — und **alle 63 Spiele eines Laufs galten als „aktualisiert",
+   obwohl sich an keinem etwas geaendert hatte.** Ein Lauf schaffte so 6
+   von 21 Mannschaften; der Rest fiel ins Zeitlimit.
+
+   Hier steht ein `sha256` ueber die GELIEFERTEN Daten eines Spiels plus
+   CC_VERSION. Stimmt er mit dem gespeicherten ueberein, schreibt der Lauf
+   das Spiel nicht noch einmal und zaehlt es als `unveraendert`. Gebildet
+   wird er in cc_pruefsumme(), verglichen und abgelegt in
+   cc_route_spiele().
+
+   ⚠ CC_VERSION GEHOERT IN DEN HASH, UND ZWAR ABSICHTLICH. Aendert sich
+   der Empfaenger — eine neue Allowlist, ein anderer Schreibweg, eine
+   berichtigte Umrechnung —, muss jedes Spiel EINMAL durch den neuen
+   Code. Ohne die Fassung im Hash bliebe der alte Stand stehen, und zwar
+   stumm: die Antwort meldete `unveraendert` fuer Beitraege, die in
+   Wahrheit nach der alten Regel geschrieben sind. Der Preis ist ein
+   voller, langsamer Lauf nach jeder neuen Fassung. Das ist gewollt und
+   billiger als ein Feld, das sich nie mehr bewegt.
+
+   ⚠ WAS DER HASH NICHT DECKT: die aufgeloeste Beitrags-Id `fch_team`.
+   Sie steht bewusst nicht drin (siehe cc_pruefsumme()). Wird ein
+   Team-Beitrag geloescht und mit derselben `sfv_id` neu angelegt, zeigen
+   die Spiele weiter auf die alte Id, bis die naechste CC_VERSION alles
+   einmal nachzieht — oder bis jemand dieses Meta entfernt.
+
+   ⚠ **DIESE DATEI LIEFERT CLUBCAMPUS ALS GANZES.** Beim naechsten
+   Nachschub wird sie ERSETZT und nicht zusammengefuehrt. Was hier
+   geaendert und drueben nicht nachgezogen wird, ist dann weg — ohne
+   Konflikt und ohne Meldung. Drueben nachzuziehen sind: diese Konstante,
+   cc_tief_sortiert(), cc_pruefsumme(), der Zaehler `unveraendert` in
+   `$erg`/Antwort/Bericht und der Block in cc_route_spiele(). */
+const CC_META_PRUEFSUMME = '_cc_pruefsumme';
 /* ⚠ ⚠  DAS FELD HEISST `abgleich_stand`, UND ES IST EIN ACF-FELD.
    BERICHTIGT AM 10.09.2026 — hier stand vorher `_cc_team_abgleich`,
    ein Meta mit Unterstrich, das ich selbst erfunden hatte.
@@ -665,6 +1198,20 @@ const CC_FELDER = array(
 	'wettbewerb', 'liga', 'runde', 'status', 'quelle',
 	'tore_heim', 'tore_gast', 'halbzeit_heim', 'halbzeit_gast',
 	'sfv_match_id', 'sfv_spiel_nr',
+	/* ⚠ SEIT 0.9.30 (23.09.2026). Die SFV-Teamnummer des GEGNERS, Feldname
+	   `sfv_gegner_team_id`, Schluessel `f_s_gtid` am fch_spiel.
+
+	   ⚠ Nicht zu verwechseln mit den drei Nachbarn, und die Namen werden
+	   NICHT angeglichen: `sfv_id` am Team-Beitrag, `sfv_team_id` in der
+	   Nutzlast und am Wappen-Anhang, `sfv_gegner_team_id` hier. Drei
+	   Namen fuer drei Dinge.
+
+	   ⚠ **Freiwillig.** Fehlt das Feld in der Nutzlast, ueberspringt die
+	   Schleife in `cc_schreibe_felder()` es ueber `array_key_exists()` —
+	   kein Eintrag wird abgelehnt und kein bestehender Wert geleert. Das
+	   ist wichtiger, als es aussieht: `update_field( $key, '' )` bei
+	   fehlendem Schluessel loeschte, was schon dasteht. */
+	'sfv_gegner_team_id',
 	/* ⚠ REPEATER, kein Textfeld. `update_field()` nimmt dafuer ein Array
 	   von Zeilen; die Unterfeldnamen muessen zeichengenau stimmen, sonst
 	   schreibt ACF still nichts hinein.
@@ -776,6 +1323,25 @@ const CC_VERLAUF_FELDER = array(
 	   wir benennen koennen. NICHT `mannschaftsstrafe` — dafuer haben wir kein
 	   Merkmal. */
 	'ohne_person',
+	/* ⚠ ⚠  DER VERMERK STATT DES ZERLEGTEN SATZES — Nutzlast-Fassung 6,
+	   24.09.2026. Der Klartext des Verbands zur Rollenkategorie
+	   («Trainer/in», «Betreuer», …), leer fuer jeden Spieler.
+
+	   ⚠ Ohne dieses Feld muesste die Website die Rolle aus `text`
+	   herausschneiden — derselbe Fehler wie `"Unser Team"` als Zeichenkette
+	   eine Zeile darueber, nur eine Runde spaeter. Eine eigene Liste der 28
+	   Kategorien waere die andere Falle: eine zweite Wahrheit neben den
+	   Stammdaten des Verbands, die gepflegt werden muesste.
+
+	   ⚠ NICHT gegen einen Text vergleichen. Zwei Listen desselben Verbands
+	   schreiben verschieden — `/events` sagt «Spieler/in», die Stammdaten
+	   sagen «Spieler». Ein `=== 'Trainer'` traefe `'Trainer/in'` nicht, und
+	   der Vermerk fehlte, ohne dass etwas fehlschlaegt.
+
+	   ⚠ Drueben `f_s_v_rolle`, ein `text`. NICHT `f_s_a_rolle`:
+	   `aufstellung.rolle` traegt denselben Namen und fuehrt
+	   `start`/`eingewechselt`/`nicht_eingesetzt` — ein anderes Feld. */
+	'rolle',
 );
 
 /**
@@ -798,6 +1364,153 @@ const CC_AUFSTELLUNG_FELDER = array(
 /** Unterfelder des verschachtelten Repeaters `marken`. */
 const CC_MARKEN_FELDER = array( 'art', 'minute' );
 
+/* ═══ WAPPEN — seit 0.9.29 ═══════════════════════════════════════════
+
+   ⚠ **Die Metafeldnamen sind ein Vertrag mit der Anzeige.**
+   `fch_wappen()` im Theme sucht den Anhang ueber genau diese zwei
+   Schluessel. Wer sie hier aendert, muss sie dort mitaendern — sonst
+   findet die Seite nichts und meldet es nicht, sie zeigt einfach
+   weiter den Platzhalter.
+
+   ⚠ **`sfv_team_id` ist bewusst NICHT `sfv_id`** (so heisst das Feld am
+   Team, CC_META_TEAM_SFV). Am Anhang steht der Name, den die Nutzlast
+   fuehrt; am Team der Name, den die Maske fuehrt. Zwei Orte, zwei
+   Namen, und beide sind an ihrer Stelle richtig — ein gemeinsamer Name
+   waere die Einladung, das eine fuer das andere zu halten. */
+const CC_META_WAPPEN_TEAM = 'sfv_team_id';
+const CC_META_WAPPEN_SHA  = 'sha256';
+
+/* ⚠ Hoechstens 20 je Aufruf — Didis Zahl. Was darueber liegt, wird
+   NICHT stumm abgeschnitten: `cc_route_wappen()` meldet es, weil eine
+   Gegenstelle, die 50 schickt und 20 bestaetigt bekommt, sonst 30
+   Wappen fuer erledigt haelt. */
+const CC_WAPPEN_JE_AUFRUF = 20;
+
+/* ⚠ 512 KiB auf die DEKODIERTEN Bytes, nicht auf die base64-Laenge —
+   base64 traegt ein Drittel Aufschlag, und eine Grenze auf der
+   Zeichenkette waere darum in Wahrheit 384 KiB und wuerde niemandem
+   auffallen.
+
+   Die Zahl ist gemessen und nicht gewaehlt (23.09.2026, GD im
+   Container, ein 512px-Wappen): png 2,7 KB, webp 3,9 KB, jpeg 12,7 KB.
+   512 KiB ist rund das Hundertachtzigfache — Platz fuer ein
+   detailreiches 1024px-Bild, und eine Grenze gegen das, was kein
+   Wappen mehr ist. */
+const CC_WAPPEN_BYTES = 524288;
+
+/* ⚠ Die erlaubten Typen, und die Endung dazu. **Der Schluessel ist der
+   Fund von `finfo_buffer()`**, nicht die Angabe der Gegenstelle.
+
+   ⚠ `svg` steht NICHT hier, und das ist eine Entscheidung mit
+   Begruendung — siehe `cc_wappen_pruefe()`.
+
+   ⚠ **`image/gif` steht seit 23.09.2026 hier, weil der Verband GIF
+   liefert — unser eigenes Wappen ist eines.** Ohne GIF laufen genau die
+   Bilder in `fehler`, die am haeufigsten kommen. WordPress fuehrt `gif`
+   von Haus aus (gemessen am 23.09.2026, siehe Kopf der Datei), es ist
+   also kein Tor, das wir eigens aufstossen muessten — anders als bei
+   SVG. Die Grenze von CC_WAPPEN_BYTES gilt unveraendert auch hier.
+
+   ⚠ **Ein GIF darf animiert sein — und ob die Seite es animiert zeigt,
+   haengt an der Kantenlaenge, nicht am Typ.** Gemessen am 23.09.2026 im
+   lokalen Stapel an einem dreibildrigen GIF: Die Zwischengroesse
+   `fch-wappen` (96x96) hat **ein** Bild, das Original behaelt seine
+   drei — mit Imagick wie mit GD. Der Kern sagt es selbst
+   (`wp-includes/media.php`: «WordPress flattens animated GIFs into one
+   frame when generating intermediate sizes»).
+   ⚠ **Aber:** `fch-wappen` ist auf 96px ohne Beschnitt gesetzt, und
+   `image_resize_dimensions()` liefert fuer eine Quelle unter 96px
+   `false` — dann entsteht gar keine Zwischengroesse und die Anzeige
+   faellt auf das Original zurueck. **Ein animiertes Wappen von 64px
+   wuerde also auf der Seite laufen.**
+
+   ~~«Das ist Didis Entscheid und hier bewusst NICHT verbaut: Der
+   Empfaenger nimmt an, was ein gueltiges GIF ist. Wer Standbilder
+   erzwingen will, entscheidet das an der Anzeige, nicht an der
+   Allowlist.»~~ — Stand 23.09.2026, ueberholt. **Didi hat entschieden:
+   ruhig, aber sichtbar.** Der Satz blieb im uebrigen wahr — die Allowlist
+   ist unveraendert, GIF wird weiter angenommen —, nur der Ort stimmte
+   nicht: Die Anzeige kann es gar nicht. WordPress verweigert eine
+   Zwischengroesse in der Originalgroesse und vergroessert nicht (beides
+   gemessen, siehe `cc_wappen_standbild()`). Das Standbild entsteht darum
+   beim Annehmen, in `cc_wappen_anlegen()`. */
+const CC_WAPPEN_MIME = array(
+	'image/png'  => 'png',
+	'image/jpeg' => 'jpg',
+	'image/webp' => 'webp',
+	'image/gif'  => 'gif',
+);
+
+/* ⚠ ⚠  DIE ZWEI SCHWELLEN DES BESCHNITTS — und warum beide ENG sind.
+
+   `CC_WAPPEN_WEISS` ist die Untergrenze je Farbkanal (0..255), ab der ein
+   Bildpunkt als «nahezu weiss» gilt. `CC_WAPPEN_ALPHA` ist die Untergrenze
+   der GD-Durchsichtigkeit (0..127, 0 = deckend, 127 = unsichtbar), ab der
+   er als «nahezu durchsichtig» gilt. Wer weder das eine noch das andere
+   ist, ist Inhalt — und Inhalt spannt das Rechteck auf.
+
+   ⚠ ⚠  **DIE ZWEI FEHLER SIND NICHT GLEICH TEUER.** Eine zu LOCKERE
+   Schwelle erklaert blasse Inhaltspunkte zu Rand und schneidet damit genau
+   das weg, was Didi ausdruecklich geschuetzt haben will. Eine zu STRENGE
+   laesst einen Saum stehen, den niemand sieht. **Der billigere Fehler
+   gewinnt** — darum 250 und nicht 240, obwohl 240 schoener schneidet.
+
+   Gemessen am 23.09.2026 im wp-Container, ein 200px-Bild mit 60px weissem
+   Rand um einen roten Kreis (wahr ist also `[60,60,140,140]`):
+
+       PNG, GIF   250 → [60,60,140,140]   zeichengenau, auf jeder Schwelle
+       WebP q92   250 → [56,56,142,142]   vier Bildpunkte Saum
+       JPEG q92   250 → [48,48,143,143]   ZWOELF Bildpunkte Saum
+                  240 → [59,59,141,141]
+                  230 → [60,60,140,140]
+
+   ⚠ **Der JPEG-Saum ist gewollt und kein Versehen.** JPEG streut um eine
+   harte Kante herum; der Rand misst dort `255,243,241` statt `255,255,255`
+   und faellt darum unter 250 als Inhalt durch. Das Wappen wird trotzdem
+   von 200px auf 96px eng — 48 der 60 leeren Punkte je Seite fallen weg.
+   **Die Alternative waere, bei jedem Bild ein Risiko auf den Inhalt zu
+   nehmen, um bei einem Typ zwoelf Punkte zu gewinnen.**
+
+   ⚠ 120 und nicht 127: Ein PNG, das schon einmal skaliert wurde, traegt am
+   Saum 125 oder 126 statt der glatten 127. Was darunter liegt, ist auf
+   jedem Grund sichtbar und zaehlt als Inhalt.
+
+   ⚠ **Ein Sicherheitsrand bleibt NICHT stehen** — kein zusaetzlicher
+   Punkt, keine Prozentzahl. Jede stehengelassene Zeile ist genau die
+   Wirkung, gegen die der Beschnitt gebaut ist; und die Toleranz sitzt
+   schon in der Schwelle: ein Saumpunkt unter 250 spannt das Rechteck von
+   selbst eine Zeile weiter. */
+const CC_WAPPEN_WEISS = 250;
+const CC_WAPPEN_ALPHA = 120;
+
+/* ⚠ **Die Obergrenze in BILDPUNKTEN — und sie wiederholt CC_WAPPEN_BYTES
+   nicht.** Die Byte-Grenze bindet die Kantenlaenge ueberhaupt nicht:
+   gemessen am 23.09.2026 wiegt ein weisses GIF von 2000x2000 genau
+   10 288 Bytes und kaeme glatt durch die 512 KiB. Der Beschnitt kostet
+   dagegen an der FLAECHE — gemessen im wp-Container: 512px 23 ms, 2000px
+   390 ms, 4000px 1,46 s, und das dekodierte 2000px-Bild belegt 82 MiB.
+
+   Bei CC_WAPPEN_JE_AUFRUF (20) Eintraegen ist das der Unterschied zwischen
+   einer halben Sekunde und einer halben Minute. 4 194 304 sind 2048x2048 —
+   ein Vielfaches dessen, was ein Wappen je braucht, und trotzdem eine
+   Grenze. Geprueft wird sie am DATEIKOPF, vor dem Dekodieren: eine Grenze,
+   die erst nach `imagecreatefromstring()` greift, hat den Speicher schon
+   ausgegeben, gegen den sie schuetzen soll.
+
+   ⚠ Wer darueber liegt, bekommt sein Bild UNBESCHNITTEN abgelegt und den
+   Grund in der Antwort. **Abgelehnt wird nichts** — dieselbe Regel wie
+   ueberall auf diesem Weg. */
+const CC_WAPPEN_PUNKTE = 4194304;
+
+/* ⚠ Die Guete fuer die zwei verlustbehafteten Typen. **Neu kodiert wird
+   nur, wenn wirklich geschnitten wurde** — ein Bild ohne leeren Rand geht
+   Byte fuer Byte unveraendert durch, siehe `cc_wappen_beschnitt()`. 92
+   statt der GD-Vorgabe (75 bei JPEG, 80 bei WebP): Der Beschnitt soll
+   Rand wegnehmen und nicht Schaerfe. Gemessen am 23.09.2026: ein
+   200px-Kreis kostet als JPEG q75 1 344 Bytes, als q92 1 823 — ein halbes
+   Kilobyte fuer eine Stufe, die man nicht mehr sieht. */
+const CC_WAPPEN_GUETE = 92;
+
 
 /* ═══════════════════════════════════════════════════════════════════════
    VORAUSSETZUNGEN — laut abbrechen, nicht still weiterlaufen
@@ -816,6 +1529,11 @@ function cc_voraussetzungen(): array {
 	if ( ! function_exists( 'get_field' ) )    { $fehlt[] = 'ACF (get_field)'; }
 	if ( ! function_exists( 'update_field' ) ) { $fehlt[] = 'ACF (update_field)'; }
 	if ( ! function_exists( 'fch_core_spiel_titel' ) ) { $fehlt[] = 'fch-core (fch_core_spiel_titel)'; }
+	/* ⚠ **Seit 0.9.31 auch der Beitragszeiger.** `(int)` auf ein Array
+	   ergibt stumm die 1 — und im Zurueckzieh-Zweig heisst das, dass ein
+	   Spiel NIE zurueckgezogen wird, ohne dass etwas fehlschlaegt.
+	   Lieber laut fehlen als leise falsch rechnen. */
+	if ( ! function_exists( 'fch_core_beitrags_id' ) ) { $fehlt[] = 'fch-core (fch_core_beitrags_id)'; }
 	if ( ! post_type_exists( CC_TYP_SPIEL ) )  { $fehlt[] = 'Beitragstyp ' . CC_TYP_SPIEL; }
 	if ( ! post_type_exists( CC_TYP_TEAM ) )   { $fehlt[] = 'Beitragstyp ' . CC_TYP_TEAM; }
 	return $fehlt;
@@ -870,6 +1588,17 @@ add_action(
 			array(
 				'methods'             => 'GET',
 				'callback'            => 'cc_route_bestand',
+				'permission_callback' => 'cc_darf_schreiben',
+			)
+		);
+
+		/* Seit 0.9.29: die Wappen in die Mediathek. */
+		register_rest_route(
+			CC_ROUTE,
+			'/wappen',
+			array(
+				'methods'             => 'POST',
+				'callback'            => 'cc_route_wappen',
 				'permission_callback' => 'cc_darf_schreiben',
 			)
 		);
@@ -998,6 +1727,17 @@ function cc_bericht_deckel( array $faelle ): array {
  *   und — nur auf dem Ranglisten-Weg — `gruppen`. Fehlt einer, zeigt die
  *   Seite `0` beziehungsweise eine leere Liste: **also „nichts passiert"
  *   statt „nicht erfasst".** Deshalb werden alle gefuellt, auch mit null.
+ *
+ * ⚠ **NEU AM 26.09.2026: `unveraendert` auf dem Spiele-Weg.** Die Zahl der
+ *   Spiele, die der Lauf wegen gleicher Pruefsumme gar nicht geschrieben
+ *   hat (siehe CC_META_PRUEFSUMME). Sie steht in ALLEN drei Berichten
+ *   dieser Route, auch in den beiden Abbruchberichten mit null: ein
+ *   Schluessel, der nur manchmal da ist, zwingt jeden Leser drueben zu
+ *   einer Fallunterscheidung, und geraten wird dann „null". **Der
+ *   Unterschied zwischen „null unveraendert" und „diese Fassung kennt die
+ *   Zahl nicht" gehoert in den Bericht, nicht in eine Vermutung.**
+ *   ⚠ `fch-core/src/Admin/clubcampus.php` rendert den Schluessel noch
+ *   nicht — bis dahin ist die Zahl abgelegt und unsichtbar.
  *
  * ⚠ `$weg` ist der Name der Route und nicht der Pfad: `spiele` oder
  * `ranglisten`. Die reinen Leserouten `/status` und `/bestand` schreiben
@@ -1313,7 +2053,10 @@ function cc_route_status(): WP_REST_Response {
 			   Kandidaten, damit drueben entschieden werden kann, welcher
 			   gemeint ist. Ein Taxonomie-Feld schreibt ueber
 			   wp_set_object_terms() und legt BEGRIFFE an. */
-			'feld_mehrdeutig'       => (array) ( $GLOBALS['cc_feld_mehrdeutig'] ?? array() ),
+			/* ⚠ ~~`(array) ( … )`~~ — bis 0.9.33, 23.09.2026. Der Schluessel
+			   ist ueber den FELDNAMEN indiziert und darum immer `{}`, auch
+			   leer; siehe cc_als_objekt(). */
+			'feld_mehrdeutig'       => cc_als_objekt( $GLOBALS['cc_feld_mehrdeutig'] ?? array() ),
 			'wp_teams_mit_sfv_id'   => count( $karte ) - $mehrfach,
 			'wp_teams_sfv_id_doppelt' => $mehrfach,
 			'spiele_gesamt'    => (int) wp_count_posts( CC_TYP_SPIEL )->publish,
@@ -1444,6 +2187,77 @@ function cc_stempel( int $post_id, string $lauf ): void {
 	if ( '' === trim( (string) get_post_meta( $post_id, CC_META_ERST, true ) ) ) {
 		update_post_meta( $post_id, CC_META_ERST, $lauf );
 	}
+}
+
+/**
+ * Schluessel rekursiv sortieren — LISTEN AUSGENOMMEN.
+ *
+ * ⚠ ⚠  WARUM UEBERHAUPT SORTIERT WIRD (26.09.2026). Die Pruefsumme darunter
+ * serialisiert `$spiel`. Schickt die Gegenstelle morgen dieselben Werte in
+ * anderer Schluesselreihenfolge — und das entscheidet drueben ein
+ * Array-Aufbau, keine Absicht —, waere die Zeichenkette eine andere und
+ * jedes Spiel „geaendert". Der Hash haenge dann an der Form der Lieferung
+ * statt an ihrem Inhalt, und die ganze Ersparnis waere weg, ohne dass
+ * irgendwo etwas auffiele.
+ *
+ * ⚠ ⚠  UND WARUM LISTEN NICHT SORTIERT WERDEN. Bei `verlauf` und
+ * `aufstellung` IST die Reihenfolge Inhalt: ACF legt Repeaterzeilen in der
+ * gelieferten Folge ab, und ein Spielverlauf, dessen Zeilen die Plaetze
+ * tauschen, ist ein anderer Verlauf. Wuerden wir Listen mitsortieren, bliebe
+ * genau diese Aenderung unsichtbar — das Spiel wuerde nicht neu geschrieben,
+ * und der falsche Verlauf bliebe stehen. Darum: Maps `ksort`, Listen nie.
+ *
+ * ⚠ Die Listenprobe geht ueber `array_keys() === range()` statt
+ * `array_is_list()`: das gibt es erst ab PHP 8.1, und welche Fassung auf
+ * dem Server laeuft, bestimmt der Hoster.
+ *
+ * @param mixed $wert Beliebiger Nutzlastteil.
+ * @return mixed Derselbe Wert, Maps rekursiv nach Schluessel sortiert.
+ */
+function cc_tief_sortiert( $wert ) {
+	if ( ! is_array( $wert ) || array() === $wert ) {
+		return $wert;
+	}
+	$ist_liste = ( array_keys( $wert ) === range( 0, count( $wert ) - 1 ) );
+	foreach ( $wert as $k => $v ) {
+		$wert[ $k ] = cc_tief_sortiert( $v );
+	}
+	if ( ! $ist_liste ) {
+		ksort( $wert );
+	}
+	return $wert;
+}
+
+/**
+ * Die Pruefsumme eines gelieferten Spiels. Siehe CC_META_PRUEFSUMME.
+ *
+ * ⚠ ⚠  NUR GELIEFERTE DATEN. Aufgerufen wird sie in cc_route_spiele(),
+ * BEVOR der Empfaenger `fch_team` und `quelle` in `$spiel` schreibt. Beides
+ * sind unsere eigenen Werte: `fch_team` ist die aufgeloeste Beitrags-Id (der
+ * Export kennt sie nie), `quelle` eine Konstante dieser Datei. Haengte der
+ * Hash daran, meldete er eine Aenderung, sobald WIR etwas anders machen —
+ * und die Aussage „die Lieferung ist dieselbe" waere keine mehr.
+ *
+ * ⚠ CC_VERSION mit im Hash: eine neue Fassung des Empfaengers schreibt jedes
+ * Spiel einmal neu. Begruendung bei der Konstante.
+ *
+ * ⚠ Leere Rueckgabe heisst „nicht bestimmbar", nicht „leeres Spiel".
+ * `wp_json_encode()` liefert bei ungueltigem UTF-8 `false`; wer daraus
+ * stillschweigend `''` machte und hashte, gaebe ALLEN betroffenen Spielen
+ * denselben Hash — und sie wuerden einander gegenseitig als unveraendert
+ * bestaetigen. Der Aufrufer behandelt `''` deshalb als „schreiben" und legt
+ * nichts ab. Aus `get_json_params()` kann das praktisch nicht kommen; die
+ * Sperre kostet nichts und deckt den Fall, dass es doch geschieht.
+ *
+ * @param array $spiel Ein Spiel aus der Nutzlast, unveraendert.
+ * @return string sha256 in Hex, oder '' wenn nicht bestimmbar.
+ */
+function cc_pruefsumme( array $spiel ): string {
+	$roh = wp_json_encode( cc_tief_sortiert( $spiel ) );
+	if ( ! is_string( $roh ) ) {
+		return '';
+	}
+	return hash( 'sha256', CC_VERSION . '|' . $roh );
 }
 
 /** Nur die Felder aus der Allowlist, und nur die, die mitgeschickt wurden. */
@@ -1642,6 +2456,43 @@ function cc_verlust_leer(): array {
 }
 
 /**
+ * Eine Map, die auch LEER ein JSON-Objekt bleibt.
+ *
+ * ⚠ ⚠  DER GEGENSATZ ZU cc_verlust_bericht() DARUNTER — und derselbe
+ *       Grund. Dort wird eine Map zur LISTE umgebaut, weil sie als Liste
+ *       ausgeliefert werden soll; hier bleibt sie Map, weil sie ueber
+ *       einen NAMEN indiziert wird. Beide Male gilt derselbe Satz: ein
+ *       Schluessel, dessen Typ sich mit dem Inhalt aendert, ist beim
+ *       Auswerten teurer als ein paar Zeichen mehr.
+ *
+ * ⚠ ⚠  WAS OHNE DIESEN AUFRUF GESCHIEHT. `json_encode( array() )` ergibt
+ *       `[]`, `json_encode( array( 'a' => 1 ) )` ergibt `{"a":1}` — der
+ *       Typ haengt am INHALT und nicht am Vertrag. Ein Leser, der
+ *       `for k, v in x.items()` schreibt, bricht am leeren Lauf, und zwar
+ *       genau dann, wenn nichts zu berichten war. Gemessen am
+ *       23.09.2026 an allen drei Stellen, je leer und gefuellt.
+ *
+ * ⚠  `(object)` und NICHT `JSON_FORCE_OBJECT`: das Flag gilt fuer die
+ *    GANZE Antwort und machte jede Liste darin zum Objekt — aus
+ *    `"fehler":[]` wuerde `"fehler":{}`, aus `beitraege` eine Map mit den
+ *    Zaehlnummern als Schluesseln. Ein Flaechenbrand fuer drei Schluessel.
+ *
+ * ⚠  `(object)` wirkt nur auf die OBERSTE Ebene, und genau das wird hier
+ *    gebraucht: `feld_mehrdeutig` traegt LISTEN als Werte
+ *    (`{"liga":["text:f_s_liga","text:f_tm_liga"]}`), und die muessen
+ *    Listen bleiben. Geprueft am erzeugten JSON, nicht am PHP-Wert — in
+ *    PHP sehen `[]` und `{}` beide wie `array()` aus.
+ *
+ * ⚠  Der `(array)`-Wurf davor bleibt stehen. `(object) 'x'` ergaebe
+ *    `{"scalar":"x"}` — eine Form, die niemand bestellt hat und die wie
+ *    ein Feldname aussieht. Ueber `(array)` wird daraus `{"0":"x"}`:
+ *    sichtbar falsch statt still plausibel.
+ */
+function cc_als_objekt( $wert ): stdClass {
+	return (object) (array) $wert;
+}
+
+/**
  * Aus der Map eine Liste — fuer die Antwort.
  *
  * ⚠  Gesammelt als Map (entdoppelt sich selbst, ein Spiel kommt nur
@@ -1713,9 +2564,29 @@ function cc_schreibe_felder( int $post_id, array $spiel ): array {
 		/* ⚠ Der Repeater geht durch eine eigene Unterfeld-Allowlist —
 		   wie der Verlauf, und aus demselben Grund. Bis 0.9.7 reichte er
 		   jede Zeile unveraendert durch. */
-		$wert = ( 'aufstellung' === $feld )
-			? cc_saeubere_aufstellung( $spiel[ $feld ] )
-			: $spiel[ $feld ];
+		if ( 'aufstellung' === $feld ) {
+			$wert = cc_saeubere_aufstellung( $spiel[ $feld ] );
+		} elseif ( 'sfv_gegner_team_id' === $feld ) {
+			/* ⚠ ⚠  ALS TEXT, SEIT 0.9.30 — und mit DERSELBEN Funktion wie
+			   das Wappen, nicht mit einer zweiten eigenen.
+
+			   JSON kennt Zahlen, ACF speichert, was es bekommt: `39010`
+			   landete als Ganzzahl, `"39010"` als Zeichenkette. Die
+			   Anzeige vergleicht die Nummer gegen das Metafeld eines
+			   Anhangs, und `get_post_meta()` gibt IMMER eine
+			   Zeichenkette — ein Vergleich mit `===` fande die Zahl dann
+			   nie. Dieselbe Falle ist beim Wappen schon gemessen worden.
+
+			   ⚠ Der Name `cc_wappen_tid()` ist enger als ihre Aufgabe:
+			   Sie normalisiert eine SFV-Teamnummer, nicht ein Wappen.
+			   **Eine zweite, gleichlautende Funktion daneben waere
+			   schlimmer als der enge Name** — eine Nummer, die auf zwei
+			   Wegen verschieden normalisiert wird, trifft irgendwann
+			   nicht mehr dasselbe. */
+			$wert = cc_wappen_tid( $spiel[ $feld ] );
+		} else {
+			$wert = $spiel[ $feld ];
+		}
 
 		/* ⚠ Ueber den SCHLUESSEL. Findet sich keiner, wird NICHT ueber
 		   den Namen ausgewichen: das waere genau der unvorhersehbare
@@ -2456,7 +3327,8 @@ function cc_route_bestand(): WP_REST_Response {
 		$post   = get_post( $postId );
 		$lauf   = trim( (string) get_post_meta( $postId, CC_META_LAUF, true ) );
 		$erst   = trim( (string) get_post_meta( $postId, CC_META_ERST, true ) );
-		$teamId = (int) get_field( 'fch_team', $postId );
+		/* ⚠ Siehe `cc_voraussetzungen()`: `(int)` auf ein Array ist die 1. */
+		$teamId = fch_core_beitrags_id( get_field( 'fch_team', $postId ) );
 		$status = $post ? (string) $post->post_status : '?';
 
 		$fraglich = ( '' === $lauf );
@@ -2509,6 +3381,53 @@ function cc_route_bestand(): WP_REST_Response {
 		}
 	);
 
+	/* ⚠ ⚠  `wappen` IST DIE LISTE — BERICHTIGT AM 23.09.2026, NACH DEM
+	   ERSTEN ECHTEN WAPPENLAUF.
+
+	   Bis 0.9.32 stand in der Antwort:
+
+	   > ~~'wappen' => cc_wappen_lage(),~~   (0.9.29 bis 23.09.2026)
+
+	   Damit lag unter `wappen` der ganze Zaehlerblock — ein Objekt. Der
+	   Vertrag mit ClubCampus lautet aber auf eine LISTE aus
+	   `{ sfv_team_id, sha256 }`. Die Gegenstelle meldete «Die Gegenstelle
+	   meldet unter «wappen» keine Liste», `bestand_lage` blieb «unlesbar»,
+	   und der erste Lauf schickte **nichts**.
+
+	   > Ein Objekt an der Stelle einer Liste ist keine magere Auskunft,
+	   > sondern eine unlesbare. Es fiel zwischen 0.9.29 und heute nicht
+	   > auf, weil bis zum ersten echten Lauf niemand drueben hinsah.
+
+	   ⚠ **Die Zaehler gehen nicht verloren, sie ruecken einen Schluessel
+	   weiter** — nach `wappen_lage` daneben. Sie in `wappen` zu belassen
+	   und die Liste darunter zu haengen, hiesse denselben Vertrag noch
+	   einmal zu brechen; sie wegzulassen naehme dem Verein die einzige
+	   Stelle, an der «elf Teams, null Nummern» ueberhaupt steht.
+
+	   ⚠ **`array_values()` und nicht `$lage['teams']` direkt.** Aus einem
+	   PHP-Array mit Luecken in den Schluesseln macht `json_encode` still
+	   ein OBJEKT — und zwar ohne Fehler, ohne Warnung und ohne dass hier
+	   etwas anders aussieht. Heute entstehen in `cc_wappen_lage()` keine
+	   Luecken; die naechste Filterzeile dort erzeugt sie, und der Befund
+	   fiele wieder erst drueben auf.
+
+	   ⚠ Gemessen, nicht angenommen (23.09.2026, im wp-Container):
+	     `json_encode( array( 0 => …, 2 => … ) )` → `{"0":…,"2":…}`
+	     `json_encode( array_values( … ) )`       → `[…]`
+	     `json_encode( array() )`                 → `[]`
+	   Die leere Liste ist also schon ohne Zutun `[]`; `array_values()`
+	   sichert den FUELLTEN Fall.
+
+	   ⚠ Zwei Stellen in dieser Datei haben denselben Schutz aus eigenem
+	   Anlass: `cc_route_wappen()` legt `array_values()` auf die
+	   EINGEHENDE Liste (die Gegenstelle koennte Luecken schicken), und
+	   `cc_verlust_bericht()` baut die Map ausdruecklich zur Liste um —
+	   mit der Begruendung, dass ein Schluessel, dessen Typ sich mit dem
+	   Inhalt aendert, beim Auswerten teurer ist als ein paar Zeichen. */
+	$cc_wappen_lage = cc_wappen_lage();
+	$cc_wappen      = array_values( (array) ( $cc_wappen_lage['teams'] ?? array() ) );
+	unset( $cc_wappen_lage['teams'] );
+
 	return new WP_REST_Response(
 		array(
 			'gesamt'                    => count( $zeilen ),
@@ -2535,6 +3454,29 @@ function cc_route_bestand(): WP_REST_Response {
 			'version'                   => CC_VERSION,
 			'personen'                  => cc_personen_lage(),
 			'teams'                     => cc_teams_lage(),
+			/* ⚠ Seit 0.9.29. Die Gegenstelle braucht je Team die Summe, um
+			   zu entscheiden, was sie schicken MUSS — ohne sie schickt sie
+			   jedes Mal alles, und `unveraendert` waere die haeufigste
+			   Antwort statt der seltensten.
+
+			   ⚠ Eine LISTE, und leer ist sie `[]` und nicht `{}` — die
+			   Begruendung steht oben bei `$cc_wappen`. */
+			'wappen'                    => $cc_wappen,
+			/* ⚠ Die Zaehler zu derselben Sache: `teams_gesamt`,
+			   `teams_ohne_sfv_id`, `mit_wappen`, `ohne_wappen`,
+			   `wappen_verloren` und `ohne_team`. Sie standen bis 0.9.32
+			   zusammen mit der Liste unter `wappen` — siehe oben.
+
+			   ⚠ Ein eigener Schluessel und kein Anhaengsel an die Zeilen:
+			   `teams_ohne_sfv_id` zaehlt die Teams, die in der Liste GAR
+			   NICHT vorkommen. Eine Zahl ueber Abwesende hat in keiner
+			   Zeile Platz. */
+			'wappen_lage'               => $cc_wappen_lage,
+			/* ⚠ Seit 0.9.30. Damit die Gegenstelle nach ihrem Deploy sehen
+			   kann, ob die zwei neuen Felder ANKOMMEN — ohne diese Zahl
+			   bliebe nur die Website als Anzeige, und dort faellt ein
+			   fehlendes Feld als Platzhalter gar nicht auf. */
+			'sfv_nummern'               => cc_sfv_nummern_lage(),
 			'beitraege'                 => $zeilen,
 		),
 		200
@@ -2585,6 +3527,7 @@ function cc_route_spiele( WP_REST_Request $req ) {
 			array(
 			'neu' => 0,
 			'geaendert' => 0,
+			'unveraendert' => 0,   // seit 26.09.2026; siehe cc_bericht_ablegen()
 			'zurueckgezogen' => 0,
 			'verlauf_zeilen' => 0,
 			'uebersprungen' => cc_bericht_deckel( array() ),
@@ -2632,6 +3575,7 @@ function cc_route_spiele( WP_REST_Request $req ) {
 			array(
 			'neu' => 0,
 			'geaendert' => 0,
+			'unveraendert' => 0,   // seit 26.09.2026; siehe cc_bericht_ablegen()
 			'zurueckgezogen' => 0,
 			'verlauf_zeilen' => 0,
 			'uebersprungen' => cc_bericht_deckel( array() ),
@@ -2674,7 +3618,19 @@ function cc_route_spiele( WP_REST_Request $req ) {
 	$teamKarte = cc_team_karte();
 
 	$erg = array(
-		'neu' => 0, 'aktualisiert' => 0, 'zurueckgezogen' => 0,
+		/* ⚠ ⚠  `aktualisiert` ZAEHLT SEIT DEM 26.09.2026 NUR NOCH SPIELE,
+		   AN DENEN WIRKLICH GESCHRIEBEN WURDE.
+		   > ~~«$erg['aktualisiert']++» stand im else-Zweig der Schleife und
+		   > zaehlte JEDEN bestehenden Beitrag~~ — bis 0.9.38, 26.09.2026.
+		   Die Zahl war damit dasselbe wie „gefunden" und sagte ueber Arbeit
+		   nichts: 63 von 63 „aktualisiert", geaendert hatte sich keines.
+
+		   `unveraendert` ist die Gegenzahl: Pruefsumme gleich, also nicht
+		   geschrieben. Zusammen ergeben `neu + aktualisiert + unveraendert
+		   + uebersprungen` wieder die Zahl der gelieferten Spiele — sonst
+		   saehe die Ersparnis wie ein Verlust aus. */
+		'neu' => 0, 'aktualisiert' => 0, 'unveraendert' => 0,
+		'zurueckgezogen' => 0,
 		'uebersprungen' => 0, 'verlauf_zeilen' => 0,
 		'ohne_team' => array(), 'doppelte_teams' => array(),
 		'moegliche_dubletten' => array(), 'fehler' => array(),
@@ -2746,6 +3702,44 @@ function cc_route_spiele( WP_REST_Request $req ) {
 			$erg['uebersprungen']++;
 			continue;
 		}
+		/* ⚠ ⚠  DIE PRUEFSUMME WIRD GENAU HIER GEBILDET — 26.09.2026.
+		   ─────────────────────────────────────────────────────────────
+		   An dieser Zeile ist `$spiel` zum LETZTEN Mal genau das, was
+		   ClubCampus geliefert hat. Zwei Zeilen tiefer kommt `fch_team`
+		   hinein, weiter unten `quelle` — beides Werte des Empfaengers.
+		   Haengte der Hash daran, meldete er eine Aenderung, sobald wir
+		   etwas anders machen, und die Frage, die er beantworten soll
+		   („hat sich die LIEFERUNG geaendert?"), waere eine andere.
+
+		   Weiter oben als hier ginge es auch, kostete aber: die beiden
+		   `continue` darueber (kein Schluessel, fremdes Team) werfen das
+		   Spiel weg, und ein Hash ueber ein weggeworfenes Spiel ist
+		   Rechenzeit ohne Leser. Siehe cc_pruefsumme(). */
+		$pruefsumme = cc_pruefsumme( $spiel );
+
+		/* ⚠ ⚠  HIERHIN GEZOGEN AM 26.09.2026 — VOR das Ueberspringen.
+		   > ~~Die Schleife stand unter `$spiel['quelle'] = CC_QUELLE;` mit
+		   > dem Satz «VOR dem Schreiben, und aus der Nutzlast wie sie kam:
+		   > `quelle` setzen wir selbst, das gehoert nicht in die
+		   > Meldung.»~~ — bis 0.9.38.
+
+		   Zwei Gruende fuer den Umzug. Erstens war der Satz dort schon
+		   nicht mehr wahr: `quelle` war eine Zeile FRUEHER gesetzt worden;
+		   dass die Meldung trotzdem stimmte, lag allein daran, dass
+		   `quelle` und `fch_team` beide in CC_FELDER stehen und damit als
+		   „beachtet" gelten. Zweitens, und das ist der Anlass: unten
+		   laeuft die Zeile fuer ein uebersprungenes Spiel gar nicht mehr.
+		   Die Liste `unbeachtete_felder` beantwortet aber die Frage „ist
+		   das Feld angekommen und wurde es verworfen?" — sie muss JEDE
+		   Lieferung sehen, nicht nur die geschriebene. Sonst verstummte
+		   sie nach dem ersten Lauf und saehe aus wie „alles in Ordnung".
+
+		   ⚠ Sie schreibt nichts und kostet keine Abfrage: ein `array_diff`
+		   ueber die obersten Schluessel. Siehe cc_unbeachtete_felder(). */
+		foreach ( cc_unbeachtete_felder( $spiel ) as $f ) {
+			$erg['unbeachtete_felder'][ $f ] = true;
+		}
+
 		/* Die Beitrags-Id ist ein WordPress-Wert und gehoert erst ab hier in
 		   die Nutzlast — der Export kennt sie nie. */
 		$spiel['fch_team'] = $teamId;
@@ -2770,19 +3764,107 @@ function cc_route_spiele( WP_REST_Request $req ) {
 			$erg['neu']++;
 			cc_pruefe_dublette( (int) $postId, $spiel, $erg );
 		} else {
-			$erg['aktualisiert']++;
-			/* Status 12 des Verbands ("keine Publikation"): zurueckziehen. */
-			if ( false === ( $spiel['publizieren'] ?? true ) ) {
+			/* ⚠ ⚠  DER SPARSCHALTER — 26.09.2026, ANLASS LAUFZEIT  ⚠ ⚠
+			   ──────────────────────────────────────────────────────────
+			   > ~~«$erg['aktualisiert']++;» als erste Zeile dieses
+			   > Zweiges~~ — bis 0.9.38. Sie zaehlte jeden BESTEHENDEN
+			   > Beitrag, ob geschrieben wurde oder nicht.
+
+			   Darunter entscheidet die Pruefsumme, ob ueberhaupt
+			   geschrieben wird. Sie deckt nur die Lieferung; siehe
+			   CC_META_PRUEFSUMME und cc_pruefsumme().
+
+			   ⚠ ⚠  UND DIE GEFAEHRLICHSTE FALLE DIESES UMBAUS: `$geliefert[
+			   $mid ] = true;` steht WEITER OBEN in der Schleife und gilt
+			   auch fuer jedes uebersprungene Spiel. **Ein uebersprungenes
+			   Spiel ist geliefert.** Stuende das Merkzeichen hier unten,
+			   zoege der Rueckzug weiter unten genau die Spiele als
+			   Entwurf ein, die wir gerade gespart haben — und die Ersparnis
+			   waere ein halber Spielplan. */
+			$pruefAlt = (string) get_post_meta( (int) $postId, CC_META_PRUEFSUMME, true );
+			/* ⚠ Beide Seiten muessen einen Wert haben. Ein fehlendes Meta
+			   liest sich als '', und eine nicht bestimmbare Pruefsumme ist
+			   ebenfalls '' — ohne die erste Bedingung wuerden zwei
+			   Unbekannte einander als „gleich" bestaetigen und ein nie
+			   geschriebenes Spiel uebersprungen. */
+			$gleich = ( '' !== $pruefsumme && $pruefsumme === $pruefAlt );
+
+			$statusIst  = (string) get_post_status( $postId );
+			$zurueck    = ( false === ( $spiel['publizieren'] ?? true ) );
+			$statusSoll = $zurueck ? 'draft' : 'publish';
+
+			/* Status 12 des Verbands ("keine Publikation"): zurueckziehen.
+			   ⚠ Unveraendert in der Sache und ABSICHTLICH vor der
+			   Pruefsumme: wer den Beitrag von Hand wieder veroeffentlicht
+			   hat, soll ihn beim naechsten Lauf wieder als Entwurf
+			   vorfinden. Neu ist nur, dass wir vorher nachsehen — ein
+			   `wp_update_post()` auf einen Beitrag, der schon Entwurf ist,
+			   schreibt `post_modified` fort und sagt nichts aus. */
+			$statusGeschrieben = false;
+			if ( $zurueck && 'draft' !== $statusIst ) {
 				wp_update_post( array( 'ID' => $postId, 'post_status' => 'draft' ) );
+				$statusIst         = 'draft';
+				$statusGeschrieben = true;
 			}
+
+			/* ⚠ ⚠  DIE GEGENRICHTUNG — NEU AM 26.09.2026, AUSDRUECKLICH SO
+			   BESTELLT. Ein Spiel, das ein frueherer Lauf nicht geliefert
+			   bekam, steht als Entwurf da (siehe Rueckzug weiter unten).
+			   Kommt es zurueck und hat sich nichts geaendert, wuerde es der
+			   Sparschalter ueberspringen — und der Entwurf bliebe fuer
+			   immer. **Die Ersparnis wuerde den Rueckzug festschreiben.**
+			   Also: veroeffentlichen, und NUR das. Die Felder stimmen ja;
+			   die Pruefsumme wird erst nach einem vollstaendigen Schreiben
+			   abgelegt.
+
+			   ⚠ Nur aus `draft`, nicht aus `pending` oder `private`: die
+			   beiden setzt kein Lauf, sondern die Redaktion. Was wir nicht
+			   angerichtet haben, raeumen wir nicht weg.
+
+			   ⚠ Gezaehlt als `aktualisiert`, nicht als `unveraendert`: am
+			   Beitrag wurde geschrieben. `unveraendert` heisst „nichts
+			   angefasst", und das waere hier falsch. */
+			if ( ! $zurueck && $gleich && 'draft' === $statusIst ) {
+				wp_update_post( array( 'ID' => $postId, 'post_status' => 'publish' ) );
+				cc_stempel( (int) $postId, $lauf );
+				$erg['aktualisiert']++;
+				continue;
+			}
+
+			/* ⚠ ⚠  HIER WIRD GESPART. Gleiche Pruefsumme und der Status
+			   ist der, den die Lieferung verlangt → nichts schreiben.
+
+			   ⚠ DER LAUFSTEMPEL BLEIBT — ENTSCHIEDEN AM 26.09.2026.
+			   `cc_stempel()` ist „Buchhaltung, kein Inhalt": ein einziges
+			   `update_post_meta`, und es sagt „in diesem Lauf gesehen".
+			   Fiele er hier weg, saehe ein unveraendertes Spiel genauso aus
+			   wie eines, das gar nicht geliefert wurde — und `_cc_lauf` ist
+			   genau das Merkmal, an dem Waisen und Probelaeufe erkannt
+			   werden (siehe CC_META_LAUF). Die Ersparnis machen die ACF-
+			   Schreibwege aus, nicht dieses eine Meta. */
+			if ( $gleich && $statusIst === $statusSoll ) {
+				cc_stempel( (int) $postId, $lauf );
+				/* ⚠ Der Rueckzug drei Zeilen weiter oben IST ein
+				   Schreibvorgang. Er kommt nur vor, wenn jemand den
+				   Beitrag von Hand wieder veroeffentlicht hatte — selten,
+				   aber dann waere `unveraendert` gelogen: am Beitrag hat
+				   sich etwas bewegt. Die Felder bleiben trotzdem
+				   ungeschrieben, denn die Lieferung ist dieselbe. */
+				if ( $statusGeschrieben ) {
+					$erg['aktualisiert']++;
+				} else {
+					$erg['unveraendert']++;
+				}
+				continue;
+			}
+
+			$erg['aktualisiert']++;
 		}
 
+		/* ⚠ Erst hier, also NACH der Pruefsumme: `quelle` ist eine Konstante
+		   dieser Datei und kommt nicht aus der Lieferung. Geschrieben wird
+		   sie trotzdem — sie steht in CC_FELDER. Siehe cc_pruefsumme(). */
 		$spiel['quelle'] = CC_QUELLE;
-		/* ⚠ VOR dem Schreiben, und aus der Nutzlast wie sie kam: `quelle`
-		   setzen wir selbst, das gehoert nicht in die Meldung. */
-		foreach ( cc_unbeachtete_felder( $spiel ) as $f ) {
-			$erg['unbeachtete_felder'][ $f ] = true;
-		}
 		cc_schreibe_felder( (int) $postId, $spiel );
 		cc_stempel( (int) $postId, $lauf );
 
@@ -2794,17 +3876,159 @@ function cc_route_spiele( WP_REST_Request $req ) {
 		}
 
 		cc_titel_nachziehen( (int) $postId );
+
+		/* ⚠ ⚠  ZULETZT, UND DAS IST DIE GANZE SICHERHEIT DES VERFAHRENS.
+		   Die Pruefsumme behauptet „dieser Beitrag traegt genau diese
+		   Lieferung". Stuende sie weiter oben, wuerde ein Lauf, der im
+		   Zeitlimit mitten zwischen Feldern und Verlauf abbricht, eine
+		   Behauptung hinterlassen, die nicht stimmt — und der naechste Lauf
+		   liesse das halb geschriebene Spiel in Ruhe, fuer immer. Erst
+		   ablegen, wenn alles gelaufen ist: bricht es vorher, fehlt die
+		   Pruefsumme, und das Spiel wird beim naechsten Mal eben noch
+		   einmal geschrieben. Der teure Fehler ist der stille.
+
+		   ⚠ Auch bei NEUEN Beitraegen — der Zweig darueber faellt hier
+		   durch. Ohne das waere jedes neue Spiel im naechsten Lauf ohne
+		   Pruefsumme und wuerde ein zweites Mal vollstaendig geschrieben.
+
+		   ⚠ Leer heisst „nicht bestimmbar" und wird NICHT abgelegt; siehe
+		   cc_pruefsumme(). Ein leeres Meta wuerde beim naechsten Lauf gegen
+		   eine leere Pruefsumme verglichen. */
+		if ( '' !== $pruefsumme ) {
+			update_post_meta( (int) $postId, CC_META_PRUEFSUMME, $pruefsumme );
+		}
 	}
 
 	/* ── Rueckzug ────────────────────────────────────────────────────────
 	   ⚠ Zwei Bedingungen, beide verengend: der Beitrag muss dem Abgleich
 	   gehoeren (sfv_match_id gesetzt — das ist $vorhanden) UND sein Team
-	   muss in diesem Lauf geliefert worden sein. Nichts wird geloescht. */
+	   muss in diesem Lauf geliefert worden sein. Nichts wird geloescht.
+
+	   ⚠ **DIESE DATEI LIEFERT CLUBCAMPUS ALS GANZES.** Beim naechsten
+	   Nachschub wird sie ERSETZT und nicht zusammengefuehrt — was hier
+	   geaendert und drueben nicht nachgezogen wird, ist dann weg, ohne
+	   Konflikt und ohne Meldung. */
+
+	/* ⚠ ⚠  DIE VORAUSWAHL — 26.09.2026, ANLASS LAUFZEIT.
+	   ─────────────────────────────────────────────────────────────────
+	   > ~~«foreach ( $vorhanden as $mid => $postId ) { … $teamId =
+	   >   fch_core_beitrags_id( get_field( 'fch_team', $postId ) ); … }»~~
+	   > — so lief die Schleife bis heute, 26.09.2026.
+
+	   `$vorhanden` sind ALLE rund 275 `fch_spiel` mit `sfv_match_id`.
+	   Fuer jeden NICHT gelieferten lief `get_field()` — und das ist hier
+	   der teure Teil: Feldgruppen aufloesen, Referenzzeile lesen, den
+	   Wert durch `format_value` schicken, dazu `get_post_status()` mit
+	   einem eigenen Beitragsabruf. Sieben Mannschaften brauchten rund
+	   90 s bei einem Zeitlimit von 150 s. Reisst das Limit, bricht der
+	   Lauf MITTEN im Rueckzug ab: ein Teil der Spiele steht auf `draft`,
+	   der Rest nicht — und welcher Teil, sagt niemand.
+
+	   Darum eine Metaabfrage VOR der Schleife. Sie ENTSCHEIDET nichts;
+	   sie verkleinert nur die Menge, auf der die unveraenderten
+	   Kriterien darunter entscheiden.
+
+	   ⚠ ⚠  WARUM DIE ABFRAGE ZWEI FORMEN SUCHT.
+	   `fch_team` steht im Postmeta ROH — und roh heisst hier zweierlei:
+
+	     3972                    `f_s_team` ist ein `post_object`
+	                             (fch-core `Fields/spiel.php:82`)
+	     a:1:{i:0;s:4:"3972";}   `f_be_team` ist ein `relationship` —
+	                             ACF legt eine Liste SERIALISIERT ab
+
+	   Gemessen am 26.09.2026 im lokalen Pruefstapel ueber `wp_postmeta`:
+	   `fch_spiel` 11 von 11 in der ersten Form, `post` 2 von 2 (und neun
+	   Revisionen) in der zweiten. Am `fch_spiel` kommt die zweite HEUTE
+	   also nicht vor — **aber sie kann dorthin geraten**: am 23.09.2026
+	   stand die Referenzzeile `_fch_team` an 11 von 11 `fch_spiel` auf
+	   `f_be_team` (der Absatz in der Schleife unten haelt den Fall fest).
+	   Der `relationship`-Schluessel FINDET an diesen Beitrag, und wer
+	   ueber ihn schreibt, legt die serialisierte Form ab.
+
+	   Eine Abfrage mit `'compare' => 'IN'` auf die nackte Team-Id fande
+	   sie dann nicht. Und ein Beitrag, den die Vorauswahl uebersieht,
+	   wird NIE zurueckgezogen — stumm, ohne Fehlermeldung, mit einer
+	   Antwort, die Erfolg meldet. Also `REGEXP` ueber beide Formen:
+
+	     (^|:)"?(3972|4001)"?(;|$)
+
+	       3972                die nackte Id, ganzer Wert
+	       …;s:4:"3972";}      die serialisierte Zeichenkette
+	       …;i:3972;}          die serialisierte Ganzzahl
+
+	   Die Laengenangabe `s:3972:"…"` trifft es NICHT: darauf folgt ein
+	   Doppelpunkt, das Muster verlangt ein Semikolon oder das Ende.
+
+	   ⚠ **Zu weit darf die Vorauswahl sein, zu eng nie.** Traegt ein
+	   Beitrag mehrere Teams, trifft das Muster ihn auch dann, wenn das
+	   gelieferte nicht an erster Stelle steht; `fch_core_beitrags_id()`
+	   nimmt den ersten, die Bedingung darunter faellt durch, der Beitrag
+	   bleibt unangetastet — dasselbe Ergebnis wie bisher. Andersherum
+	   waere es ein stiller Verlust.
+
+	   ⚠ **Ohne gelieferte Mannschaft gar keine Abfrage.** Ein leeres
+	   `$erlaubteTid` ergaebe das Muster `(^|:)"?()"?(;|$)`, und das
+	   trifft JEDEN Wert — aus einer Verengung wuerde eine Oeffnung.
+	   Heute zieht `isset( $erlaubteTid[ $teamId ] )` in diesem Fall
+	   nichts zurueck, und genau das bleibt so.
+
+	   ⚠ **Ein Spiel OHNE Teamzuordnung bleibt unangetastet.** Es traegt
+	   `fch_team` gar nicht oder leer, faellt damit schon aus der
+	   Vorauswahl — und fiele auch ohne sie an `! $teamId` durch. Zwei
+	   Wege, dasselbe Ergebnis; das Verhalten ist unveraendert. */
+	$vorauswahl = array();
+	if ( array() !== $erlaubteTid ) {
+		$muster = array();
+		foreach ( array_keys( $erlaubteTid ) as $tid ) {
+			$muster[] = (string) (int) $tid;
+		}
+		$treffer = get_posts(
+			array(
+				'post_type'   => CC_TYP_SPIEL,
+				'post_status' => array( 'publish', 'draft', 'pending', 'private' ),
+				'numberposts' => -1,
+				'fields'      => 'ids',
+				/* ⚠ Dieselbe Einstellung wie in cc_abgleich_kandidaten().
+				   Filtert ein Plugin dort mit und hier nicht, waere die
+				   Vorauswahl ENGER als $vorhanden — und die Differenz
+				   wuerde nie zurueckgezogen. */
+				'suppress_filters' => false,
+				'meta_query'  => array(
+					array(
+						'key'     => 'fch_team',
+						'value'   => '(^|:)"?(' . implode( '|', $muster ) . ')"?(;|$)',
+						'compare' => 'REGEXP',
+					),
+				),
+			)
+		);
+		foreach ( $treffer as $vid ) {
+			$vorauswahl[ (int) $vid ] = true;
+		}
+	}
+
+	/* ⚠ Erst schneiden, dann arbeiten: `$geliefert` und `$vorauswahl`
+	   sind zwei isset() und kosten nichts, `get_field()` kostet alles.
+	   Die Schleife darunter laeuft nur noch ueber den Schnitt. */
+	$rueckzugKandidaten = array();
 	foreach ( $vorhanden as $mid => $postId ) {
 		if ( isset( $geliefert[ $mid ] ) ) {
 			continue;
 		}
-		$teamId = (int) get_field( 'fch_team', $postId );
+		if ( ! isset( $vorauswahl[ (int) $postId ] ) ) {
+			continue;
+		}
+		$rueckzugKandidaten[ $mid ] = (int) $postId;
+	}
+
+	foreach ( $rueckzugKandidaten as $postId ) {
+		/* ⚠⚠ **Hier stand `(int) get_field(…)` — bis 0.9.31, 23.09.2026.**
+		   Liefert das Feld ein Array (Referenzzeile auf einem
+		   `relationship`), ist `(int)` davon die **1**, und `1` steht in
+		   keiner Lieferliste. Die Bedingung darunter greift dann IMMER,
+		   und **kein Spiel wird je zurueckgezogen** — stumm, ohne
+		   Fehlermeldung, mit einer Antwort, die Erfolg meldet. */
+		$teamId = fch_core_beitrags_id( get_field( 'fch_team', $postId ) );
 		if ( ! $teamId || ! isset( $erlaubteTid[ $teamId ] ) ) {
 			continue;
 		}
@@ -2828,6 +4052,24 @@ function cc_route_spiele( WP_REST_Request $req ) {
 		array(
 			'neu'            => (int) $erg['neu'],
 			'geaendert'      => (int) $erg['aktualisiert'],
+			/* ⚠ ⚠  NEU AM 26.09.2026. `geaendert` zaehlt seit heute nur
+			   noch WIRKLICH geschriebene Spiele; was die Pruefsumme
+			   ausgespart hat, steht hier. Ohne die zweite Zahl saehe ein
+			   sparsamer Lauf wie ein halb ausgefallener aus: „63 geliefert,
+			   2 geaendert" liest sich als Verlust, „63 geliefert, 2
+			   geaendert, 61 unveraendert" als Ersparnis.
+
+			   ⚠ FUER DAS THEME-REPOSITORY: `fch-core/src/Admin/
+			   clubcampus.php` rendert diesen Schluessel noch nicht. Bis er
+			   dort steht, ist die Zahl abgelegt und unsichtbar.
+
+			   ⚠ Und die Zeilenzaehler daneben aendern damit ihre
+			   Bedeutung: `verlauf_zeilen` und `aufstellung_zeilen` zaehlen
+			   ab jetzt die Zeilen der GESCHRIEBENEN Spiele. Ein
+			   uebersprungenes bringt keine mit — seine Zeilen stehen ja
+			   schon am Beitrag. Ein Ruecklauf auf null bei vielen
+			   `unveraendert` ist deshalb kein Verlust. */
+			'unveraendert'   => (int) $erg['unveraendert'],
 			'zurueckgezogen' => (int) $erg['zurueckgezogen'],
 			'verlauf_zeilen' => (int) $erg['verlauf_zeilen'],
 			/* ⚠ In den Bericht, nicht nur in die Antwort: die Antwort sieht
@@ -2862,7 +4104,10 @@ function cc_route_spiele( WP_REST_Request $req ) {
 	   Abwesenheit ist geraten. */
 	$erg['aufstellung_zeilen'] = (int) ( $GLOBALS['cc_aufstellung_zeilen'] ?? 0 );
 	$erg['aufstellung_spiele'] = (int) ( $GLOBALS['cc_aufstellung_spiele'] ?? 0 );
-	$erg['aufstellung_je_spiel'] = (array) ( $GLOBALS['cc_aufstellung_je_spiel'] ?? array() );
+	/* ⚠ ~~`(array) ( … )`~~ — bis 0.9.33, 23.09.2026. Die Map ist ueber die
+	   `sfv_match_id` indiziert und darum immer `{}`, auch leer; siehe
+	   cc_als_objekt(). */
+	$erg['aufstellung_je_spiel'] = cc_als_objekt( $GLOBALS['cc_aufstellung_je_spiel'] ?? array() );
 	/* ⚠ ⚠  DER VORHER-NACHHER-VERGLEICH — bestellt am 12.09.2026, nachdem
 	   ein Waechter 100 Verluste gemeldet hatte, die es nicht gab, und diese
 	   Datei sie nicht widerlegen konnte. Siehe cc_pruefe_verlust().
@@ -2885,7 +4130,10 @@ function cc_route_spiele( WP_REST_Request $req ) {
 	/* ⚠ ⚠ „gesendet:erlaubt:acf" je Repeater — steht IMMER da. Ohne sie
 	   sehen „nichts gefunden" und „nie gelaufen" gleich aus, naemlich als
 	   drei leere Listen. */
-	$erg['unterfelder_geprueft'] = (array) ( $GLOBALS['cc_unterfelder_geprueft'] ?? array() );
+	/* ⚠ ~~`(array) ( … )`~~ — bis 0.9.33, 23.09.2026. Die Map ist ueber den
+	   REPEATERNAMEN indiziert und darum immer `{}`, auch leer; siehe
+	   cc_als_objekt(). */
+	$erg['unterfelder_geprueft'] = cc_als_objekt( $GLOBALS['cc_unterfelder_geprueft'] ?? array() );
 
 	return new WP_REST_Response( $erg, 200 );
 }
@@ -3446,6 +4694,1859 @@ function fch_cc_rangliste_fuer_team( string $sfv_team_id ): ?array {
 
 
 /* ═══════════════════════════════════════════════════════════════════════
+   WAPPEN — seit 0.9.29
+   ═══════════════════════════════════════════════════════════════════════
+
+   Nutzlast:
+     {
+       "wappen": [
+         { "sfv_team_id": "39010",
+           "sha256":      "e3b0c442…",
+           "mime":        "image/png",
+           "daten":       "iVBORw0KGgo…"        // base64
+         }, …
+       ]
+     }
+
+   ⚠ `image/png` ist hier ein BEISPIEL, keine Vorschrift. Erlaubt ist,
+     was in CC_WAPPEN_MIME steht — seit 23.09.2026 png, jpeg, webp und
+     **gif**. Und `mime` ist eine Angabe, keine Entscheidung: Es zaehlt,
+     was `finfo_buffer()` in den dekodierten Bytes findet.
+
+   ⚠ **WAS DIESER WEG BESITZT UND WAS NICHT.** Er fasst ausschliesslich
+     Anhaenge an, die das Metafeld `sfv_team_id` tragen — also die, die er
+     selbst angelegt hat. Ein von Hand hochgeladenes Wappen ohne dieses
+     Feld ist fuer ihn unsichtbar und bleibt unberuehrt. Dieselbe
+     Besitzregel wie bei den Spielen (`sfv_match_id`), und aus demselben
+     Grund: Ein Abgleich, der loescht, was er nicht angelegt hat, ist kein
+     Abgleich.
+
+   ⚠ **DIE REIHENFOLGE DER PRUEFUNGEN IST DER GANZE SCHUTZ.** Erst
+     dekodieren, dann Groesse, dann Pruefsumme, dann Typ — und nichts wird
+     angelegt oder geloescht, solange nicht alle vier durch sind. Wer die
+     Pruefsumme nach dem Schreiben prueft, hat sie umsonst geprueft.
+
+   ⚠ **`standbild` im Urteil — seit 23.09.2026.** Ein animiertes GIF wird
+     angenommen, aber auf sein erstes Bild zurueckgefuehrt; das Feld traegt
+     dann die Bilderzahl des GELIEFERTEN (etwa `3`) und fehlt sonst ganz.
+     **`sha256` und `bytes` im selben Urteil beschreiben weiterhin die
+     LIEFERUNG** und nicht die abgelegte Datei — das ist Absicht und der
+     Grund, warum `standbild` ueberhaupt gebraucht wird: Ohne das Feld
+     waere der Unterschied von aussen unsichtbar. */
+
+/**
+ * **Die Team-Nummer, wie sie verglichen wird — an EINER Stelle.**
+ *
+ * ⚠ `sfv_team_id` kommt als Text, aber JSON erlaubt auch `39010` ohne
+ * Anfuehrungszeichen. Ohne gemeinsame Normalisierung traefen `"39010"` und
+ * `39010` verschiedene Anhaenge: Der eine schriebe das Metafeld als
+ * `"39010"`, der andere als `39010`, und `meta_value` ist in der Datenbank
+ * eine Zeichenkette — der Vergleich gelaenge zufaellig oder auch nicht.
+ *
+ * **Darum laufen Schreiben UND Lesen durch diese Funktion.** Sie ist die
+ * Antwort auf Didis Pruefung 4.
+ */
+function cc_wappen_tid( $roh ): string {
+	if ( is_array( $roh ) || is_object( $roh ) || is_bool( $roh ) || null === $roh ) {
+		return '';
+	}
+	return trim( (string) $roh );
+}
+
+/**
+ * **Alle Anhaenge zu einer Team-Nummer.** Normalerweise einer, im Fehlerfall
+ * mehrere.
+ *
+ * ⚠ **Mehrere sind kein Abbruchgrund, sondern werden aufgeraeumt.** Die
+ * Hausregel bei doppelten Kennungen lautet sonst „keines von beiden
+ * bedienen und melden" (siehe `cc_team_karte()`) — hier ist sie falsch:
+ * Dort waere die Frage, WELCHER Beitrag gemeint ist, und die kann der
+ * Abgleich nicht entscheiden. Hier ist die Sache eindeutig, es gibt genau
+ * ein richtiges Wappen je Nummer; mehrere sind ein Ueberrest. Ein
+ * Abgleich, der sich davon dauerhaft blockieren liesse, waere nicht
+ * vorsichtig, sondern kaputt.
+ *
+ * @return int[] Anhang-IDs, neueste zuerst.
+ */
+function cc_wappen_anhaenge( string $tid ): array {
+	if ( '' === $tid ) {
+		return array();
+	}
+
+	$ids = get_posts(
+		array(
+			'post_type'        => 'attachment',
+			'post_status'      => 'inherit',
+			'numberposts'      => -1,
+			'fields'           => 'ids',
+			'orderby'          => 'ID',
+			'order'            => 'DESC',
+			'suppress_filters' => false,
+			'meta_query'       => array(
+				array(
+					'key'     => CC_META_WAPPEN_TEAM,
+					'value'   => $tid,
+					'compare' => '=',
+				),
+			),
+		)
+	);
+
+	return array_map( 'intval', (array) $ids );
+}
+
+/**
+ * **Traegt dieser Anhang wirklich ein Wappen? — leer heisst ja, sonst der
+ * Grund.** Seit 23.09.2026.
+ *
+ * ── ⚠⚠ WARUM ES DIESE FRAGE ÜBERHAUPT BRAUCHT ──────────────────────────
+ *
+ * `bestand` meldete bis heute die Pruefsumme, sobald ein Anhang mit dem
+ * Metafeld dastand — **ohne zu pruefen, ob die Datei im Uploads-Ordner
+ * noch liegt.** Gemessen am 23.09.2026 im lokalen Stapel: Anhang #4342
+ * angelegt, danach `wappen-99001.png` und `wappen-99001-96x96.png` von
+ * Hand geloescht. `bestand` meldete davor wie danach Zeichen fuer Zeichen
+ * dasselbe (`sha256: 00fcc0b2…`, `anhang_id: 4342`, `mehrfach: 0`), die
+ * Seite lieferte ein `<img>` auf eine Adresse mit **HTTP 404**, und ein
+ * erneut geschicktes Wappen bekam `unveraendert` zurueck.
+ *
+ * > **Drei Stellen sagten «alles in Ordnung», und keine hatte nachgesehen.**
+ * > Eine Pruefsumme ist eine Zusage, dass das Bild daliegt. Wer sie ohne
+ * > Anhang meldet, sperrt die Nachlieferung fuer immer aus — ClubCampus
+ * > ueberspringt, was `bestand` als vorhanden fuehrt.
+ *
+ * Die Faelle, aus denen das entsteht, sind keine Theorie: ein Griff von
+ * Hand in die Mediathek, eine unvollstaendige Uebertragung, ein
+ * Serverumzug ohne `uploads/`, ein Sicherungsstand, der die Datenbank
+ * zurueckspielt und die Dateien nicht.
+ *
+ * ── DIE VIER MAENGEL, UND WARUM JEDER EINZELN GEPRUEFT WIRD ────────────
+ *
+ *  1. **Der Beitrag ist weg.** Kommt vor, wenn jemand in der Datenbank
+ *     aufraeumt und die Meta-Zeilen stehen laesst.
+ *  2. **Der Beitrag ist kein Anhang.** `cc_wappen_anhaenge()` grenzt schon
+ *     auf `attachment` ein; diese Zeile ist die zweite Sperre fuer jeden
+ *     anderen Aufrufer, der eine Id von irgendwoher hat.
+ *  3. **Keine Datei hinterlegt** (`_wp_attached_file` fehlt) — ein Anhang
+ *     ohne Dateiverweis ist ein Beitrag und kein Bild.
+ *  4. **Die Datei fehlt auf der Platte.** Der Hauptfall, siehe oben.
+ *  5. **Die Pruefsumme fehlt am Anhang.** Seit 23.09.2026 schreibt
+ *     `cc_wappen_anlegen()` sie ZULETZT — ihr Fehlen ist damit die Spur
+ *     eines abgebrochenen Anlegens und kein Schoenheitsfehler.
+ *
+ * ⚠ **Die Zwischengroessen werden bewusst NICHT geprueft.** Gemessen am
+ * 23.09.2026: Ein Anhang ganz ohne `sizes` faellt auf das Original zurueck
+ * (`image_src: wappen-99302.png 96x96`), das Bild erscheint. Wer das zum
+ * Mangel erklaerte, liesse ClubCampus ein funktionierendes Wappen noch
+ * einmal schicken — und `fch-wappen` entsteht ohnehin nicht, wenn die
+ * Quelle unter 96px liegt.
+ *
+ * @return string Leer, wenn der Anhang traegt; sonst der Grund im Klartext.
+ */
+function cc_wappen_mangel( int $anhang ): string {
+	if ( $anhang <= 0 || ! ( get_post( $anhang ) instanceof WP_Post ) ) {
+		return 'Anhang ' . $anhang . ' gibt es nicht mehr';
+	}
+	if ( 'attachment' !== get_post_type( $anhang ) ) {
+		return 'Beitrag ' . $anhang . ' ist kein Anhang';
+	}
+
+	$datei = (string) get_attached_file( $anhang );
+	if ( '' === $datei ) {
+		return 'Anhang ' . $anhang . ' hat keine Datei hinterlegt';
+	}
+	if ( ! file_exists( $datei ) ) {
+		return 'Datei fehlt im Uploads-Ordner (' . basename( $datei ) . ')';
+	}
+
+	if ( '' === trim( (string) get_post_meta( $anhang, CC_META_WAPPEN_SHA, true ) ) ) {
+		return 'Pruefsumme fehlt am Anhang — das Anlegen wurde abgebrochen';
+	}
+
+	return '';
+}
+
+/**
+ * **Ein Eintrag geprueft — vier Huerden, und keine darf uebersprungen
+ * werden.**
+ *
+ * ── ⚠⚠ WARUM SVG ABGELEHNT WIRD UND NICHT GESAEUBERT ────────────────────
+ *
+ * Didi laesst die Wahl. Sie faellt auf Ablehnen, aus drei Gruenden, und der
+ * erste allein genuegt:
+ *
+ *  1. **WordPress erlaubt den Typ gar nicht.** ~~«Gemessen am 23.09.2026:
+ *     `wp_get_mime_types()` fuehrt `png`, `jpg|jpeg|jpe` und `webp`»~~ —
+ *     Stand 23.09.2026, ueberholt: die Aufzaehlung nannte nur unsere drei
+ *     Typen und klang, als waere das die ganze Liste. **Nachgemessen am
+ *     23.09.2026 im lokalen Stapel: 98 Eintraege**, darunter
+ *     `jpg|jpeg|jpe`, `gif`, `png`, `bmp`, `tiff|tif`, `webp`, `avif`,
+ *     `ico`, `heic`. Auf `svg` faellt dabei **kein einziger Treffer** —
+ *     weder als Schluessel noch als Wert. Punkt 1 traegt also weiter, und
+ *     er traegt schaerfer als vorher: Der Kern fuehrt fast hundert Typen
+ *     und laesst SVG trotzdem weg, das ist kein Vergessen. `wp_upload_bits()`
+ *     wuerde die Datei abweisen. Ein Saeuberer haette erst das Tor zu
+ *     oeffnen, das der Kern absichtlich zu haelt.
+ *  2. **Ein SVG ist ausfuehrbares Markup, kein Bild.** Es traegt `<script>`,
+ *     `onload`, `<foreignObject>` und Verweise nach aussen. Was hier
+ *     ankommt, kommt von einer Gegenstelle, die in einem anderen
+ *     Repository liegt — genau die Sorte Herkunft, bei der man nicht auf
+ *     Wohlverhalten baut.
+ *  3. **Ein selbstgebauter Saeuberer ist gefaehrlicher als die Luecke.** Er
+ *     sieht aus wie Schutz und ist eine Liste von Faellen, an die jemand
+ *     gedacht hat. Trauen wuerde man ihm trotzdem — und das ist der
+ *     Schaden.
+ *
+ * ⚠ **Abgelehnt heisst gemeldet, nicht verschwiegen:** Der Eintrag wird
+ * `fehler` mit klarem Grund, und der Grund nennt die erlaubten Typen.
+ * ~~«damit ClubCampus weiss, dass PNG oder WebP gebraucht wird»~~ — Stand
+ * 23.09.2026, ueberholt: die Meldung zaehlte die Typen von Hand auf und
+ * verschwieg nach der GIF-Aufnahme genau den Typ, der am haeufigsten
+ * kommt. **Sie liest die Liste jetzt aus CC_WAPPEN_MIME**, damit die
+ * naechste Aenderung an der Allowlist die Meldung nicht wieder luegen
+ * laesst. Ein stilles Weglassen liesse die Gegenstelle glauben, das
+ * Wappen sei angekommen.
+ *
+ * @return array{bytes?:string,mime?:string,sha?:string,fehler?:string}
+ */
+function cc_wappen_pruefe( array $eintrag ): array {
+	/* ── 1 ── Dekodieren. `true` ist der strenge Modus: er verwirft
+	   Zeichen, die nicht in das Alphabet gehoeren, statt sie zu
+	   ueberspringen. Ohne ihn kommt aus Unsinn stillschweigend Muell,
+	   und der Muell scheitert erst an der Pruefsumme — also am richtigen
+	   Ort, aber mit einer Meldung, die auf das falsche Feld zeigt. */
+	$roh = $eintrag['daten'] ?? null;
+	if ( ! is_string( $roh ) || '' === $roh ) {
+		return array( 'fehler' => '«daten» fehlt oder ist leer' );
+	}
+
+	$bytes = base64_decode( $roh, true );
+	if ( false === $bytes || '' === $bytes ) {
+		return array( 'fehler' => '«daten» ist kein gueltiges base64' );
+	}
+
+	/* ── 2 ── Groesse, auf die DEKODIERTEN Bytes. */
+	$gross = strlen( $bytes );
+	if ( $gross > CC_WAPPEN_BYTES ) {
+		return array(
+			'fehler' => sprintf(
+				'%d Bytes — mehr als die Grenze von %d (%d KiB)',
+				$gross,
+				CC_WAPPEN_BYTES,
+				(int) ( CC_WAPPEN_BYTES / 1024 )
+			),
+		);
+	}
+
+	/* ── 3 ── Die Pruefsumme NACHRECHNEN.
+	   ⚠ `hash_equals()` und nicht `===`: Der Vergleich soll nicht ueber
+	   seine Laufzeit verraten, wie weit zwei Summen uebereinstimmen. Hier
+	   ist das kein scharfes Risiko, aber es ist die Gewohnheit, die man
+	   nicht fallweise pflegt. */
+	$soll = strtolower( trim( (string) ( $eintrag['sha256'] ?? '' ) ) );
+	if ( '' === $soll ) {
+		return array( 'fehler' => '«sha256» fehlt' );
+	}
+	$ist = hash( 'sha256', $bytes );
+	if ( ! hash_equals( $ist, $soll ) ) {
+		return array(
+			'fehler' => 'Pruefsumme passt nicht zu den Daten (geliefert '
+				. substr( $soll, 0, 12 ) . '…, gerechnet ' . substr( $ist, 0, 12 ) . '…)',
+		);
+	}
+
+	/* ── 4 ── Der Typ, am INHALT. */
+	if ( ! function_exists( 'finfo_buffer' ) ) {
+		/* ⚠ Ohne finfo wird NICHT durchgelassen. Der Typ ist hier die
+		   Sicherheitsgrenze, nicht ein Etikett — und eine Grenze, die bei
+		   fehlendem Werkzeug oeffnet, ist keine. */
+		return array( 'fehler' => 'finfo fehlt auf dem Server — der Typ ist nicht pruefbar' );
+	}
+
+	$finfo = finfo_open( FILEINFO_MIME_TYPE );
+	$fund  = $finfo ? (string) finfo_buffer( $finfo, $bytes ) : '';
+	if ( $finfo ) {
+		finfo_close( $finfo );
+	}
+
+	if ( 'image/svg+xml' === $fund || 'image/svg' === $fund ) {
+		return array(
+			'fehler' => 'SVG wird nicht angenommen — bitte eines von '
+				. implode( ', ', array_keys( CC_WAPPEN_MIME ) ) . ' schicken. '
+				. 'Grund: ausfuehrbares Markup, und WordPress erlaubt den Typ nicht.',
+		);
+	}
+
+	if ( ! isset( CC_WAPPEN_MIME[ $fund ] ) ) {
+		return array(
+			'fehler' => 'Typ «' . ( '' !== $fund ? $fund : 'unbekannt' )
+				. '» ist nicht erlaubt (erlaubt: ' . implode( ', ', array_keys( CC_WAPPEN_MIME ) ) . ')',
+		);
+	}
+
+	/* ⚠ **Die ANGABE muss zum FUND passen.** Ein PNG, das als
+	   `image/jpeg` angekuendigt wird, ist ein Befund und kein Detail: Es
+	   heisst, dass auf der Gegenseite Typ und Inhalt auseinanderlaufen,
+	   und das naechste Mal laufen sie vielleicht weiter auseinander.
+
+	   ⚠ `image/jpg` wird als Schreibweise von `image/jpeg` durchgelassen —
+	   sie ist verbreitet und meint nichts anderes. Mehr wird NICHT
+	   geglaettet: Wer `image/gif` schickt und ein PNG meint, soll es
+	   erfahren. */
+	$angabe = strtolower( trim( (string) ( $eintrag['mime'] ?? '' ) ) );
+	if ( 'image/jpg' === $angabe ) {
+		$angabe = 'image/jpeg';
+	}
+	if ( '' !== $angabe && $angabe !== $fund ) {
+		return array(
+			'fehler' => 'angekuendigt als «' . $angabe . '», tatsaechlich «' . $fund . '»',
+		);
+	}
+
+	return array( 'bytes' => $bytes, 'mime' => $fund, 'sha' => $ist );
+}
+
+/**
+ * **Wie viele Bilder traegt dieses GIF?** - 23.09.2026
+ *
+ * Der Zaehler laeuft die GIF-Struktur ab und zaehlt die Bilddeskriptoren
+ * (`0x2C`). **Er braucht dafuer weder Imagick noch GD**, und das ist der
+ * Grund, warum er von Hand geschrieben ist und nicht `getNumberImages()`
+ * ruft: Die Antwort entscheidet, ob eine Datei ueberhaupt angefasst wird.
+ * Haengt diese Entscheidung an einer Bibliothek, faellt sie auf einem
+ * Server ohne sie anders aus als hier - und zwar still.
+ *
+ * > **Ein nicht animiertes GIF muss Byte fuer Byte durchkommen.** Diese
+ * > Zusicherung ist nur so viel wert wie die Frage, die ihr vorausgeht.
+ *
+ * ⚠ Bei einem unerwarteten Block bricht der Zaehler ab und gibt zurueck,
+ * was er bis dahin gesehen hat. Das ist die vorsichtige Richtung: Wer
+ * schon zwei Bilder gezaehlt hat, rechnet um; wer keines sicher hat,
+ * laesst die Bytes in Ruhe. **Ein krummes GIF wird nicht abgelehnt** -
+ * darueber entscheidet `cc_wappen_pruefe()` und nicht dieser Zaehler.
+ *
+ * @param string $bytes Die rohen Bilddaten.
+ * @return int Zahl der Bilder; 0, wenn es kein GIF ist.
+ */
+function cc_gif_bilder( string $bytes ): int {
+	$laenge = strlen( $bytes );
+
+	/* 6 Bytes Kopf + 7 Bytes Bildschirmbeschreibung = 13. */
+	if ( $laenge < 13 || 'GIF8' !== substr( $bytes, 0, 4 ) ) {
+		return 0;
+	}
+
+	/* Bit 7 des Sammelbytes: es folgt eine globale Farbtabelle, und ihre
+	   Groesse steht in den untersten drei Bits als Zweierpotenz. */
+	$sammel = ord( $bytes[10] );
+	$p      = 13;
+	if ( $sammel & 0x80 ) {
+		$p += 3 * ( 1 << ( ( $sammel & 0x07 ) + 1 ) );
+	}
+
+	$bilder = 0;
+
+	while ( $p < $laenge ) {
+		$block = ord( $bytes[ $p ] );
+
+		if ( 0x3B === $block ) {
+			break; /* Abschluss. */
+		}
+
+		if ( 0x21 === $block ) {
+			$p += 2; /* Erweiterung: Kennung ueberspringen, dann Teilbloecke. */
+		} elseif ( 0x2C === $block ) {
+			++$bilder;
+			if ( $p + 9 >= $laenge ) {
+				return $bilder;
+			}
+			$lokal = ord( $bytes[ $p + 9 ] );
+			$p    += 10;
+			if ( $lokal & 0x80 ) {
+				$p += 3 * ( 1 << ( ( $lokal & 0x07 ) + 1 ) );
+			}
+			++$p; /* Mindestcodelaenge der LZW-Daten. */
+		} else {
+			return $bilder;
+		}
+
+		/* Teilbloecke: Laengenbyte, Daten, … bis zum Nullbyte. */
+		while ( $p < $laenge ) {
+			$n = ord( $bytes[ $p ] );
+			++$p;
+			if ( 0 === $n ) {
+				break;
+			}
+			$p += $n;
+		}
+	}
+
+	return $bilder;
+}
+
+/**
+ * **Aus einem animierten GIF ein Standbild machen.** - Didis Entscheid
+ * vom 23.09.2026
+ *
+ * ── ⚠⚠ WARUM HIER UND NICHT AN DER ANZEIGE ──────────────────────
+ *
+ * ~~«Ein animiertes Wappen unter 96px laeuft also auf der Seite. Das ist
+ * an der ANZEIGE zu entscheiden, nicht an der Allowlist.»~~ - Stand
+ * 23.09.2026, ueberholt. Der Satz stellte zwei Orte gegeneinander, von
+ * denen nur der eine je gangbar war; **die Anzeige kann es gar nicht.**
+ * Gemessen im lokalen Stapel (Imagick, so wie ausgeliefert wird):
+ *
+ *     image_resize_dimensions( 64, 64, 96, 96, false )  →  false
+ *     make_subsize( 64 x 64, ohne Beschnitt )  →  image_subsize_create_error
+ *                                                 «hat bereits die Groesse»
+ *     make_subsize( 96 x 96, ohne Beschnitt )  →  error_getting_dimensions
+ *
+ * **Beide Tueren sind zu.** WordPress legt keine Zwischengroesse in der
+ * Originalgroesse an - es lehnt das ausdruecklich ab - und es vergroessert
+ * nicht. Ein Standbild an der Anzeige haette also bedeutet, ein 64er
+ * Wappen auf 96 aufzublasen: Schaerfe wegwerfen, um Ruhe zu bekommen, und
+ * dafuer einen Filter zu setzen, der jedes Bild der Website sieht.
+ *
+ * > **Die Umrechnung beim Annehmen kostet keinen Bildpunkt.** Das
+ * > Standbild hat die volle Kantenlaenge des Gelieferten; es hat nur ein
+ * > Bild statt drei.
+ *
+ * ── ⚠⚠ UND WAS DAS FUER `sha256` BEDEUTET ───────────────────────
+ *
+ * Die abgelegte Datei ist dann **nicht mehr die gelieferte**. Die
+ * Pruefsumme am Anhang bleibt trotzdem die der **LIEFERUNG** - sie kommt
+ * als eigener Parameter in `cc_wappen_anlegen()` an und wird hier nicht
+ * angefasst.
+ *
+ * **Das ist kein Detail, sondern die ganze Frage.** Wuerde die Summe der
+ * umgerechneten Datei abgelegt, faende `cc_route_wappen()` im Zweig
+ * `unveraendert` nie wieder eine Uebereinstimmung: ClubCampus schickte
+ * dasselbe Wappen bei jedem Lauf neu, der Anhang wuerde bei jedem Lauf
+ * ersetzt, und **nichts davon saehe nach einem Fehler aus** - die Antwort
+ * meldete brav `ersetzt`. Die Summe ist die Quittung ueber das, was
+ * ankam, und nicht ueber das, was daraus wurde.
+ *
+ * ⚠ `cc_wappen_mangel()` rechnet die Datei NICHT nach - geprueft und
+ * nicht vermutet: es prueft Beitrag, Anhangstyp, hinterlegten Pfad, Dasein
+ * auf der Platte und gesetzte Summe. Die Abweichung zwischen Datei und
+ * Summe faellt also nirgends als Schaden an.
+ *
+ * ── ⚠ NICHT ABLEHNEN, UNTER KEINEN UMSTAENDEN ────────────────────
+ *
+ * Jeder Fehlweg gibt die **urspruenglichen Bytes** zurueck. Fehlt Imagick,
+ * fehlt GD, stolpert einer von beiden ueber ein krummes GIF: Das Wappen
+ * erscheint, dann eben animiert. **Didis Bedingung ist «erscheint, nur
+ * ruhig» - und die erste Haelfte wiegt schwerer als die zweite.**
+ *
+ * ⚠ **Was kein GIF ist und was nicht animiert ist, kommt Byte fuer Byte
+ * unveraendert zurueck** - nicht «gleich gross» oder «gleich aussehend»,
+ * sondern derselbe String. Ein PNG, ein WebP und ein einbildriges GIF
+ * laufen durch diese Funktion, als gaebe es sie nicht.
+ *
+ * ⚠ Imagick zuerst, GD als Rueckfall: `coalesceImages()` rechnet die
+ * Teilbilder eines animierten GIF zu vollen Bildern aus, bevor das erste
+ * genommen wird. GD liest von sich aus nur das erste Bild - das trifft
+ * hier dasselbe, ist aber die groebere Zusicherung.
+ *
+ * @param string $bytes  Die gelieferten Bilddaten.
+ * @param string $mime   Der am Inhalt gefundene Typ.
+ * @param int   &$bilder Zahl der Bilder im Gelieferten; 0, wenn kein GIF.
+ * @return string Standbild-Bytes, oder unveraendert die urspruenglichen.
+ */
+function cc_wappen_standbild( string $bytes, string $mime, &$bilder = null ): string {
+	$bilder = 0;
+
+	if ( 'image/gif' !== $mime ) {
+		return $bytes;
+	}
+
+	$bilder = cc_gif_bilder( $bytes );
+	if ( $bilder < 2 ) {
+		return $bytes;
+	}
+
+	if ( class_exists( 'Imagick' ) ) {
+		try {
+			$quelle = new Imagick();
+			$quelle->readImageBlob( $bytes );
+
+			$voll = $quelle->coalesceImages();
+			$voll->setIteratorIndex( 0 );
+			$erst = $voll->getImage();
+			$erst->setImageFormat( 'gif' );
+			$neu = (string) $erst->getImageBlob();
+
+			$erst->clear();
+			$voll->clear();
+			$quelle->clear();
+
+			/* ⚠ Nachgezaehlt und nicht geglaubt: Was hier zurueckgeht, muss
+			   genau ein Bild haben. Sonst waere die Umrechnung umsonst
+			   gewesen und haette die gelieferte Datei trotzdem ersetzt. */
+			if ( '' !== $neu && 1 === cc_gif_bilder( $neu ) ) {
+				return $neu;
+			}
+		} catch ( Throwable $e ) {
+			/* Weiter zu GD. */
+		}
+	}
+
+	if ( function_exists( 'imagecreatefromstring' ) && function_exists( 'imagegif' ) ) {
+		$bild = @imagecreatefromstring( $bytes );
+		if ( false !== $bild ) {
+			ob_start();
+			$ok  = imagegif( $bild );
+			$neu = (string) ob_get_clean();
+			imagedestroy( $bild );
+
+			if ( $ok && '' !== $neu && 1 === cc_gif_bilder( $neu ) ) {
+				return $neu;
+			}
+		}
+	}
+
+	return $bytes;
+}
+
+/**
+ * **Den leeren Rand wegschneiden — Didis Entscheid vom 23.09.2026.**
+ *
+ * ── ⚠ ⚠  DER ANLASS, UND ER IST EIN OPTISCHER ──────────────────────────
+ *
+ * Viele Logodateien tragen rundum weissen oder durchsichtigen Rand. Die
+ * Anzeige setzt jedes Wappen in denselben Kreis — das eigentliche Wappen
+ * sitzt darin dann klein, und **zwei Wappen nebeneinander wirken ungleich
+ * gross, obwohl beide Dateien dieselbe Kantenlaenge haben.** Der Rand ist
+ * keine Eigenschaft des Wappens, sondern eine der Datei; also gehoert er
+ * weg, bevor die Datei abgelegt wird.
+ *
+ * ── DIE REGEL, UND WARUM SIE SO EINFACH SEIN DARF ──────────────────────
+ *
+ * Ein umschliessendes Rechteck ueber ALLE Bildpunkte, die weder nahezu
+ * weiss noch nahezu durchsichtig sind. Darauf wird zugeschnitten.
+ *
+ * ⚠ ⚠  **DER INHALT KANN PER KONSTRUKTION NICHT ANGESCHNITTEN WERDEN.**
+ * Das Rechteck ist die Huelle aller Inhaltspunkte — jeder einzelne von
+ * ihnen liegt darin, sonst waere es keine Huelle. Das ist Didis
+ * ausdrueckliche Bedingung, und sie ist hier keine Zusicherung, die
+ * jemand einhalten muss, sondern eine Eigenschaft der Rechnung.
+ *
+ * ⚠ **Was die Rechnung NICHT traegt, ist die Einstufung selbst**: Ein
+ * blasser Inhaltspunkt, den die Schwelle faelschlich fuer Rand haelt, ist
+ * kein Inhaltspunkt mehr und spannt nichts auf. Die Zusicherung lautet
+ * also genau: **kein Punkt, der als Inhalt gilt, geht verloren.** Darum
+ * sind die Schwellen eng gewaehlt, und die Begruendung dafuer steht
+ * ausfuehrlich bei CC_WAPPEN_WEISS.
+ *
+ * ⚠ ⚠  **WEISS INNERHALB DES WAPPENS BLEIBT UNBERUEHRT, OHNE JEDEN
+ * FUELLALGORITHMUS.** Eine weisse Flaeche mitten im Wappen liegt zwischen
+ * Inhaltspunkten und damit INNERHALB des Rechtecks; sie wird nicht
+ * betrachtet, sondern mitgenommen. Wer hier spaeter einen Flood-Fill
+ * nachruesten will, soll wissen: **die einfache Form ist hier die richtige
+ * und nicht die faule.** Ein Fuellalgorithmus koennte zusaetzlich nur das
+ * leisten, was diese Regel absichtlich nicht tut — eine weisse Bucht vom
+ * Rand her ausraeumen —, und dafuer muesste er Bildpunkte innerhalb der
+ * Huelle veraendern. Genau das soll nie geschehen.
+ *
+ * ── ⚠  WAS SIE NICHT KANN, UND WAS DAS KOSTET ──────────────────────────
+ *
+ * **Ein weisses Wappen auf durchsichtigem Grund** (ein weisser Schriftzug
+ * etwa) hat nach dieser Regel keinen einzigen Inhaltspunkt: seine Punkte
+ * sind weiss, der Rest ist durchsichtig. Die Huelle waere leer, und statt
+ * eines Rechtecks der Groesse 0 geht das **Original** zurueck, mit einem
+ * Grund in `$masse`. Gemeldet und nicht heimlich behandelt: Ein zweiter
+ * Durchlauf, der dann nur noch die Durchsichtigkeit zaehlt, waere machbar
+ * und ist **nicht gebaut** — er ist Didis Entscheid und nicht meiner.
+ *
+ * **Ein animiertes GIF wird nicht beschnitten.** GD liest davon nur das
+ * erste Bild; ein Beschnitt machte aus der Lieferung still ein Standbild,
+ * und `$standbild` in der Antwort meldete trotzdem 0. Auf dem Weg durch
+ * `cc_wappen_anlegen()` kommt der Fall nicht vor — dort laeuft
+ * `cc_wappen_standbild()` davor. **Die Sperre steht fuer JEDEN anderen
+ * Aufrufer**, der dieser Funktion eine beliebige abgelegte Datei reicht.
+ *
+ * ── ⚠ ⚠  GD UND NICHT IMAGICK, UND DAS IST KEINE BEQUEMLICHKEIT ────────
+ *
+ * Im Container stehen beide (gemessen am 23.09.2026: GD bundled 2.1.0,
+ * ImageMagick 7.1.1-43 mit `trimImage`). Genommen wird GD, aus zwei
+ * Gruenden:
+ *
+ *  1. **GD ist gebuendelt, und dieser Weg benutzt es schon.**
+ *     `cc_wappen_standbild()` arbeitet zwei Zeilen hoeher mit `imagegif`
+ *     und `imagedestroy`. Was auf DIESEM Container steht, sagt ueber den
+ *     Server nichts; eine zweite Bibliothek als Voraussetzung einzufuehren
+ *     hiesse, den Beschnitt dort stillschweigend ausfallen zu lassen.
+ *  2. **`Imagick::trimImage()` hat die falsche Semantik.** Es beschneidet
+ *     gegen die ECKFARBE mit Unschaerfe — nicht gegen «weiss ODER
+ *     durchsichtig». Eine Datei mit durchsichtiger Ecke und weissem Rand
+ *     traefe es nur halb, und zwar ohne dass es auffiele.
+ *
+ * ── ⚠ ⚠  DREI GEMESSENE EIGENHEITEN VON GD, DIE HIER DEN CODE FORMEN ───
+ *
+ *  1. **`imagecrop()` ZERSTOERT ein Palettenbild mit durchsichtigem
+ *     Index.** Gemessen am 23.09.2026 an einem GIF mit drei Farben, Index 0
+ *     durchsichtig: nach `imagecrop()` meldet das Ergebnis
+ *     `transidx=-1, farben=1`, und die Ecke, die durchsichtiges Weiss war,
+ *     liest sich als deckendes Rot. **Das ist kein Schoenheitsfehler,
+ *     sondern ein falsches Bild.** Palettenbilder gehen darum ueber
+ *     `imagecreate()` + `imagecopy()`, mit dem durchsichtigen Farbton
+ *     vorab als Index 0 — gemessen: `transidx=0`, drei Farben, jede
+ *     zeichengenau.
+ *  2. **`imagepalettetotruecolor()` waere der falsche Ausweg.** Es
+ *     UEBERTRAEGT die GIF-Durchsichtigkeit zwar richtig (der durchsichtige
+ *     Ton kommt als `a=127` an), aber `imagegif()` flacht Alpha beim
+ *     Zurueckschreiben auf Schwarz: der durchsichtige Rand kam als
+ *     `rgb=4,2,4` wieder. Gemessen, und darum nicht gebaut.
+ *  3. **`imagesavealpha()` muss bei Vollfarbe ausdruecklich gesetzt
+ *     werden.** Ohne sie liest sich die durchsichtige Ecke des
+ *     zugeschnittenen PNG als `a=0` — die Durchsichtigkeit waere weg, die
+ *     Datei sogar kleiner (198 statt 256 Bytes), und nichts haette
+ *     fehlgeschlagen.
+ *
+ * ── ⚠  DIE EINSTUFUNG KOSTET JE PALETTENFARBE, NICHT JE BILDPUNKT ──────
+ *
+ * Bei einem Palettenbild haengt das Urteil am INDEX. Es wird darum einmal
+ * je Palettenfarbe gefaellt (hoechstens 256) und dann nachgeschlagen —
+ * sonst kostete jeder Bildpunkt ein `imagecolorsforindex()`, und GIF waere
+ * um ein Vielfaches teurer als PNG.
+ *
+ * ── ⚠  LAUFZEIT, GEMESSEN STATT VERMUTET ───────────────────────────────
+ *
+ * 23.09.2026, wp-Container, ein Durchlauf ueber alle Bildpunkte:
+ * **512px: 23 ms.** 2000px: 390 ms. 4000px: 1,46 s. Darum die Grenze
+ * CC_WAPPEN_PUNKTE, und darum wird sie am Dateikopf geprueft.
+ *
+ * ── ⚠ ⚠  UND WAS DAS FUER `sha256` BEDEUTET: NICHTS ────────────────────
+ *
+ * Dieselbe Frage ist beim Standbild schon entschieden und ausfuehrlich
+ * begruendet (siehe den Kopf von `cc_wappen_standbild()`, Abschnitt «UND
+ * WAS DAS FUER `sha256` BEDEUTET»). Der Beschnitt aendert daran nichts:
+ * **Die Pruefsumme am Anhang bleibt die der LIEFERUNG.** Wuerde die Summe
+ * der abgelegten Datei gespeichert, faende `cc_route_wappen()` im Zweig
+ * `unveraendert` nie wieder eine Uebereinstimmung — ClubCampus schickte
+ * jedes Wappen bei jedem Lauf neu, der Anhang wuerde jedes Mal ersetzt,
+ * und die Antwort meldete dabei brav `ersetzt`.
+ *
+ * ── ⚠  SIE WIRFT NIE ───────────────────────────────────────────────────
+ *
+ * Jeder Fehlweg endet in «Original zurueck»: fehlende Bibliothek, krummes
+ * Bild, entartete Kantenlaengen, gescheiterter Schnitt, gescheitertes
+ * Schreiben. Didis Bedingung ist «nichts verlieren», und die wiegt
+ * schwerer als ein enger Rand.
+ *
+ * @param string     $bytes Die Bilddaten.
+ * @param string     $mime  Der am Inhalt gefundene Typ.
+ * @param array|null $masse **Immer gefuellt, immer dieselben sechs
+ *   Schluessel, immer dieselben Typen** — kein Schluessel kippt mit dem
+ *   Inhalt, und keiner ist ein Behaelter (die Begruendung dafuer steht in
+ *   0.9.34 im Aenderungsverzeichnis):
+ *
+ *     'beschnitten' bool   Sind die zurueckgegebenen Bytes andere?
+ *     'breite'      int    Kantenlaenge VORHER (0, wenn nicht lesbar)
+ *     'hoehe'       int
+ *     'breite_neu'  int    Kantenlaenge NACHHER (gleich vorher, wenn
+ *     'hoehe_neu'   int      nichts geschah)
+ *     'grund'       string Der Klartext dazu; leer, wenn der erste
+ *                          Durchlauf entschieden hat und nichts zu
+ *                          erklaeren war
+ *     'weg'         int    0 = kein Inhalt gefunden, 1 = erster
+ *                          Durchlauf, 2 = zweiter (nur Durchsichtigkeit)
+ *
+ *   ⚠ **`beschnitten === false` und `grund === ''` heissen zusammen «es
+ *   war nichts zu tun».** Das ist der Normalfall eines randlosen Wappens
+ *   und keine Stoerung — er gehoert darum in keine Meldung.
+ *
+ *   ── ⚠ DER GRUND HAT SEIT 0.9.36 ZWEI BEDEUTUNGEN, UND `weg` TRENNT SIE ─
+ *
+ *   > ~~«Ein gefuellter `grund` heisst dagegen immer: **wir wollten und
+ *   > konnten nicht.**»~~ — Stand 23.09.2026, ueberholt.
+ *
+ *   Seit dem zweiten Durchlauf gibt es einen Erfolg, der erklaert gehoert:
+ *   ein weisses Wappen auf durchsichtigem Grund wird beschnitten, aber
+ *   nach einer ANDEREN Regel als das uebrige. Gelesen wird darum das Paar:
+ *
+ *     beschnitten === true  und grund !== ''   der zweite Weg hat gegriffen
+ *     beschnitten === false und grund !== ''   wir wollten und konnten nicht
+ *     beschnitten === false und grund === ''   es war nichts zu tun
+ *
+ *   ⚠ **`weg` sagt dasselbe maschinenlesbar** und ist der Schluessel, den
+ *   eine Pruefung befragt. Der Text ist fuer Menschen; wer auf ihn
+ *   vergleicht, haengt an einer Formulierung.
+ * @return string Die beschnittenen Bytes — oder **unveraendert `$bytes`**.
+ */
+function cc_wappen_beschnitt( string $bytes, string $mime, ?array &$masse = null ): string {
+	$masse = array(
+		'beschnitten' => false,
+		'breite'      => 0,
+		'hoehe'       => 0,
+		'breite_neu'  => 0,
+		'hoehe_neu'   => 0,
+		'grund'       => '',
+		'weg'         => 0,
+	);
+
+	/* ⚠ Die Schreibfunktion haengt am TYP und nicht an der Endung — und sie
+	   wird hier ausgewaehlt, nicht als Variable gerufen: `imagegif()` nimmt
+	   nur zwei Argumente, `imagejpeg()` und `imagewebp()` drei. Ein
+	   `$aus( $bild, null, 92 )` waere fuer GIF ein TypeError. */
+	$schreiber = array(
+		'image/png'  => 'imagepng',
+		'image/jpeg' => 'imagejpeg',
+		'image/webp' => 'imagewebp',
+		'image/gif'  => 'imagegif',
+	);
+	$aus = (string) ( $schreiber[ $mime ] ?? '' );
+
+	$bild  = null;
+	$zu    = null;
+	/* ⚠ Der Puffer wird gleich aufgemacht. Wirft irgendetwas dazwischen,
+	   bliebe er sonst offen stehen und schluckte die Antwort der Route. */
+	$stufe = ob_get_level();
+
+	try {
+		/* ── 0 ── ⚠ ⚠  **DIE KANTENLAENGEN ZUERST, VOR JEDER WEIGERUNG.**
+		   ~~Der Dateikopf wurde erst nach der Werkzeug- und der GIF-Pruefung
+		   gelesen.~~ — Stand 23.09.2026, noch am selben Tag abgeloest.
+		   Gemeldet von der Seite der Einmal-Routine, die diese Funktion
+		   gegen fuenf echte Anhaenge laufen liess: Ein animiertes GIF von
+		   160x160 kam mit `breite=0 hoehe=0` zurueck, obwohl der Kopf
+		   lesbar war.
+
+		   > **`0x0` liest sich wie ein kaputtes Bild und nicht wie «nicht
+		   > beschnitten, und hier ist der Grund».** Ein Kanal, der im
+		   > Aussetzerfall Nullen meldet, schweigt genau dort, wo man ihn
+		   > liest.
+
+		   ⚠ **Weggelassen ist nicht dasselbe wie leer.** Wo die Groesse
+		   wirklich nicht zu ermitteln war, steht die 0 zusammen mit einem
+		   Grund, der das sagt — und nie allein. */
+		if ( function_exists( 'getimagesizefromstring' ) ) {
+			$kopf = @getimagesizefromstring( $bytes );
+			if ( is_array( $kopf ) && (int) ( $kopf[0] ?? 0 ) > 0 && (int) ( $kopf[1] ?? 0 ) > 0 ) {
+				$masse['breite']     = (int) $kopf[0];
+				$masse['hoehe']      = (int) $kopf[1];
+				$masse['breite_neu'] = (int) $kopf[0];
+				$masse['hoehe_neu']  = (int) $kopf[1];
+			}
+		}
+
+		/* ── 1 ── Werkzeug. Fehlt eines, geschieht nichts — laut. */
+		if ( '' === $aus
+			|| ! function_exists( 'imagecreatefromstring' )
+			|| ! function_exists( 'getimagesizefromstring' )
+			|| ! function_exists( 'imagecrop' )
+			|| ! function_exists( $aus ) ) {
+			$masse['grund'] = 'GD kann «' . $mime . '» auf diesem Server nicht beschneiden';
+			return $bytes;
+		}
+
+		/* ── 2 ── Ein animiertes GIF bleibt, wie es ist. Siehe den Kopf. */
+		if ( 'image/gif' === $mime && cc_gif_bilder( $bytes ) > 1 ) {
+			$masse['grund'] = 'animiertes GIF — ein Beschnitt naehme still nur das erste Bild';
+			return $bytes;
+		}
+
+		/* ── 3 ── Der Dateikopf als BREMSE — die Auskunft steht schon oben.
+		   ⚠ Genau darum steht die Punktgrenze hier und nicht drei Zeilen
+		   tiefer: `imagecreatefromstring()` legt das ganze Bild im Speicher
+		   an (2000px: 82 MiB gemessen). Eine Grenze, die erst danach
+		   greift, hat schon bezahlt, wogegen sie schuetzen soll. */
+		if ( $masse['breite'] < 1 || $masse['hoehe'] < 1 ) {
+			$masse['grund'] = 'Kantenlaengen aus dem Dateikopf nicht lesbar — die 0 oben '
+				. 'ist darum keine Messung, sondern ihr Fehlen';
+			return $bytes;
+		}
+
+		if ( $masse['breite'] * $masse['hoehe'] > CC_WAPPEN_PUNKTE ) {
+			$masse['grund'] = sprintf(
+				'%dx%d Bildpunkte — mehr als die Grenze von %d; nicht beschnitten',
+				$masse['breite'],
+				$masse['hoehe'],
+				CC_WAPPEN_PUNKTE
+			);
+			return $bytes;
+		}
+
+		/* ── 4 ── Dekodieren. */
+		$bild = @imagecreatefromstring( $bytes );
+		if ( false === $bild ) {
+			$masse['grund'] = 'GD konnte das Bild nicht lesen';
+			return $bytes;
+		}
+
+		/* ⚠ Ab hier gilt das DEKODIERTE Bild und nicht mehr der Kopf: Die
+		   zwei koennen auseinanderlaufen (ein krummer Kopf, ein Typ, den GD
+		   anders liest), und zugeschnitten wird auf das, was GD vor sich
+		   hat. **Die Auskunft wird darum ueberschrieben und nicht ergaenzt**
+		   — es soll immer die Kantenlaenge dastehen, an der wirklich
+		   gearbeitet wurde. */
+		$breite = (int) imagesx( $bild );
+		$hoehe  = (int) imagesy( $bild );
+		if ( $breite < 1 || $hoehe < 1 ) {
+			$masse['grund'] = 'entartetes Bild (' . $breite . 'x' . $hoehe
+				. ' nach dem Dekodieren)';
+			return $bytes;
+		}
+		$masse['breite']     = $breite;
+		$masse['hoehe']      = $hoehe;
+		$masse['breite_neu'] = $breite;
+		$masse['hoehe_neu']  = $hoehe;
+
+		if ( $breite * $hoehe > CC_WAPPEN_PUNKTE ) {
+			$masse['grund'] = sprintf(
+				'%dx%d Bildpunkte nach dem Dekodieren — mehr als die Grenze von %d',
+				$breite,
+				$hoehe,
+				CC_WAPPEN_PUNKTE
+			);
+			return $bytes;
+		}
+
+		/* ── 5 ── Bei Palette: das Urteil einmal je Farbe, siehe den Kopf.
+		   ⚠ `imagecolorsforindex()` liefert fuer den durchsichtigen Index
+		   `alpha => 127` (gemessen) — die Durchsichtigkeit eines GIF kommt
+		   also auf demselben Weg an wie die eines PNG. */
+		$tafel = null;
+		if ( ! imageistruecolor( $bild ) ) {
+			$tafel  = array();
+			$farben = (int) imagecolorstotal( $bild );
+			for ( $i = 0; $i < $farben; $i++ ) {
+				$f = (array) imagecolorsforindex( $bild, $i );
+				$tafel[ $i ] = ( (int) ( $f['alpha'] ?? 0 ) >= CC_WAPPEN_ALPHA )
+					|| ( (int) ( $f['red'] ?? 0 ) >= CC_WAPPEN_WEISS
+						&& (int) ( $f['green'] ?? 0 ) >= CC_WAPPEN_WEISS
+						&& (int) ( $f['blue'] ?? 0 ) >= CC_WAPPEN_WEISS );
+			}
+		}
+
+		/* ── 6 ── Die Huelle ueber alle Inhaltspunkte.
+		   ⚠ Die Einstufung steht IM Schleifenrumpf und nicht in einer
+		   eigenen Funktion: gemessen am 23.09.2026 kostet ein Funktionsruf
+		   je Bildpunkt bei 512px rund 5 ms zusaetzlich (20 gegen 25 ms) —
+		   ein Viertel des ganzen Durchlaufs fuer eine Zeile Lesbarkeit.
+		   ⚠ Ein Index, den die Tafel nicht kennt, gilt als INHALT. Die
+		   unbekannte Richtung soll das Rechteck weiten und nicht engen. */
+		$links  = $breite;
+		$oben   = $hoehe;
+		$rechts = -1;
+		$unten  = -1;
+
+		for ( $y = 0; $y < $hoehe; $y++ ) {
+			for ( $x = 0; $x < $breite; $x++ ) {
+				$c = imagecolorat( $bild, $x, $y );
+
+				if ( null === $tafel ) {
+					if ( ( ( $c >> 24 ) & 0x7F ) >= CC_WAPPEN_ALPHA ) {
+						continue;
+					}
+					if ( ( ( $c >> 16 ) & 0xFF ) >= CC_WAPPEN_WEISS
+						&& ( ( $c >> 8 ) & 0xFF ) >= CC_WAPPEN_WEISS
+						&& ( $c & 0xFF ) >= CC_WAPPEN_WEISS ) {
+						continue;
+					}
+				} elseif ( ! empty( $tafel[ $c ] ) ) {
+					continue;
+				}
+
+				if ( $x < $links ) {
+					$links = $x;
+				}
+				if ( $x > $rechts ) {
+					$rechts = $x;
+				}
+				if ( $y < $oben ) {
+					$oben = $y;
+				}
+				if ( $y > $unten ) {
+					$unten = $y;
+				}
+			}
+		}
+
+		$masse['weg'] = 1;
+
+		/* ── 6b ── DER ZWEITE DURCHLAUF — Didis Auftrag vom 23.09.2026.
+		   ⚠ Er laeuft NUR, wenn der erste nichts gefunden hat.
+
+		   > ~~«Kein Rechteck der Groesse 0. Ein Bild ganz ohne Inhaltspunkt
+		   > ist entweder leer oder weiss auf durchsichtigem Grund — beides
+		   > Faelle, in denen das Original das Richtige ist.»~~ — Stand
+		   > 23.09.2026, ueberholt: **die zwei Faelle sind nicht dasselbe.**
+
+		   Ein weisses Wappen auf durchsichtigem Grund — ein Schriftzug in
+		   Weiss ist der haeufige Fall — hat nach der Regel des ersten
+		   Durchlaufs keinen einzigen Inhaltspunkt: jeder seiner Punkte ist
+		   weiss, also «leer». Es ging damit unbeschnitten zurueck, und
+		   genau die Datei, die den Beschnitt am noetigsten hat, bekam ihn
+		   nicht. Fuer sie zaehlt nur noch die Durchsichtigkeit: **was nicht
+		   durchsichtig ist, ist Inhalt.**
+
+		   ⚠ **Die Regel ist die zweite Wahl und nicht die bessere.** Sie
+		   kann einen weissen Grund nicht von weisser Schrift unterscheiden
+		   — auf einem Bild OHNE Durchsichtigkeit haelt sie schlicht alles
+		   fuer Inhalt und schneidet nichts. Darum steht sie hinten und
+		   nicht vorne; der erste Durchlauf bleibt der Normalweg.
+
+		   ⚠ **Eine zweite Schleife und kein Schalter im Rumpf der ersten.**
+		   Der Vermerk an Schritt 6 ist gemessen: ein Funktionsruf je
+		   Bildpunkt kostet bei 512px rund 5 ms von 20. Ein Test je
+		   Bildpunkt ist billiger, aber er liefe auf JEDEM Bild mit, um
+		   einem seltenen Fall zu dienen. Die Verdopplung ist bezahlter
+		   Platz gegen Laufzeit auf dem Normalweg — und sie steht
+		   unmittelbar neben ihrem Zwilling, wo eine Abweichung auffaellt. */
+		if ( $rechts < $links || $unten < $oben ) {
+			$tafel_d = null;
+			if ( ! imageistruecolor( $bild ) ) {
+				$tafel_d = array();
+				$farben  = (int) imagecolorstotal( $bild );
+				for ( $i = 0; $i < $farben; $i++ ) {
+					$f = (array) imagecolorsforindex( $bild, $i );
+					$tafel_d[ $i ] = ( (int) ( $f['alpha'] ?? 0 ) >= CC_WAPPEN_ALPHA );
+				}
+			}
+
+			for ( $y = 0; $y < $hoehe; $y++ ) {
+				for ( $x = 0; $x < $breite; $x++ ) {
+					$c = imagecolorat( $bild, $x, $y );
+
+					if ( null === $tafel_d ) {
+						if ( ( ( $c >> 24 ) & 0x7F ) >= CC_WAPPEN_ALPHA ) {
+							continue;
+						}
+					} elseif ( ! empty( $tafel_d[ $c ] ) ) {
+						continue;
+					}
+
+					if ( $x < $links ) {
+						$links = $x;
+					}
+					if ( $x > $rechts ) {
+						$rechts = $x;
+					}
+					if ( $y < $oben ) {
+						$oben = $y;
+					}
+					if ( $y > $unten ) {
+						$unten = $y;
+					}
+				}
+			}
+
+			/* ⚠ **Jetzt ist das Bild wirklich leer** — kein Punkt, der
+			   nicht durchsichtig waere. Da ist nichts zu beschneiden, und
+			   die Lieferung geht unveraendert zurueck. */
+			if ( $rechts < $links || $unten < $oben ) {
+				$masse['weg']   = 0;
+				$masse['grund'] = 'kein Inhaltspunkt, auch nicht nach der Durchsichtigkeit — '
+					. 'das Bild ist ganz durchsichtig; nicht beschnitten';
+				return $bytes;
+			}
+
+			$masse['weg'] = 2;
+		}
+
+		$neu_breite = $rechts - $links + 1;
+		$neu_hoehe  = $unten - $oben + 1;
+
+		/* ⚠ **Nichts wegzuschneiden ist kein Mangel**, und `grund` bleibt
+		   darum leer. Die Bytes gehen Zeichen fuer Zeichen zurueck — nicht
+		   «gleich aussehend», sondern derselbe String. Didis zweiter
+		   Pruefpunkt haengt genau hier. */
+		if ( $neu_breite === $breite && $neu_hoehe === $hoehe ) {
+			return $bytes;
+		}
+
+		/* ⚠ **Der Grund wird hier gesetzt und nicht oben.** Ein ganz
+		   weisses Bild ohne Durchsichtigkeit laeuft ebenfalls ueber den
+		   zweiten Weg, findet dort ALLES als Inhalt und hat darum nichts
+		   wegzuschneiden — es kehrt eine Zeile hoeher um. Stuende der Text
+		   oben, traege dieser Fall einen gefuellten `grund` bei
+		   `beschnitten === false`, und das liest sich als Fehlschlag.
+		   **Erklaert wird, was geschehen IST, nicht was versucht wurde.** */
+		if ( 2 === $masse['weg'] ) {
+			$masse['grund'] = 'zweiter Durchlauf: kein Punkt war farbig genug, gezaehlt '
+				. 'wurde darum nur die Durchsichtigkeit (weiss auf durchsichtigem Grund)';
+		}
+
+		/* ── 7 ── Zuschneiden. Zwei Wege, weil GD zwei braucht — siehe die
+		   drei gemessenen Eigenheiten im Kopf dieser Funktion. */
+		if ( null === $tafel ) {
+			$zu = @imagecrop(
+				$bild,
+				array( 'x' => $links, 'y' => $oben, 'width' => $neu_breite, 'height' => $neu_hoehe )
+			);
+			if ( false === $zu || null === $zu ) {
+				$masse['grund'] = 'imagecrop() hat nichts geliefert';
+				return $bytes;
+			}
+			/* ⚠ Ohne diese zwei Zeilen faellt der Alphakanal beim Schreiben
+			   still weg — gemessen, siehe Kopf. */
+			imagealphablending( $zu, false );
+			imagesavealpha( $zu, true );
+		} else {
+			$zu = @imagecreate( $neu_breite, $neu_hoehe );
+			if ( false === $zu || null === $zu ) {
+				$masse['grund'] = 'imagecreate() hat nichts geliefert';
+				return $bytes;
+			}
+			/* ⚠ **Der durchsichtige Farbton ZUERST**, damit er Index 0 des
+			   neuen Bildes wird und zugleich dessen Hintergrund. Genau das
+			   ist der Unterschied zwischen einem GIF, dessen Rand
+			   durchsichtig bleibt, und einem, dessen Rand ploetzlich die
+			   Inhaltsfarbe traegt. */
+			$ti = imagecolortransparent( $bild );
+			if ( $ti >= 0 ) {
+				$f   = (array) imagecolorsforindex( $bild, $ti );
+				$idx = imagecolorallocate(
+					$zu,
+					(int) ( $f['red'] ?? 255 ),
+					(int) ( $f['green'] ?? 255 ),
+					(int) ( $f['blue'] ?? 255 )
+				);
+				if ( false !== $idx ) {
+					imagecolortransparent( $zu, $idx );
+				}
+			}
+			if ( ! imagecopy( $zu, $bild, 0, 0, $links, $oben, $neu_breite, $neu_hoehe ) ) {
+				$masse['grund'] = 'imagecopy() ist fehlgeschlagen';
+				return $bytes;
+			}
+		}
+
+		/* ── 8 ── Schreiben. */
+		ob_start();
+		if ( 'imagepng' === $aus ) {
+			$ok = imagepng( $zu );
+		} elseif ( 'imagegif' === $aus ) {
+			$ok = imagegif( $zu );
+		} elseif ( 'imagejpeg' === $aus ) {
+			$ok = imagejpeg( $zu, null, CC_WAPPEN_GUETE );
+		} else {
+			$ok = imagewebp( $zu, null, CC_WAPPEN_GUETE );
+		}
+		$neu = (string) ob_get_clean();
+
+		if ( ! $ok || '' === $neu ) {
+			$masse['grund'] = $aus . '() hat nichts geschrieben';
+			return $bytes;
+		}
+
+		/* ⚠ **Nachgemessen und nicht geglaubt** — dieselbe Vorsicht wie bei
+		   `cc_wappen_standbild()`, wo die Bilderzahl des Ergebnisses
+		   nachgezaehlt wird. Was hier zurueckgeht, muss genau die berechnete
+		   Groesse haben. Sonst waere die Lieferung durch etwas ersetzt, das
+		   niemand geprueft hat. */
+		$probe = @getimagesizefromstring( $neu );
+		if ( ! is_array( $probe )
+			|| (int) ( $probe[0] ?? 0 ) !== $neu_breite
+			|| (int) ( $probe[1] ?? 0 ) !== $neu_hoehe ) {
+			$masse['grund'] = 'das geschriebene Bild misst nicht ' . $neu_breite . 'x' . $neu_hoehe;
+			return $bytes;
+		}
+
+		$masse['beschnitten'] = true;
+		$masse['breite_neu']  = $neu_breite;
+		$masse['hoehe_neu']   = $neu_hoehe;
+
+		return $neu;
+	} catch ( Throwable $e ) {
+		/* ⚠ **Sie wirft nie.** Jeder Fehlweg endet hier oder oben in
+		   «Original zurueck»; `$masse` traegt danach wieder die
+		   Kantenlaengen der Lieferung, damit kein Aufrufer aus einem
+		   halbgefuellten Feld schliesst, es sei etwas geschehen. */
+		$masse['beschnitten'] = false;
+		$masse['breite_neu']  = $masse['breite'];
+		$masse['hoehe_neu']   = $masse['hoehe'];
+		$masse['grund']       = 'Beschnitt fehlgeschlagen (' . get_class( $e ) . '): '
+			. $e->getMessage();
+		return $bytes;
+	} finally {
+		while ( ob_get_level() > $stufe ) {
+			ob_end_clean();
+		}
+		if ( $bild ) {
+			imagedestroy( $bild );
+		}
+		if ( $zu ) {
+			imagedestroy( $zu );
+		}
+	}
+}
+
+/**
+ * **Einen Wappen-Anhang anlegen.** Datei schreiben, Anhang eintragen, die
+ * zwei Metafelder setzen, Bildgroessen erzeugen.
+ *
+ * ⚠ **Seit dem 23.09.2026 geht ein animiertes GIF vorher durch
+ * `cc_wappen_standbild()`** und wird dabei auf sein erstes Bild
+ * zurueckgefuehrt. `$standbild` meldet dem Aufrufer die Zahl der Bilder,
+ * die eingegangen waren — **damit die Antwort sagt, dass die abgelegte
+ * Datei nicht die gelieferte ist.** Eine stille Umrechnung waere genau die
+ * Sorte Aenderung, die niemand bemerkt, bis sie jemanden kostet.
+ *
+ * ⚠ **Und seit 0.9.35 geht danach JEDES Bild durch
+ * `cc_wappen_beschnitt()`** — der leere Rand faellt weg. `$beschnitt`
+ * meldet dem Aufrufer, was dabei geschah, und zwar aus demselben Grund:
+ * Die abgelegte Datei ist dann nicht die gelieferte, und **das darf nicht
+ * nur die Datei wissen.**
+ *
+ * ⚠ **Was keinen leeren Rand hat, kommt Byte fuer Byte unveraendert hier
+ * an und geht Byte fuer Byte unveraendert weiter** — nicht «gleich gross»
+ * oder «gleich aussehend», sondern derselbe String. Beide Umrechnungen
+ * geben im Fall «nichts zu tun» dieselbe Zeichenkette zurueck, und der
+ * Vergleich unten ist darum `!==` auf die Bytes.
+ *
+ * ⚠ **Der Dateiname traegt die Team-Nummer** (`wappen-39010.png`). Er ist
+ * damit im Uploads-Ordner lesbar, und ein verwaistes Bild laesst sich
+ * zuordnen, ohne die Datenbank zu befragen.
+ *
+ * ⚠ `wp_generate_attachment_metadata()` braucht `wp-admin/includes/image.php`
+ * — im REST-Aufruf ist das nicht geladen. **Ohne diesen Einschluss entsteht
+ * der Anhang, aber keine einzige Zwischengroesse**, und die Anzeige fiele
+ * stumm auf das Original zurueck.
+ *
+ * ── ⚠⚠ DIE PRUEFSUMME STEHT ZULETZT, UND DAS IST DER GANZE TRICK ───────
+ *
+ * ~~«`update_post_meta( CC_META_WAPPEN_TEAM )` → `update_post_meta(
+ * CC_META_WAPPEN_SHA )` → Alternativtext → Bildgroessen»~~ — Stand
+ * 23.09.2026, ueberholt: **die Summe stand vor dem Rest.** Stirbt der
+ * Aufruf dazwischen (Zeitueberschreitung, Speicher, fataler Fehler), trug
+ * der Anhang eine Pruefsumme, die nichts mehr belegte — und `bestand`
+ * meldete sie, ClubCampus uebersprang das Team, das Wappen kam nie.
+ *
+ * > **Die Pruefsumme ist die Quittung und nicht der Anfang.** Steht sie
+ * > da, ist alles davor gelungen; fehlt sie, war der Lauf unvollstaendig.
+ * > Eine Reihenfolge, die das umdreht, macht aus dem verlaesslichsten Feld
+ * > der Antwort das unzuverlaessigste.
+ *
+ * ⚠ **Die Team-Nummer bleibt VORNE**, und zwar mit Absicht: Sie ist die
+ * Besitzmarke. Ohne sie ist der Anhang fuer `cc_wappen_anhaenge()`
+ * unsichtbar — ein Abbruch hinterliesse dann ein Bild, das dieser Weg nie
+ * wieder anfassen duerfte. Erst Besitz anmelden, dann arbeiten, zuletzt
+ * quittieren.
+ *
+ * ── ⚠⚠ UND EIN AUFRAEUMER, DER AUCH NACH EINEM ABSTURZ NOCH LAEUFT ─────
+ *
+ * Gemessen am 23.09.2026: Ein fataler Fehler mitten in
+ * `wp_insert_attachment()` liess `wappen-99202.png` im Uploads-Ordner
+ * zurueck — eine Datei ohne jeden Eintrag, die niemand mehr zuordnet und
+ * die beim naechsten Versuch `wappen-99202-1.png` erzwingt. Die
+ * `return`-Wege raeumten sauber auf; **der Abbruch kennt kein `return`.**
+ *
+ * Darum haengt die Aufraeumung an `register_shutdown_function()`: PHP ruft
+ * sie auch nach einem fatalen Fehler und nach der Zeitueberschreitung. Sie
+ * loescht Anhang und Datei, solange `$schwebt` noch gefuellt ist — und
+ * jeder Ausgang dieser Funktion leert es, der erfolgreiche wie der
+ * fehlerhafte. **Was sie also entfernt, ist ausschliesslich ein Lauf, der
+ * nie zu Ende kam.**
+ *
+ * @param string $tid       Die SFV-Teamnummer.
+ * @param string $bytes     Die gelieferten Bilddaten.
+ * @param string $mime      Der am Inhalt gefundene Typ.
+ * @param string $sha       Die Pruefsumme der LIEFERUNG — unangetastet.
+ * @param int   &$standbild 0, oder die Bilderzahl des gelieferten GIF,
+ *                          wenn daraus ein Standbild gemacht wurde.
+ * @param array &$beschnitt Der Bericht von `cc_wappen_beschnitt()`, in der
+ *                          dort beschriebenen Form — immer gefuellt.
+ * @return int|string Anhang-ID, oder eine Fehlermeldung als Text.
+ */
+function cc_wappen_anlegen( string $tid, string $bytes, string $mime, string $sha, &$standbild = null, &$beschnitt = null ) {
+	$standbild = 0;
+
+	$endung = CC_WAPPEN_MIME[ $mime ] ?? '';
+	if ( '' === $endung ) {
+		return 'Typ «' . $mime . '» hat keine Endung — nicht anzulegen';
+	}
+
+	$name = sanitize_file_name( 'wappen-' . $tid . '.' . $endung );
+
+	/* ⚠⚠ **Ein animiertes GIF wird hier still gestellt** — Didis Entscheid
+	   vom 23.09.2026, ausfuehrlich begruendet an `cc_wappen_standbild()`.
+	   Kurz: Die Anzeige kann es nicht (WordPress legt keine Zwischengroesse
+	   in Originalgroesse an und vergroessert nicht), also geschieht es beim
+	   Annehmen.
+
+	   ⚠ **`$sha` wird NICHT nachgerechnet.** Es ist die Summe der
+	   LIEFERUNG, und nur so findet der Zweig `unveraendert` beim naechsten
+	   Lauf wieder eine Uebereinstimmung. Eine Summe der umgerechneten Datei
+	   liesse ClubCampus jedes Wappen bei jedem Lauf neu schicken, und die
+	   Antwort meldete dabei brav `ersetzt`.
+
+	   ⚠ Der Vergleich ist `!==` auf die Bytes und nicht «war es ein GIF?»:
+	   Die Funktion gibt in jedem Fall, der nicht umgerechnet wurde, denselben
+	   String zurueck — **auch im Fehlerfall**. `$standbild` meldet damit nur
+	   das, was wirklich geschah. */
+	$eingegangen = $bytes;
+	$bytes       = cc_wappen_standbild( $bytes, $mime, $bilder );
+	if ( $bytes !== $eingegangen ) {
+		$standbild = (int) $bilder;
+	}
+
+	/* ⚠ ⚠ **Und danach faellt der leere Rand weg** — Didis Entscheid vom
+	   23.09.2026, ausfuehrlich begruendet an `cc_wappen_beschnitt()`.
+	   **Die abgelegte Datei ist das beschnittene Bild.**
+
+	   ⚠ ⚠ **DIE REIHENFOLGE STANDBILD → BESCHNITT IST ABSICHT, NICHT
+	   ZUFALL.** GD liest aus einem animierten GIF nur das erste Bild; ein
+	   Beschnitt VOR dem Standbild machte aus der Lieferung stillschweigend
+	   ein Standbild, und `$standbild` meldete trotzdem 0 — die Antwort
+	   loege ueber das, was geschehen ist. So herum wird das GIF erst
+	   ausdruecklich auf ein Bild zurueckgefuehrt und gemeldet, und der
+	   Beschnitt sieht genau die Bytes, die abgelegt werden.
+	   ⚠ `cc_wappen_beschnitt()` weigert sich bei einem animierten GIF
+	   ausserdem von sich aus — falls `cc_wappen_standbild()` nicht
+	   durchkam, bleibt die Animation und wird nicht heimlich kassiert.
+
+	   ⚠ **`$sha` bleibt auch hier unangetastet**, aus demselben Grund wie
+	   beim Standbild: Es ist die Summe der LIEFERUNG. Eine Summe der
+	   beschnittenen Datei liesse `bestand` bei jedem Lauf eine Abweichung
+	   melden, und ClubCampus schickte jedes Wappen jedes Mal neu. */
+	$vor_beschnitt = $bytes;
+	$bytes         = cc_wappen_beschnitt( $bytes, $mime, $beschnitt );
+	if ( $bytes === $vor_beschnitt && is_array( $beschnitt ) ) {
+		/* ⚠ Gemessen und nicht geglaubt: Meldet der Bericht einen Beschnitt,
+		   die Bytes sind aber dieselben, dann ist der Bericht falsch — und
+		   ein falscher Bericht ist teurer als gar keiner. */
+		$beschnitt['beschnitten'] = false;
+	}
+
+	$ablage = wp_upload_bits( $name, null, $bytes );
+	if ( ! is_array( $ablage ) || ! empty( $ablage['error'] ) ) {
+		return 'Datei nicht ablegbar: ' . (string) ( $ablage['error'] ?? 'unbekannt' );
+	}
+
+	/* ⚠ Ab hier liegt etwas da, das ohne uns niemand mehr findet. `$schwebt`
+	   ist die Notbremse; sie wird auf JEDEM Ausgang geleert, damit der
+	   Aufraeumer nur den Abbruch trifft und nie einen zweiten Eintrag
+	   derselben Nutzlast, der denselben Dateinamen bekommen hat. */
+	$schwebt = array( 'datei' => (string) $ablage['file'], 'anhang' => 0 );
+	register_shutdown_function(
+		static function () use ( &$schwebt ): void {
+			if ( ! is_array( $schwebt ) ) {
+				return;
+			}
+			/* Erst der Anhang (er nimmt seine Dateien mit), dann der Rest —
+			   ein Anhang ohne Pruefsumme ist eine halbe Spur und kein
+			   Wappen. Die Reihenfolge ueberlebt auch einen Speicherabbruch
+			   nach dem ersten Schritt. */
+			if ( $schwebt['anhang'] > 0 ) {
+				wp_delete_attachment( (int) $schwebt['anhang'], true );
+			}
+			if ( '' !== $schwebt['datei'] && file_exists( $schwebt['datei'] ) ) {
+				wp_delete_file( $schwebt['datei'] );
+			}
+			$schwebt = null;
+		}
+	);
+
+	/* ⚠ Der Anhang haengt am Team, wenn es eines gibt — sonst an nichts.
+	   Ein Elternteil, das auf einen Beitrag zeigt, der gar nicht gemeint
+	   ist, waere schlimmer als keines. */
+	$karte  = cc_team_karte();
+	$teamId = (int) ( $karte[ $tid ] ?? 0 );
+
+	$anhang = wp_insert_attachment(
+		array(
+			'post_mime_type' => $mime,
+			'post_title'     => 'Wappen ' . $tid,
+			'post_content'   => '',
+			'post_status'    => 'inherit',
+			'post_parent'    => $teamId,
+		),
+		$ablage['file'],
+		$teamId
+	);
+
+	if ( is_wp_error( $anhang ) || 0 === (int) $anhang ) {
+		/* ⚠ Die Datei liegt dann schon da. Sie wird weggeraeumt, sonst
+		   sammelt der Uploads-Ordner Reste, die niemand je findet. */
+		if ( file_exists( $ablage['file'] ) ) {
+			wp_delete_file( $ablage['file'] );
+		}
+		$schwebt = null;
+		return 'Anhang nicht anlegbar: '
+			. ( is_wp_error( $anhang ) ? $anhang->get_error_message() : 'ID 0' );
+	}
+
+	$anhang             = (int) $anhang;
+	$schwebt['anhang']  = $anhang;
+
+	/* ⚠ Die Besitzmarke zuerst — siehe den Kopf dieser Funktion. */
+	update_post_meta( $anhang, CC_META_WAPPEN_TEAM, $tid );
+
+	/* Der Alternativtext: der Teamname, wenn er da ist. Ein Wappen ohne
+	   Namen ist fuer ein Vorleseprogramm nichts — und «Wappen» allein sagt
+	   auch nichts. */
+	if ( $teamId ) {
+		update_post_meta( $anhang, '_wp_attachment_image_alt', 'Wappen ' . get_the_title( $teamId ) );
+	}
+
+	require_once ABSPATH . 'wp-admin/includes/image.php';
+	$meta = wp_generate_attachment_metadata( $anhang, $ablage['file'] );
+	if ( is_array( $meta ) ) {
+		wp_update_attachment_metadata( $anhang, $meta );
+	}
+
+	/* ⚠ **Letzter Blick auf die Platte, bevor quittiert wird.** Die
+	   Bilderzeugung fasst die Quelldatei an (Drehen nach EXIF, Verkleinern
+	   eines zu grossen Originals); dass sie danach noch daliegt, ist
+	   wahrscheinlich und nicht sicher. Eine Summe, die auf nichts zeigt,
+	   soll hier gar nicht erst entstehen. */
+	$liegt = (string) get_attached_file( $anhang );
+	if ( '' === $liegt || ! file_exists( $liegt ) ) {
+		wp_delete_attachment( $anhang, true );
+		if ( file_exists( $ablage['file'] ) ) {
+			wp_delete_file( $ablage['file'] );
+		}
+		$schwebt = null;
+		return 'Datei nach dem Anlegen nicht mehr auffindbar — nichts eingetragen';
+	}
+
+	/* ⚠ **Die Quittung, und nichts steht mehr dahinter.** */
+	update_post_meta( $anhang, CC_META_WAPPEN_SHA, $sha );
+	$schwebt = null;
+
+	return $anhang;
+}
+
+/**
+ * Die Aktion `wappen`.
+ *
+ * ⚠ **Je Eintrag ein Urteil, und ein schlechter Eintrag haelt die uebrigen
+ * nicht auf.** Dieselbe Regel wie ueberall in dieser Datei: Nicht die ganze
+ * Nutzlast scheitern lassen, sonst kostet ein krummes Wappen alle zwanzig.
+ */
+function cc_route_wappen( WP_REST_Request $req ) {
+	$fehlt = cc_voraussetzungen();
+	if ( array() !== $fehlt ) {
+		return new WP_REST_Response(
+			array( 'fehler' => 'Voraussetzungen fehlen', 'fehlt' => $fehlt ),
+			503
+		);
+	}
+
+	$daten  = $req->get_json_params();
+	$liste  = is_array( $daten['wappen'] ?? null ) ? $daten['wappen'] : null;
+	$hinweis = array();
+
+	if ( null === $liste ) {
+		cc_bericht_ablegen(
+			'wappen',
+			array(
+				'angelegt'     => 0,
+				'ersetzt'      => 0,
+				'unveraendert' => 0,
+				'fehler'       => 0,
+				'hinweis'      => array( 'Abgewiesen: «wappen» ist Pflicht — die Nutzlast fuehrte es nicht.' ),
+			)
+		);
+		return new WP_REST_Response( array( 'fehler' => 'wappen ist Pflicht' ), 400 );
+	}
+
+	$liste = array_values( $liste );
+
+	/* ⚠ **Nicht stumm abschneiden.** Eine Gegenstelle, die 50 schickt und
+	   20 bestaetigt bekommt, haelt sonst 30 Wappen fuer erledigt. */
+	if ( count( $liste ) > CC_WAPPEN_JE_AUFRUF ) {
+		$hinweis[] = sprintf(
+			'%d Eintraege geliefert, %d je Aufruf erlaubt — die uebrigen %d sind NICHT '
+				. 'bearbeitet und muessen erneut geschickt werden.',
+			count( $liste ),
+			CC_WAPPEN_JE_AUFRUF,
+			count( $liste ) - CC_WAPPEN_JE_AUFRUF
+		);
+		$liste = array_slice( $liste, 0, CC_WAPPEN_JE_AUFRUF );
+	}
+
+	$zahl = array( 'angelegt' => 0, 'ersetzt' => 0, 'unveraendert' => 0, 'fehler' => 0 );
+	$urteile = array();
+
+	foreach ( $liste as $i => $eintrag ) {
+		if ( ! is_array( $eintrag ) ) {
+			++$zahl['fehler'];
+			$urteile[] = array(
+				'nummer'      => (int) $i,
+				'sfv_team_id' => '',
+				'urteil'      => 'fehler',
+				'grund'       => 'Eintrag ist kein Objekt',
+			);
+			continue;
+		}
+
+		$tid = cc_wappen_tid( $eintrag['sfv_team_id'] ?? null );
+		if ( '' === $tid ) {
+			++$zahl['fehler'];
+			$urteile[] = array(
+				'nummer'      => (int) $i,
+				'sfv_team_id' => '',
+				'urteil'      => 'fehler',
+				'grund'       => '«sfv_team_id» fehlt oder ist leer',
+			);
+			continue;
+		}
+
+		$geprueft = cc_wappen_pruefe( $eintrag );
+		if ( isset( $geprueft['fehler'] ) ) {
+			++$zahl['fehler'];
+			$urteile[] = array(
+				'nummer'      => (int) $i,
+				'sfv_team_id' => $tid,
+				'urteil'      => 'fehler',
+				'grund'       => $geprueft['fehler'],
+			);
+			continue;
+		}
+
+		$alt = cc_wappen_anhaenge( $tid );
+
+		/* ── Unveraendert: genau einer, er traegt, und seine Summe stimmt. ──
+		   ⚠ Bei MEHREREN wird nicht „unveraendert" gemeldet, auch wenn die
+		   Summe passt: Der Ueberrest gehoert weg, und das ist ein
+		   Schreibvorgang. Er laeuft darum ueber den Ersetzen-Zweig.
+
+		   ⚠⚠ **Und `cc_wappen_mangel()` steht seit 23.09.2026 davor.**
+		   ~~«genau einer, und seine Summe stimmt»~~ — Stand 23.09.2026,
+		   ueberholt: Der Zweig verglich zwei Zeichenketten und sah nie
+		   nach, ob das Bild ueberhaupt noch daliegt. Gemessen: Anhang
+		   #4342 mit geloeschter Datei, dasselbe Wappen erneut geschickt →
+		   `unveraendert`, und die Datei blieb weg. **Das war die zweite
+		   Sperre neben `bestand`:** Selbst eine Gegenstelle, die es
+		   trotzdem versuchte, kam nicht durch. Mit der Pruefung faellt ein
+		   beschaedigter Anhang in den Ersetzen-Zweig und heilt sich. */
+		if ( 1 === count( $alt ) && '' === cc_wappen_mangel( $alt[0] ) ) {
+			$hat = strtolower( trim( (string) get_post_meta( $alt[0], CC_META_WAPPEN_SHA, true ) ) );
+			if ( hash_equals( $geprueft['sha'], $hat ) ) {
+				++$zahl['unveraendert'];
+				$urteile[] = array(
+					'nummer'      => (int) $i,
+					'sfv_team_id' => $tid,
+					'urteil'      => 'unveraendert',
+					'anhang_id'   => $alt[0],
+					'sha256'      => $hat,
+				);
+				continue;
+			}
+		}
+
+		/* ── Anlegen, und erst DANN das Alte weg. ──
+		   ⚠ **Die Reihenfolge ist Absicht.** Scheitert das Anlegen, steht
+		   das alte Wappen noch — die Seite zeigt etwas Veraltetes statt
+		   nichts. Umgekehrt waere der Fehlerfall ein Verlust. */
+		$standbild = 0;
+		$beschnitt = null;
+		$neu       = cc_wappen_anlegen(
+			$tid,
+			$geprueft['bytes'],
+			$geprueft['mime'],
+			$geprueft['sha'],
+			$standbild,
+			$beschnitt
+		);
+
+		if ( ! is_int( $neu ) ) {
+			++$zahl['fehler'];
+			$urteile[] = array(
+				'nummer'      => (int) $i,
+				'sfv_team_id' => $tid,
+				'urteil'      => 'fehler',
+				'grund'       => (string) $neu,
+			);
+			continue;
+		}
+
+		/* ── ⚠⚠ DAS ALTE WEG, ABER NICHT MIT DEN DATEIEN DES NEUEN ──────
+		   Gefunden am 23.09.2026, unmittelbar nachdem die Pruefung oben
+		   den beschaedigten Anhang in diesen Zweig gelenkt hatte:
+
+		     Nachlieferung fuer 99001 → «ersetzt», anhang_id 4350,
+		     entfernt 1 — **und die Datei fehlte danach weiter.**
+
+		   Der Grund ist die Namensvergabe. `wp_unique_filename()` haengt
+		   nur dann eine `-1` an, wenn die Datei schon DALIEGT. Fehlt sie
+		   (und genau das ist der Fall, der hier heilen soll), bekommt das
+		   neue Bild **denselben** Pfad wie das alte — und
+		   `wp_delete_attachment( $alt, true )` loescht die Dateien nach
+		   dem Eintrag des ALTEN Anhangs, also exakt die eben
+		   geschriebenen.
+
+		   > **Die Selbstheilung haette sich in derselben Zeile wieder
+		   > aufgehoben, und zwar still:** Beitrag ersetzt, Zaehler auf
+		   > «ersetzt», Datei weg. Jede Nachlieferung haette das Gleiche
+		   > getan, unbegrenzt oft.
+
+		   Darum ein Schutzband um genau die Pfade des NEUEN Anhangs.
+		   `wp_delete_file` ist der Kernfilter, durch den `wp_delete_
+		   attachment_files()` jede einzelne Datei schickt — Original,
+		   Zwischengroessen und das unskalierte Original. Ein leerer
+		   Rueckgabewert laesst sie stehen. Der Filter haengt nur fuer die
+		   Dauer dieser Schleife. */
+		$schutz_pfade = array();
+		$neu_datei    = (string) get_attached_file( $neu );
+		if ( '' !== $neu_datei ) {
+			$schutz_pfade[] = $neu_datei;
+			$ordner         = dirname( $neu_datei );
+			$neu_meta       = wp_get_attachment_metadata( $neu );
+			foreach ( (array) ( $neu_meta['sizes'] ?? array() ) as $groesse ) {
+				if ( ! empty( $groesse['file'] ) ) {
+					$schutz_pfade[] = $ordner . '/' . $groesse['file'];
+				}
+			}
+			if ( ! empty( $neu_meta['original_image'] ) ) {
+				$schutz_pfade[] = $ordner . '/' . $neu_meta['original_image'];
+			}
+		}
+		$schutz = static function ( $datei ) use ( $schutz_pfade ) {
+			return in_array( (string) $datei, $schutz_pfade, true ) ? '' : $datei;
+		};
+		add_filter( 'wp_delete_file', $schutz );
+
+		$weg = 0;
+		foreach ( $alt as $id ) {
+			/* ⚠ `true` — die Datei im Uploads-Ordner soll mit. Ohne das
+			   bleibt sie liegen, zaehlt gegen den Platz und ist von der
+			   Mediathek aus nicht mehr erreichbar. */
+			if ( wp_delete_attachment( $id, true ) ) {
+				++$weg;
+			}
+		}
+
+		remove_filter( 'wp_delete_file', $schutz );
+
+		if ( $alt ) {
+			++$zahl['ersetzt'];
+		} else {
+			++$zahl['angelegt'];
+		}
+
+		$urteil = array(
+			'nummer'      => (int) $i,
+			'sfv_team_id' => $tid,
+			'urteil'      => $alt ? 'ersetzt' : 'angelegt',
+			'anhang_id'   => $neu,
+			'sha256'      => $geprueft['sha'],
+			'mime'        => $geprueft['mime'],
+			'bytes'       => strlen( $geprueft['bytes'] ),
+		);
+		if ( $weg ) {
+			$urteil['entfernt'] = $weg;
+		}
+		/* ⚠ **Die Antwort sagt es, wenn die abgelegte Datei nicht die
+		   gelieferte ist.** `bytes` und `sha256` daneben beschreiben
+		   weiterhin die LIEFERUNG — das ist kein Widerspruch, sondern die
+		   Aufgabenteilung: Die Summe quittiert den Empfang, `standbild`
+		   meldet, was daraus wurde. Ohne dieses Feld haette die Gegenstelle
+		   keine Moeglichkeit, von der Umrechnung zu erfahren. */
+		if ( $standbild > 1 ) {
+			$urteil['standbild'] = $standbild;
+		}
+		/* ⚠ **Derselbe Satz noch einmal, fuer den Beschnitt.** Die abgelegte
+		   Datei misst dann weniger als die gelieferte, und `bytes`/`sha256`
+		   daneben beschreiben weiterhin die LIEFERUNG. Ohne dieses Feld
+		   haette die Gegenstelle keine Moeglichkeit, von der Aenderung zu
+		   erfahren — und genau solche stillen Aenderungen kosten spaeter.
+
+		   ⚠ **Zwei Schluessel, und sie schliessen einander aus.**
+		   `beschnitt` steht da, wenn geschnitten wurde; `beschnitt_grund`,
+		   wenn es versucht wurde und nicht ging. **Fehlen beide, war nichts
+		   wegzuschneiden** — der Normalfall eines randlosen Wappens, der
+		   keine Meldung verdient.
+
+		   ⚠ Die Kantenlaengen gehen als TEXT («200x200») und nicht als
+		   Behaelter: Ein Schluessel, dessen JSON-Typ sich mit dem Inhalt
+		   aendert, ist beim Auswerten teurer als ein paar Zeichen mehr —
+		   dieselbe Begruendung wie in 0.9.33 und 0.9.34, nur diesmal von
+		   vornherein.
+
+		   ⚠ **`beschnitt_weg` steht nur beim zweiten Weg da** (0.9.36).
+		   Der erste ist der Normalweg und braucht keine Meldung; der
+		   zweite hat nach einer anderen Regel geschnitten — nur die
+		   Durchsichtigkeit —, und das ist eine Auskunft, die die
+		   Gegenstelle haben soll, falls ein Wappen anders herauskommt als
+		   erwartet. Eine Zahl und kein Satz: der Text in `grund` ist fuer
+		   Menschen, und wer auf ihn vergleicht, haengt an einer
+		   Formulierung. */
+		if ( is_array( $beschnitt ) ) {
+			if ( ! empty( $beschnitt['beschnitten'] ) ) {
+				if ( 2 === (int) ( $beschnitt['weg'] ?? 0 ) ) {
+					$urteil['beschnitt_weg'] = 2;
+				}
+				$urteil['beschnitt'] = sprintf(
+					'%dx%d → %dx%d',
+					(int) $beschnitt['breite'],
+					(int) $beschnitt['hoehe'],
+					(int) $beschnitt['breite_neu'],
+					(int) $beschnitt['hoehe_neu']
+				);
+			} elseif ( '' !== (string) ( $beschnitt['grund'] ?? '' ) ) {
+				$urteil['beschnitt_grund'] = (string) $beschnitt['grund'];
+			}
+		}
+		if ( count( $alt ) > 1 ) {
+			$hinweis[] = sprintf(
+				'Team %s trug %d Wappen — aufgeraeumt, eines bleibt.',
+				$tid,
+				count( $alt )
+			);
+		}
+		$urteile[] = $urteil;
+	}
+
+	$antwort = array_merge(
+		$zahl,
+		array(
+			'gesamt'     => count( $liste ),
+			'eintraege'  => $urteile,
+			'hinweis'    => $hinweis,
+			'empfaenger' => basename( __FILE__ ),
+			'version'    => CC_VERSION,
+		)
+	);
+
+	cc_bericht_ablegen( 'wappen', $antwort );
+
+	return new WP_REST_Response( $antwort, 200 );
+}
+
+/**
+ * **Was `bestand` ueber die Wappen meldet — je Team die Nummer und die
+ * Summe.**
+ *
+ * ⚠ **Auch die Teams OHNE Wappen stehen drin**, mit leerer Summe. Eine
+ * Liste, die nur die vorhandenen nennt, beantwortet die Frage der
+ * Gegenstelle nicht: Sie will wissen, was sie schicken muss, und das sind
+ * die leeren Zeilen.
+ *
+ * ⚠ **Und die Wappen OHNE Team stehen auch drin.** Sie entstehen, wenn ein
+ * Wappen vor seinem Team ankommt — kein Fehler, aber ein Zustand, den
+ * niemand sonst sehen wuerde.
+ *
+ * ⚠ ⚠ **SEIT DEM 23.09.2026 GEHT DIESER RUECKGABEWERT AUF ZWEI SCHLUESSEL
+ * DER ANTWORT.** `cc_route_bestand()` legt `teams` als LISTE unter
+ * `wappen` ab und den Rest unter `wappen_lage`. Wer hier ein Feld
+ * hinzufuegt, muss wissen, in welchem der beiden es landet: alles ausser
+ * `teams` geht nach `wappen_lage`.
+ *
+ * ⚠ Die Funktion selbst blieb unveraendert — sie hat weitere Leser
+ * (`pruef/`, Wegwerfskripte), und eine Form zu aendern, die nur an EINER
+ * Stelle falsch verwendet wurde, haette den Fehler verschoben statt
+ * behoben.
+ */
+/**
+ * **Wie viele der zwei freiwilligen Nummern schon ankommen — seit 0.9.30.**
+ *
+ * ⚠ **Eine Null ist hier eine AUSKUNFT und kein Fehler.** ClubCampus
+ * schickt beide Felder erst ab dem naechsten Deploy; bis dahin ist null der
+ * richtige Wert. Ohne diese Zahl bliebe der Gegenstelle nur die Website als
+ * Anzeige — und dort faellt ein fehlendes Feld nicht auf, weil an seiner
+ * Stelle der Platzhalter steht.
+ *
+ * ⚠ **Die Ranglistenzeilen werden aus der OPTION gezaehlt**, nicht aus dem
+ * Wiederholer am Team: Der Abgleich schreibt in `CC_OPT_RANG`, der
+ * Wiederholer ist die handgepflegte Rueckfallquelle. Wer den Wiederholer
+ * zaehlte, mass die Handarbeit und nicht die Lieferung.
+ *
+ * @return array Zaehler fuer beide Felder.
+ */
+function cc_sfv_nummern_lage(): array {
+	/* ── Die Gegnernummer an den Spielen ── */
+	$spiele_mit  = 0;
+	$spiele_alle = 0;
+
+	foreach ( cc_abgleich_kandidaten() as $postId ) {
+		++$spiele_alle;
+		if ( '' !== cc_wappen_tid( get_field( 'sfv_gegner_team_id', (int) $postId ) ) ) {
+			++$spiele_mit;
+		}
+	}
+
+	/* ── Die Nummer je Ranglistenzeile, aus der Ablage ── */
+	$rang       = get_option( CC_OPT_RANG, array() );
+	$zeilen_mit = 0;
+	$zeilen_all = 0;
+	$gruppen    = 0;
+
+	if ( is_array( $rang ) ) {
+		foreach ( $rang as $g ) {
+			if ( ! is_array( $g ) ) {
+				continue;
+			}
+			++$gruppen;
+			/* ⚠ Der Name der Zeilenliste ist nicht zugesichert — die
+			   Gruppenobjekte kommen unveraendert von der Gegenstelle.
+			   Darum jede Liste von Zeilen befragen, statt einen Schluessel
+			   zu raten. */
+			foreach ( $g as $wert ) {
+				if ( ! is_array( $wert ) ) {
+					continue;
+				}
+				foreach ( $wert as $zeile ) {
+					if ( ! is_array( $zeile ) || ! array_key_exists( 'team', $zeile ) ) {
+						continue;
+					}
+					++$zeilen_all;
+					if ( '' !== cc_wappen_tid( $zeile['sfv_team_id'] ?? null ) ) {
+						++$zeilen_mit;
+					}
+				}
+			}
+		}
+	}
+
+	return array(
+		'spiele_gesamt'          => $spiele_alle,
+		'spiele_mit_gegnernummer' => $spiele_mit,
+		'rang_gruppen'           => $gruppen,
+		'rang_zeilen_gesamt'     => $zeilen_all,
+		'rang_zeilen_mit_nummer' => $zeilen_mit,
+	);
+}
+
+/**
+ * ── ⚠⚠ KEINE PRUEFSUMME OHNE ANHANG — 23.09.2026 ──────────────────────
+ *
+ * ~~«`sha256` aus `get_post_meta($ids[0], CC_META_WAPPEN_SHA)`»~~ — Stand
+ * 23.09.2026, ueberholt: **Die Summe wurde gemeldet, sobald das Metafeld
+ * dastand.** Ob die Datei dahinter noch existierte, fragte niemand.
+ *
+ * Gemessen im lokalen Stapel (23.09.2026): Anhang #4342 angelegt, dann die
+ * zwei Dateien von Hand geloescht. Die Antwort war **vorher wie nachher
+ * identisch** — `mit_wappen: 1`, `sha256: 00fcc0b2…`, `anhang_id: 4342`,
+ * `mehrfach: 0` —, die Seite zeigte ein `<img>` auf eine Adresse mit HTTP
+ * **404**, und eine erneute Lieferung wurde mit `unveraendert` abgewiesen.
+ *
+ * ── ⚠⚠ WAS CLUBCAMPUS DAVON SIEHT (VERTRAG MIT EINEM FREMDEN REPOSITORY)
+ *
+ * Die Antwortform waechst um **ein** Feld je Teamzeile und **einen**
+ * Zaehler. Bestehende Felder behalten Name und Bedeutung; ein Leser, der
+ * das neue Feld nicht kennt, liest weiter richtig — er sieht nur eine
+ * leere `sha256` und schickt das Wappen nach, und genau das ist gewollt.
+ *
+ *   `mangel`          je Teamzeile, Text. Leer heisst: alles in Ordnung.
+ *                     Sonst steht da im Klartext, WARUM die Summe leer ist
+ *                     («Datei fehlt im Uploads-Ordner (wappen-39010.png)»,
+ *                     «Pruefsumme fehlt am Anhang — das Anlegen wurde
+ *                     abgebrochen»).
+ *   `wappen_verloren` oben in der Lage, Zahl. Wie viele Teams ein Wappen
+ *                     hatten und es verloren haben.
+ *
+ * > **Warum nicht einfach stumm die Summe leeren?** Weil «nie geliefert»
+ * > und «geliefert, aber verloren» dasselbe aussaehen. Das erste ist der
+ * > Normalfall eines jungen Bestands, das zweite ein Befund, dem jemand
+ * > nachgehen muss — eine Mediathek, die Dateien verliert, verliert
+ * > naechste Woche mehr als Wappen.
+ *
+ * ⚠ **`anhang_id` und `mehrfach` haetten NICHT gereicht**, und das ist
+ * geprueft und nicht vermutet: `anhang_id > 0` bei leerer `sha256` waere
+ * eine Regel, die nur kennt, wer sie hier nachliest — und sie nennte den
+ * Grund nicht. `mehrfach` beantwortet eine andere Frage (Ueberreste) und
+ * ist im Schadensfall `0`, sieht also aus wie Ordnung.
+ */
+function cc_wappen_lage(): array {
+	$karte    = cc_team_karte();
+	$zeilen   = array();
+	$mit      = 0;
+	$verloren = 0;
+
+	foreach ( $karte as $tid => $teamId ) {
+		$tid    = cc_wappen_tid( $tid );
+		$ids    = cc_wappen_anhaenge( $tid );
+		$id     = $ids ? (int) $ids[0] : 0;
+		$mangel = $id ? cc_wappen_mangel( $id ) : '';
+
+		/* ⚠ Die Summe wird NUR gelesen, wenn der Anhang traegt. Sie sonst
+		   zu melden, waere die Zusage, dass das Bild daliegt — und die
+		   Gegenstelle ueberspringt, was `bestand` als vorhanden fuehrt. */
+		$sha = ( $id && '' === $mangel )
+			? strtolower( trim( (string) get_post_meta( $id, CC_META_WAPPEN_SHA, true ) ) )
+			: '';
+
+		if ( '' !== $sha ) {
+			++$mit;
+		} elseif ( '' !== $mangel ) {
+			++$verloren;
+		}
+
+		$zeilen[] = array(
+			'sfv_team_id' => $tid,
+			'sha256'      => $sha,
+			'anhang_id'   => $id,
+			'mehrfach'    => count( $ids ) > 1 ? count( $ids ) : 0,
+			'mangel'      => $mangel,
+			'team'        => $teamId ? get_the_title( $teamId ) : '',
+		);
+	}
+
+	/* Wappen, deren Nummer zu keinem Team passt. */
+	$fremd = array();
+	foreach ( cc_wappen_alle() as $id => $tid ) {
+		if ( ! isset( $karte[ $tid ] ) ) {
+			$fremd[] = array( 'sfv_team_id' => $tid, 'anhang_id' => (int) $id );
+		}
+	}
+
+	/* ⚠⚠ **`teams_gesamt` zaehlt Teams MIT `sfv_id`, nicht alle Teams — und
+	   eine Null hier braucht ihre Erklaerung.** Gemessen am 23.09.2026 im
+	   lokalen Stapel: 11 Teams, davon **0 mit `sfv_id`**. `bestand` meldete
+	   damit «teams_gesamt: 0», waehrend elf Mannschaften dastehen.
+
+	   > **Eine Null ohne Bezugsgroesse ist keine Auskunft, sondern eine
+	   > Falle.** Die Gegenstelle koennte sie fuer «keine Teams» lesen und
+	   > aufhoeren, statt fuer «die Nummern fehlen noch» und nachzufragen.
+
+	   Darum steht `teams_ohne_sfv_id` daneben. Die elf SFV-Nummern sind ein
+	   offener Punkt des Vereins, kein Fehler dieses Wegs — aber er darf ihn
+	   nicht verschweigen. */
+	$alle_teams = get_posts(
+		array(
+			'post_type'   => CC_TYP_TEAM,
+			'post_status' => CC_TEAM_ZUSTAENDE,
+			'numberposts' => -1,
+			'fields'      => 'ids',
+		)
+	);
+
+	/* ⚠ `wappen_verloren` ist eine Teilmenge von `ohne_wappen` und kein
+	   dritter Topf. Ohne den Zaehler muesste die Gegenstelle alle Zeilen
+	   durchsehen, um zu merken, dass ueberhaupt etwas kaputt ist — und ein
+	   Befund, den man suchen muss, wird nicht gefunden. */
+	return array(
+		'teams_gesamt'      => count( $zeilen ),
+		'teams_ohne_sfv_id' => count( $alle_teams ) - count( $zeilen ),
+		'mit_wappen'        => $mit,
+		'ohne_wappen'       => count( $zeilen ) - $mit,
+		'wappen_verloren'   => $verloren,
+		'ohne_team'         => $fremd,
+		'teams'             => $zeilen,
+	);
+}
+
+/** Alle Wappen-Anhaenge als `[ Anhang-ID => sfv_team_id ]`. */
+function cc_wappen_alle(): array {
+	$ids = get_posts(
+		array(
+			'post_type'        => 'attachment',
+			'post_status'      => 'inherit',
+			'numberposts'      => -1,
+			'fields'           => 'ids',
+			'suppress_filters' => false,
+			'meta_query'       => array(
+				array(
+					'key'     => CC_META_WAPPEN_TEAM,
+					'compare' => 'EXISTS',
+				),
+			),
+		)
+	);
+
+	$raus = array();
+	foreach ( (array) $ids as $id ) {
+		$raus[ (int) $id ] = cc_wappen_tid( get_post_meta( (int) $id, CC_META_WAPPEN_TEAM, true ) );
+	}
+	return $raus;
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════════
    SPERREN IM BACKEND
    ═══════════════════════════════════════════════════════════════════════
 
@@ -3541,4 +6642,108 @@ add_action(
 			esc_html( implode( ', ', array_slice( $doppelte, 0, 10 ) ) )
 		);
 	}
+);
+
+
+/* ══════════════════════════════════════════════════════════════════════
+   LAUFZEIT IN JEDER ANTWORT — 0.9.38 (26.09.2026)
+   ══════════════════════════════════════════════════════════════════════
+
+   ⚠ **DIESE DATEI LIEFERT CLUBCAMPUS ALS GANZES.** Beim naechsten Nachschub
+   wird sie ERSETZT und nicht zusammengefuehrt — was hier steht und drueben
+   nicht nachgezogen wird, ist dann weg, ohne Konflikt und ohne Meldung.
+
+   ── Warum die Zahl in JEDE Antwort gehoert ──────────────────────────────
+
+   Die Laufzeit wurde bisher nur im ABBRUCHBERICHT festgehalten
+   (`cc_bericht_notfalls()`, Feld `laufzeit`). **Damit gab es sie genau dann,
+   wenn es zu spaet war.** Ein Lauf, der in 90 s durchkommt, meldete dieselbe
+   Antwort wie einer, der in 8 s durchkam — und niemand konnte sehen, dass
+   die 150 s naeher rueckten, bevor sie gerissen wurden.
+
+   > **Eine Zahl, die erst im Schadensfall entsteht, misst den Schaden und
+   > nicht den Weg dorthin.**
+
+   Die Gegenstelle bekommt sie jetzt bei jedem Aufruf und kann selbst
+   entscheiden, ob sie den Abgleich kleiner schneidet.
+
+   ── Was genau gemessen wird, und warum zwei Quellen ─────────────────────
+
+   ```
+   cc_lauf_stand['start']   die Messung der Route selbst (Weg «spiele»);
+                            beginnt NACH cc_voraussetzungen() und dem
+                            Zeitschutz — dieselbe Zahl, die der
+                            Abbruchbericht fuehrt
+   cc_anfrage_start         Rueckfall fuer alle uebrigen Routen: gesetzt,
+                            wenn diese Datei geladen wird
+   ```
+
+   ⚠ **Die zwei sind nicht dasselbe, und das ist Absicht.** Wer `laufzeit_ms`
+   mit dem `laufzeit`-Feld des Abbruchberichts vergleicht, soll dieselbe
+   Zahl sehen; darum hat `cc_lauf_stand['start']` Vorrang. Fuer `/status`
+   und `/bestand` gibt es keine solche Messung, und dort ist die Ladezeit
+   der Datei der ehrlichere Anfang.
+
+   ⚠ **Auch Fehlerantworten tragen sie** — 401, 400, 503. Gerade dort ist
+   sie etwas wert: Eine abgewiesene Anfrage, die 40 s gebraucht hat, sagt
+   etwas ganz anderes als eine, die sofort zurueckkam.
+
+   ⚠ **In Millisekunden und als Ganzzahl.** Der Abbruchbericht fuehrt
+   `laufzeit` in SEKUNDEN (`(int)` einer Differenz, also abgeschnitten —
+   aus 0,9 s wird dort 0). Ein zweites Feld mit demselben Namen und einer
+   anderen Einheit waere die Falle; darum heisst dieses `laufzeit_ms` und
+   sagt die Einheit im Namen. */
+
+$GLOBALS['cc_anfrage_start'] = microtime( true );
+
+/**
+ * Die bisher verstrichene Zeit dieser Anfrage in Millisekunden.
+ *
+ * @return int Millisekunden, nie negativ.
+ */
+function cc_laufzeit_ms(): int {
+	$start = $GLOBALS['cc_lauf_stand']['start']
+		?? $GLOBALS['cc_anfrage_start']
+		?? microtime( true );
+
+	return (int) max( 0, round( ( microtime( true ) - (float) $start ) * 1000 ) );
+}
+
+add_filter(
+	'rest_post_dispatch',
+	/**
+	 * @param mixed           $ergebnis Antwort des Servers.
+	 * @param mixed           $server   REST-Server (ungenutzt).
+	 * @param WP_REST_Request $anfrage  Die Anfrage.
+	 * @return mixed
+	 */
+	static function ( $ergebnis, $server, $anfrage ) {
+		if ( ! $ergebnis instanceof WP_HTTP_Response || ! $anfrage instanceof WP_REST_Request ) {
+			return $ergebnis;
+		}
+
+		/* ⚠ Nur der eigene Namensraum. Ein Filter, der JEDE REST-Antwort
+		   der Website anfasst, veraendert fremde Schnittstellen — und der
+		   Block-Editor ist eine davon. */
+		if ( 0 !== strpos( (string) $anfrage->get_route(), '/' . CC_ROUTE . '/' ) ) {
+			return $ergebnis;
+		}
+
+		$daten = $ergebnis->get_data();
+		if ( ! is_array( $daten ) ) {
+			return $ergebnis;
+		}
+
+		/* ⚠ Nicht ueberschreiben, falls eine Route das Feld je selbst
+		   fuehrt: die Route weiss mehr ueber ihren eigenen Lauf als dieser
+		   Filter, der nur das Ende sieht. */
+		if ( ! array_key_exists( 'laufzeit_ms', $daten ) ) {
+			$daten['laufzeit_ms'] = cc_laufzeit_ms();
+			$ergebnis->set_data( $daten );
+		}
+
+		return $ergebnis;
+	},
+	10,
+	3
 );
