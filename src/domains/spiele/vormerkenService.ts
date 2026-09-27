@@ -40,26 +40,6 @@ import {
 } from "../../../supabase/functions/sfv-sync/matchdaten.ts";
 import { aktuelleSfvSaison, saisonZeitraum } from "./spielMapper.ts";
 
-/**
- * ⚠ ⚠  UEBERGANGSTYP — faellt weg, sobald die Migration eingespielt und
- * `npm run gen:types` gelaufen ist.
- *
- * `supabase/migration_matchdaten_vormerken.sql` legt die Spalte an; sie
- * steht damit noch nicht in `database.types.ts`, und ein Objektliteral mit
- * diesem Feld waere fuer `tsc` eine erfundene Spalte (TS2353).
- *
- * ⚠ Die Typdatei wird deshalb NICHT von Hand ergaenzt: sie ist erzeugt,
- * und was man von Hand hineinschreibt, nimmt der naechste Lauf von
- * `gen:types` wieder zurueck — schlimmer noch, bis dahin sieht die Spalte
- * aus, als waere sie gemessen. Dieser Typ nennt stattdessen GENAU das eine
- * Feld, das fehlt, und verschwindet mit ihm.
- *
- * Dasselbe Muster wie `MitgliedUpdate` in `types.ts`: ein erzeugter Typ
- * plus die eine Bruecke, die es noch braucht.
- */
-type SpielVormerkUpdate = TablesUpdate<"spiele"> & {
-  matchdaten_vorgemerkt_am: string | null;
-};
 
 export interface VormerkErgebnis {
   ok: boolean;
@@ -163,26 +143,14 @@ export async function merkeGespielteVor(
   }
   const gefunden = zaehlung.count ?? 0;
 
-  const felder: SpielVormerkUpdate = { matchdaten_vorgemerkt_am: jetzt.toISOString() };
-
-  /* ⚠ ⚠  DIE EINE UMDEUTUNG, UND SIE HAT EIN ABLAUFDATUM.
-     supabase-js prueft den Update-Rumpf mit `RejectExcessProperties` gegen
-     `database.types.ts`; solange die Migration nicht eingespielt und
-     `npm run gen:types` nicht gelaufen ist, gibt es die Spalte dort nicht
-     und JEDE Form scheitert — auch die Schnittmenge darueber (TS2345,
-     `matchdaten_vorgemerkt_am: never`).
-
-     ⚠ Sie steht hier und nicht in `database.types.ts`: die Typdatei ist
-     erzeugt, und was man von Hand hineinschreibt, nimmt der naechste Lauf
-     von `gen:types` wieder zurueck — bis dahin saehe die Spalte aus, als
-     waere sie geprueft.
-
-     ⚠ Die Umdeutung betrifft AUSSCHLIESSLICH diese Zuweisung, nicht den
-     Wert: `SpielVormerkUpdate` oben nennt Feld und Typ weiterhin
-     ausgeschrieben, und wer nach der Spalte sucht, findet sie dort. Nach
-     `gen:types` faellt diese Zeile ersatzlos weg — dann traegt der
-     erzeugte Typ das Feld selbst. */
-  const rumpf = felder as unknown as TablesUpdate<"spiele">;
+  /* Der erzeugte Typ traegt die Spalte seit dem 27.09.2026 selbst — bis
+     dahin stand hier eine Umdeutung, weil `database.types.ts` sie noch
+     nicht kannte. Sie ist mit der Migration gefallen, und ein Fall hat
+     sie bewacht: er wurde rot, als es soweit war, statt darauf zu
+     hoffen, dass jemand daran denkt. */
+  const rumpf: TablesUpdate<"spiele"> = {
+    matchdaten_vorgemerkt_am: jetzt.toISOString(),
+  };
 
   /* ⚠ ⚠  `.select("id")` AM SCHREIBVORGANG, nicht als zweite Abfrage
      daneben. Lesen und Schreiben haengen an verschiedenen Policies: eine

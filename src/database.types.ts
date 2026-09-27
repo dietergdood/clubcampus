@@ -4046,6 +4046,7 @@ export type Database = {
           id: string
           liga: string | null
           matchdaten_geholt_am: string | null
+          matchdaten_vorgemerkt_am: string | null
           notes: string | null
           resultat: string | null
           schiedsrichter: string | null
@@ -4084,6 +4085,7 @@ export type Database = {
           id?: string
           liga?: string | null
           matchdaten_geholt_am?: string | null
+          matchdaten_vorgemerkt_am?: string | null
           notes?: string | null
           resultat?: string | null
           schiedsrichter?: string | null
@@ -4122,6 +4124,7 @@ export type Database = {
           id?: string
           liga?: string | null
           matchdaten_geholt_am?: string | null
+          matchdaten_vorgemerkt_am?: string | null
           notes?: string | null
           resultat?: string | null
           schiedsrichter?: string | null
@@ -5013,6 +5016,10 @@ export type Database = {
       check_email_bekannt: {
         Args: { p_email: string; p_verein_id: string }
         Returns: Json
+      }
+      export_nachlauf_faellig: {
+        Args: { p_verein_id: string }
+        Returns: boolean
       }
       export_wartet: { Args: { p_verein_id: string }; Returns: number }
       get_my_mitglied_id: { Args: never; Returns: number }
