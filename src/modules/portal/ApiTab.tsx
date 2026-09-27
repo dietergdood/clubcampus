@@ -330,8 +330,8 @@ export function ApiTab({loading,isMobile,mobileKachel,apiVerbindungen,tab,sb=nul
        Gegenstelle, oder unsere Durchreichliste —, und die Zeile nennt
        beide, weil wir sie hier nicht unterscheiden koennen. */
     const fehlt=(k:string)=>d[k]===undefined;
-    const NICHT="⚠ nicht übermittelt — ältere Gegenstelle, oder das Feld "
-      +"steht nicht in EMPFAENGER_DIAGNOSE";
+    const NICHT="⚠ nicht geliefert — die Gegenstelle schickt das Feld nicht, "
+      +"oder wir reichen es nicht durch";
     const sf=(d.spielfelder??{}) as Record<string,string>;
     const ohneFeld=Object.entries(sf).filter(([,v])=>v!=="feld");
     const zeilen=[

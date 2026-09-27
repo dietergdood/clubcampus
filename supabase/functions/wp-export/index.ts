@@ -701,9 +701,18 @@ Deno.serve(async (req) => {
         .filter((t: { fehler: string | null }) => !t.fehler)
         .map((t: { team: string }) => t.team),
     );
-    const rang = gesendeteTeams.size
-      ? await sendeRanglisten(db, vereinId, nurTeam, gesendeteTeams)
-      : { uebersprungen: "Keine Mannschaft gesendet — ohne Spiele keine Rangliste." };
+    /* ⚠ ⚠  UNABHAENGIG VOM SPIELVERSAND — zweiter Teil des Befundes vom
+       27.09.2026. Hier stand `gesendeteTeams.size ? … : uebersprungen`,
+       also: keine Spiele gesendet, keine Rangliste.
+
+       Seit Empfaenger 0.9.39 ist „keine Spiele gesendet“ der NORMALFALL —
+       unveraenderte Spiele werden uebersprungen. Die Bedingung haette die
+       Ranglisten damit gerade dann abgeschaltet, wenn alles in Ordnung
+       ist. Und eine Tabelle aendert sich ohnehin unabhaengig davon: der
+       Verband rechnet sie, nicht wir.
+
+       ⚠ `null` statt `gesendeteTeams`: alle eigenen Mannschaften. */
+    const rang = await sendeRanglisten(db, vereinId, nurTeam, null);
 
     /* ⚠ ⚠  EIGENER BLOCK, UND DAS IST DER GANZE PUNKT.
 
@@ -1305,7 +1314,25 @@ async function sendeRanglisten(
     ((tRes.data ?? []) as { sfv_team_id: number }[]).map((t) => String(t.sfv_team_id)),
   );
   if (nurTeam) unsere = new Set([...unsere].filter((t) => t === nurTeam));
-  if (nurTeams) unsere = new Set([...unsere].filter((t) => nurTeams.has(t)));
+  /* ⚠ ⚠  `nurTeams` FILTERT HIER NICHT MEHR — Befund vom 27.09.2026.
+
+     Bis dahin bekam diese Funktion die Mannschaften, deren SPIELE der
+     Lauf gerade gesendet hatte. Bei einem Etappenlauf waren das sieben,
+     also gingen auch nur deren Gruppen hinaus. Drueben kam das als
+     „stueckweise“ an: Lauf 1 die Gruppen von Team 1–7, Lauf 2 die von
+     8–14 — und weil die Ablage dort auf die jeweils gelieferten kuerzte,
+     blieben **6 von 21** uebrig.
+
+     ⚠ Die Kopplung war kuenstlich. Eine Gruppentabelle haengt nicht
+     daran, ob wir gerade die Spiele dieser Mannschaft geschickt haben;
+     sie aendert sich, wenn der Verband sie rechnet. Und sie kostet
+     nichts: Ranglisten gehen in EINEM POST hinaus, ob mit 6 Gruppen
+     oder mit 21.
+
+     `nurTeam` bleibt — das ist der ausdrueckliche Einzelabruf fuer die
+     Diagnose, den jemand von Hand setzt. Der Unterschied ist, wer
+     entscheidet. */
+  void nurTeams;
   if (!unsere.size) {
     return { ziel: host, uebersprungen: "Keine zugeordnete Mannschaft — nichts zu senden." };
   }
@@ -1334,7 +1361,27 @@ async function sendeRanglisten(
   const antwort = await fetch(`${basis}/clubcampus/v1/ranglisten`, {
     method: "POST",
     headers: { "Content-Type": "application/json", "X-FCH-Schluessel": schluessel },
-    body: JSON.stringify({ gruppen }),
+    /* ⚠ ⚠  `teams` IST DER GELTUNGSBEREICH — dieselbe Rolle wie beim
+       Spiele-Weg, und aus demselben Grund. Er sagt: „dieser Aufruf
+       spricht ueber DIESE Mannschaften, und ueber keine anderen.“
+
+       Ohne ihn hat die Gegenstelle nur zwei Moeglichkeiten, und beide
+       sind falsch: alles aufraeumen, was nicht geliefert wurde (dann
+       kuerzt ein Teilversand den Bestand — genau der Vorfall vom
+       27.09.2026, 6 von 21 uebrig), oder nie aufraeumen (dann bleibt
+       eine Gruppe stehen, die es nicht mehr gibt).
+
+       ⚠ Heute sind es immer alle: der Filter oben ist gefallen. Der
+       Geltungsbereich ist trotzdem kein Zierrat — er haelt die Zusage
+       AUSDRUECKLICH, statt sie daran zu haengen, dass niemand je wieder
+       filtert. Setzt jemand `nurTeam` fuer eine Diagnose, schrumpft er
+       mit, und drueben wird nur darin aufgeraeumt.
+
+       ⚠ Aus `unsere`, nicht aus `gruppen`: eine Mannschaft, zu der der
+       Verband gerade KEINE Tabelle fuehrt, gehoert in den Bereich. Sonst
+       raeumte drueben ihre alte Gruppe nie weg — und das ist der Fall,
+       fuer den das Aufraeumen gebaut ist. */
+    body: JSON.stringify({ gruppen, teams: [...unsere].sort() }),
   });
   const text = await antwort.text();
   let wp: WpAntwort;
