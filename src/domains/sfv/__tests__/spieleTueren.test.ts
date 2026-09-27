@@ -66,16 +66,38 @@ function tueren(): string[] {
 }
 
 describe("Türen in die Tabelle spiele", () => {
-  it("es sind genau die drei bekannten", () => {
+  it("es sind genau die vier bekannten", () => {
     /* ⚠ Kommt eine dazu, ist die Frage zu beantworten, BEVOR sie steht:
        schreibt sie ein Feld, das unter `sfv` deklariert ist? Und wenn
        nein — gehört es dorthin, oder gehört der Schreibvorgang weg?
 
        matchdatenLauf.ts  Halbzeitstand (ht_resultat, seit 10.09.2026)
        matchdatenLauf.ts  matchdaten_geholt_am + schiedsrichter
+       matchdatenLauf.ts  matchdaten_vorgemerkt_am = null (seit 27.09.2026)
        sync.ts            der Spielplan-Upsert — die EINZIGE Tür, an der
-                          schneideAufFeldhoheit() steht */
+                          schneideAufFeldhoheit() steht
+
+       ⚠ ⚠  DIE VIERTE TÜR, UND DIE FRAGE IST BEANTWORTET STATT ÜBERGANGEN.
+       Dieser Fall ist am 27.09.2026 rot geworden, weil er soll — hier steht
+       die Antwort, nicht bloss die erhöhte Zahl:
+
+         schreibt sie ein SFV-Feld?   NEIN. `matchdaten_vorgemerkt_am` ist
+                                      eine Marke des PORTALS: jemand hat den
+                                      Neuabruf von Hand bestellt. Der Verband
+                                      kennt sie nicht und liefert sie nie.
+         gehört sie in `sync_felder`? NEIN, aus demselben Grund wie
+                                      `matchdaten_geholt_am`, das ebenfalls
+                                      keiner Deklaration untersteht: der
+                                      Vertrag regelt, wem ein DATENFELD
+                                      gehört. Eine Laufmarke ist kein Datum
+                                      über das Spiel.
+         gehört der Schreibweg weg?   NEIN. Er ist der Gegenpart zum
+                                      Vormerken: ein Auftrag für EINEN Lauf.
+                                      Ohne ihn stünde das Spiel in jedem
+                                      folgenden Lauf wieder vorne und
+                                      verstopfte den Kopf der Schlange. */
     expect(tueren()).toEqual([
+      "matchdatenLauf.ts update",
       "matchdatenLauf.ts update",
       "matchdatenLauf.ts update",
       "sync.ts upsert",

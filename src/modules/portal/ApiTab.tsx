@@ -14,6 +14,8 @@ import {
   holeNummernprobe,
 } from "../../domains/sfv/sfvService.ts";
 import { starteWpExport, fasseExportZusammen, holeEmpfaengerStatus, holeBestand } from "../../domains/spiele/wpExportService.ts";
+import { merkeGespielteVor } from "../../domains/spiele/vormerkenService.ts";
+import type { VormerkErgebnis } from "../../domains/spiele/vormerkenService.ts";
 import { deuteBestand } from "../../domains/spiele/bestandAnzeige.ts";
 import { deuteExportStand } from "../../domains/spiele/exportStandAnzeige.ts";
 import { holeExportWartet } from "../../domains/spiele/exportWartetService.ts";
@@ -158,6 +160,44 @@ export function ApiTab({loading,isMobile,mobileKachel,apiVerbindungen,tab,sb=nul
     holeExportWartet(sb,vereinId).then(e=>{if(lebt)setWartet(e);});
     return ()=>{lebt=false;};
   },[sb,vereinId,wpDa,wpStand]);
+
+  /* ── Gespielte Spiele einer Mannschaft neu holen ──────────────────────
+
+     ⚠ ⚠  DER EINZIGE SCHREIBVORGANG DIESER KACHEL, DER NICHT EIN LAUF IST.
+     Er setzt `spiele.matchdaten_vorgemerkt_am`; geholt wird erst danach,
+     vom stuendlichen Sync. Die Meldung sagt deshalb eine DAUER und keinen
+     Erfolg — ein „fertig" waere hier gelogen.
+
+     Warum es den Knopf gibt: traegt ein Trainer beim Verband nachtraeglich
+     etwas nach, steht bei uns der Stand vom Abruf. Der rollende Nachlauf
+     kommt mit zwei Plaetzen ueber ~270 Spiele erst in rund fuenf Tagen
+     wieder vorbei — bis dahin zeigt die Website die alte Aufstellung. */
+  const [vormerkTeam,setVormerkTeam]=useState("");
+  const [vormerkLaeuft,setVormerkLaeuft]=useState(false);
+  const [vormerk,setVormerk]=useState<VormerkErgebnis|null>(null);
+
+  /* ⚠ NUR MANNSCHAFTEN MIT VERBANDSNUMMER. Ohne `sfv_team_id` gibt es
+     keine gesyncten Spiele und damit nichts vorzumerken — ein Eintrag in
+     der Liste, der immer „nichts gefunden" ergibt, sieht aus wie ein
+     Defekt. Wie viele dadurch fehlen, steht daneben: eine Auswahl, die
+     schweigend die Haelfte weglaesst, ist keine Auswahl.
+
+     ⚠ Die Zahl wird GEZAEHLT und nicht abgeschrieben. „21 von 42" ist eine
+     Messung vom 14.09.2026; hier steht, was heute in `dbTeams` liegt. */
+  const sfvTeams=(dbTeams??[]).filter(t=>t.sfv_team_id!=null)
+    .slice().sort((a,b)=>String(a.name).localeCompare(String(b.name),"de"));
+  const teamsOhneNummer=(dbTeams??[]).length-sfvTeams.length;
+
+  async function vormerkenStarten(){
+    setVormerkLaeuft(true);
+    /* ⚠ Die alte Meldung weg, BEVOR die neue kommt. Bliebe sie stehen,
+       stuende neben einer laufenden Aktion das Ergebnis der vorigen — und
+       niemand koennte sagen, welche Mannschaft gemeint ist. */
+    setVormerk(null);
+    const e=await merkeGespielteVor(sb,vereinId,vormerkTeam?Number(vormerkTeam):null);
+    setVormerk(e);
+    setVormerkLaeuft(false);
+  }
 
   /** Was vom Lauf angezeigt wird — aufgezaehlt, nicht ausgeschlossen. */
   function fasseZusammen(daten: unknown): string {
@@ -1046,6 +1086,70 @@ export function ApiTab({loading,isMobile,mobileKachel,apiVerbindungen,tab,sb=nul
                          über den Zeitplan.
                        </span>}
                   </Row>
+
+                  {/* ── Gespielte Spiele einer Mannschaft neu holen ──────────
+                      ⚠ EIGENE ZEILE UNTER DEN KNÖPFEN, nicht in der Reihe.
+                      Die Knöpfe darüber lösen einen Lauf aus oder fragen
+                      etwas; dieser hier SCHREIBT und braucht vorher eine
+                      Wahl. Zwischen Auskunftsknöpfen stehend sähe er aus wie
+                      einer von ihnen. */}
+                  {api.key==="football_ch"&&(
+                    <div style={{marginTop:12,paddingTop:12,borderTop:"1px solid var(--border)"}}>
+                      <div className="cc-section-title" style={{marginBottom:6}}>
+                        <TI n="refresh" size={14}/> Gespielte Spiele einer Mannschaft neu holen
+                      </div>
+                      <div style={{fontSize:13,color:"var(--sub)",lineHeight:1.5,marginBottom:8}}>
+                        Merkt alle ausgetragenen Spiele der Mannschaft in dieser Saison zum
+                        Neuabruf vor. Geholt wird nicht sofort, sondern vom stündlichen Sync —
+                        für den Fall, dass beim Verband nachträglich etwas erfasst wurde.
+                      </div>
+                      {sfvTeams.length===0
+                        /* ⚠ Kein leerer Auswahlkasten: eine Auswahl ohne
+                           Einträge ist von einer nicht geladenen nicht zu
+                           unterscheiden. Hier steht, was fehlt. */
+                        ?<div style={{fontSize:13,color:BK,lineHeight:1.5}}>
+                           Keine Mannschaft hat eine Verbandsnummer — ohne sie gibt es keine
+                           gesyncten Spiele. Zuzuordnen unter „Teams zuordnen".
+                         </div>
+                        :<>
+                          <Row align="center" wrap>
+                            <select
+                              value={vormerkTeam}
+                              disabled={vormerkLaeuft}
+                              onChange={e=>{setVormerkTeam(e.target.value);setVormerk(null);}}
+                              style={{minWidth:220,padding:"5px 8px",borderRadius:8,
+                                      border:"1px solid var(--border)",background:"var(--surface)",
+                                      color:"var(--text)",fontSize:13,fontFamily:"inherit"}}>
+                              <option value="">— Mannschaft wählen —</option>
+                              {sfvTeams.map(t=>(
+                                <option key={t.id} value={String(t.sfv_team_id)}>{t.name}</option>
+                              ))}
+                            </select>
+                            <Btn small variant="outline" color="#888"
+                                 onClick={vormerkenStarten}
+                                 disabled={vormerkLaeuft||!vormerkTeam}>
+                              {vormerkLaeuft?"Läuft…":"Gespielte Spiele neu holen"}
+                            </Btn>
+                          </Row>
+                          {teamsOhneNummer>0&&(
+                            <div style={{fontSize:12,color:"var(--sub)",marginTop:6,lineHeight:1.5}}>
+                              {teamsOhneNummer} von {(dbTeams??[]).length} Mannschaften haben keine
+                              Verbandsnummer und stehen deshalb nicht zur Wahl.
+                            </div>
+                          )}
+                          {/* ⚠ Die Meldung steht da, sobald es eine gibt — auch
+                              die, die null Treffer meldet. Ein Knopf, nach dem
+                              nichts erscheint, ist von einem ohne Wirkung nicht
+                              zu unterscheiden. */}
+                          {vormerk&&(
+                            <div style={{fontSize:13,marginTop:8,lineHeight:1.5,wordBreak:"break-word",
+                                         color:vormerk.ok?"var(--text)":"var(--danger,#ef4444)"}}>
+                              {vormerk.text}
+                            </div>
+                          )}
+                        </>}
+                    </div>
+                  )}
                 </Card>
               );
             })}

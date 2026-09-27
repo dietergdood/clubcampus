@@ -1,7 +1,9 @@
 import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import ts from "typescript";
-import { suche, jederKnoten, kette, textLiterale } from "../../../test-helpers/quelltext.ts";
+import {
+  suche, jederKnoten, kette, textLiterale, objektEigenschaften, baue, zeileVon,
+} from "../../../test-helpers/quelltext.ts";
 import {
   bildeAufstellung, bildeEreignis, istEigener, istKorrekturUeberfluessig,
   leseHalbzeit, waehleKandidaten, NACHZUG_TAGE, bildeOffeneNamen, jahrgangAus,
@@ -774,8 +776,17 @@ describe("Nachzug — vergleicht nur die geaenderten Felder", () => {
 
 describe("waehleKandidaten", () => {
   const jetzt = new Date("2026-08-19T12:00:00Z");
-  const s = (id: string, date: string, geholt: string | null, matchId: number | null = 1) =>
-    ({ id, date, matchdaten_geholt_am: geholt, sfv_match_id: matchId });
+  /* ⚠ `matchdaten_vorgemerkt_am` ist PFLICHTFELD an `SpielKandidat`, nicht
+     optional — der Compiler nennt damit jede Attrappe, die es nicht sagt.
+     Eine Attrappe, der ein Feld fehlt, prueft etwas anderes als das, was
+     laeuft (CLAUDE.md, der `gilt_fuer`-Fall). */
+  const s = (
+    id: string, date: string, geholt: string | null, matchId: number | null = 1,
+    vorgemerkt: string | null = null,
+  ) => ({
+    id, date, matchdaten_geholt_am: geholt, sfv_match_id: matchId,
+    matchdaten_vorgemerkt_am: vorgemerkt,
+  });
 
   it("nimmt neue Spiele vor Wiederholungen", () => {
     /* Ein fehlender Spielbericht faellt auf, eine um eine Stunde verzoegerte
@@ -853,14 +864,19 @@ describe("waehleKandidaten", () => {
     expect(w.alt).toBe(0);
   });
 
-  it("⚠ die drei Zahlen gehen auf", () => {
-    /* Eine Aufteilung, die aufgehen MUSS, prueft sich selbst. */
+  it("⚠ die vier Zahlen gehen auf", () => {
+    /* Eine Aufteilung, die aufgehen MUSS, prueft sich selbst.
+
+       ⚠ Hier standen bis zum 27.09.2026 DREI Summanden. Der vierte Topf
+       ist am selben Tag dazugekommen — eine Summe, die einen Topf nicht
+       kennt, kann ihre eigene Unvollstaendigkeit nicht melden. */
     const w = waehleKandidaten([
+      s("vorgemerkt", "2026-07-01", "2026-07-01T20:00:00Z", 1, "2026-09-27T08:00:00Z"),
       s("neu", "2026-08-18", null),
       s("fenster", "2026-08-15", "2026-08-15T20:00:00Z"),
       s("alt", "2026-06-01", "2026-05-01T20:00:00Z"),
     ], jetzt, 12);
-    expect(w.neu + w.fenster + w.alt).toBe(w.spiele.length);
+    expect(w.vorgemerkt + w.neu + w.fenster + w.alt).toBe(w.spiele.length);
   });
 
   it("nimmt ein Spiel genau am Rand der Frist noch mit", () => {
@@ -914,6 +930,81 @@ it("⚠⚠ ein AUS DEM FENSTER GEFALLENES Spiel faellt nicht durch", () => {
     expect(w.neu + w.fenster + w.alt).toBe(w.spiele.length);
   });
 
+  it("⚠⚠ der naechste Lauf holt die VORGEMERKTEN zuerst", () => {
+    /* ⚠ Das vorgemerkte Spiel ist in jedem anderen Topf das letzte: schon
+       geholt (also nicht `neu`), ausserhalb des Fensters, und zuletzt von
+       allen geholt (also in `alt` ganz hinten). **Ohne den vierten Topf
+       kaeme es hier gar nicht vor** — drei Plaetze, drei neue Spiele.
+
+       Genau das ist der Anlass: ein Trainer traegt beim Verband etwas
+       nach, und der rollende Nachlauf kaeme bei zwei Plaetzen ueber ~270
+       Spiele erst in rund fuenf Tagen vorbei. */
+    const w = waehleKandidaten([
+      s("n18", "2026-08-18", null),
+      s("n17", "2026-08-17", null),
+      s("n16", "2026-08-16", null),
+      s("vorgemerkt", "2026-06-02", "2026-08-19T11:00:00Z", 1, "2026-09-27T08:00:00Z"),
+    ], jetzt, 3);
+    /* ⚠ Werte, keine Laengen — und die Reihenfolge ist Teil der Zusage:
+       „zuerst" heisst vorne, nicht irgendwo. */
+    expect(w.spiele.map((x) => x.id)).toEqual(["vorgemerkt", "n18", "n17"]);
+    expect(w.vorgemerkt).toBe(1);
+  });
+
+  it("⚠⚠ das 7-Tage-Fenster bleibt, auch bei MEHR Vormerkungen als Plaetzen", () => {
+    /* ⚠ ⚠  DER FALL, DER DIE AUFTEILUNG PRUEFT. Eine Mannschaft hat ~13
+       gespielte Spiele; wer sie alle vormerkt, belegte ohne Deckel einen
+       ganzen Lauf — und liegen bliebe ausgerechnet das Fenster, also die
+       Spiele, die gerade gespielt wurden und sich noch aendern.
+
+       **Ein Auftrag von Hand darf den laufenden Betrieb nicht anhalten.**
+
+       12 Plaetze: 6 vorgemerkt (Deckel), 0 neu, 4 Fenster
+       (12 − 6 − NACHLAUF_PLAETZE), 2 Nachlauf. */
+    const vorgemerkt = Array.from({ length: 13 }, (_, i) =>
+      s(`v${String(i + 1).padStart(2, "0")}`, "2026-07-01", "2026-08-19T11:00:00Z", 1,
+        `2026-09-27T08:${String(i + 1).padStart(2, "0")}:00Z`));
+    const fenster = [18, 17, 16, 15].map((t) =>
+      s(`fenster-${t}`, `2026-08-${t}`, "2026-08-18T20:00:00Z"));
+    const alt = [
+      s("alt-1", "2026-06-01", "2026-05-01T20:00:00Z"),
+      s("alt-2", "2026-06-01", "2026-05-02T20:00:00Z"),
+    ];
+
+    const w = waehleKandidaten([...vorgemerkt, ...fenster, ...alt], jetzt, 12);
+    const ids = w.spiele.map((x) => x.id);
+
+    /* ⚠ DIE EIGENTLICHE ZUSAGE: jedes Fensterspiel ist dabei, namentlich. */
+    expect(ids.filter((x) => x.startsWith("fenster-")))
+      .toEqual(["fenster-18", "fenster-17", "fenster-16", "fenster-15"]);
+
+    /* ⚠ Und der Deckel nimmt die SECHS AELTESTEN Auftraege, nicht
+       irgendwelche sechs: wer zuerst vorgemerkt hat, kommt zuerst dran. */
+    expect(ids.filter((x) => x.startsWith("v")))
+      .toEqual(["v01", "v02", "v03", "v04", "v05", "v06"]);
+
+    /* ⚠ Der Nachlauf behaelt seine Plaetze — ein stillstehender Durchgang
+       ist der Ausfall, den niemand bemerkt. */
+    expect(ids.filter((x) => x.startsWith("alt-"))).toEqual(["alt-1", "alt-2"]);
+
+    expect(w.vorgemerkt + w.neu + w.fenster + w.alt).toBe(w.spiele.length);
+  });
+
+  it("⚠ ein vorgemerktes Spiel wird nicht zweimal geholt", () => {
+    /* ⚠ `vorgemerkt` ueberschneidet sich mit ALLEN anderen Toepfen — anders
+       als `neu` und `fenster`, die einander ausschliessen. Dieses Spiel
+       steht zugleich im Fenster und ist das einzige, was `alt` kennt.
+       Ohne Entdoppelung an jedem Topf: vier Abrufe umsonst, und die vier
+       Zahlen gehen nicht mehr auf. */
+    const w = waehleKandidaten([
+      s("beides", "2026-08-18", "2026-08-18T20:00:00Z", 1, "2026-09-27T08:00:00Z"),
+    ], jetzt, 12);
+    expect(w.spiele.map((x) => x.id)).toEqual(["beides"]);
+    expect(w.vorgemerkt).toBe(1);
+    expect(w.fenster).toBe(0);
+    expect(w.alt).toBe(0);
+  });
+
   it("nimmt innerhalb einer Gruppe das juengste zuerst", () => {
     const w = waehleKandidaten([
       s("aelter", "2026-08-10", null),
@@ -925,8 +1016,10 @@ it("⚠⚠ ein AUS DEM FENSTER GEFALLENES Spiel faellt nicht durch", () => {
 
 describe("aeltesteHolungStunden — die Zahl, die nicht luegen kann", () => {
   const jetzt = new Date("2026-09-11T12:00:00Z");
-  const s = (geholt: string | null) =>
-    ({ id: "x", date: "2026-08-01", matchdaten_geholt_am: geholt, sfv_match_id: 1 });
+  const s = (geholt: string | null) => ({
+    id: "x", date: "2026-08-01", matchdaten_geholt_am: geholt, sfv_match_id: 1,
+    matchdaten_vorgemerkt_am: null,
+  });
 
   it("rechnet die aelteste Holung in Stunden", () => {
     expect(aeltesteHolungStunden([
@@ -1518,5 +1611,84 @@ describe("jahrgangAus", () => {
       UNSERE, new Set(),
     );
     expect(mit[0].jahrgang).toBe(2011);
+  });
+});
+
+/* ══════════════════════════════════════════════════════════════════════
+   Die Vormerk-Marke faellt AUCH bei einem Fehlschlag (27.09.2026)
+
+   ⚠ ⚠  DIE ZUSAGE, UM DIE ES BEIM VORMERKEN UEBERHAUPT GEHT — und sie
+   laesst sich nicht als Verhalten pruefen: `matchdatenLauf.ts` importiert
+   `SupabaseClient` von esm.sh und ist aus vitest nicht ladbar. Die
+   etablierte Antwort dieses Projekts ist dann der Syntaxbaum, nicht der
+   Verzicht: eine Datei, die ein Test nicht laden kann, ist ungeprueft,
+   und ungeprueft sieht genauso aus wie richtig.
+
+   ⚠ WAS SIE FESTHAELT: das Loeschen steht im `finally`, nicht im
+   Erfolgszweig. Bliebe die Marke bei einem gescheiterten Abruf stehen,
+   stuende dieses Spiel in JEDEM folgenden Lauf wieder ganz vorne und
+   scheiterte wieder — der Kopf der Schlange verstopft, ohne dass etwas
+   fehlschlaegt. Das ist derselbe Defekt, den `matchdaten_geholt_am = null`
+   schon hat; er wird hier nicht ein zweites Mal gebaut.
+
+   ⚠ UND: NUR AN EINER STELLE. Sie zusaetzlich im Erfolgszweig zu loeschen
+   waeren zwei Stellen, die dasselbe tun muessen — und an der zweiten
+   faellt es niemandem auf, wenn sie fehlt.
+
+   ⚠ ⚠  UEBER `objektEigenschaften`, NICHT UEBER `getText()`. Der
+   Kommentar im `finally` nennt `matchdaten_vorgemerkt_am` woertlich — ein
+   Textvergleich waere gruen, auch wenn der Code verschwaende. Genau die
+   Falle, vor der quelltext.ts im Kopf warnt.
+   ══════════════════════════════════════════════════════════════════════ */
+describe("die Vormerk-Marke wird auch bei einem Fehlschlag geloescht", () => {
+  const DATEI = "supabase/functions/sfv-sync/matchdatenLauf.ts";
+  const MARKE = "matchdaten_vorgemerkt_am";
+
+  /** Setzt irgendein Objektliteral unter diesem Knoten die Marke auf null? */
+  const setztMarke = (n: ts.Node) =>
+    objektEigenschaften(n).some(([k, w]) => k === MARKE && w === "null");
+
+  it("⚠⚠ sie faellt im `finally`, nicht erst nach einem gelungenen Abruf", () => {
+    const treffer = suche({
+      frage: "löscht ein finally-Block die Vormerk-Marke?",
+      dateien: [DATEI],
+      positivkontrolle: `
+        async function lauf() {
+          for (const spiel of kandidaten) {
+            try { await hole(spiel); } catch { melde(); }
+            finally {
+              await db.from("spiele").update({ matchdaten_vorgemerkt_am: null });
+            }
+          }
+        }`,
+      finde: (baum) => {
+        const fund: string[] = [];
+        jederKnoten(baum, (n) => {
+          if (!ts.isTryStatement(n) || !n.finallyBlock) return;
+          if (setztMarke(n.finallyBlock)) fund.push("finally");
+        });
+        return fund;
+      },
+    });
+    expect(treffer.map((t) => t.fund)).toEqual(["finally"]);
+  });
+
+  it("⚠ und NUR dort — eine Stelle, nicht zwei", () => {
+    /* ⚠ Der `try`-Block darf sie nicht auch loeschen. Zwei Stellen, die
+       dasselbe tun muessen, sind zwei Stellen, an denen eine fehlen kann —
+       und im Erfolgszweig faellt das nie auf, weil der Erfolgsfall der
+       haeufige ist. */
+    const baum = baue(DATEI);
+    const verstoesse: string[] = [];
+    jederKnoten(baum, (n) => {
+      if (!ts.isTryStatement(n)) return;
+      if (setztMarke(n.tryBlock)) {
+        verstoesse.push(`try-Block in Zeile ${zeileVon(n)} löscht die Marke ebenfalls`);
+      }
+      if (n.catchClause && setztMarke(n.catchClause)) {
+        verstoesse.push(`catch in Zeile ${zeileVon(n)} löscht die Marke ebenfalls`);
+      }
+    });
+    expect(verstoesse).toEqual([]);
   });
 });

@@ -63,6 +63,7 @@ export async function laufeMatchdaten(
        zu unterscheiden — und genau das war am 11.09.2026 die Frage. */
     aufstellung_geliefert: 0, eigen_ohne_person: 0, fremd_ohne_nummer: 0,
     verband_hat_korrigiert: 0, fremd_unveraendert: 0, verlauf_unveraendert: 0,
+    kandidaten_vorgemerkt: 0, vorgemerkt_geloescht: 0,
     kandidaten_neu: 0, kandidaten_fenster: 0, kandidaten_alt: 0,
     kandidaten_gesamt: 0, aelteste_holung_stunden: null,
     eigene_unzugeordnet: 0, zuordnungen_gesamt: 0, namen_geschrieben: 0, aufstellung_fremd: 0, gegner_doppel: 0,
@@ -89,10 +90,23 @@ export async function laufeMatchdaten(
      der ersten 1000 liegt, bekaeme NIE Matchdaten. Das saehe aus wie „der
      Verband fuehrt dazu nichts", und genau diese Verwechslung hat am
      11.09.2026 eine halbe Untersuchung gekostet. */
+  /* ⚠ ⚠  `matchdaten_vorgemerkt_am` MUSS IN DIESER ZEICHENKETTE STEHEN —
+     und hier hilft der Compiler NICHT.
+
+     `alleSeiten<SpielKandidat>` sagt TypeScript, die Zeilen haetten das
+     Feld; die `select`-Liste ist eine Zeichenkette und wird von niemandem
+     dagegen gehalten (`check:selects` liest nur `src/`, nicht die Edge
+     Functions). Fehlt die Spalte hier, kommt sie als `undefined` an, gilt
+     als „nicht vorgemerkt", und der Topf bleibt fuer immer leer.
+
+     **Und das saehe aus wie eine Datenlage:** die Kachel meldete „n
+     vorgemerkt", der Lauf holte sie nie, die Marke bliebe stehen — die
+     Suche ginge zur Oberflaeche statt hierher. Genau die Verwechslung, die
+     dieses Projekt als teuerste fuehrt. */
   const kandidatenRoh = await alleSeiten<SpielKandidat>(
     (von, bis) => db
       .from("spiele")
-      .select("id,date,matchdaten_geholt_am,sfv_match_id")
+      .select("id,date,matchdaten_geholt_am,matchdaten_vorgemerkt_am,sfv_match_id")
       .eq("verein_id", v.verein_id)
       /* ⚠ Aus MATCHDATEN_STATUS, nicht als Zahl hier: die vollstaendige
          Liste der zwoelf Status steht daneben, und wer die Auswahl aendern
@@ -113,17 +127,22 @@ export async function laufeMatchdaten(
   const wahl = waehleKandidaten(kandidatenRoh, new Date(), hoechstens);
   const kandidaten = wahl.spiele;
 
-  /* ⚠ ⚠  DREI ZAHLEN, DIE AUFGEHEN MUESSEN — sonst ist der Nachlauf
+  /* ⚠ ⚠  VIER ZAHLEN, DIE AUFGEHEN MUESSEN — sonst ist der Nachlauf
      unbeobachtet, und ein Nachlauf, der still aussetzt, faellt
      monatelang niemandem auf.
 
-     `neu + fenster + alt == spiele_geholt`. Eine Aufteilung, die aufgehen
-     MUSS, prueft sich selbst; eine einzelne Zahl kann nur behauptet
-     werden.
+     `vorgemerkt + neu + fenster + alt == spiele_geholt`. Eine Aufteilung,
+     die aufgehen MUSS, prueft sich selbst; eine einzelne Zahl kann nur
+     behauptet werden.
+
+     ⚠ Hier standen bis zum 27.09.2026 DREI. Der vierte Topf ist am selben
+     Tag dazugekommen, und wer ihn ergaenzt und diese Summe nicht, hat eine
+     Formel stehen, die ihre eigene Unvollstaendigkeit nicht melden kann.
 
      ⚠ `alt = 0` ist fuer sich genommen KEIN Befund: hat `neu` die
-     Plaetze gebraucht, ist es richtig. Erst die drei zusammen sagen,
+     Plaetze gebraucht, ist es richtig. Erst die vier zusammen sagen,
      warum. */
+  erg.kandidaten_vorgemerkt = wahl.vorgemerkt;
   erg.kandidaten_neu = wahl.neu;
   erg.kandidaten_fenster = wahl.fenster;
   erg.kandidaten_alt = wahl.alt;
@@ -507,6 +526,75 @@ export async function laufeMatchdaten(
       const text = e instanceof Error ? e.message : String(e);
       if (erg.fehlermeldungen.length < 5) {
         erg.fehlermeldungen.push(`Spiel ${matchId}: ${text}`);
+      }
+    } finally {
+      /* ── Die Vormerkung ist erledigt ──────────────────────────────────
+         ⚠ ⚠  AUCH WENN DER ABRUF GESCHEITERT IST — und genau deshalb steht
+         das hier im `finally` und nicht oben bei `matchdaten_geholt_am`.
+
+         Ein Vormerken ist ein Auftrag fuer EINEN Lauf, nicht fuer immer.
+         Bliebe die Marke bei einem Fehlschlag stehen, stuende dieses Spiel
+         in JEDEM folgenden Lauf wieder ganz vorne und scheiterte wieder —
+         es verstopfte den Kopf der Schlange, ohne je fertig zu werden, und
+         waechst mit jedem weiteren solchen Spiel. Das ist derselbe Defekt,
+         den `matchdaten_geholt_am = null` bei einem gescheiterten Abruf
+         schon hat (CLAUDE.md, „EIN SPIEL, DAS BEIM ABRUF SCHEITERT, BLEIBT
+         FUER IMMER «NIE GEHOLT»") — hier wird er nicht ein zweites Mal
+         gebaut.
+
+         ⚠ EINE STELLE, NICHT ZWEI. Sie im Erfolgszweig und noch einmal im
+         `catch` zu loeschen waeren zwei Stellen, die dasselbe tun muessen
+         — und an der zweiten faellt es niemandem auf, wenn sie fehlt.
+
+         ⚠ NUR WO EINE MARKE WAR. `spiel.matchdaten_vorgemerkt_am` steht in
+         der Kandidatenzeile; ein Update fuer jedes der zwoelf Spiele waere
+         elf Abfragen umsonst.
+
+         ⚠ UND DER FEHLER WIRD GEBUNDEN, NICHT GEWORFEN. Ein Wurf im
+         `finally` risse die Schleife ab und naehme die restlichen Spiele
+         mit — der Preis fuer eine nicht geloeschte Marke waere dann ein
+         halber Lauf. Er zaehlt als Fehler und steht in den Meldungen;
+         sichtbar wird er ausserdem daran, dass `vorgemerkt_geloescht`
+         hinter `kandidaten_vorgemerkt` ZURUECKBLEIBT.
+
+         ⚠ ⚠  NUR DIESE RICHTUNG IST EIN BEFUND. Darueber zu liegen ist
+         keiner: ein vorgemerktes Spiel kann zusaetzlich ueber den
+         Nachlauf-Topf hereinkommen, und dann faellt seine Marke hier
+         genauso. Gemessen am 27.09.2026 — 13 Vormerkungen, sonst nichts
+         zu tun: Topf 6, geloescht 12. */
+      if (spiel.matchdaten_vorgemerkt_am) {
+        /* ⚠ ⚠  `.select("id")` AM SCHREIBVORGANG SELBST — `error` allein
+           genuegt hier nicht. Ein `update`, das KEINE Zeile trifft, ist
+           fuer PostgREST kein Fehler: 204, `error` ist `null`. Ohne diese
+           Gegenprobe zaehlte `vorgemerkt_geloescht` einen Erfolg, waehrend
+           die Marke stehenbliebe — und dann bliebe die Zahl auch NICHT
+           hinter `kandidaten_vorgemerkt` zurueck, die einzige Richtung, in
+           der jemand etwas merken wuerde. **Eine Gegenprobe, die den Fall
+           nicht sieht, fuer den sie gebaut ist, ist schlimmer als keine.**
+
+           ⚠ Am Schreibvorgang, nicht als zweite Abfrage daneben: eine
+           danebenstehende fragt „ist die Zeile lesbar?", nicht „wurde sie
+           geschrieben?" — Lesen und Schreiben haengen an verschiedenen
+           Policies (CLAUDE.md, der `kindService.ts`-Fall). */
+        const { data, error } = await db.from("spiele")
+          .update({ matchdaten_vorgemerkt_am: null })
+          .eq("verein_id", v.verein_id).eq("id", spiel.id)
+          .select("id");
+        if (error) {
+          erg.fehler += 1;
+          if (erg.fehlermeldungen.length < 5) {
+            erg.fehlermeldungen.push(
+              `Spiel ${matchId}: Vormerkung nicht gelöscht (${error.message})`);
+          }
+        } else if (!data || data.length === 0) {
+          erg.fehler += 1;
+          if (erg.fehlermeldungen.length < 5) {
+            erg.fehlermeldungen.push(
+              `Spiel ${matchId}: Vormerkung nicht gelöscht — keine Zeile getroffen`);
+          }
+        } else {
+          erg.vorgemerkt_geloescht += 1;
+        }
       }
     }
   }

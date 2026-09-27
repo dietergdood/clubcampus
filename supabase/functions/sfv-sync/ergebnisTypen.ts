@@ -122,6 +122,40 @@ export interface MatchdatenErgebnis {
    * ⚠ `alt = 0` ist fuer sich KEIN Befund: hat `neu` die Plaetze
    * gebraucht, ist es richtig. Erst die drei zusammen sagen, warum.
    */
+  /**
+   * Von Hand vorgemerkte Spiele, die dieser Lauf genommen hat.
+   *
+   * ⚠ Gedeckelt auf `VORGEMERKT_PLAETZE` — ein Auftrag von Hand darf den
+   * laufenden Betrieb nicht anhalten, sonst bleibt das 7-Tage-Fenster in
+   * dieser Stunde liegen.
+   */
+  kandidaten_vorgemerkt: number;
+  /**
+   * Wie viele Vormerk-Marken der Lauf geloescht hat.
+   *
+   * ⚠ ⚠  ER HEISST NICHT `vorgemerkt_geholt`, UND DAS IST DER PUNKT. Die
+   * Marke faellt AUCH, wenn der Abruf gescheitert ist — ein Vormerken ist
+   * ein Auftrag fuer einen Lauf, nicht fuer immer. Ein Name, der „geholt"
+   * behauptet, behauptete mehr, als die Zahl misst.
+   *
+   * ⚠ ⚠  SIE IST DIE GEGENPROBE ZU `kandidaten_vorgemerkt` — aber die
+   * Richtung ist eine UNGLEICHUNG, keine Gleichheit:
+   *
+   *     vorgemerkt_geloescht >= kandidaten_vorgemerkt
+   *
+   *   darunter  ⚠ eine Marke ist stehengeblieben. Dieses Spiel kaeme in
+   *             jedem folgenden Lauf wieder vorne dran, ohne je fertig zu
+   *             werden — der Fall, gegen den das `finally` gebaut ist.
+   *   darueber  kein Befund: ein vorgemerktes Spiel ist zusaetzlich ueber
+   *             `alt` hereingekommen. Gemessen am 27.09.2026 — bei 13
+   *             Vormerkungen und sonst nichts zu tun: Topf 6, geloescht 12.
+   *
+   * ⚠ Hier stand „die beiden MUESSEN gleich sein". Das war falsch; die
+   * Messung hat es widerlegt, bevor es hinausging. **Ein Paar, dessen
+   * behauptete Beziehung nicht stimmt, ist schlimmer als eine einzelne
+   * Zahl — es sieht nach Selbstprobe aus und schlaegt im Normalbetrieb an.**
+   */
+  vorgemerkt_geloescht: number;
   kandidaten_neu: number;
   kandidaten_fenster: number;
   kandidaten_alt: number;
@@ -499,6 +533,13 @@ export function fuersProtokoll(erg: LaufErgebnis): Record<string, unknown> {
       verband_hat_korrigiert: md.verband_hat_korrigiert,
       fremd_unveraendert: md.fremd_unveraendert,
       verlauf_unveraendert: md.verlauf_unveraendert,
+      /* ⚠ Beide, immer, auch als Null — sie sind ein PAAR und nur zusammen
+         eine Auskunft: `vorgemerkt_geloescht` darf nicht UNTER
+         `kandidaten_vorgemerkt` liegen (darueber schon, siehe den Typ).
+         Nur eine von beiden ins Protokoll zu nehmen hiesse, die Gegenprobe
+         wegzulassen und die uebrige Zahl fuer eine Messung zu halten. */
+      kandidaten_vorgemerkt: md.kandidaten_vorgemerkt,
+      vorgemerkt_geloescht: md.vorgemerkt_geloescht,
       kandidaten_neu: md.kandidaten_neu,
       kandidaten_fenster: md.kandidaten_fenster,
       kandidaten_alt: md.kandidaten_alt,

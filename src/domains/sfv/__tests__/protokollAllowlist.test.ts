@@ -61,7 +61,18 @@ const LAUF: LaufErgebnis = {
     aufstellung_geliefert: 180, eigen_ohne_person: 2, fremd_ohne_nummer: 0,
     verband_hat_korrigiert: 5, fremd_unveraendert: 11,
     verlauf_unveraendert: 22,
-    kandidaten_neu: 0, kandidaten_fenster: 8, kandidaten_alt: 2,
+    /* ⚠ DIE AUFTEILUNG GEHT AUF: 2 + 0 + 6 + 2 = 10 = `spiele_geholt`.
+       Hier standen bis zum 27.09.2026 drei Zahlen (0 + 8 + 2); der vierte
+       Topf ist am selben Tag dazugekommen. **Eine Attrappe, deren Summe
+       nicht stimmt, zementiert eine Aufteilung, die es nicht gibt** — genau
+       so ist `aufstellung_geliefert` zwei Wochen lang gegen die falsche
+       Formel gruen gewesen, zwoelf Zeilen weiter oben.
+
+       ⚠ Und `vorgemerkt_geloescht` gleicht `kandidaten_vorgemerkt`: die
+       beiden sind ein Paar, und eine Attrappe, in der sie auseinandergehen,
+       beschriebe einen Lauf, bei dem eine Marke stehengeblieben ist. */
+    kandidaten_vorgemerkt: 2, vorgemerkt_geloescht: 2,
+    kandidaten_neu: 0, kandidaten_fenster: 6, kandidaten_alt: 2,
     kandidaten_gesamt: 50, aelteste_holung_stunden: 25,
     halbzeit: { da: 3, fehlt: 0, leer: 1, ohne_halbzeit: 2 },
     pass_konflikte: ["Mitglied 633: zwei Passnummern"],
@@ -85,9 +96,11 @@ describe("fuersProtokoll", () => {
       "fehler", "fehlermeldungen", "fremd_ohne_nummer", "fremd_unveraendert",
       "gegner_doppel", "halbzeit",
       "kandidaten_alt", "kandidaten_fenster", "kandidaten_gesamt", "kandidaten_neu",
+      "kandidaten_vorgemerkt",
       "nachzug_meldungen", "namen_geschrieben",
       "paesse_geschrieben", "pass_konflikte",
       "spiele_geholt", "verband_hat_korrigiert", "verlauf_unveraendert",
+      "vorgemerkt_geloescht",
       "zuordnungen_gesamt",
     ]);
   });

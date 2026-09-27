@@ -931,6 +931,22 @@ export interface SpielKandidat {
   date: string | null;
   matchdaten_geholt_am: string | null;
   sfv_match_id: number | null;
+  /**
+   * Von Hand zum Neuabruf vorgemerkt — `null` heisst „nicht vorgemerkt".
+   *
+   * ⚠ ⚠  PFLICHTFELD, NICHT OPTIONAL, und das ist die ganze Pruefung.
+   * Am 11.09.2026 stand unsere Namen beim Gegner, weil
+   * `beschreibeGewechselten()` `ist_eigener` gar nicht bekam: eine Grenze,
+   * die eine Funktion nicht sehen kann, kann sie nicht ziehen — und ein zu
+   * schmaler Typ ist fuer `tsc` kein Fehler, sondern eine Absicht. Als
+   * Pflichtfeld nennt der Compiler jede Stelle, die es nicht liefert.
+   *
+   * ⚠ WAS ER TROTZDEM NICHT NENNT: die `select`-Zeichenkette in
+   * `matchdatenLauf.ts`. Fehlt die Spalte dort, kommt sie als `undefined`
+   * an, gilt als „nicht vorgemerkt", und der Topf bleibt fuer immer leer —
+   * still. Die zweite Haelfte steht deshalb dort als Warnung.
+   */
+  matchdaten_vorgemerkt_am: string | null;
 }
 
 /**
@@ -998,11 +1014,71 @@ export const NACHZUG_TAGE = 7;
  */
 export const NACHLAUF_PLAETZE = 2;
 
+/**
+ * Wie viele der Plaetze VON HAND VORGEMERKTEN Spielen gehoeren.
+ *
+ * Ein Trainer traegt beim Verband nachtraeglich etwas nach; die
+ * Football.ch-Kachel merkt die gespielten Spiele seiner Mannschaft zum
+ * Neuabruf vor (`spiele.matchdaten_vorgemerkt_am`). Ohne diesen Topf
+ * kaemen sie erst mit dem rollenden Nachlauf dran — bei 2 Plaetzen ueber
+ * ~270 Spiele sind das rund fuenf Tage.
+ *
+ * ⚠ ⚠  UND DESHALB IST ER GEDECKELT UND HAT NICHT EINFACH VORRANG.
+ *
+ * Eine Mannschaft hat ~13 gespielte Spiele. Ohne Deckel belegten sie
+ * einen ganzen Lauf, und das 7-Tage-Fenster bliebe in dieser Stunde
+ * liegen — also genau die Spiele, die gerade gespielt wurden und sich
+ * noch aendern. Ein Vormerken von Hand darf den laufenden Betrieb nicht
+ * anhalten.
+ *
+ * Mit sechs Plaetzen und stuendlichem Lauf ist eine Mannschaft in
+ * `ceil(13 / 6)` = **3 Stunden** durch, und 12 − 6 − 2 = 4 Plaetze
+ * bleiben fuer Neues und das Fenster. Die Kachel rechnet ihre
+ * Restzeitangabe aus genau dieser Zahl — sie steht hier und nicht
+ * zweimal.
+ *
+ * ⚠ Die Zahl ist gerechnet, nicht gemessen: 13 Spiele je Mannschaft
+ * sind der Durchschnitt aus 269 Spielen ueber 21 Mannschaften (Stand
+ * 25.08.2026). Wer sie aendert, aendert die Restzeitangabe mit.
+ *
+ * ⚠ ⚠  `ceil(offen / 6)` IST EINE OBERGRENZE, KEINE VORHERSAGE — gemessen
+ * am 27.09.2026 an `waehleKandidaten()` selbst, nicht gerechnet:
+ *
+ *   13 vorgemerkt, alle anderen Toepfe voll   ->  6 ueber diesen Topf
+ *   13 vorgemerkt, sonst nichts zu tun        ->  6 hier + 6 ueber `alt`
+ *
+ * Im zweiten Fall ist die Mannschaft in ZWEI Stunden durch statt in drei:
+ * die uebrigen vorgemerkten Spiele sind ja schon einmal geholt worden,
+ * also kennt sie der rollende Nachlauf, und ihre Marke faellt dort
+ * genauso. **Die Angabe darf also zu lang sein, nie zu kurz** — und das
+ * ist die richtige Richtung fuer eine Restzeit.
+ *
+ * ⚠ Sie gilt, solange der stuendliche Lauf laeuft. Steht er, steht sie
+ * auch — dafuer ist `aelteste_holung_stunden` die Zahl, nicht diese.
+ */
+export const VORGEMERKT_PLAETZE = 6;
+
 /** Wie viele Spiele ein Lauf hoechstens holt. */
 export const HOECHSTENS_SPIELE = 12;
 
 export interface KandidatenWahl<T> {
   spiele: T[];
+  /**
+   * Von Hand vorgemerkt — Vorrang, aber gedeckelt auf VORGEMERKT_PLAETZE.
+   *
+   * ⚠ ⚠  SIE ZAEHLT DIESEN TOPF, NICHT DIE VORGEMERKTEN SPIELE DES LAUFS.
+   * Ein vorgemerktes Spiel kann zusaetzlich ueber `alt` hereinkommen —
+   * gemessen am 27.09.2026: bei 13 Vormerkungen und sonst nichts zu tun
+   * stehen hier **6**, geholt werden **12**, weil der Nachlauf die
+   * uebrigen sechs nimmt. Sie sind schon geholt, also kennt `alt` sie.
+   *
+   * ⚠ Hier stand zuerst „der Lauf muss hinterher genau so viele Marken
+   * geloescht haben". **Das war falsch, und die Messung hat es widerlegt,
+   * bevor es hinausging.** Richtig ist `vorgemerkt_geloescht >=
+   * vorgemerkt`: weniger heisst, eine Marke ist stehengeblieben; mehr
+   * heisst, der Nachlauf hat mitgeholfen.
+   */
+  vorgemerkt: number;
   /** Nie geholt. Vorrang ohne Deckel. */
   neu: number;
   /** Im Nachzugsfenster (Spieldatum nicht aelter als NACHZUG_TAGE). */
@@ -1023,6 +1099,22 @@ export function waehleKandidaten<T extends SpielKandidat>(
     jetzt.getUTCFullYear(), jetzt.getUTCMonth(), jetzt.getUTCDate(),
   );
   const grenze = tagesanfang - NACHZUG_TAGE * 24 * 60 * 60 * 1000;
+  /* ⚠ ⚠  OFFEN, 27.09.2026: EINE MARKE AN EINEM SPIEL OHNE `sfv_match_id`
+     WIRD NIE GELOESCHT. Turniere und interne Spiele fallen hier heraus —
+     fuer sie gibt es beim SFV nichts zu holen —, also kommen sie in keinen
+     Topf, werden nie geholt, und der Lauf loescht die Marke nicht (er
+     loescht sie nur an den Spielen, die er angefasst hat).
+
+     Die Marke bliebe damit fuer immer stehen, und die Kachel meldete
+     dauerhaft „noch offen" fuer etwas, das nie drankommt — ein Zaehler,
+     der mehr behauptet als er misst, und der schlimmste Fall davon: einer,
+     der sich nie bewegt.
+
+     **UNGEMESSEN, ob es vorkommt.** Es haengt daran, ob die Kachel nur
+     Spiele mit `sfv_match_id` vormerkt; sie liegt in einer anderen Datei
+     und ist hier nicht nachgesehen worden. Steht ein Fall an, gehoert er
+     entweder dort verhindert oder hier gezaehlt — nicht stillschweigend
+     hingenommen. */
   const mitId = spiele.filter((s) => s.sfv_match_id !== null);
 
   /* Innerhalb jeder Gruppe das juengste zuerst — was gerade gespielt wurde,
@@ -1030,6 +1122,27 @@ export function waehleKandidaten<T extends SpielKandidat>(
   const neuer = (a: T, b: T) => String(b.date ?? "").localeCompare(String(a.date ?? ""));
   const imFenster = (s: T) =>
     Boolean(s.date) && new Date(s.date as string).getTime() >= grenze;
+
+  /* ⚠ ⚠  VORGEMERKT UEBERSCHNEIDET SICH MIT ALLEN DREI ANDEREN TOEPFEN —
+     und darin liegt der Unterschied zu allem, was vorher hier stand.
+
+     `neu` und `fenster` schliessen einander aus (geholt / nicht geholt),
+     deshalb genuegte bis zum 27.09.2026 EINE Entdoppelung, am Ende, fuer
+     `alt`. Ein vorgemerktes Spiel kann dagegen nie geholt sein, im Fenster
+     stehen ODER das am laengsten nicht geholte — alle drei zugleich ist
+     moeglich. Ohne Entdoppelung an JEDEM Topf holte ein Lauf dasselbe Spiel
+     zweimal: vier Abrufe umsonst, und die Aufteilung ginge nicht mehr auf.
+
+     ⚠ Sortiert nach der MARKE, aeltester Auftrag zuerst — nicht nach dem
+     Spieldatum wie die anderen Toepfe. Wer zuerst vorgemerkt hat, kommt
+     zuerst dran; ein spaeteres Vormerken draengt sich nicht vor. Bei
+     gleicher Marke (die Kachel merkt eine ganze Mannschaft in einem Zug
+     vor) entscheidet wie ueberall sonst das juengste Spiel. */
+  const vorgemerkt = mitId
+    .filter((s) => s.matchdaten_vorgemerkt_am)
+    .sort((a, b) =>
+      String(a.matchdaten_vorgemerkt_am).localeCompare(String(b.matchdaten_vorgemerkt_am))
+      || neuer(a, b));
 
   const neu = mitId.filter((s) => !s.matchdaten_geholt_am).sort(neuer);
   const fenster = mitId
@@ -1084,12 +1197,61 @@ export function waehleKandidaten<T extends SpielKandidat>(
      Eine Aufteilung, die niemand aufgeschrieben hat, kann auch niemand
      pruefen. */
   const raus: T[] = [];
+  const schonDrin = new Set<string>();
 
-  /* 1 · Nie Geholtes hat Vorrang, ohne Deckel. Es ist der Rueckstand;
+  /* ⚠ ⚠  EIN HELFER FUER ALLE VIER TOEPFE — und ab dem vierten ist das
+     keine Bequemlichkeit mehr, sondern die Reparatur eines Fehlermusters.
+
+     Jeder Topf muss dreierlei tun: gegen das schon Gewaehlte entdoppeln,
+     seinen eigenen Deckel einhalten und die Gesamtgrenze. Vier Stellen,
+     die dasselbe tun muessen, sind vier Stellen, an denen es eine
+     vergessen kann — **wer zwei gleichartige Stellen hat, repariert beide
+     oder keine**, und bei vier gehoert die Sache an eine.
+
+     ⚠ AUSGESCHRIEBEN BLEIBT DAS ENTSCHEIDENDE: welcher Topf welchen Deckel
+     hat und warum. Das steht unten, Topf fuer Topf. Was hier steht, ist
+     nur die Mechanik, die sie teilen — nicht die Aufteilung selbst. Ein
+     `slice` am Ende waere das Gegenteil: dort entschiede die REIHENFOLGE,
+     wer leer ausgeht, und nicht eine Absicht, die jemand aufgeschrieben
+     hat.
+
+     ⚠ ⚠  UND DIE SUMME GEHT DAMIT VON BAUART AUF. Jeder Aufruf nimmt
+     hoechstens `hoechstens - raus.length` und legt jede Id in `schonDrin`
+     — die vier Zahlen koennen also weder doppelt zaehlen noch zusammen
+     ueber die Grenze kommen. Eine Aufteilung, die aufgehen MUSS, prueft
+     sich selbst; eine, die es nur meistens tut, ist eine Behauptung. */
+  const nimm = (topf: T[], deckel: number): number => {
+    const platz = Math.max(0, Math.min(deckel, hoechstens - raus.length));
+    const gewaehlt = topf.filter((s) => !schonDrin.has(s.id)).slice(0, platz);
+    for (const s of gewaehlt) { raus.push(s); schonDrin.add(s.id); }
+    return gewaehlt.length;
+  };
+
+  /* 1 · VON HAND VORGEMERKT — Vorrang, aber GEDECKELT.
+
+     ⚠ ⚠  WARUM VOR `neu` UND NICHT DAHINTER. `neu` hat keinen Deckel: an
+     einem Spielwochenende mit zwoelf neuen Partien bliebe fuer das
+     Vormerken nichts uebrig, und die Kachel rechnet ihre Restzeit
+     (`ceil(offen / VORGEMERKT_PLAETZE)` Stunden) aus einer Zahl, die dann
+     nicht gilt. **Eine Angabe, die mehr behauptet als sie weiss, ist
+     schlimmer als keine** — und schlimmer noch waere der Dauerfall: ein
+     Spiel, dessen Abruf scheitert, behaelt `matchdaten_geholt_am = null`
+     und steht in JEDEM Lauf wieder in `neu`. Es koennte das Vormerken
+     dauerhaft aushungern.
+
+     ⚠ UND DESHALB DER DECKEL. Eine Mannschaft hat ~13 gespielte Spiele;
+     ohne Deckel belegten sie einen ganzen Lauf, und das 7-Tage-Fenster
+     bliebe in dieser Stunde liegen — also genau die Spiele, die gerade
+     gespielt wurden und sich noch aendern. **Ein Auftrag von Hand darf den
+     laufenden Betrieb nicht anhalten.** Die Begruendung der Zahl 6 steht
+     an VORGEMERKT_PLAETZE und nicht zweimal. */
+  const gewaehltVorgemerkt = nimm(vorgemerkt, VORGEMERKT_PLAETZE);
+
+  /* 2 · Nie Geholtes hat Vorrang, ohne Deckel. Es ist der Rueckstand;
          alles Uebrige wurde schon einmal geholt und kann warten. */
-  raus.push(...neu.slice(0, hoechstens));
+  const gewaehltNeu = nimm(neu, hoechstens);
 
-  /* 2 · DAS FENSTER ZUERST — aber nur bis auf die Plaetze des Nachlaufs.
+  /* 3 · DAS FENSTER ZUERST — aber nur bis auf die Plaetze des Nachlaufs.
 
      ⚠ ⚠  DIE REIHENFOLGE WAR ZUERST UMGEKEHRT, und das war falsch — nicht
      im Ergebnis, sondern in der AUSKUNFT.
@@ -1108,27 +1270,28 @@ export function waehleKandidaten<T extends SpielKandidat>(
      zwoelf Partien bliebe ihm sonst nichts, der Durchgang stuende still,
      **und ein stillstehender Durchgang ist der Ausfall, den niemand
      bemerkt.** */
-  const fuersFenster = Math.max(0, hoechstens - raus.length - NACHLAUF_PLAETZE);
-  const fensterGewaehlt = fenster.slice(0, fuersFenster);
-  raus.push(...fensterGewaehlt);
+  const gewaehltFenster = nimm(fenster, hoechstens - raus.length - NACHLAUF_PLAETZE);
 
-  /* 3 · Der Nachlauf fuellt den Rest — aus ALLEM Geholten, entdoppelt.
+  /* 4 · Der Nachlauf fuellt den Rest — aus ALLEM Geholten, entdoppelt.
 
      ⚠ Die Entdoppelung ist Pflicht: ein Fensterspiel kann auch das am
-     laengsten nicht geholte sein. Ohne sie holte ein Lauf dasselbe Spiel
-     zweimal — vier Abrufe umsonst, und die drei Zahlen gingen nicht mehr
-     auf. */
-  const schonDrin = new Set(raus.map((s) => s.id));
-  const altGewaehlt = alt
-    .filter((s) => !schonDrin.has(s.id))
-    .slice(0, Math.max(0, hoechstens - raus.length));
-  raus.push(...altGewaehlt);
+     laengsten nicht geholte sein, und ein vorgemerktes erst recht. Ohne
+     sie holte ein Lauf dasselbe Spiel zweimal — vier Abrufe umsonst, und
+     die vier Zahlen gingen nicht mehr auf. Sie steckt in `nimm`. */
+  const gewaehltAlt = nimm(alt, hoechstens);
 
   return {
     spiele: raus,
-    neu: Math.min(neu.length, hoechstens),
-    fenster: fensterGewaehlt.length,
-    alt: altGewaehlt.length,
+    vorgemerkt: gewaehltVorgemerkt,
+    /* ⚠ Die tatsaechlich genommene Zahl, nicht `Math.min(neu.length,
+       hoechstens)`. Das stand hier bis zum 27.09.2026 und war richtig,
+       SOLANGE `neu` der erste Topf war — mit `vorgemerkt` davor haette es
+       mehr gemeldet als genommen, und die Aufteilung ginge nicht auf.
+       Eine Zahl, die aus der Absicht gerechnet wird statt aus dem
+       Ergebnis, ist eine Behauptung ueber eine andere Stelle. */
+    neu: gewaehltNeu,
+    fenster: gewaehltFenster,
+    alt: gewaehltAlt,
   };
 }
 
