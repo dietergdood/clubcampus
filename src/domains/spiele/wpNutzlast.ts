@@ -90,13 +90,61 @@ export type WpVerlaufArt = "tor" | "gelb" | "gelbrot" | "rot" | "wechsel" | "ass
  * aufruft, schreibt ihn nicht. Dieselbe „jemand muss daran denken"-
  * Schwäche, gegen die das Ganze gebaut wird.
  *
- * **Deshalb ruft der Abholer seit dem 11.09.2026 IMMER, und die Function
- * entscheidet selbst** — sie ist der einzige Ort, der beide Hälften
- * kennt: die geänderten Zeilen UND die eigene Fassung.
+ * ~~**Deshalb ruft der Abholer seit dem 11.09.2026 IMMER, und die
+ * Function entscheidet selbst** — sie ist der einzige Ort, der beide
+ * Hälften kennt: die geänderten Zeilen UND die eigene Fassung.~~
  *
- * > Heute entschied SQL, und der Code wusste nicht, warum er läuft.
+ * > ~~Heute entschied SQL, und der Code wusste nicht, warum er läuft.~~
  *
- * Der Preis sind vier Leerläufe je Stunde mit je zwei Abfragen.
+ * ~~Der Preis sind vier Leerläufe je Stunde mit je zwei Abfragen.~~
+ *
+ * ══════════════════════════════════════════════════════════════════
+ * ⚠ ⚠ ⚠  29.09.2026 — DIESE ZAHL LÖST NICHTS AUS. SIE WIRD NIRGENDS
+ *          VERGLICHEN.
+ *
+ * Gemessen, drei Abfragen über das ganze Repository:
+ *
+ *   `NUTZLAST_FASSUNG`  hat **keinen Leser ausser seinem eigenen Test**
+ *   `FUNCTION_FASSUNG`  wird in zwei Antworten AUSGEGEBEN, nie verglichen
+ *   `schema.sql`        führt **keine gespeicherte Fassung**, nirgends
+ *
+ * Und der Abholer ruft nicht „immer": `cron_wp_export.sql:119` gattert
+ * auf `export_wartet() > 0 or export_nachlauf_faellig()`. Beide Sätze
+ * darüber sind damit falsch — der eine über den Zeitplan, der andere
+ * über die Function.
+ *
+ * ⚠ ⚠  UND ES IST DAS ZWEITE MAL FÜR DIESE KONSTANTE. Am 11.09.2026
+ * stand schon einmal fest, dass `nutzlast_fassung` in KEINER Nutzlast
+ * vorkommt — „die ganze Idee hätte vom ersten Lauf an nicht
+ * funktioniert, und der Testfall war grün". Damals fehlte das Feld in
+ * der Nutzlast; heute fehlt der Vergleich. **Zwei Hälften derselben
+ * Idee, beide nie gebaut, und dazwischen ein Kommentar, der sie als
+ * fertig beschrieb.**
+ *
+ * ⚠ **Der Satz ist stehen geblieben und durchgestrichen, nicht
+ * weggewischt** — eine gelöschte Behauptung sieht aus wie eine, die
+ * niemand aufgeschrieben hat, und der nächste Leser baut sie wieder.
+ *
+ * ── Was die Zahl heute IST ───────────────────────────────────────────
+ *
+ * Buchhaltung. Sie hält fest, dass die Nutzlast sich geändert hat, und
+ * `nutzlastFassung.test.ts` erzwingt, dass Feldliste und Zahl im selben
+ * Commit wandern. **Das ist nützlich und etwas anderes als ein
+ * Auslöser.**
+ *
+ * ⚠ Was tatsächlich hinausgeht, entscheidet die Prüfsumme je Spiel
+ * (`cc_pruefsumme()` drüben, mit `CC_VERSION` darin). Ändert sich die
+ * Nutzlast, ändert sich die Summe — **aber erst, wenn der Abholer
+ * überhaupt läuft**, und das hängt an den zwei Bedingungen oben. Ein
+ * Deploy allein löst weiterhin nichts aus; der Befund vom 11.09.2026
+ * gilt unverändert, nur ist er nie behoben worden.
+ *
+ * **Hier wird deshalb nichts gebaut** (Entscheid Didi, 29.09.2026: „Nur
+ * der Kommentar, keine Logik."). Wer es behebt, hat zwei Wege — die
+ * Fassung in die Nutzlast legen und drüben vergleichen, oder sie beim
+ * Deploy in eine Spalte schreiben, die `export_wartet()` mitliest.
+ * Beides ist eine Entscheidung, keine Reparatur.
+ * ══════════════════════════════════════════════════════════════════
  *
  * ⚠ Und die verbleibende Schwäche ist benannt: jemand muss diese Zahl
  * hochzählen. **Sie steht dafür neben den Feldern, die sie beschreibt,

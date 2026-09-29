@@ -4,10 +4,22 @@
 
    ⚠ ⚠  EINE REGEL, AN DIE JEMAND DENKEN MUSS, IST DIE SCHWÄCHSTE LÖSUNG.
 
-   `NUTZLAST_FASSUNG` löst den Export aus, wenn sich die Nutzlast geändert
-   hat — aber nur, wenn jemand sie hochzählt. **Genau dafür ist dieser
-   Fall da:** ändert sich ein Feldname in `WpVerlaufZeile` oder
-   `WpAufstellungZeile`, wird er rot und nennt beide Stellen.
+   ~~`NUTZLAST_FASSUNG` löst den Export aus, wenn sich die Nutzlast
+   geändert hat — aber nur, wenn jemand sie hochzählt.~~
+
+   ⚠ ⚠  29.09.2026: **sie löst nichts aus.** Gemessen — die Konstante hat
+   keinen Leser ausser diesem Test, `FUNCTION_FASSUNG` wird nur ausgegeben
+   und nie verglichen, und `schema.sql` führt keine gespeicherte Fassung.
+   Die ausführliche Fassung des Befunds steht an der Konstante selbst.
+
+   **Der Fall bleibt trotzdem richtig und wichtig** — nur ist seine Zusage
+   eine andere als die, die hier stand: ändert sich ein Feldname in
+   `WpVerlaufZeile`, `WpAufstellungZeile` oder `WpSpiel`, wird er rot und
+   nennt beide Stellen. Das hält Feldliste und Zahl im selben Commit
+   zusammen. Buchhaltung, kein Auslöser.
+
+   ⚠ Der durchgestrichene Satz bleibt stehen: eine gelöschte Behauptung
+   sieht aus wie eine, die niemand aufgeschrieben hat.
 
    ⚠ Er prüft NICHT, ob die Fassung „richtig" ist — das kann er nicht.
    Er prüft, dass Feldliste und Fassung **zusammen** geändert werden.

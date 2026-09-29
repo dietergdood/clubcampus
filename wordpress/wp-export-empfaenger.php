@@ -1,6 +1,6 @@
 <?php
-/* ═══════════════════════════════════════════════════════════════════════
-   ⚠ ⚠  ABSCHRIFT — NICHT DIE LAUFENDE DATEI, UND VON HIER GEHT NICHTS RAUS
+/* =======================================================================
+   ⚠ ⚠  ABSCHRIFT - NICHT DIE LAUFENDE DATEI, UND VON HIER GEHT NICHTS RAUS
 
    Die Wahrheit liegt im Theme-Repository:
 
@@ -10,42 +10,69 @@
    hat keinen Weg auf den Server: kein Deploy-Skript fasst `wordpress/`
    an, und `npm run deploy` kennt nur die vier Edge Functions.
 
-   ── Wozu sie hier dann liegt ─────────────────────────────────────────
+   -- Wozu sie hier dann liegt --------------------------------------------
 
    Damit `npm run check:plugin` die Zusagen der Gegenstelle gegen unsere
-   Nutzlast halten kann — 29 Regeln, die sonst nichts zu lesen haetten.
+   Nutzlast halten kann - 29 Regeln, die sonst nichts zu lesen haetten.
    Sie ist ein Pruefgegenstand, keine Quelle.
 
-   ── ⚠ WAS DARAUS FOLGT, WENN SIE VERALTET ────────────────────────────
+   -- ⚠ WAS DARAUS FOLGT, WENN SIE VERALTET ----------------------------
 
    Am 26.09.2026 stand hier 0.9.26, waehrend drueben 0.9.39 lief: zwoelf
    Fassungen Abstand. Unsere Kopie kannte die Route `/wappen` nicht, die
-   unsere eigene Function aufruft — wer hier nachsah, um zu verstehen,
-   was drueben passiert, las einen Stand von zwei Wochen zuvor.
+   unsere eigene Function aufruft - wer hier nachsah, um zu verstehen, was
+   drueben passiert, las einen Stand von zwei Wochen zuvor.
 
-   **Eine Abschrift, die niemand nachzieht, ist schlimmer als keine:**
-   sie sieht aus wie eine Auskunft und ist eine Erinnerung.
+   **Eine Abschrift, die niemand nachzieht, ist schlimmer als keine:** sie
+   sieht aus wie eine Auskunft und ist eine Erinnerung.
 
-   ── ⚠ BEIM NAECHSTEN ABGLEICH ────────────────────────────────────────
+   -- ⚠ BEIM NAECHSTEN ABGLEICH ---------------------------------------
 
        cp <theme-repo>/mu-plugins/wp-export-empfaenger.php \
           wordpress/wp-export-empfaenger.php
 
    ⚠ **DIESER BLOCK GEHOERT NICHT ZUR QUELLE UND WIRD DABEI
-   UEBERSCHRIEBEN.** Er ist danach von Hand wieder einzusetzen — sonst
-   liest der Naechste den Satz gleich darunter („DIESE DATEI IST DER
-   EMPFAENGER“), der im Theme-Repo stimmt und hier das Gegenteil sagt.
+   UEBERSCHRIEBEN.** Er ist danach von Hand wieder einzusetzen - sonst
+   liest der Naechste den Satz gleich darunter ("DIESE DATEI IST DER
+   EMPFAENGER"), der im Theme-Repo stimmt und hier das Gegenteil sagt.
 
-   Uebernommen am 26.09.2026 aus Commit b2c94ae, Fassung 0.9.39,
-   byteweise (`cp`, mit `cmp` gegengeprueft). Ausser diesem Block ist
-   die Datei Zeichen fuer Zeichen die des Theme-Repos.
-   ═══════════════════════════════════════════════════════════════════ */
+   -- ⚠ ⚠  ZWEI DATEIEN TRUGEN DIE NUMMER 0.9.40 (29.09.2026) ------
+
+   Diese Abschrift holt ZWEI Spruenge auf einmal, und der erste davon ist
+   keiner: **unser 0.9.40 ist hier entstanden, nicht abgeschrieben.** Am
+   29.09.2026 wurde `ereignis_subtyp` in dieser Kopie ergaenzt und der Kopf
+   auf 0.9.40 gesetzt - waehrend das Theme-Repo unabhaengig ein eigenes
+   0.9.40 fuehrte (`kandidaten()` byteidentisch zwischen 0.9.38 und 0.9.40).
+
+       unser 0.9.40   die Allowlist um `ereignis_subtyp`, hier geschrieben
+       ihr  0.9.40    `kandidaten()`, dort geschrieben
+       ihr  0.9.41    sechs Schiedsrichterfelder an `/status` (26.09.2026)
+       ihr  0.9.42    `ereignis_subtyp` im Repeater `verlauf` (29.09.2026)
+
+   ⚠ **Eine Fassungsnummer ist kein Schluessel, solange zwei Seiten sie
+   vergeben duerfen.** Genau das hat am 09. und 12.09.2026 drei Anlaeufe
+   gekostet, damals mit einem Dateinamen statt einer Nummer - und es ist
+   hier nur folgenlos, weil beide Seiten dasselbe Feld gemeint haben.
+   Gemessen vor dem Ueberschreiben: ihre `CC_VERLAUF_FELDER` fuehrt 13
+   Namen, `ereignis_subtyp` direkt nach `ereignis_zusatz`, also dieselbe
+   Stelle wie bei uns.
+
+   ⚠ Was dabei verloren geht, ist unsere Begruendung im Kommentar -
+   warum der Zusatz NICHT in `ereignis_zusatz` gehoert. Sie steht
+   weiterhin dort, wo sie hingehoert und wo wir sie pflegen: am Feld
+   `ereignis_subtyp` in `src/domains/spiele/wpNutzlast.ts`.
+
+   Uebernommen am 29.09.2026 aus Fassung 0.9.42, byteweise. Ausser diesem
+   Block ist die Datei Zeichen fuer Zeichen die des Theme-Repos - belegt
+   mit `diff`, nicht mit einer Pruefsumme: der Vermerk verschiebt sie
+   ohnehin.
+   ======================================================================= */
 /**
  * ClubCampus-Abgleich — Empfaenger auf WordPress-Seite
  *
  * Plugin Name: ClubCampus Export
  * Description: Nimmt Spielplan, Verlauf und Ranglisten aus ClubCampus entgegen.
- * Version:     0.9.40
+ * Version:     0.9.42
  *
  * ⚠ ⚠  STAND 10.09.2026: DIESE DATEI **IST** DER EMPFAENGER  ⚠ ⚠
  *
@@ -183,34 +210,118 @@ const CC_ROUTE      = 'clubcampus/v1';
    Auskunft, die „laeuft drueben der neue Empfaenger?" beantworten koennte,
    beantwortet sie nicht mehr.
 
-   0.9.40 (29.09.2026): `ereignis_subtyp` im Repeater `verlauf` — der
-   Subtyp des Verbands als Klartext («Kopftor», «Freistosstor»,
-   «Notbremse», «2. Verwarnung»). Nutzlast-Fassung 8.
-   ⚠ ANLASS: das Theme bildet eigene Verlaufszeilen jetzt aus den FELDERN
-      (Namensregel je Team, «Vorname N.» bei Junioren). Damit faellt `text`
-      als Anzeige weg — und mit ihm die Zusaetze, die NUR dort standen.
-   ⚠ ⚠  NICHT IN `ereignis_zusatz`, OBWOHL DER AUFTRAG DAS WOLLTE. Zwei
-      gemessene Gruende: `f_s_v_zusatz` ist ein `select` mit zwei Optionen
-      und verwirft alles andere WORTLOS (der `ein_nummer`-Fall) — und die
-      zwei Optionen heissen im Klartext des Verbands `Eigentor` und
-      `Penalty`. Ein Durchreichen traefe also genau das Feld, an dem die
-      Spielseite den Zwischenstand auf die andere Mannschaft dreht.
-   ⚠ ⚠  DAS ACF-UNTERFELD MUSS DRUEBEN ANGELEGT WERDEN (`f_s_v_subtyp`,
-      Typ `text`, in `fch-core/src/Fields/spiel.php`) — beide Haelften,
-      sonst verwirft `update_field()` den Wert wortlos. Bis dahin meldet
-      `unterfelder_ohne_acf` genau diesen Namen, und
-      `unterfelder_geprueft["verlauf"]` steht auf 13:13:12 statt 13:13:13.
-      **Der Ausfall ist damit sichtbar und nicht still** — aber er ist
-      einer.
-   ⚠ NICHT jeder Subtyp geht hinaus. Die Liste des Verbands hat 100
-      Eintraege und ist ein gemeinsamer Vorrat ueber alle 30
-      Ereignistypen; 50–72 sind Abwesenheitsgruende (`Verletzt`, `Krank`,
-      `Gesperrt`, `Militaer`). Die Grenze liegt auf UNSERER Seite
-      (`ZUSATZ_TYPEN`: Tor, Verwarnung, Ausschluss) — hier kommt nur an,
-      was sie durchlaesst.
-   ⚠ `text` bleibt unveraendert. Die Spielseite liest das Wort «Eigentor»
-      daraus, solange dieses Feld nicht bestaetigt ankommt; wer den Zusatz
-      vorher aus dem Text nimmt, verschiebt den Stand um zwei Tore.
+   0.9.42 (29.09.2026): `ereignis_subtyp` im Repeater `verlauf` — der Zusatz
+   des Verbands im KLARTEXT («Kopftor», «Freistosstor», «2. Verwarnung») als
+   eigenes Feld statt als Wort in `text`.
+   ⚠  Ohne den Namen in CC_VERLAUF_FELDER faellt der Wert an der EIGENEN
+      Allowlist weg, eine Stufe VOR ACF — derselbe Code wie bei `rolle` in
+      0.9.37: cc_schreibe_verlauf() baut jede Zeile aus dieser Liste.
+   ⚠  Das ACF-Unterfeld ist am selben Tag angelegt (`f_s_v_subtyp`,
+      `fch-core/src/Fields/spiel.php`) — beide Haelften, sonst verwirft
+      `update_field()` den Wert wortlos. Genau der `ein_nummer`-Fall.
+   ⚠  `unterfelder_geprueft["verlauf"]` STEHT AUF 13:13:13 — gemessen am
+      29.09.2026 an einem fch_spiel im lokalen Stapel, ueber
+      cc_pruefe_unterfelder() mit einer Zeile aus allen 13 Namen; beide
+      Melderlisten leer.
+      **Und die Messung kann scheitern.** Sie ist gegen drei Mutanten
+      gehalten, ebenfalls gemessen, damit «13:13:13» nicht bloss die
+      Abwesenheit von Funden ist:
+
+          Nutzlast bringt einen 14. Namen   14:13:13  unbeachtete_unterfelder
+          Name aus der Allowlist gezogen    13:12:13  unbeachtete_unterfelder
+          ACF-Unterfeld fehlt               13:13:12  unterfelder_ohne_acf
+
+      ⚠ Die dritte Zeile ist ueber die reine cc_unterfeld_befund() gemessen
+      und nicht durch Entfernen des Feldes; die ersten zwei liefen durch
+      cc_pruefe_unterfelder() und damit durch ACF.
+      ⚠ ⚠  UND SIE SIND NICHT 12:11:11 VON 0.9.37 MIT ANDEREN ZAHLEN. Dort
+      fehlten BEIDE Haelften zugleich; hier fehlt je eine, und darum bleibt
+      die dritte Zahl in der zweiten Mutante bei 13. **Wer die Zahlen von
+      0.9.37 fortschreibt, statt zu messen, schreibt 13:12:12 hin** — und das
+      waere geraten.
+   ⚠ ⚠  ES TRITT NICHT AN DIE STELLE VON `ereignis_zusatz`. Jenes ist ein
+      `select` mit genau zwei Werten (`eigentor` · `penalty`), und an ihm
+      haengt die Drehung des Zwischenstands. **Ein freier Text in demselben
+      Kanal macht `=== 'eigentor'` unlesbar.** Zwei Fragen, zwei Felder: was
+      das Tor FUER DEN STAND bedeutet, und wie es gefallen ist. **`text`
+      bleibt ebenso unveraendert** — der Zusatz wird nicht daraus gewonnen,
+      sondern geliefert.
+   ⚠  KEIN EINTRAG IN CC_FELDER_ABSICHTLICH_UNGENUTZT, und zwar aus zwei
+      Gruenden: Jene Liste nennt OBERSTE Feldnamen der Nutzlast
+      (`cc_unbeachtete_felder()` vergleicht gegen CC_FELDER, eine Ebene
+      hoeher), und sie nennt, was ABSICHTLICH liegen bleibt — dieses Feld wird
+      geschrieben.
+   ⚠  Die Fassungsnummer der NUTZLAST zaehlt die Gegenseite, nicht diese
+      Datei. `nutzlast_fassung` gibt es hier nicht und gab es nie (siehe die
+      Berichtigung bei 0.9.15); darum steht in diesem Eintrag das Feld und
+      keine Zahl.
+   ⚠  JEDES SPIEL WIRD EINMAL NEU GESCHRIEBEN, und das ist der Preis jeder
+      Erhoehung: CC_VERSION geht in cc_pruefsumme() ein, also aendert sich
+      jede abgelegte Pruefsumme. **Umgangen wird es nicht** — der Hash bleibt
+      `CC_VERSION . '|' . $roh`, und der erste Lauf nach dieser Fassung meldet
+      `aktualisiert` statt `unveraendert`, fuer alles. Begruendung bei der
+      Konstante und bei 0.9.39.
+
+   0.9.41 (26.09.2026): sechs Schiedsrichterfelder an `/status`, die in
+   EINEM Abruf entscheiden, woran die Nullmeldung auf www liegt.
+   ⚠ ⚠ NUR AUSKUNFT. **Keine Logik geaendert, kein Verhalten, keine
+      Nutzlast.** Der Export schreibt Zeichen fuer Zeichen dasselbe wie
+      0.9.40, und wer von dort kommt, bekommt dasselbe Ergebnis. Neu sind
+      ausschliesslich Felder in der Antwort von `/status`.
+   ⚠ ANLASS: Auf www meldete `/status` mit Schluessel **0 Spielbeitraege,
+      0 im Abgleich und keinen abgelegten Bericht** — bei 32 Teams, davon
+      28 mit SFV-Nummer, also richtig gezaehlt. Daneben standen rund 275
+      Spiele auf derselben Website, und der letzte Export hatte 68
+      geschrieben (an zwei Spielseiten belegt). Derselbe 0.9.40-Code
+      meldet im Pruefstapel 281 Spiele, 271 im Abgleich, Bericht da: die
+      Stoerung ist lokal NICHT reproduzierbar.
+   ⚠ WARUM AUSKUNFT STATT REPARATUR: Die beiden naheliegenden Ursachen
+      sind zweimal unabhaengig widerlegt worden. `cc_abgleich_
+      kandidaten()` ist zwischen 0.9.38 und 0.9.40 byteidentisch und
+      kennt keine Team-Vorauswahl — die steht allein in
+      `cc_route_spiele()`. Und den Bericht schreibt und liest genau eine
+      Konstante, `CC_OPT_BERICHT`. An beiden Stellen gibt es nichts zu
+      reparieren, und wer dort trotzdem baut, aendert etwas Gesundes.
+   ⚠ Der schaerfste Hinweis ist, dass `letzter_bericht` MIT fehlt:
+      `get_option()` ist von Beitragstyp-Anmeldung, `posts_*`-Filtern und
+      der Cachegruppe `counts` voellig unberuehrt. **Kein einzelner
+      WordPress-Mechanismus erklaert alle vier Symptome zugleich** — eine
+      einzige Ursache taete es, und genau sie pruefen die neuen Felder:
+      liest `/status` einen anderen Datenbestand als die oeffentlichen
+      Seiten?
+   ⚠ DIE FELDER, und welche Frage jedes entscheidet:
+      `spiele_roh`             WordPress-Ebene oder Daten? (rohes SQL)
+      `abgleich_ohne_filter`   schneidet ein `posts_*`-Filter?
+      `spiel_typ_angemeldet`   ist der Beitragstyp ueberhaupt da?
+      `team_typ_angemeldet`    — und wenn ja, nur einer von beiden?
+      `bericht_roh`            Option fehlt, oder get_option() sieht sie nicht?
+      `datenbank`              dieselbe Installation wie die Seiten?
+      `objekt_cache`           steht ein fremder Cache dazwischen?
+      `wpdb_letzter_fehler`    war die 0 eine Antwort oder ein Fehlschlag?
+   ⚠ `suppress_filters => false` in cc_abgleich_kandidaten() BLEIBT.
+      Der Zwilling kommt daneben, nicht an seine Stelle: nur so misst
+      `abgleich_findet` weiter, was der Export tatsaechlich sieht.
+   ⚠ `datenbank.kennung` ist ein md5 ueber Datenbankname und Praefix.
+      **Nie Klartext** — kein DB_NAME, kein DB_USER, kein Passwort, kein
+      Praefix. Diese Route antwortet ueber HTTP; vergleichbar genuegt.
+   ⚠ ⚠ CLUBCAMPUS LIEFERT DIESE DATEI ALS GANZES. Was hier steht, ist
+      eine Kopie — die Aenderung muss drueben nachgezogen werden, sonst
+      ueberschreibt die naechste Lieferung sie wortlos, und `/status`
+      meldet wieder 0.9.40 ohne die Felder. Woran man es merkt: die
+      Antwort nennt ihre `version`.
+
+   0.9.40 (26.09.2026): `version` steht in JEDER Antwort des Namensraums,
+   auch in 401, 400 und 503 — genau wie `laufzeit_ms` seit 0.9.38.
+   ⚠ NUR EINE KENNZEICHNUNG. Keine Logik geaendert, kein Verhalten,
+      keine Nutzlast. Wer von 0.9.39 kommt, bekommt dasselbe Ergebnis.
+   ⚠ ANLASS: Am 26.09.2026 zeigte Plugins → Must-Use eine Fassung und
+      die Antwort des Empfaengers eine andere, und von aussen war nicht zu
+      entscheiden, welche laeuft. Must-Use liest den Dateikopf von der
+      Platte (was ABGELEGT ist), die Antwort kommt aus dem ausgefuehrten
+      Code (was LAEUFT). Erst beide zusammen trennen «nicht angekommen»
+      von «angekommen, aber vom Opcache festgehalten».
+   ⚠ Bis 0.9.39 nannten nur `status`, `bestand` und `wappen` die Fassung
+      — also gerade `spiele` und `ranglisten` nicht, die Wege des Exports.
 
    0.9.39 (26.09.2026): unveraenderte Spiele werden nicht neu geschrieben.
    ⚠ ANLASS, gemessen mit 0.9.38: `laufzeit_ms` 14–19 s je Mannschaft,
@@ -1049,7 +1160,7 @@ const CC_ROUTE      = 'clubcampus/v1';
    einander), `autoload` wird nach dem Schreiben geprueft und notfalls
    berichtigt, `/status` nennt Empfaenger, Version, Metaschluessel und die
    Team-Zuordnung. */
-const CC_VERSION    = '0.9.40';
+const CC_VERSION    = '0.9.42';
 const CC_TYP_SPIEL  = 'fch_spiel';
 const CC_TYP_TEAM   = 'fch_team';
 /* ⚠ NUR ZUM ZAEHLEN. Dieses Plugin legt keine Person an und aendert
@@ -1339,27 +1450,37 @@ const CC_VERLAUF_FELDER = array(
 	   ⚠ Drueben `f_s_v_zusatz`, ein `select` mit `allow_null`. Es kennt
 	   genau zwei Werte; was hier nicht passt, kommt als leerer Text. */
 	'ereignis_zusatz',
-	/* ⚠ ⚠  Seit 0.9.40: der Subtyp des Verbands als KLARTEXT — «Kopftor»,
-	   «Freistosstor», «Notbremse», «2. Verwarnung». Er steht NEBEN
-	   `ereignis_zusatz` und nicht darin, und die Reihenfolge ist hier die
-	   Aussage.
+	/* ⚠ ⚠  DER KLARTEXT NEBEN DER AUSWAHL — 29.09.2026, Fassung 0.9.42.
+	   Der Zusatz, wie der Verband ihn schreibt: «Kopftor», «Freistosstor»,
+	   «2. Verwarnung» — oder leer. Ungedeutet, nur getrimmt.
 
-	   ⚠ ⚠  WARUM NICHT DARIN, obwohl der Auftrag das wollte: `f_s_v_zusatz`
-	   ist ein `select` mit genau zwei Optionen und verwirft alles andere
-	   WORTLOS — und die zwei heissen im Klartext des Verbands `Eigentor`
-	   und `Penalty`. Ein Durchreichen traefe also ausgerechnet das Feld, an
-	   dem die Spielseite den Zwischenstand auf die andere Mannschaft dreht.
-	   **Ein Eigentor zaehlt fuer den Gegner.**
+	   ⚠ ⚠ ES TRITT NICHT AN DIE STELLE DER ZEILE DARUEBER. `ereignis_zusatz`
+	   ist ein `select` mit genau zwei Werten, und an ihm haengt die Drehung
+	   des Zwischenstands. **Ein freier Text in demselben Kanal macht
+	   `=== 'eigentor'` unlesbar** — wer dort prueft, pruefte gegen ein Feld,
+	   in dem auch «Kopftor» stehen kann. Jenes sagt, was das Tor FUER DEN
+	   STAND bedeutet; dieses sagt, WIE es gefallen ist.
 
-	   ⚠ Drueben `f_s_v_subtyp`, ein `text` — wie `rolle` und aus demselben
-	   Grund: die Website ZEIGT die Angabe, sie rechnet nicht damit. Ein
-	   `select` braeuchte die Liste der 100 Subtypen, also eine zweite
-	   Wahrheit neben den Stammdaten des Verbands.
+	   ⚠ Und es wird NICHT aus `text` gewonnen. Der Zusatz steht heute mit im
+	   Satz («Ramon Farah · Freistoss»), und die Spielseite schneidet dort
+	   «Eigentor» heraus. Dieses Feld ist der Ort, an dem er steht, wenn
+	   `text` schrumpft — der Parser faellt weg, wenn der Abgleich liefert,
+	   nicht vorher.
 
-	   ⚠ Der Name `subtyp` gibt es drueben nur hier. Als UNTERFELD waere ein
-	   gleichnamiges Feld ohnehin keine Falle — `update_field('verlauf', …)`
-	   ordnet die Schluessel diesem Wiederholer zu —, aber der Satz gehoert
-	   hierher, weil der naechste Leser genau diese Frage stellt. */
+	   ⚠ NICHT gegen einen Text vergleichen — derselbe Satz wie bei `rolle`
+	   eine Zeile weiter unten: Es ist die Schreibweise eines fremden
+	   Verbands, und ein `=== 'Kopfball'` traefe «Kopftor» nicht.
+
+	   ⚠ Gefuellt kommt es nur bei `art` = `tor` · `gelb` · `gelbrot` · `rot`;
+	   bei `assist` und `wechsel` schickt der Verband nichts. **Dann kommt
+	   aber `""` und nicht nichts** — das Feld ist immer da, und
+	   cc_schreibe_verlauf() setzt es ohnehin auf `''`, wo die Zeile es nicht
+	   fuehrt.
+
+	   ⚠ Drueben `f_s_v_subtyp`, ein `text`. Der NAME ist im Baum eindeutig
+	   (gemessen am 29.09.2026: 0 Treffer vor dem Bau) — geschrieben wird
+	   trotzdem ueber den Schluessel des Repeaters, wie jedes Unterfeld
+	   hier. */
 	'ereignis_subtyp',
 	/* ⚠ ⚠  DAS MERKMAL STATT DES NAMENS — Nutzlast-Fassung 4, 13.09.2026.
 	   Vier Verlaufszeilen trugen `spieler: "Unser Team"`, und das ist unser
@@ -2081,6 +2202,24 @@ function cc_route_status(): WP_REST_Response {
 			/* ⚠ Was wir SUCHEN — damit ein Namensunterschied sichtbar
 			   wird, statt als leere Menge zu erscheinen. */
 			'spiel_typ_gesucht'     => CC_TYP_SPIEL,
+			/* ⚠ ⚠ ENTSCHEIDET: Ist der Beitragstyp UEBERHAUPT angemeldet, wenn
+			   diese Anfrage laeuft? Bisher stand das nur MITTELBAR in `fehlt`
+			   — und weil ein Eintrag dort die ganze Antwort auf 503 zieht,
+			   liest man in dem Fall zuerst die Abweisung und nicht die Zahl.
+			   Als eigenes Feld ist es eine Zeile neben `spiele_gesamt`:
+			   ist der Typ nicht angemeldet, zaehlt wp_count_posts() zwingend
+			   0, und zwar voellig unabhaengig davon, was in der Tabelle
+			   steht. Die Gegenprobe dazu ist `spiele_roh`.
+			   ⚠ Ein Beitragstyp kann an der REST-Anfrage fehlen und auf den
+			   oeffentlichen Seiten da sein: `init` laeuft in beiden Faellen,
+			   aber Bedingungen wie is_admin() oder eine Abfrage am Pfad
+			   entscheiden dort verschieden. */
+			'spiel_typ_angemeldet'  => (bool) post_type_exists( CC_TYP_SPIEL ),
+			/* ⚠ Der Gegenpol: er MUSS `true` sein, denn die Teams werden
+			   richtig gezaehlt. Steht hier `true` und daneben `false`,
+			   sind es nicht „die Beitragstypen", sondern genau einer — und
+			   das ist eine andere Suche. */
+			'team_typ_angemeldet'   => (bool) post_type_exists( CC_TYP_TEAM ),
 			/* ⚠ Und was tatsaechlich DA IST, an WP_Query vorbei. */
 			'match_id_typen'        => cc_typen_mit_match_id(),
 			/* ⚠ DIESELBE ABFRAGE WIE DER EXPORT. Findet sie hier etwas
@@ -2088,12 +2227,31 @@ function cc_route_status(): WP_REST_Response {
 			   der ABFRAGE und nicht in den Daten — und die zwei Zahlen
 			   nebeneinander sagen es, statt dass jemand es herleitet. */
 			'abgleich_findet'       => count( cc_abgleich_kandidaten() ),
+			/* ⚠ ⚠ ENTSCHEIDET: Schneidet ein `posts_*`-FILTER die Spiele weg?
+			   Derselbe Bau wie eine Zeile darueber, nur mit
+			   `suppress_filters => true` — dem einzigen Unterschied zu den
+			   Team-Abfragen, die richtig melden. Weicht diese Zahl von
+			   `abgleich_findet` ab, schneidet ein Filter; sind beide gleich,
+			   tut es keiner, und an dieser Stelle ist fertig gesucht.
+			   ⚠ DANEBEN, NICHT ANSTELLE: cc_abgleich_kandidaten() bleibt
+			   unveraendert, damit `abgleich_findet` weiterhin misst, was der
+			   Export tatsaechlich sieht. Siehe cc_abgleich_ohne_filter(). */
+			'abgleich_ohne_filter'  => cc_abgleich_ohne_filter(),
 			/* ⚠ Der letzte Bericht, unveraendert. Er traegt `neu`,
 			   `aktualisiert`, `zurueckgezogen` und vor allem
 			   `unbeachtete_felder` — die Antwort auf „ist das Feld
 			   angekommen und wurde es verworfen?". Bis 0.9.6 stand er
 			   nur in einer Option, die niemand von aussen lesen kann. */
 			'letzter_bericht'       => get_option( CC_OPT_BERICHT, null ),
+			/* ⚠ ⚠ ENTSCHEIDET: Ist die Option nicht DA, oder sieht
+			   `get_option()` sie nicht? `letzter_bericht` meldet fuer beides
+			   `null`, und die beiden Faelle fuehren an entgegengesetzte
+			   Stellen — zum Export oder zum Abruf. Dass der Bericht MIT
+			   fehlt, ist der schaerfste Hinweis ueberhaupt: get_option() ist
+			   von Beitragstypen, posts_*-Filtern und der Cachegruppe
+			   `counts` voellig unberuehrt, also erklaert keiner dieser
+			   Mechanismen alle vier Symptome zugleich. */
+			'bericht_roh'           => cc_bericht_roh(),
 			/* ⚠ Felder, deren Schluessel sich an diesem Beitragstyp nicht
 			   aufloesen laesst. Sie werden NICHT geschrieben — lieber gar
 			   nicht als unvorhersehbar. Eine leere Liste ist die
@@ -2111,8 +2269,44 @@ function cc_route_status(): WP_REST_Response {
 			'wp_teams_mit_sfv_id'   => count( $karte ) - $mehrfach,
 			'wp_teams_sfv_id_doppelt' => $mehrfach,
 			'spiele_gesamt'    => (int) wp_count_posts( CC_TYP_SPIEL )->publish,
+			/* ⚠ ⚠ ENTSCHEIDET: Liegt es an WordPress oder an den DATEN?
+			   Dieselbe Frage wie `spiele_gesamt`, aber an
+			   post_type_exists(), WP_Query, jedem Filter und der
+			   Cachegruppe `counts` vorbei — rohes SQL auf die Tabelle.
+			   Steht hier etwas und `spiele_gesamt` ist 0, ist die
+			   WordPress-Ebene schuld und die Beitraege sind da. Steht hier
+			   nichts, sind sie es nicht, und `datenbank` ist die naechste
+			   Auskunft. Nach Zustand, damit der Papierkorb nicht als
+			   „nicht vorhanden" durchgeht. */
+			'spiele_roh'       => cc_spiele_roh(),
 			'spiele_abgleich'  => count( cc_abgleich_kandidaten() ),
+			/* ⚠ ⚠ ENTSCHEIDET: Bedienen `/status` und die oeffentlichen Seiten
+			   dieselbe Installation? Die eine Annahme, die alle vier
+			   Symptome auf einmal erklaeren wuerde — und die bisher
+			   ungeprueft blieb, weil sie zu selbstverstaendlich schien.
+			   ⚠ `kennung` ist ein Hash, KEIN Klartext: Datenbankname,
+			   Benutzer, Passwort und Praefix gehoeren in keine Antwort,
+			   die ueber HTTP geht. Vergleichbar genuegt. */
+			'datenbank'        => cc_datenbank_fingerabdruck(),
+			/* ⚠ ENTSCHEIDET, ob ein FREMDER Cache zwischen Abfrage und
+			   Antwort steht. Ohne externen Objekt-Cache lebt jeder
+			   Zwischenstand nur fuer die Dauer dieser einen Anfrage, und
+			   „veraltete Zahl" scheidet als Erklaerung aus. Mit einem gilt
+			   das Gegenteil: dann kann `/status` eine Zahl melden, die zu
+			   einem anderen Zeitpunkt gehoert als die Seite daneben. */
+			'objekt_cache'     => (bool) wp_using_ext_object_cache(),
 			'benutzer'         => wp_get_current_user()->user_login,
+			/* ⚠ ⚠ GANZ AM SCHLUSS, UND DAS IST DER PUNKT: Alle Abfragen
+			   dieser Antwort sind hier durch. Eine Tabelle, die es nicht
+			   gibt, ein Feld, das umbenannt wurde, eine abgerissene
+			   Verbindung — wpdb meldet das NICHT nach oben, sondern gibt
+			   ein leeres Ergebnis zurueck. Eine 0 aus einer fehlgeschlagenen
+			   Abfrage sieht genauso aus wie eine 0 aus einer erfolgreichen.
+			   Dieses Feld trennt die beiden.
+			   ⚠ Es traegt nur den LETZTEN Fehler: wpdb leert ihn bei jeder
+			   neuen Abfrage. Ein leerer Wert heisst also „die letzte
+			   Abfrage lief sauber", nicht „alle liefen sauber". */
+			'wpdb_letzter_fehler' => (string) $GLOBALS['wpdb']->last_error,
 		),
 		array() === $fehlt ? 200 : 503
 	);
@@ -4650,6 +4844,223 @@ function cc_spiele_nach_zustand(): array {
 	return $raus;
 }
 
+
+/* ═══════════════════════════════════════════════════════════════════════
+   SCHIEDSRICHTERFELDER — 0.9.41, 26.09.2026
+   ═══════════════════════════════════════════════════════════════════════
+
+   ⚠ ⚠  DIESE FUENF HELFER SCHREIBEN NICHTS UND ENTSCHEIDEN NICHTS.
+   Sie antworten nur, und zwar jeder auf GENAU EINE Frage. Wer einen von
+   ihnen in den Export hineinzieht, nimmt ihm den Zweck: eine Auskunft,
+   die den Lauf beeinflusst, kann den Lauf nicht mehr beurteilen.
+
+   ⚠ ANLASS: Am 26.09.2026 meldete `/status` auf www null Spielbeitraege,
+   null im Abgleich und keinen abgelegten Bericht — bei 32 Teams, davon 28
+   mit SFV-Nummer, also RICHTIG gezaehlt. Auf derselben Website standen
+   rund 275 Spiele, und der letzte Export hatte 68 geschrieben; an zwei
+   Spielseiten war das nachzusehen. Derselbe Code meldete im Pruefstapel
+   281 Spiele, 271 im Abgleich und einen Bericht.
+
+   ⚠ WARUM NEUE FELDER UND KEINE REPARATUR: Die beiden naheliegenden
+   Ursachen sind zweimal unabhaengig WIDERLEGT worden — `cc_abgleich_
+   kandidaten()` ist zwischen 0.9.38 und 0.9.40 byteidentisch und kennt
+   keine Team-Vorauswahl, und den Bericht schreibt und liest genau eine
+   Konstante. Repariert wurde also an zwei Stellen, an denen nichts
+   kaputt war. Dass ausgerechnet `letzter_bericht` MIT fehlt, ist der
+   schaerfste Hinweis: `get_option()` ist von Beitragstypen, `posts_*`-
+   Filtern und der Cachegruppe `counts` voellig unberuehrt. Kein
+   einzelner WordPress-Mechanismus erklaert alle vier Symptome zugleich
+   — eine einzige Ursache taete es, und die Felder hier unten pruefen
+   genau sie: **liest `/status` einen anderen Datenbestand als die
+   oeffentlichen Seiten?**
+
+   Sie sind so gebaut, dass ein Abruf die Frage entscheidet, statt eine
+   naechste Vermutung zu erlauben.
+*/
+
+/**
+ * Die Spiele, wie sie in der TABELLE stehen — je Zustand.
+ *
+ * ⚠ ENTSCHEIDET: Fehlen die DATEN, oder verliert sie die WordPress-Ebene?
+ *   `spiele_gesamt` und `spiele_nach_zustand` gehen beide ueber
+ *   wp_count_posts(). Das setzt einen ANGEMELDETEN Beitragstyp voraus,
+ *   liest aus der Cachegruppe `counts` und laeuft durch Filter. Diese
+ *   Abfrage braucht nichts davon — sie fragt die Tabelle.
+ *
+ *   Steht hier etwas und `spiele_gesamt` ist 0, liegt es an der
+ *   WordPress-Ebene und nicht an den Daten. Steht hier NICHTS, sind die
+ *   Beitraege in dieser Datenbank wirklich nicht vorhanden, und jede
+ *   weitere Suche auf der WordPress-Ebene ginge ins Leere — dann ist
+ *   `datenbank` die naechste Auskunft, nicht der Beitragstyp.
+ *
+ * ⚠ Nach ZUSTAND, wie `spiele_nach_zustand`. Eine einzelne Zahl koennte
+ *   „es gibt keine" nicht von „sie stehen im Papierkorb" trennen.
+ */
+function cc_spiele_roh(): array {
+	global $wpdb;
+	$zeilen = $wpdb->get_results(
+		$wpdb->prepare(
+			"SELECT post_status, COUNT(*) AS anzahl
+			   FROM {$wpdb->posts}
+			  WHERE post_type = %s
+			  GROUP BY post_status
+			  ORDER BY anzahl DESC",
+			CC_TYP_SPIEL
+		),
+		ARRAY_A
+	);
+	$raus = array();
+	foreach ( (array) $zeilen as $z ) {
+		$raus[ (string) $z['post_status'] ] = (int) $z['anzahl'];
+	}
+	if ( array() === $raus ) {
+		$raus['_hinweis'] = 'In dieser Datenbank steht keine einzige Zeile mit '
+			. 'post_type = ' . CC_TYP_SPIEL . ', gleich welchen Zustands. Dann '
+			. 'fehlt kein Beitragstyp und kein Filter schneidet, sondern der '
+			. 'Export hat nie HIERHER geschrieben. Weiter bei `datenbank`.';
+	}
+	return $raus;
+}
+
+/**
+ * Der Zwilling von cc_abgleich_kandidaten() — dieselbe Abfrage, aber
+ * ohne `posts_*`-Filter.
+ *
+ * ⚠ ENTSCHEIDET: Schneidet ein FILTER die Spiele weg?
+ *   `cc_abgleich_kandidaten()` laeuft mit `suppress_filters => false`
+ *   und ist damit fuer jedes `posts_where`, `posts_join` oder
+ *   `posts_clauses` eines beliebigen Plugins offen. Die Team-Abfragen
+ *   daneben uebergeben den Parameter gar nicht, laufen also mit der
+ *   WordPress-Vorgabe `true`. **Das ist der einzige Bauunterschied
+ *   zwischen der Zahl, die falsch meldet, und den Zahlen, die stimmen.**
+ *
+ *   Findet dieser Zwilling die Spiele und das Original nicht, schneidet
+ *   ein Filter — und nur dann. Finden beide nichts, liegt es woanders,
+ *   und an den Filtern muss niemand weitersuchen.
+ *
+ * ⚠ ⚠ ER TRITT NICHT AN DIE STELLE DES ORIGINALS, er kommt DANEBEN.
+ *   `suppress_filters => false` in cc_abgleich_kandidaten() ist Absicht:
+ *   es ist dieselbe Abfrage wie im Export. Eine Auskunft, die anders
+ *   misst als der Export, beantwortet die Frage nach dem Export nicht
+ *   mehr — sie beantwortet dann eine Frage, die niemand gestellt hat.
+ *
+ * ⚠ Gezaehlt wird wie dort ueber die `sfv_match_id`, nicht ueber die
+ *   Beitraege: doppelte Nummern fallen in beiden Zahlen gleich zusammen.
+ *   Sonst haette eine Abweichung zwei moegliche Ursachen statt einer.
+ */
+function cc_abgleich_ohne_filter(): int {
+	$ids = get_posts(
+		array(
+			'post_type'        => CC_TYP_SPIEL,
+			'post_status'      => array( 'publish', 'draft', 'pending', 'private' ),
+			'numberposts'      => -1,
+			'fields'           => 'ids',
+			'suppress_filters' => true,
+			'meta_query'       => array(
+				array(
+					'key'     => 'sfv_match_id',
+					'compare' => 'EXISTS',
+				),
+				array(
+					'key'     => 'sfv_match_id',
+					'value'   => '',
+					'compare' => '!=',
+				),
+			),
+		)
+	);
+
+	$karte = array();
+	foreach ( $ids as $id ) {
+		$mid = trim( (string) get_post_meta( (int) $id, 'sfv_match_id', true ) );
+		if ( '' === $mid ) {
+			continue;
+		}
+		$karte[ $mid ] = (int) $id;
+	}
+	return count( $karte );
+}
+
+/**
+ * Die Berichts-Option, wie sie in der TABELLE steht.
+ *
+ * ⚠ ENTSCHEIDET: Ist die Option nicht DA — oder sieht `get_option()` sie
+ *   nicht? `letzter_bericht` meldet in beiden Faellen `null`, und die
+ *   beiden Faelle fuehren in entgegengesetzte Richtungen: fehlt die
+ *   Zeile, hat der Export hier nie geschrieben (oder in eine andere
+ *   Datenbank) — steht sie da, war der Export erfolgreich und der
+ *   Optionen-Cache, `autoload` oder ein `pre_option_`-Filter verbirgt
+ *   sie. Im ersten Fall sucht man am Export, im zweiten am Abruf.
+ *
+ * ⚠ NUR DIE LAENGE, nicht der Inhalt. Der Bericht selbst steht als
+ *   `letzter_bericht` ohnehin in derselben Antwort; ein zweites Mal
+ *   verdoppelte die Nutzlast ohne Erkenntnisgewinn. Die Laenge genuegt
+ *   fuer „steht dort etwas Ernsthaftes oder ein leerer Rumpf?".
+ */
+function cc_bericht_roh(): array {
+	global $wpdb;
+	$zeile = $wpdb->get_row(
+		$wpdb->prepare(
+			"SELECT option_id, autoload, LENGTH(option_value) AS laenge
+			   FROM {$wpdb->options}
+			  WHERE option_name = %s",
+			CC_OPT_BERICHT
+		),
+		ARRAY_A
+	);
+	if ( ! is_array( $zeile ) ) {
+		return array(
+			'vorhanden' => false,
+			'_hinweis'  => 'Die Option ' . CC_OPT_BERICHT . ' steht nicht in '
+				. 'dieser Datenbank. Dann trifft get_option() keine Schuld, '
+				. 'und der Export hat hier nie abgelegt. Weiter bei `datenbank`.',
+		);
+	}
+	return array(
+		'vorhanden' => true,
+		'option_id' => (int) $zeile['option_id'],
+		/* ⚠ `autoload` = `no` heisst NICHT „unsichtbar": get_option() holt
+		   eine nicht vorgeladene Option einzeln nach. Es steht hier, weil
+		   ein Wechsel dieser Spalte zwischen zwei Laeufen verraet, dass
+		   jemand anders die Option geschrieben hat als wir. */
+		'autoload'  => (string) $zeile['autoload'],
+		'laenge'    => (int) $zeile['laenge'],
+	);
+}
+
+/**
+ * Ein Fingerabdruck der Installation, die DIESE Antwort bedient.
+ *
+ * ⚠ ENTSCHEIDET: Lesen `/status` und die oeffentlichen Seiten UEBERHAUPT
+ *   denselben Datenbestand? Das ist die einzige Annahme, die alle vier
+ *   Symptome auf einmal erklaeren wuerde — und bisher hat sie niemand
+ *   geprueft, weil sie so selbstverstaendlich schien. Wer denselben
+ *   Abdruck neben eine oeffentliche Seite haelt und eine Abweichung
+ *   findet, braucht an Filtern, Caches und Beitragstypen gar nicht erst
+ *   anzufangen.
+ *
+ * ⚠ ⚠ NIEMALS `DB_NAME`, `DB_USER`, ein Passwort oder den Tabellen-
+ *   Praefix im KLARTEXT. Diese Route antwortet ueber HTTP, und Zugangs-
+ *   daten in einer Auskunft sind eine Luecke, die kein Befund aufwiegt.
+ *   `kennung` ist ein md5 ueber Datenbanknamen und Praefix: er ist
+ *   VERGLEICHBAR, ohne etwas preiszugeben — genau das wird gebraucht.
+ *
+ * ⚠ `posts_gesamt` und `posts_max_id` daneben, weil zwei Installationen
+ *   denselben Namen und Praefix haben koennen (Kopie auf einem zweiten
+ *   Server). Die hoechste vergebene Id trennt sie: sie waechst mit dem
+ *   Betrieb und ist auf zwei Kopien nach Stunden verschieden.
+ */
+function cc_datenbank_fingerabdruck(): array {
+	global $wpdb;
+	$name = defined( 'DB_NAME' ) ? (string) constant( 'DB_NAME' ) : '';
+	return array(
+		'kennung'      => md5( $name . '|' . $wpdb->prefix ),
+		'posts_gesamt' => (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$wpdb->posts}" ),
+		'posts_max_id' => (int) $wpdb->get_var( "SELECT MAX(ID) FROM {$wpdb->posts}" ),
+		'siteurl'      => (string) get_option( 'siteurl' ),
+	);
+}
+
 function cc_ein_spiel_id(): int {
 	$ids = get_posts(
 		array(
@@ -6697,8 +7108,13 @@ add_action(
 
 
 /* ══════════════════════════════════════════════════════════════════════
-   LAUFZEIT IN JEDER ANTWORT — 0.9.38 (26.09.2026)
+   LAUFZEIT UND KEIN ZWISCHENSPEICHER IN JEDER ANTWORT — 26.09.2026
    ══════════════════════════════════════════════════════════════════════
+
+   ⚠ Der Abschnitt hiess bis 26.09.2026 ~~«LAUFZEIT IN JEDER ANTWORT —
+   0.9.38»~~. Er traegt seither einen zweiten Auftrag: die Antworten dieses
+   Namensraums aus jedem Zwischenspeicher heraushalten. Warum das kein
+   Nebenthema ist, steht unter KEIN ZWISCHENSPEICHER weiter unten.
 
    ⚠ **DIESE DATEI LIEFERT CLUBCAMPUS ALS GANZES.** Beim naechsten Nachschub
    wird sie ERSETZT und nicht zusammengefuehrt — was hier steht und drueben
@@ -6760,6 +7176,180 @@ function cc_laufzeit_ms(): int {
 	return (int) max( 0, round( ( microtime( true ) - (float) $start ) * 1000 ) );
 }
 
+/* ══════════════════════════════════════════════════════════════════════
+   KEIN ZWISCHENSPEICHER — 26.09.2026
+   ══════════════════════════════════════════════════════════════════════
+
+   ⚠ **AUCH DAS HIER LIEFERT CLUBCAMPUS ALS GANZES.** Beim naechsten
+   Nachschub wird diese Datei ERSETZT. Wird das Folgende drueben nicht
+   nachgezogen, ist es weg — ohne Konflikt und ohne Meldung —, und der
+   Befund von unten kehrt zurueck.
+
+   ── Der Anlass, gemessen auf www am 26.09.2026 ──────────────────────────
+
+   Der Export hatte gerade 68 Spiele aktualisiert, und `/status` meldete
+   «Fassung 0.9.38» und «kein Bericht abgelegt», waehrend Must-Use 0.9.39
+   zeigte. Drei Abrufe hintereinander gaben byteidentische Antworten,
+   `laufzeit_ms` stand dreimal auf demselben Wert, und nginx schrieb
+   `X-Cache-Status: STALE` dazu. **Die Antwort kam nicht aus WordPress.**
+
+   Schlimmer, und das ist der eigentliche Grund fuer diesen Abschnitt:
+   Diese abgelegte Antwort wurde **ohne `X-FCH-Schluessel`** ausgeliefert —
+   voller Rumpf, 200, 275 Spiele. Derselbe Abruf mit einem angehaengten
+   `?nocache=…` umging die Ablage und bekam das, was richtig ist:
+   **401 «Nicht berechtigt.»**
+
+   > **Eine Abweisung, die im Zwischenspeicher nicht ankommt, hebt sich
+   > selbst auf: Die letzte erlaubte Antwort bleibt liegen und wird an
+   > jeden weitergereicht, der danach fragt.**
+
+   ── Warum WordPress das nicht von allein verhindert hat ─────────────────
+
+   `wp-includes/rest-api/class-wp-rest-server.php` entscheidet in
+   `serve_request()`:
+
+   ```
+   $send_no_cache_headers = apply_filters(
+       'rest_send_nocache_headers', is_user_logged_in()
+   );
+   ```
+
+   ⚠ **`is_user_logged_in()`, und der Abgleich ist nicht angemeldet.** Er
+   weist sich mit dem Kopf `X-FCH-Schluessel` aus und hat keinen
+   WordPress-Benutzer — `/status` schreibt das selbst in den Rumpf
+   (`benutzer: false`). Also war die Bedingung falsch, WordPress liess
+   `wp_get_nocache_headers()` aus, und **die Antwort ging ganz ohne
+   `Cache-Control` hinaus.** Ein Zwischenspeicher, der nichts vorfindet,
+   was ihm etwas verbietet, darf ablegen. Er hat getan, was erlaubt war.
+
+   ── Warum GURT UND HOSENTRAEGER, also zwei Haken ────────────────────────
+
+   1. `rest_send_nocache_headers` ist der **vorgesehene** Weg. Wer ihn
+      benutzt, bekommt von `wp_get_nocache_headers()` genau die Koepfe, die
+      der Kern fuer richtig haelt, und bleibt beim Kern, wenn der sie
+      einmal aendert.
+      ⚠ Aber der Filter laeuft **fruehestens** und bekommt kein
+      `WP_REST_Request`. Die Route muss dort aus dem angefragten Pfad
+      geraten werden (siehe `cc_rest_pfad_frueh()`), und ein anderes
+      Plugin, das spaeter auf demselben Filter `false` zurueckgibt,
+      ueberstimmt uns still.
+
+   2. Darum setzt `rest_post_dispatch` die Koepfe **zusaetzlich und
+      ausdruecklich**. Dort gibt es das `$anfrage`-Objekt, dort ist der
+      Namensraum nicht geraten, sondern gewusst — und dort greift es auch
+      dann, wenn Haken 1 ueberstimmt wurde.
+
+   ⚠ **Die beiden widersprechen sich nicht, sie decken sich.**
+   `wp_get_nocache_headers()` liefert `no-cache, must-revalidate,
+   max-age=0, no-store, private`; Haken 2 setzt dieselbe Menge in anderer
+   Reihenfolge. Wer spaeter schreibt, schreibt dasselbe. **Ergaenzung,
+   kein Widerspruch** — und Haken 2 gewinnt ohnehin, weil
+   `WP_REST_Server::set_headers()` nach dem fruehen Block laeuft.
+
+   ── Warum `private` UND `no-store` beide dastehen ───────────────────────
+
+   Sie verbieten Verschiedenes, und nur zusammen decken sie den Fall ab:
+
+   ```
+   private    verbietet die GETEILTE Ablage. Ein Zwischenspeicher, der
+              viele Leser bedient — nginx, ein Proxy, ein CDN — darf die
+              Antwort nicht aufheben und nicht an einen zweiten Leser
+              geben. Das ist der Kopf gegen genau den Befund von oben:
+              die Antwort des Berechtigten an den Unberechtigten.
+              ⚠ Er erlaubt dem BROWSER weiterhin, sie abzulegen.
+
+   no-store   verbietet jede Ablage ueberhaupt, auch die private im
+              Browser und auf der Platte. Das ist der Kopf gegen den
+              zweiten Befund: die veraltete Fassung 0.9.38 in einer
+              Kachel, die 0.9.39 haette zeigen muessen.
+   ```
+
+   ⚠ **Keiner ersetzt den anderen.** `private` allein laesst eine Kopie im
+   Browser zurueck und damit die Veraltung. `no-store` allein waere streng
+   genug, doch aeltere Zwischenspeicher werten ihn nicht aus und halten
+   sich nur an `private`. `no-cache` und `max-age=0` sind die dritte Lage
+   fuer alles, was beide nicht kennt: erst rueckfragen, nie ungefragt
+   ausliefern. `Pragma` und `Expires: 0` sind dasselbe noch einmal in der
+   Sprache von HTTP/1.0.
+
+   ⚠ **AUCH AUF FEHLERANTWORTEN — 401, 400, 503.** Gerade dort. Eine
+   abgelegte 401 waere laestig; eine abgelegte 200, die eine 401 haette
+   sein muessen, ist ein Datenabfluss. Darum stehen die Koepfe VOR jeder
+   Pruefung des Rumpfes: Eine Antwort ohne Datenfeld bekommt sie auch.
+
+   ⚠ **Was diese Koepfe NICHT koennen.** Sie wirken erst auf Antworten, die
+   von jetzt an hinausgehen. Was in nginx schon liegt, raeumen sie nicht
+   weg — und eine 401 kann es nicht verdraengen, weil Fehlerantworten
+   nicht abgelegt werden und die alte 200 deshalb als `STALE` stehen
+   bleibt. **Der bestehende Zwischenspeicher muss einmal von Hand geleert
+   werden**, sonst wirkt der Bau erst, wenn der Eintrag von selbst
+   verfaellt. */
+
+/**
+ * Der angefragte REST-Pfad, ermittelt ohne `WP_REST_Request`.
+ *
+ * ⚠ **Nur fuer `rest_send_nocache_headers` gedacht.** Dieser Filter laeuft,
+ * bevor die Anfrage zu einem Objekt geworden ist; es gibt dort nichts
+ * Besseres. Wer eine Route sicher wissen will, nimmt `get_route()` am
+ * `$anfrage` — so wie der `rest_post_dispatch`-Filter weiter unten.
+ *
+ * Drei Quellen, in dieser Reihenfolge, weil eine Website je nach
+ * Permalink-Einstellung einen anderen Weg nimmt:
+ *
+ * ```
+ * query_vars['rest_route']   der Wert, den rest_api_loaded() an
+ *                            serve_request() reicht — der genaueste
+ * $_GET['rest_route']        der Weg ohne schoene Permalinks
+ * REQUEST_URI                Rueckfall, traegt das /wp-json/ noch davor
+ * ```
+ *
+ * @return string Pfad, moeglicherweise leer.
+ */
+function cc_rest_pfad_frueh(): string {
+	$pfad = $GLOBALS['wp']->query_vars['rest_route'] ?? '';
+
+	if ( '' === $pfad && isset( $_GET['rest_route'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		$pfad = wp_unslash( $_GET['rest_route'] ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+	}
+
+	if ( '' === $pfad && isset( $_SERVER['REQUEST_URI'] ) ) {
+		$pfad = wp_unslash( $_SERVER['REQUEST_URI'] );
+	}
+
+	return is_string( $pfad ) ? $pfad : '';
+}
+
+add_filter(
+	'rest_send_nocache_headers',
+	/**
+	 * Haken 1: WordPress die eigenen No-Cache-Koepfe senden lassen.
+	 *
+	 * ⚠ **Nur ergaenzen, nie zuruecknehmen.** Steht `$senden` schon auf
+	 * wahr — etwa weil ein Redakteur angemeldet ist —, bleibt es dabei.
+	 * Ein `false` von hier wuerde den Schutz fuer FREMDE Routen abraeumen,
+	 * und das waere ein Schaden, den niemand hier bestellt hat.
+	 *
+	 * ⚠ Die Pfadpruefung ist absichtlich grosszuegig (`strpos`, nicht
+	 * Anfang): `/clubcampus/v1/status` und `/wp-json/clubcampus/v1/status`
+	 * sollen beide passen. Traefe sie einmal zu viel, waere die Folge ein
+	 * zusaetzlicher No-Cache-Kopf auf einer fremden Route — unschoen,
+	 * aber nie ein Sicherheitsverlust. Die umgekehrte Unschaerfe waere
+	 * einer.
+	 *
+	 * @param bool $senden Was der Kern oder ein Vorgaenger entschieden hat.
+	 * @return bool
+	 */
+	static function ( $senden ) {
+		if ( $senden ) {
+			return true;
+		}
+
+		return false !== strpos( cc_rest_pfad_frueh(), '/' . CC_ROUTE . '/' );
+	},
+	10,
+	1
+);
+
 add_filter(
 	'rest_post_dispatch',
 	/**
@@ -6780,6 +7370,28 @@ add_filter(
 			return $ergebnis;
 		}
 
+		/* ── Haken 2: kein Zwischenspeicher ─────────────────────────────
+		   Ausfuehrlich begruendet im Abschnitt KEIN ZWISCHENSPEICHER
+		   oberhalb: `private` verbietet die geteilte Ablage (der Fall
+		   «Antwort des Berechtigten geht an den Unberechtigten»),
+		   `no-store` verbietet jede Ablage ueberhaupt (der Fall «Kachel
+		   zeigt die alte Fassung»). Beide, weil keiner den anderen deckt.
+
+		   ⚠ **Hier oben, vor jeder Pruefung des Rumpfes.** Stuende es
+		   unten beim `laufzeit_ms`, verloere jede Antwort ohne
+		   Datenfeld die Koepfe — und 401, 400 und 503 gehen genau diesen
+		   Weg. Eine abgelegte Abweisung ist laestig; eine abgelegte
+		   Erlaubnis, die haette abweisen muessen, ist der Abfluss.
+
+		   ⚠ Dasselbe noch einmal, obwohl Haken 1 (`rest_send_nocache_
+		   headers`, oberhalb) es bereits bestellt: Der dortige Filter
+		   raet die Route und laesst sich von einem fremden Plugin
+		   ueberstimmen. Hier ist die Route gewusst. Gleiche Koepfe,
+		   zweiter Weg — Ergaenzung, kein Widerspruch. */
+		$ergebnis->header( 'Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0, private', true );
+		$ergebnis->header( 'Pragma', 'no-cache', true );
+		$ergebnis->header( 'Expires', '0', true );
+
 		$daten = $ergebnis->get_data();
 		if ( ! is_array( $daten ) ) {
 			return $ergebnis;
@@ -6788,8 +7400,55 @@ add_filter(
 		/* ⚠ Nicht ueberschreiben, falls eine Route das Feld je selbst
 		   fuehrt: die Route weiss mehr ueber ihren eigenen Lauf als dieser
 		   Filter, der nur das Ende sieht. */
+		$ergaenzt = false;
+
 		if ( ! array_key_exists( 'laufzeit_ms', $daten ) ) {
 			$daten['laufzeit_ms'] = cc_laufzeit_ms();
+			$ergaenzt             = true;
+		}
+
+		/* ⚠ **`version` in JEDE Antwort — 0.9.40, 26.09.2026.**
+
+		   Bis 0.9.39 nannten nur `status`, `bestand` und `wappen` die Fassung.
+		   **Also gerade die beiden Wege nicht, die ein Export geht** (`spiele`,
+		   `ranglisten`), und die Abweisung schon gar nicht.
+
+		   Der Anlass ist eine Frage, die sich am 26.09.2026 nicht beantworten
+		   liess: Must-Use zeigte eine Fassung, die Kachel eine andere, und von
+		   aussen war nicht zu entscheiden, welche LAEUFT. **Die zwei Auskuenfte
+		   messen Verschiedenes, und erst zusammen sind sie eine Diagnose:**
+
+		   ```
+		   Plugins → Must-Use   liest den Dateikopf von der Platte
+		                        (get_plugin_data) → was ABGELEGT ist
+		   diese Antwort        kommt aus dem ausgefuehrten Code
+		                        → was LAEUFT
+		   ```
+
+		   Stehen beide auf derselben Zahl, ist die Datei angekommen und wird
+		   ausgefuehrt. Zeigt Must-Use die neue und die Antwort die alte, haelt
+		   ein Opcache die alte Fassung fest. Zeigt Must-Use die alte, ist die
+		   Datei gar nicht erst angekommen. **Ohne die Zahl hier sind diese drei
+		   Lagen von aussen nicht zu unterscheiden.**
+
+		   ⚠ Auch in 401, 400 und 503 — genau wie `laufzeit_ms`. Eine
+		   Abweisung ist oft die einzige Antwort, die ohne Schluessel zu
+		   bekommen ist; traegt sie die Fassung nicht, nuetzt das Feld dem
+		   nichts, der von aussen nachsieht.
+
+		   ⚠ Nicht ueberschreiben, wo eine Route die Fassung selbst fuehrt —
+		   dieselbe Regel wie bei `laufzeit_ms`. Der Wert ist derselbe
+		   (`CC_VERSION`); die Route behaelt trotzdem das letzte Wort.
+
+		   ⚠ **AUCH DAS LIEFERT CLUBCAMPUS ALS GANZES.** Beim naechsten
+		   Nachschub wird diese Datei ERSETZT — wird das hier drueben nicht
+		   nachgezogen, ist die Unterscheidung wieder weg. */
+		if ( ! array_key_exists( 'version', $daten ) ) {
+			$daten['version'] = CC_VERSION;
+			$ergaenzt         = true;
+		}
+
+		if ( $ergaenzt ) {
 			$ergebnis->set_data( $daten );
 		}
 
