@@ -31,10 +31,10 @@
      sfv_status 1…12     →  vier Zustände + „publizieren"
      spiel_ereignisse    →  verlauf-Zeilen (Text statt Person)
    ═══════════════════════════════════════════════════════════════ */
-import type { AnzeigeEreignis } from "./matchdatenAnzeige.ts";
+import type { AnzeigeEreignis, NummerJePerson } from "./matchdatenAnzeige.ts";
 import {
   werBefund, rollenName, beschreibeGewechselten, TYP_TOR, TYP_VERWARNUNG, TYP_AUSSCHLUSS,
-  torZusatz,
+  torZusatz, nummerDesAusgewechselten,
 } from "./matchdatenAnzeige.ts";
 
 /** SFV-Ereignistyp „Aus-/Einwechslung". Steht nicht in matchdatenAnzeige,
@@ -104,7 +104,7 @@ export type WpVerlaufArt = "tor" | "gelb" | "gelbrot" | "rot" | "wechsel" | "ass
  * einem SQL-Block. Gehalten wird es von `nutzlastFassung.test.ts`: ändert
  * sich ein Feldname, ist der Fall rot, und er nennt beide Stellen.
  */
-export const NUTZLAST_FASSUNG = 7;
+export const NUTZLAST_FASSUNG = 9;
 
 export interface WpVerlaufZeile {
   /** Text, nicht Zahl — damit „45+2" hineinpasst. */
@@ -130,6 +130,67 @@ export interface WpVerlaufZeile {
    * **bewusst keinen Zusatz**: er wäre eine Wiederholung.
    */
   ereignis_zusatz: "eigentor" | "penalty" | "";
+  /**
+   * Der Subtyp des Verbands als KLARTEXT — „Kopftor", „Freistosstor",
+   * „Reklamieren", „Notbremse", „2. Verwarnung" — und `""`, wo keiner gilt
+   * oder keiner hinausgehen darf.
+   *
+   * ⚠ ⚠  ANLASS, 29.09.2026: der Theme-Chat bildet eigene Verlaufszeilen
+   * jetzt aus den FELDERN (Namensregel je Team, „Vorname N." bei
+   * Junioren). Damit fällt `text` als Anzeige weg — und mit ihm die
+   * Zusätze, die NUR dort standen: `bildeVerlauf()` hängt sie seit jeher
+   * als ` · <Subtyp>` an den Fliesstext.
+   *
+   * ⚠ ⚠ ⚠  UND DESHALB EIN EIGENES FELD UND NICHT `ereignis_zusatz` —
+   *         GEGEN DEN WORTLAUT DES AUFTRAGS.
+   *
+   * Der Auftrag sagte: *„Bitte diese Zusätze in «ereignis_zusatz»
+   * mitliefern."* Zwei gemessene Gründe stehen dagegen, und der zweite ist
+   * der teurere:
+   *
+   *   1. **Es käme nicht an.** `f_s_v_zusatz` ist drüben ein `select` mit
+   *      genau zwei Optionen; `update_field()` verwirft, was nicht passt,
+   *      **wortlos**. „Kopftor" wäre ein leerer Text — der `ein_nummer`-Fall
+   *      vom 10.09.2026, vier Tage ins Leere.
+   *
+   *   2. ⚠ **Es kollidierte auf genau dem Feld, das den Zwischenstand
+   *      trägt.** Subtyp 2 heisst im Klartext des Verbands `Eigentor`,
+   *      Subtyp 4 `Penalty` — unsere Werte sind `eigentor` und `penalty`.
+   *      Ein Klartext-Durchreichen änderte also ausgerechnet die zwei
+   *      Werte, an denen die Spielseite den Stand auf die andere
+   *      Mannschaft dreht. **Ein Eigentor zählt für den Gegner; der Stand
+   *      verschöbe sich um zwei Tore, ohne Fehlermeldung.**
+   *
+   * > Eine Zahl, deren Bedeutung sich ändert, ohne dass ihr Name sich
+   * > ändert, ist gefährlicher als eine falsche.
+   *
+   * ⚠ ⚠  ZWEI DER DREI GENANNTEN WERTE HEISSEN ANDERS. Gemessen in
+   * `docs/sfv/sfv_stammdaten.json` (100 Einträge, 29.09.2026):
+   * **`Freistosstor`** (3), nicht „Freistoss"; **`Kopftor`** (1), nicht
+   * „Kopfball". Daneben gibt es `Kopf` (14) und `Kopfball an die Latte`
+   * (85), `an den Pfosten` (86), `ans Lattenkreuz` (87) — vier
+   * verschiedene Sachen. Wer eine Zuordnung auf „Freistoss" baut, trifft
+   * nichts, und nichts schlägt fehl.
+   *
+   * ⚠ `„2. Verwarnung"` (20) kommt mit. An `ereignis_zusatz` war sie
+   * bewusst ausgeschlossen, weil `art` dort bereits `gelbrot` trägt — das
+   * gilt weiter. Hier ist sie kein Merkmal, sondern der Wortlaut des
+   * Verbands, und ob die Seite ihn neben ihrem Symbol zeigt, ist ihre
+   * Entscheidung. Sie WEGZULASSEN wäre ein Loch, das wir erklären müssten.
+   *
+   * ⚠ ALS KLARTEXT UND NICHT ALS ID, dieselbe Wahl wie bei `rolle`: die
+   * Gegenseite ZEIGT die Angabe, sie rechnet nicht damit. Für eine
+   * Rechnung bräuchte sie die Liste der 100 Subtypen, die sie nicht hat —
+   * und eine eigene Liste wäre eine zweite Wahrheit neben den Stammdaten.
+   *
+   * ⚠ ⚠  NICHT JEDER SUBTYP GEHT HINAUS. Die Liste ist ein gemeinsamer
+   * Vorrat über alle 30 Ereignistypen und enthält Abwesenheitsgründe
+   * (`Verletzt`, `Krank`, `Gesperrt`, `Militär`). Welche Typen
+   * durchkommen und warum, steht an `ZUSATZ_TYPEN` — **dort steht der
+   * einzige Grund, aus dem dieses Feld eine Grenze hat und keine
+   * Durchreiche ist.**
+   */
+  ereignis_subtyp: string;
   /**
    * Wir können die Person dieser Zeile **nicht benennen** — weder über die
    * Zuordnung noch über eine Rückennummer.
@@ -728,6 +789,106 @@ export function verlaufSortiert(
 }
 
 /**
+ * Trägt der Subtyp des Verbands überhaupt eine Aussage?
+ *
+ * ⚠ `-` ist kein leerer Wert, sondern der KLARTEXT zu Subtyp 0 in den
+ * SFV-Stammdaten. Ohne diese Prüfung stünde auf der Website
+ * „FC Küsnacht a · -" — aufgefallen am 05.09.2026 in Didis eigener
+ * Ausgabe, und beinahe so hinausgegangen.
+ *
+ * ⚠ Nicht auf `"-"` allein prüfen: gemeint ist „trägt keine Aussage", und
+ * ein leergeschlagener Wert gehört zur selben Sache.
+ *
+ * ⚠ ⚠  SIE IST DIE ERSTE VON ZWEI FRAGEN, und die zwei gehören getrennt.
+ * Diese hier heisst *„steht da etwas?"* und gilt für jede Art. Die zweite
+ * — `zusatzText()` — heisst *„darf es auf eine öffentliche Seite?"* und
+ * gilt nur für drei Ereignistypen. Zusammengelegt wären sie eine Stelle,
+ * die zwei Dinge entscheidet, und `text` verlöre Zusätze, die es seit
+ * jeher zeigt.
+ */
+export function subtypKlartext(subtyp: string | null | undefined): string {
+  const t = (subtyp ?? "").trim();
+  return t && t !== "-" ? t : "";
+}
+
+/**
+ * ⚠ ⚠  EREIGNISTYPEN, DEREN SUBTYP ALS KLARTEXT HINAUSGEHEN DARF.
+ *
+ * Tor · Verwarnung · Ausschluss — die drei, bei denen der Subtyp eine
+ * Eigenschaft der HANDLUNG ist: „Kopftor", „Freistosstor", „Reklamieren",
+ * „Notbremse", „2. Verwarnung".
+ *
+ * ⚠ ⚠ ⚠  UND DAS IST EINE ALLOWLIST, WEIL EIN DURCHREICHEN
+ *         GESUNDHEITSDATEN VERÖFFENTLICHEN WÜRDE.
+ *
+ * Gemessen am 29.09.2026 in `docs/sfv/sfv_stammdaten.json`: die Liste
+ * `Ereignissubtyp` hat **100 Einträge** und ist ein GEMEINSAMER VORRAT
+ * über alle **30** Ereignistypen. Darin stehen Werte völlig anderer Art:
+ *
+ *   50–72   `Verletzt` · `Krank` · `Rekonvaleszent` · `Gesperrt` ·
+ *           `Militär` · `Zivildienst` · `Beruf` · `Schule/Ausbildung` ·
+ *           `Privat` · `Familie`
+ *   200–240 `Trainer` · `Präsident` · `Arzt` · `Physiotherapeut` …
+ *   100–124 `Spiel angepfiffen` · `2. Halbzeit angepfiffen` …
+ *   41–48   `rechts` · `links` · `Eigene Platzhälfte - rechts` …
+ *
+ * **Die Gruppe 50–72 sind Abwesenheitsgründe.** Auf einer öffentlichen
+ * Seite, neben dem Namen eines Junioren, wäre das eine Gesundheitsangabe.
+ *
+ * ⚠ ⚠  HEUTE UNERREICHBAR — ABER DURCH EINEN FILTER, DER DAFÜR NICHT
+ *       GEBAUT IST. Die Abwesenheitsgründe gehören zu Ereignistyp **8
+ * „Abwesend"** (und 23 „Unfallmeldung"), und `verlaufArt()` lässt nur 1,
+ * 2, 3, 4 und 9 durch. Das ist dieselbe Scheinsicherheit wie
+ * `sfv_person_id` als Unterscheider der Seiten: es trägt aus einem
+ * NEBENEFFEKT eines Filters, der nach „welche Arten kennt das Theme?"
+ * fragt — nicht nach „was darf hinaus?".
+ *
+ * ⚠ Und der Fall ist benannt, nicht erfunden: CLAUDE.md führt Typ **15
+ * „Strafen (Trainer, Funktionäre, Zuschauer)"** als offenen Punkt zum
+ * Ergänzen. Wer eine sechste `art` einbaut, öffnete damit STILL auch
+ * dieses Textfeld — mit einer Subtyp-Menge, die niemand angesehen hat.
+ * Eine Allowlist zwingt an dieser Stelle zu einer Entscheidung.
+ *
+ * ── Warum Wechsel und Assist NICHT darin stehen ──────────────────────
+ *
+ * ⚠ Beim **Wechsel** ist es kein Verlust, sondern der Ist-Zustand:
+ * `bildeVerlauf()` hängt den Zusatz dort seit jeher NICHT an, sobald ein
+ * Ersatzspieler bekannt ist (`${wer} ersetzt durch ${zweiter}`) — das ist
+ * der Normalfall. Und der plausibelste Subtyp eines Wechsels ist
+ * ausgerechnet `Verletzt` (50).
+ *
+ * ⚠ Beim **Assist** ist die Subtyp-Menge ungemessen; in den Stammdaten
+ * steht kein assist-eigener Wert, es wird also `-` sein. Ihn
+ * auszuschliessen kostet damit nichts und ist die laute Richtung: fehlend
+ * statt undicht.
+ *
+ * ⚠ ⚠  WAS DIE GRENZE WEGNIMMT, WIRD GEZÄHLT — `zusatz_verworfen`, mit
+ * `typ_id:subtyp_id` und **ohne Klartext**. Ein verworfener Wert im
+ * Protokoll wäre genau der Ausgang, den die Grenze schliessen soll (siehe
+ * die 903 Klarnamen in `api_sync_log`, 21.08.2026). Zahlen sind keine
+ * Personendaten.
+ */
+export const ZUSATZ_TYPEN: readonly number[] = [
+  TYP_TOR, TYP_VERWARNUNG, TYP_AUSSCHLUSS,
+];
+
+/**
+ * Der Subtyp-Klartext des Verbands, soweit er hinausgehen darf.
+ *
+ * ⚠ Er geht in ein EIGENES Feld und nicht in `ereignis_zusatz` — die
+ * Begründung steht am Feld `ereignis_subtyp`. Kurz: dort drüben ist ein
+ * `select` mit zwei Optionen, und die zwei heissen im Klartext des
+ * Verbands `Eigentor` und `Penalty`.
+ */
+export function zusatzText(
+  typId: number,
+  subtyp: string | null | undefined,
+): string {
+  if (!ZUSATZ_TYPEN.includes(typId)) return "";
+  return subtypKlartext(subtyp);
+}
+
+/**
  * Die Zähler, die `bildeVerlauf()` und `bildeSpiel()` hochzählen.
  *
  * ⚠ Sie sind PFLICHTFELDER, nicht optional. Ein Zähler, den eine
@@ -745,6 +906,129 @@ export interface VerlaufZaehler {
   assist_ohne_tor: number;
   /** Assists, zu deren Minute und Seite **mehrere** Tore stehen. */
   assist_ohne_eindeutiges_tor: number;
+  /**
+   * ⚠ **Die Bezugsgrösse zu `zusatz_verworfen`.** Verlaufszeilen, die
+   * einen Subtyp-Klartext MITNEHMEN. „3 verworfen" heisst etwas anderes
+   * bei 4 Zusätzen als bei 400.
+   */
+  zusatz_gesendet: number;
+  /**
+   * Zeilen, die einen Subtyp trugen, den `ZUSATZ_TYPEN` nicht durchlässt.
+   *
+   * ⚠ ⚠  DIE ZWEI ZUSAMMEN SIND EINE AUFTEILUNG, DIE AUFGEHEN MUSS —
+   * `gesendet + verworfen` = Zeilen mit einer Subtyp-Aussage. Eine
+   * einzelne Zahl kann nur behauptet werden; eine Aufteilung kann man
+   * nachrechnen.
+   *
+   * ⚠ Steht hier dauerhaft eine Zahl über null, ist das **kein Defekt,
+   * sondern eine Frage**: dann tragen Wechsel oder Assists tatsächlich
+   * einen Subtyp, und ob er hinausgehen soll, ist zu entscheiden statt
+   * anzunehmen. Heute ist es ungemessen — die Datenbank war von hier aus
+   * nicht erreichbar.
+   */
+  zusatz_verworfen: number;
+  /**
+   * Welche Paare es traf — `"typ_id:subtyp_id"`, höchstens eine Handvoll.
+   *
+   * ⚠ ⚠  ZAHLEN, NIEMALS DER KLARTEXT. Der verworfene Wert kann
+   * `Verletzt` oder `Krank` sein; ihn ins Protokoll zu schreiben wäre
+   * genau der Ausgang, den die Grenze schliessen soll. **Ein neues Feld
+   * erbt JEDEN Ausgang des Objekts** — so gingen am 21.08.2026 903
+   * Klarnamen in `api_sync_log`.
+   */
+  zusatz_verworfen_ids: string[];
+
+  /* ── Die zwei Nummern einer eigenen Wechselzeile ───────────────────
+     ⚠ ⚠  NEUN ZAHLEN, UND SIEBEN DAVON SIND EINE AUFTEILUNG, DIE
+           AUFGEHEN MUSS.
+
+       wechsel_nummer_vom_verband + _hergeleitet + _ohne_person
+       + _nicht_gefragt + _ohne_zeile + _zeile_ohne_nummer
+       + _mehrdeutig + _kollision  =  wechsel_eigen
+
+     Je eigene Wechselzeile genau ein Wert — das ist die Gegenprobe. Eine
+     einzelne Zahl kann nur behauptet werden; eine Aufteilung kann man
+     nachrechnen, und geht sie nicht auf, misst eine der Stellen etwas
+     anderes als die andere. ─────────────────────────────────────────── */
+
+  /**
+   * ⚠ **Die Bezugsgrösse.** ALLE eigenen Wechselzeilen. Ohne sie ist
+   * „12 mit beiden Nummern" ein Artefakt: es heisst etwas anderes bei 14
+   * Wechseln als bei 400. Eine Zahl ohne Bezugsgrösse ist keine Auskunft.
+   */
+  wechsel_eigen: number;
+  /**
+   * Eigene Wechselzeilen, die **beide** Nummern tragen — die Zahl, an der
+   * die Gegenstelle ihre Wechselzeile bauen kann („X ersetzt durch Y").
+   *
+   * ⚠ Sie ist KEIN Teil der Aufteilung darunter: sie schneidet quer, weil
+   * sie zusätzlich `ein_nummer` verlangt.
+   */
+  wechsel_beide_nummern: number;
+  /**
+   * ⚠ ⚠  **DIE ZAHL, DIE EINE OFFENE FRAGE BEANTWORTET.** Schickt der
+   * Verband `jerseyNumber` am Wechsel mit? Die einzige aufgezeichnete
+   * Antwort enthält fünf Tore und keinen Wechsel, und `MatchEvent` hat 28
+   * Felder ohne eine einzige `description`. **Steht hier nach dem ersten
+   * Lauf eine Zahl, ist es gemessen statt angenommen.**
+   */
+  wechsel_nummer_vom_verband: number;
+  /**
+   * Wie oft die Herleitung aus der Aufstellung getragen hat.
+   *
+   * ⚠ **Kein Erfolgsmass.** Es ist das Mass dafür, wie oft der Verband
+   * seine eigene Angabe nicht mitschickt — genau wie
+   * `ueber_nummer_aufgeloest`. Fällt die Zahl gegen null, liefert er sie
+   * wieder selbst.
+   */
+  wechsel_nummer_hergeleitet: number;
+  /** Das Ereignis nennt keine `sfv_person_id` — es gibt keinen Schlüssel. */
+  wechsel_nummer_ohne_person: number;
+  /**
+   * ⚠ Die Karte wurde nicht übergeben — **nicht gefragt**, nicht „nichts
+   * gefunden". In Betrieb 0; steht hier eine Zahl, ist eine Aufrufstelle
+   * nicht verdrahtet. Dann sagt der Zähler das, statt die Datenlage zu
+   * beschuldigen — dieselbe Lücke wie `sfv_person_id: null`, das hart
+   * verdrahtet war und wie eine leere Tabelle aussah.
+   */
+  wechsel_nummer_nicht_gefragt: number;
+  /** Kein Aufstellungseintrag zu dieser Person in diesem Spiel. */
+  wechsel_nummer_ohne_zeile: number;
+  /** Der Eintrag ist da und trägt keine Nummer. */
+  wechsel_nummer_zeile_ohne_nummer: number;
+  /** Zwei Nummern für dieselbe Person — die Brücke schweigt. */
+  wechsel_nummer_mehrdeutig: number;
+  /**
+   * ⚠ Die Herleitung ergab dieselbe Zahl wie `ein_nummer` — dann hätten
+   * wir den EINGEWECHSELTEN getroffen. Das Feld bleibt leer.
+   */
+  wechsel_nummer_kollision: number;
+}
+
+/**
+ * Ein frischer Zähler, alles auf null.
+ *
+ * ⚠ ⚠  EINE STELLE, DIE DIE FELDER AUFZÄHLT — NICHT DREI. Vor dem
+ * 29.09.2026 stand dasselbe Objektliteral im Export und zweimal im Test;
+ * mit den zehn Wechsel-Zählern wären es dreissig Zeilen an drei Orten
+ * geworden.
+ *
+ * Der Compiler fängt ein **fehlendes** Feld (alle sind Pflicht) — er fängt
+ * nicht, dass eines mit `1` statt `0` beginnt. Genau dieser Fehler wäre
+ * still: die Zahl wäre um eins zu hoch, die Aufteilung ginge nicht auf,
+ * und gesucht würde bei der Zählung statt bei der Vorbelegung.
+ */
+export function neuerVerlaufZaehler(): VerlaufZaehler {
+  return {
+    ueber_nummer_aufgeloest: 0,
+    assists: 0, assist_ohne_tor: 0, assist_ohne_eindeutiges_tor: 0,
+    zusatz_gesendet: 0, zusatz_verworfen: 0, zusatz_verworfen_ids: [],
+    wechsel_eigen: 0, wechsel_beide_nummern: 0,
+    wechsel_nummer_vom_verband: 0, wechsel_nummer_hergeleitet: 0,
+    wechsel_nummer_ohne_person: 0, wechsel_nummer_nicht_gefragt: 0,
+    wechsel_nummer_ohne_zeile: 0, wechsel_nummer_zeile_ohne_nummer: 0,
+    wechsel_nummer_mehrdeutig: 0, wechsel_nummer_kollision: 0,
+  };
 }
 
 /**
@@ -905,6 +1189,13 @@ export function bildeVerlauf(
       ueber eine Anzeigeangabe, und wie oft er greift, gehoert gezaehlt —
       steigt die Zahl gegen null, loest der Verband wieder auf. */
   zaehler?: VerlaufZaehler,
+  /** Siehe baueNummerJePerson() — `spiel_id:sfv_person_id` → Nummer, fuer
+      den AUSGEWECHSELTEN. ⚠ Die ANDERE Richtung als `bruecke`: die geht
+      von der Nummer zum Namen und braucht deshalb `ist_eigener` gegen die
+      Derby-Falle; diese geht von der Personennummer zur Nummer und ist je
+      Spiel durch einen UNIQUE-Schluessel eindeutig. Fehlt sie, bleibt
+      `nummer` bei einem Wechsel ohne Verbandsangabe leer. */
+  nummern?: Map<string, NummerJePerson>,
 ): WpVerlaufZeile[] {
   const zeilen: WpVerlaufZeile[] = [];
 
@@ -924,17 +1215,63 @@ export function bildeVerlauf(
        „dieselbe Bedingung wie der Rückfalltext". Zwei Stellen, eine
        Aussage, von Hand gleichgehalten — und `ohne_person` ist das Feld,
        an dem die Website entscheidet, ob dort ein Mensch steht. */
-    const befund = werBefund(e, namen);
-    const wer = befund.text;
-    /* ⚠ `subtyp` kann „-" sein, und das ist kein leerer Wert, sondern der
-       Klartext zu Subtyp 0 in den SFV-Stammdaten. Ohne diese Prüfung stünde
-       auf der Website „FC Küsnacht a · -". Aufgefallen in der Probe vom
-       05.09.2026, in Didis eigener Ausgabe.
+    /* ⚠ ⚠  DIE NUMMER DES AUSGEWECHSELTEN ENTSTEHT VOR `werBefund()` —
+       UND GEHT DORT MIT EIN. Das ist die ganze Entscheidung dieses
+       Umbaus, und die Alternative war der Fehler, den dieses Papier ein
+       Dutzend Mal fuehrt.
 
-       Nicht auf `"-"` allein prüfen: gemeint ist „trägt keine Aussage", und
-       ein leergeschlagener Wert gehört zur selben Sache. */
-    const subtyp = (e.subtyp ?? "").trim();
-    const zusatz = subtyp && subtyp !== "-" ? ` · ${subtyp}` : "";
+       Setzte man nur das FELD aus der Herleitung, stuende in derselben
+       Zeile:
+
+         nummer: 9  ·  text: "Unser Team ersetzt durch Nr. 14"
+                    ·  ohne_person: true
+
+       Drei Aussagen ueber denselben Menschen, zwei davon falsch — und
+       `ohne_person` ist das Feld, an dem die Website entscheidet, ob dort
+       ein Mensch steht. Genau diese Doppelung ist am 24.09.2026 bei
+       `ohne_person` aufgeloest worden; sie hier wieder einzufuehren waere
+       ein Rueckschritt mit einem neuen Feld als Anlass.
+
+       ⚠ NUR FUER WECHSEL. Bei Tor und Karte steht `nummer` heute schon,
+       und `text` traegt dort den Subtyp-Zusatz, aus dem die Spielseite
+       das Wort „Eigentor" liest — an diesen Zeilen wird nichts
+       angefasst. */
+    const nrBefund = art === "wechsel"
+      ? nummerDesAusgewechselten(e, nummern, spielId)
+      : null;
+    /* ⚠ Nur die HERGELEITETE Nummer wird eingesetzt. Kam sie vom Verband,
+       steht sie ohnehin schon in `e` — dann ist `{...e}` eine Kopie ohne
+       Unterschied, und eine Kopie ohne Unterschied ist eine Stelle, an
+       der spaeter jemand einen Unterschied vermutet. */
+    const eff = nrBefund?.herkunft === "aufstellung"
+      ? { ...e, rueckennr: nrBefund.nummer }
+      : e;
+    const befund = werBefund(eff, namen);
+    const wer = befund.text;
+    /* ⚠ Die `-`-Prüfung liegt seit dem 29.09.2026 in `subtypKlartext()`,
+       weil das neue Feld `ereignis_subtyp` dieselbe Frage stellt. Zwei
+       Stellen, eine Aussage, von Hand gleichgehalten — genau der Fehler,
+       der bei `ohne_person` fünf Tage vorher behoben wurde. */
+    const klartext = subtypKlartext(e.subtyp);
+    const zusatz = klartext ? ` · ${klartext}` : "";
+    /* ⚠ ⚠  `text` BLEIBT UNVERÄNDERT — auch für die Arten, die das neue
+       Feld nicht bekommen. Die Spielseite liest das Wort „Eigentor" aus
+       diesem Fliesstext, solange `ereignis_subtyp` nicht bestätigt
+       ankommt; wer den Zusatz hier wegnimmt, verschiebt den Zwischenstand
+       um zwei Tore, ohne Fehlermeldung. Die Grenze gilt für das FELD, nicht
+       für den Text. */
+    const subtypFeld = zusatzText(e.typ_id, e.subtyp);
+    if (zaehler && klartext) {
+      if (subtypFeld) zaehler.zusatz_gesendet += 1;
+      else {
+        zaehler.zusatz_verworfen += 1;
+        /* ⚠ Nur die Kennzahlen, und jedes Paar einmal. */
+        const paar = `${e.typ_id}:${e.subtyp_id ?? ""}`;
+        if (!zaehler.zusatz_verworfen_ids.includes(paar)) {
+          zaehler.zusatz_verworfen_ids.push(paar);
+        }
+      }
+    }
     /* ⚠ Der Ausgewechselte bekommt seinen Namen nach DERSELBEN Regel wie
        der Eingewechselte — siehe beschreibeGewechselten(). Bis zum
        10.09.2026 stand hier `ein_rueckennr` direkt, und daneben ein Name:
@@ -963,6 +1300,45 @@ export function bildeVerlauf(
          nichts geschah. */
       if (zaehler && zweiter !== ohne && !zweiter.startsWith("Nr. ")) {
         zaehler.ueber_nummer_aufgeloest += 1;
+      }
+      /* ⚠ ⚠  NUR EIGENE ZEILEN — und deshalb kann `herkunft: "fremd"` in
+         keinem dieser Zaehler auftauchen. Die Aufteilung ist damit
+         vollstaendig: acht Werte, eine Bezugsgroesse, und sie muessen
+         aufgehen. Die Gegenprobe dazu steht als Testfall. */
+      if (zaehler && wir && nrBefund) {
+        zaehler.wechsel_eigen += 1;
+        if (nrBefund.nummer != null && e.ein_rueckennr != null) {
+          zaehler.wechsel_beide_nummern += 1;
+        }
+        switch (nrBefund.herkunft) {
+          case "verband": zaehler.wechsel_nummer_vom_verband += 1; break;
+          case "aufstellung": zaehler.wechsel_nummer_hergeleitet += 1; break;
+          case "ohne_person": zaehler.wechsel_nummer_ohne_person += 1; break;
+          case "nicht_gefragt": zaehler.wechsel_nummer_nicht_gefragt += 1; break;
+          case "ohne_zeile": zaehler.wechsel_nummer_ohne_zeile += 1; break;
+          case "zeile_ohne_nummer": zaehler.wechsel_nummer_zeile_ohne_nummer += 1; break;
+          case "mehrdeutig": zaehler.wechsel_nummer_mehrdeutig += 1; break;
+          case "kollision": zaehler.wechsel_nummer_kollision += 1; break;
+          /* ⚠ `fremd` steht hier mit Absicht als eigener Zweig und nicht
+             im `default`: es ist ein bekannter Wert, der bewusst nicht
+             zaehlt, und kein unbekannter. */
+          case "fremd": break;
+          default: {
+            /* ⚠ ⚠  DIE ERSCHOEPFUNGSPRUEFUNG — und sie steht hier, WEIL
+               der Kommentar ohne sie eine Behauptung ueber ein Werkzeug
+               waere, die nicht haelt: ein `switch` als ANWEISUNG wird von
+               TypeScript nicht auf Vollstaendigkeit geprueft. Ein neuer
+               `herkunft`-Wert fiele stillschweigend durch, und die
+               Aufteilung ginge nicht mehr auf — sichtbar nur an einer
+               Summe, auf die niemand schaut.
+
+               `never` macht daraus einen Compilerfehler, ohne zur Laufzeit
+               etwas zu werfen: ein Wurf wegen eines ZAEHLERS risse einen
+               ganzen Export mit. */
+            const unbekannt: never = nrBefund.herkunft;
+            void unbekannt;
+          }
+        }
       }
     }
     const text = zweiter
@@ -996,7 +1372,10 @@ export function bildeVerlauf(
          10.09.2026 bewusst stehen, fuer die Symbole an der
          Gegneraufstellung. **Eine Nummer ist eine Beschriftung auf einem
          Trikot, kein Personendatum.** */
-      nummer: e.rueckennr ?? null,
+      /* ⚠ ⚠  BEI EINEM WECHSEL AUS DEMSELBEN BEFUND WIE `text` UND
+         `ohne_person` — siehe die Herleitung oben. Fuer Tor und Karte
+         unveraendert die Angabe des Verbands. */
+      nummer: nrBefund ? nrBefund.nummer : (e.rueckennr ?? null),
       /* ⚠ ⚠  DAS FELD, DAS DEN ZWISCHENSTAND TRÄGT — seit 0.9.13.
 
          Die Spielseite dreht den Stand beim Eigentor auf die andere
@@ -1015,6 +1394,11 @@ export function bildeVerlauf(
          hat: `update_field()` verwirft unbekannte Unterfelder still, und
          `unbeachtete_felder` sieht nur die oberste Ebene. */
       ereignis_zusatz: torZusatz(e.typ_id, e.subtyp_id ?? null),
+      /* ⚠ ⚠  DER KLARTEXT DES VERBANDS, GEGRENZT — siehe das Feld und
+         `ZUSATZ_TYPEN`. Er steht NEBEN `ereignis_zusatz` und nicht darin:
+         dort drüben ist ein `select` mit zwei Optionen, und die zwei
+         heissen im Klartext `Eigentor` und `Penalty`. */
+      ereignis_subtyp: subtypFeld,
       /* ⚠ ⚠  AUS DEM BEFUND, NICHT NEU GERECHNET. `benennbar` beantwortet
          genau eine Frage — konnten wir die Person kennzeichnen, durch Namen
          ODER Rückennummer? —, und dieselbe Antwort formt den Text darüber.
@@ -1729,6 +2113,10 @@ export function bildeSpiel(
   bruecke?: Map<string, string>,
   spielId?: string,
   zaehler?: VerlaufZaehler,
+  /** Siehe baueNummerJePerson(). Fehlt sie, bleibt die Nummer des
+      Ausgewechselten leer, wo der Verband sie nicht mitschickt — und
+      `wechsel_nummer_nicht_gefragt` sagt genau das. */
+  nummern?: Map<string, NummerJePerson>,
 ): WpSpiel | null {
   if (q.sfv_match_id == null) return null;
 
@@ -1795,7 +2183,7 @@ export function bildeSpiel(
     halbzeit_heim: halb.tore_heim,
     halbzeit_gast: halb.tore_gast,
     verlauf: bildeVerlauf(ereignisse, heimspiel, namen, unserKlub,
-      bruecke, spielId, zaehler),
+      bruecke, spielId, zaehler, nummern),
   };
 }
 

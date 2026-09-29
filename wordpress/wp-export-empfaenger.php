@@ -45,7 +45,7 @@
  *
  * Plugin Name: ClubCampus Export
  * Description: Nimmt Spielplan, Verlauf und Ranglisten aus ClubCampus entgegen.
- * Version:     0.9.39
+ * Version:     0.9.40
  *
  * ⚠ ⚠  STAND 10.09.2026: DIESE DATEI **IST** DER EMPFAENGER  ⚠ ⚠
  *
@@ -182,6 +182,35 @@ const CC_ROUTE      = 'clubcampus/v1';
    `/status` fuer zwei verschiedene Fassungen dieselbe Zahl, und die eine
    Auskunft, die „laeuft drueben der neue Empfaenger?" beantworten koennte,
    beantwortet sie nicht mehr.
+
+   0.9.40 (29.09.2026): `ereignis_subtyp` im Repeater `verlauf` — der
+   Subtyp des Verbands als Klartext («Kopftor», «Freistosstor»,
+   «Notbremse», «2. Verwarnung»). Nutzlast-Fassung 8.
+   ⚠ ANLASS: das Theme bildet eigene Verlaufszeilen jetzt aus den FELDERN
+      (Namensregel je Team, «Vorname N.» bei Junioren). Damit faellt `text`
+      als Anzeige weg — und mit ihm die Zusaetze, die NUR dort standen.
+   ⚠ ⚠  NICHT IN `ereignis_zusatz`, OBWOHL DER AUFTRAG DAS WOLLTE. Zwei
+      gemessene Gruende: `f_s_v_zusatz` ist ein `select` mit zwei Optionen
+      und verwirft alles andere WORTLOS (der `ein_nummer`-Fall) — und die
+      zwei Optionen heissen im Klartext des Verbands `Eigentor` und
+      `Penalty`. Ein Durchreichen traefe also genau das Feld, an dem die
+      Spielseite den Zwischenstand auf die andere Mannschaft dreht.
+   ⚠ ⚠  DAS ACF-UNTERFELD MUSS DRUEBEN ANGELEGT WERDEN (`f_s_v_subtyp`,
+      Typ `text`, in `fch-core/src/Fields/spiel.php`) — beide Haelften,
+      sonst verwirft `update_field()` den Wert wortlos. Bis dahin meldet
+      `unterfelder_ohne_acf` genau diesen Namen, und
+      `unterfelder_geprueft["verlauf"]` steht auf 13:13:12 statt 13:13:13.
+      **Der Ausfall ist damit sichtbar und nicht still** — aber er ist
+      einer.
+   ⚠ NICHT jeder Subtyp geht hinaus. Die Liste des Verbands hat 100
+      Eintraege und ist ein gemeinsamer Vorrat ueber alle 30
+      Ereignistypen; 50–72 sind Abwesenheitsgruende (`Verletzt`, `Krank`,
+      `Gesperrt`, `Militaer`). Die Grenze liegt auf UNSERER Seite
+      (`ZUSATZ_TYPEN`: Tor, Verwarnung, Ausschluss) — hier kommt nur an,
+      was sie durchlaesst.
+   ⚠ `text` bleibt unveraendert. Die Spielseite liest das Wort «Eigentor»
+      daraus, solange dieses Feld nicht bestaetigt ankommt; wer den Zusatz
+      vorher aus dem Text nimmt, verschiebt den Stand um zwei Tore.
 
    0.9.39 (26.09.2026): unveraenderte Spiele werden nicht neu geschrieben.
    ⚠ ANLASS, gemessen mit 0.9.38: `laufzeit_ms` 14–19 s je Mannschaft,
@@ -1020,7 +1049,7 @@ const CC_ROUTE      = 'clubcampus/v1';
    einander), `autoload` wird nach dem Schreiben geprueft und notfalls
    berichtigt, `/status` nennt Empfaenger, Version, Metaschluessel und die
    Team-Zuordnung. */
-const CC_VERSION    = '0.9.39';
+const CC_VERSION    = '0.9.40';
 const CC_TYP_SPIEL  = 'fch_spiel';
 const CC_TYP_TEAM   = 'fch_team';
 /* ⚠ NUR ZUM ZAEHLEN. Dieses Plugin legt keine Person an und aendert
@@ -1310,6 +1339,28 @@ const CC_VERLAUF_FELDER = array(
 	   ⚠ Drueben `f_s_v_zusatz`, ein `select` mit `allow_null`. Es kennt
 	   genau zwei Werte; was hier nicht passt, kommt als leerer Text. */
 	'ereignis_zusatz',
+	/* ⚠ ⚠  Seit 0.9.40: der Subtyp des Verbands als KLARTEXT — «Kopftor»,
+	   «Freistosstor», «Notbremse», «2. Verwarnung». Er steht NEBEN
+	   `ereignis_zusatz` und nicht darin, und die Reihenfolge ist hier die
+	   Aussage.
+
+	   ⚠ ⚠  WARUM NICHT DARIN, obwohl der Auftrag das wollte: `f_s_v_zusatz`
+	   ist ein `select` mit genau zwei Optionen und verwirft alles andere
+	   WORTLOS — und die zwei heissen im Klartext des Verbands `Eigentor`
+	   und `Penalty`. Ein Durchreichen traefe also ausgerechnet das Feld, an
+	   dem die Spielseite den Zwischenstand auf die andere Mannschaft dreht.
+	   **Ein Eigentor zaehlt fuer den Gegner.**
+
+	   ⚠ Drueben `f_s_v_subtyp`, ein `text` — wie `rolle` und aus demselben
+	   Grund: die Website ZEIGT die Angabe, sie rechnet nicht damit. Ein
+	   `select` braeuchte die Liste der 100 Subtypen, also eine zweite
+	   Wahrheit neben den Stammdaten des Verbands.
+
+	   ⚠ Der Name `subtyp` gibt es drueben nur hier. Als UNTERFELD waere ein
+	   gleichnamiges Feld ohnehin keine Falle — `update_field('verlauf', …)`
+	   ordnet die Schluessel diesem Wiederholer zu —, aber der Satz gehoert
+	   hierher, weil der naechste Leser genau diese Frage stellt. */
+	'ereignis_subtyp',
 	/* ⚠ ⚠  DAS MERKMAL STATT DES NAMENS — Nutzlast-Fassung 4, 13.09.2026.
 	   Vier Verlaufszeilen trugen `spieler: "Unser Team"`, und das ist unser
 	   Rueckfalltext fuer „eigenes Ereignis, kein zugeordneter Name, keine

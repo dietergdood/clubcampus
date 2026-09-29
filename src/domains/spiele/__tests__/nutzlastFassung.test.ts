@@ -89,13 +89,48 @@ describe("NUTZLAST_FASSUNG hält mit den Feldern Schritt", () => {
      zurück — und dieser Fall ist die einzige Stelle, die es merkt.
 
      ⚠ Es steht direkt hinter den drei Minutenfeldern, weil es GENAU SIE
-     beschreibt und sonst nichts. */
-  const VERLAUF_FASSUNG_7 = [
-    "minute", "nummer", "ereignis_zusatz", "ohne_person", "rolle", "art",
-    "seite", "text", "stand", "klub", "sfv_person_id", "ein_nummer",
+     beschreibt und sonst nichts.
+
+     ⚠ ⚠  FASSUNG 8 (29.09.2026): `ereignis_subtyp` an der Verlaufszeile —
+     der Subtyp des Verbands als Klartext („Kopftor", „Freistosstor",
+     „Notbremse"). Das Theme bildet eigene Zeilen jetzt aus den Feldern,
+     und damit fielen die Zusätze weg, die nur in `text` standen.
+
+     ⚠ ⚠  ES STEHT DIREKT NACH `ereignis_zusatz`, UND DIE REIHENFOLGE IST
+     HIER DIE AUSSAGE — sie ist die Abgrenzung. Der Auftrag wollte die
+     Zusätze IN `ereignis_zusatz`; dort drüben ist ein `select` mit zwei
+     Optionen, und die zwei heissen im Klartext des Verbands `Eigentor` und
+     `Penalty`. Ein Durchreichen hätte also genau das Feld getroffen, an
+     dem der Zwischenstand hängt — und wäre ausserdem wortlos verworfen
+     worden. Wer die zwei Felder je zusammenlegt, holt beides zurück.
+
+     ⚠ ⚠  FASSUNG 9 (29.09.2026): **KEIN NEUES FELD** — `nummer` WECHSELT
+     SEINE BEDEUTUNG. Bei einer eigenen Wechselzeile stand dort fast immer
+     `null`; seither wird die Rückennummer des AUSGEWECHSELTEN aus der
+     Aufstellung derselben Partie hergeleitet, wenn der Verband sie nicht
+     mitschickt.
+
+     ⚠ ⚠  DIESER FALL IST DER, DEN DIESE DATEI NICHT FINDET — und er stand
+     die ganze Zeit in der Zusage der Konstante: *„hochzuzählen, wenn ein
+     Feld dazukommt, wegfällt ODER SEINE BEDEUTUNG WECHSELT"*. Die drei
+     Listen unten vergleichen **Feldnamen**. Eine Bedeutung steht in keiner
+     Liste, also bleiben sie grün, und nur `toBe(9)` hält die Zahl.
+
+     > **Der Zuschnitt des Wächters ist schmaler als seine Zusage** —
+     > dieselbe Familie wie am 23.09.2026, als `WpSpiel` in keiner Liste
+     > stand. Damals fehlte eine Ebene, hier fehlt eine Fehlerart.
+
+     ⚠ Und der Anlass ist genau der, gegen den die Konstante gebaut wurde:
+     `export_wartet()` zählt geänderte ZEILEN, und `spiel_ereignisse` ändert
+     sich beim Deploy nicht. Ohne die Erhöhung gingen die hergeleiteten
+     Nummern erst hinaus, wenn irgendeine unbeteiligte Zeile sich bewegt. */
+  const VERLAUF_FASSUNG_9 = [
+    "minute", "nummer", "ereignis_zusatz", "ereignis_subtyp", "ohne_person",
+    "rolle", "art", "seite", "text", "stand", "klub", "sfv_person_id",
+    "ein_nummer",
   ];
 
-  const AUFSTELLUNG_FASSUNG_7 = [
+  const AUFSTELLUNG_FASSUNG_9 = [
     "seite", "sfv_person_id", "nummer", "spieler", "position", "rolle",
     "ist_captain", "von_minute", "bis_minute", "spielzeit",
     "minuten_abgeleitet", "marken",
@@ -105,30 +140,30 @@ describe("NUTZLAST_FASSUNG hält mit den Feldern Schritt", () => {
      `sfv_gegner_team_id` steht mit Absicht direkt neben `gegner`: die
      zwei sind dasselbe Gegenüber, einmal als Name und einmal als
      Kennung, und die Reihenfolge ist hier die Aussage. */
-  const SPIEL_FASSUNG_7 = [
+  const SPIEL_FASSUNG_9 = [
     "sfv_match_id", "sfv_spiel_nr", "datum", "zeit", "sfv_team_id",
     "gegner", "sfv_gegner_team_id", "heim_auswaerts", "ort", "wettbewerb",
     "liga", "runde", "status", "publizieren", "tore_heim", "tore_gast",
     "halbzeit_heim", "halbzeit_gast", "verlauf", "aufstellung",
   ];
 
-  it("⚠⚠ WpVerlaufZeile trägt genau die Felder der Fassung 7", () => {
-    expect(felderVon("WpVerlaufZeile")).toEqual(VERLAUF_FASSUNG_7);
+  it("⚠⚠ WpVerlaufZeile trägt genau die Felder der Fassung 9", () => {
+    expect(felderVon("WpVerlaufZeile")).toEqual(VERLAUF_FASSUNG_9);
   });
 
-  it("⚠⚠ WpAufstellungZeile trägt genau die Felder der Fassung 7", () => {
-    expect(felderVon("WpAufstellungZeile")).toEqual(AUFSTELLUNG_FASSUNG_7);
+  it("⚠⚠ WpAufstellungZeile trägt genau die Felder der Fassung 9", () => {
+    expect(felderVon("WpAufstellungZeile")).toEqual(AUFSTELLUNG_FASSUNG_9);
   });
 
-  it("⚠⚠ WpSpiel trägt genau die Felder der Fassung 7", () => {
-    expect(felderVon("WpSpiel")).toEqual(SPIEL_FASSUNG_7);
+  it("⚠⚠ WpSpiel trägt genau die Felder der Fassung 9", () => {
+    expect(felderVon("WpSpiel")).toEqual(SPIEL_FASSUNG_9);
   });
 
-  it("die Fassung steht auf 7", () => {
+  it("die Fassung steht auf 9", () => {
     /* Der zweite Anker: wer die Listen oben anpasst und die Zahl
        vergisst, wird hier rot. Beide Fälle zusammen erzwingen, dass
        Feldliste und Fassung gemeinsam wandern. */
-    expect(NUTZLAST_FASSUNG).toBe(7);
+    expect(NUTZLAST_FASSUNG).toBe(9);
   });
 
   it("die Konstante steht in derselben Datei wie die Felder", () => {

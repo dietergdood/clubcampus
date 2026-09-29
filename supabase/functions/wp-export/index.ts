@@ -54,13 +54,13 @@
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { AKTION_EXPORT } from "../../../src/domains/sfv/protokollStatus.ts";
-import { mischeEreignisse, hatVerlauf, baueNummernBruecke } from "../../../src/domains/spiele/matchdatenAnzeige.ts";
+import { mischeEreignisse, hatVerlauf, baueNummernBruecke, baueNummerJePerson } from "../../../src/domains/spiele/matchdatenAnzeige.ts";
 import type { EreignisZeile } from "../../../src/domains/spiele/matchdatenAnzeige.ts";
 import {
   bildeSpiel, zaehleVerlaufNamen, hatDoppelabstand,
   baueAufstellung, leereAufstellungZahlen, sammleMarken,
   zaehleWechselWiderspruch, leererWechselWiderspruch, halbzeitWiderspruch,
-  verlaufSortiert, leiteWechselMinutenAb,
+  verlaufSortiert, leiteWechselMinutenAb, neuerVerlaufZaehler,
 } from "../../../src/domains/spiele/wpNutzlast.ts";
 /* ⚠ ⚠  DER LINKBAUER STEHT DORT, NICHT HIER — und zwar in
    `verbandsadresse.ts`, nicht in `verbandslink.ts` daneben.
@@ -2481,14 +2481,23 @@ async function laufeProbe(
     aufZeilenAlle as unknown as { spiel_id: string; ist_eigener: boolean;
                                   rueckennr: number | null; name: string | null }[],
   );
+  /* ⚠ ⚠  DIE ZWEITE BRUECKE, IN DER ANDEREN RICHTUNG — fuer die Nummer
+     des AUSGEWECHSELTEN. Sie geht ueber `sfv_person_id` und nicht ueber
+     die Rueckennummer, und genau deshalb greift die Derby-Falle hier
+     nicht: zwei eigene Kader unter derselben `spiel_id` teilen keine
+     Personennummer, nur die Nummer auf dem Trikot.
+
+     Sie kostet keinen Abruf — dieselben Zeilen, die schon geladen sind. */
+  const nummerJePerson = baueNummerJePerson(
+    aufZeilenAlle as unknown as { spiel_id: string; ist_eigener: boolean;
+                                  sfv_person_id: number | null;
+                                  rueckennr: number | null }[],
+  );
   /* ⚠ Ein Objekt fuer beide Fragen — die Bruecke und die Assists. Zwei
      Objekte waeren zwei Stellen, die eine Aufrufstelle einzeln vergessen
      kann; `VerlaufZaehler` fuehrt sie deshalb zusammen und macht die
      Felder zu Pflicht. */
-  const brueckeZaehler: VerlaufZaehler = {
-    ueber_nummer_aufgeloest: 0,
-    assists: 0, assist_ohne_tor: 0, assist_ohne_eindeutiges_tor: 0,
-  };
+  const brueckeZaehler: VerlaufZaehler = neuerVerlaufZaehler();
 
   /* ── Namen ───────────────────────────────────────────────────────── */
   /* ⚠ Heute leer: sfv_zuordnung hat null Zeilen (29.08.2026). Dann steht
@@ -2697,7 +2706,7 @@ async function laufeProbe(
     if (!hatVerlauf(roh)) ohneVerlauf++;
 
     const spiel = bildeSpiel(s, String(s.sfv_team_id ?? ""), ereignisse, namen,
-      unserKlub, bruecke, String(s.id), brueckeZaehler);
+      unserKlub, bruecke, String(s.id), brueckeZaehler, nummerJePerson);
     if (!spiel) { ohneSchluessel++; continue; }
     if (!spiel.publizieren) zurueckgehalten++;
     /* ⚠ NICHT bereinigt, nur gezaehlt (Entscheidung Didi, 10.09.2026):
@@ -2958,6 +2967,60 @@ async function laufeProbe(
          das Mass dafuer, wie oft der Verband seine eigene Kennung nicht
          aufloest. Faellt sie gegen null, loest er wieder auf. */
       ueber_nummer_aufgeloest: brueckeZaehler.ueber_nummer_aufgeloest,
+      /* ⚠ ⚠  DIE ZWEI NUMMERN EINER EIGENEN WECHSELZEILE — ZEHN ZAHLEN,
+         UND DIE ERSTE IST DIE BEZUGSGROESSE.
+
+         „12 mit beiden Nummern" heisst etwas anderes bei 14 Wechseln als
+         bei 400. Eine Zahl ohne Bezugsgroesse ist ein Artefakt — deshalb
+         steht `wechsel_eigen` daneben und nicht darunter. Und immer da,
+         auch als Null: was still wegfaellt, sieht aus wie etwas, das es
+         nie gab.
+
+         ⚠ ⚠  SIEBEN DER ZEHN SIND EINE AUFTEILUNG, DIE AUFGEHEN MUSS:
+
+           vom_verband + hergeleitet + ohne_person + nicht_gefragt
+           + ohne_zeile + zeile_ohne_nummer + mehrdeutig + kollision
+           = wechsel_eigen
+
+         Je eigene Wechselzeile genau ein Wert. Eine einzelne Zahl kann
+         nur behauptet werden; eine Aufteilung kann man nachrechnen — und
+         geht sie nicht auf, misst eine der Stellen etwas anderes als die
+         andere. `wechsel_beide_nummern` schneidet quer und gehoert nicht
+         dazu: es verlangt zusaetzlich `ein_nummer`.
+
+         ⚠ **`vom_verband` beantwortet eine offene Frage**, statt sie
+         anzunehmen: schickt der Verband `jerseyNumber` am Wechsel mit?
+         Die einzige aufgezeichnete Antwort enthaelt fuenf Tore und keinen
+         Wechsel, und `MatchEvent` hat 28 Felder ohne eine einzige
+         `description`. Nach dem ersten Lauf ist es gemessen.
+
+         ⚠ `hergeleitet` ist KEIN Erfolgsmass, sondern das Mass dafuer, wie
+         oft der Verband seine eigene Angabe nicht mitschickt — genau wie
+         `ueber_nummer_aufgeloest` darueber.
+
+         ⚠ Die fuenf Schweigegruende sind GETRENNT, weil sie Verschiedenes
+         heissen — „es gibt keinen Schluessel", „die Karte fehlt", „keine
+         Zeile", „Zeile ohne Nummer", „zwei Kandidaten". **Nicht
+         feststellbar ist nicht dasselbe wie nichts gefunden**, und wer sie
+         zusammenzaehlt, schickt den Leser in die falsche Richtung.
+
+         ⚠ `nicht_gefragt` ist in Betrieb 0. Steht dort eine Zahl, ist
+         eine Aufrufstelle nicht verdrahtet — dann sagt der Zaehler das,
+         statt die Datenlage zu beschuldigen.
+
+         ⚠ NUR ZAHLEN. Keine Namen, keine Personennummern: die Antwort
+         landet in `api_sync_log`, und so gingen am 21.08.2026 903
+         Klarnamen dorthin. */
+      wechsel_eigen: brueckeZaehler.wechsel_eigen,
+      wechsel_beide_nummern: brueckeZaehler.wechsel_beide_nummern,
+      wechsel_nummer_vom_verband: brueckeZaehler.wechsel_nummer_vom_verband,
+      wechsel_nummer_hergeleitet: brueckeZaehler.wechsel_nummer_hergeleitet,
+      wechsel_nummer_ohne_person: brueckeZaehler.wechsel_nummer_ohne_person,
+      wechsel_nummer_nicht_gefragt: brueckeZaehler.wechsel_nummer_nicht_gefragt,
+      wechsel_nummer_ohne_zeile: brueckeZaehler.wechsel_nummer_ohne_zeile,
+      wechsel_nummer_zeile_ohne_nummer: brueckeZaehler.wechsel_nummer_zeile_ohne_nummer,
+      wechsel_nummer_mehrdeutig: brueckeZaehler.wechsel_nummer_mehrdeutig,
+      wechsel_nummer_kollision: brueckeZaehler.wechsel_nummer_kollision,
       /* ⚠ ⚠  DIE ASSISTS — DREI ZAHLEN, UND DIE ERSTE IST DIE
          BEZUGSGROESSE. „2 ohne eindeutiges Tor" heisst etwas anderes bei
          3 Assists als bei 300; eine Zahl ohne Bezugsgroesse ist keine
@@ -2978,6 +3041,25 @@ async function laufeProbe(
       assists: brueckeZaehler.assists,
       assist_ohne_tor: brueckeZaehler.assist_ohne_tor,
       assist_ohne_eindeutiges_tor: brueckeZaehler.assist_ohne_eindeutiges_tor,
+      /* ⚠ ⚠  DER SUBTYP-KLARTEXT — ZWEI ZAHLEN, UND SIE MUESSEN AUFGEHEN.
+         `gesendet + verworfen` = Verlaufszeilen, die ueberhaupt eine
+         Subtyp-Aussage tragen. Eine einzelne Zahl kann nur behauptet
+         werden; eine Aufteilung kann man nachrechnen.
+
+         ⚠ `verworfen` ist KEIN Defekt, sondern eine Frage: dann traegt ein
+         Wechsel oder Assist einen Subtyp, und ob er hinausgehen soll, ist
+         zu ENTSCHEIDEN statt anzunehmen. Heute ungemessen — die Datenbank
+         war beim Bau von hier aus nicht erreichbar.
+
+         ⚠ ⚠  UND DIE LISTE FUEHRT NUR ZAHLEN (`typ_id:subtyp_id`), NIE DEN
+         KLARTEXT. Der verworfene Wert kann `Verletzt` oder `Krank` sein;
+         ihn ins Protokoll zu schreiben waere genau der Ausgang, den die
+         Grenze schliessen soll — so gingen am 21.08.2026 903 Klarnamen in
+         `api_sync_log`. Immer da, auch als Null: was still wegfaellt,
+         sieht aus wie etwas, das es nie gab. */
+      zusatz_gesendet: brueckeZaehler.zusatz_gesendet,
+      zusatz_verworfen: brueckeZaehler.zusatz_verworfen,
+      zusatz_verworfen_ids: brueckeZaehler.zusatz_verworfen_ids,
       verlauf_mit_person: verlaufMitPerson,
       /* ⚠ ⚠  WIE VIELE ZEILEN DIE DREI NEUEN FELDER TRAGEN — damit die
          Website-Seite GEZIELT nachsehen kann statt zu suchen.

@@ -24,10 +24,11 @@ import {
   ROLLE_CAPTAIN_ID, baueAufstellung, leereAufstellungZahlen,
   type AbgeleiteteMinuten,
   SUBTYP_EIGENTOR,
+  subtypKlartext, zusatzText, ZUSATZ_TYPEN, neuerVerlaufZaehler,
 } from "../wpNutzlast.ts";
 import {
   baueNummernBruecke, beschreibeGewechselten, mischeEreignisse,
-  werBefund, ROLLE_SPIELER,
+  werBefund, ROLLE_SPIELER, baueNummerJePerson, nummerDesAusgewechselten,
 } from "../matchdatenAnzeige.ts";
 import { suche, findeFunktion, jederKnoten } from "../../../test-helpers/quelltext.ts";
 import ts from "typescript";
@@ -294,10 +295,12 @@ describe("⚠ die Reihenfolge der Verlaufszeilen — chronologisch nach Minute, 
    ══════════════════════════════════════════════════════════════════════ */
 describe("⚠ der Assist im Verlauf", () => {
   const namen = new Map<number, string>();
-  const leer = (): VerlaufZaehler => ({
-    ueber_nummer_aufgeloest: 0, assists: 0,
-    assist_ohne_tor: 0, assist_ohne_eindeutiges_tor: 0,
-  });
+  /* ⚠ Aus der Produktionsfabrik, nicht von Hand nachgebaut. Eine
+     Attrappe, die die Felder abschreibt, prueft die Abschrift — und ein
+     neuer Zaehler fehlte hier, ohne dass der Compiler etwas sagt: er
+     zaehlt nur, dass alle Pflichtfelder da sind, nicht dass sie bei null
+     beginnen. */
+  const leer = neuerVerlaufZaehler;
 
   it("gibt ein Ereignis vom Typ 9 als eigene Zeile mit der Art «assist» aus", () => {
     /* ⚠ Und mit EIGENER Personennummer. Der Assist ist kein Feld am Tor,
@@ -742,6 +745,300 @@ describe("Wechsel — beide Menschen werden genannt", () => {
        geben kann, darf der Zaehler nicht melden. */
     const fremd = wechsel({ ist_eigener: false, ein_sfv_person_id: null, ein_rueckennr: null });
     expect(zaehleVerlaufNamen([fremd], new Set([333])).zeilen_mit_zweitem_namen).toBe(0);
+  });
+});
+
+/* ══════════════════════════════════════════════════════════════════════
+   ⚠ ⚠  DIE NUMMER DES AUSGEWECHSELTEN — beide Nummern in einer Zeile
+   29.09.2026
+
+   Der Verband zeigt „X ersetzt durch Y". Damit die Gegenstelle dieselbe
+   Zeile bauen kann — mit ihrer eigenen Namensregel je Team —, braucht sie
+   BEIDE Rueckennummern: `nummer` fuer X, `ein_nummer` fuer Y.
+
+   ⚠ `nummer` fehlte bei eigenen Wechseln fast immer, und die Kette war in
+   Ordnung: `bildeVerlauf()` setzt das Feld unbedingt, der Sync schreibt
+   `jerseyNumber` unbedingt, und beide Namen stehen in
+   `CC_VERLAUF_FELDER`. **Es fehlt in der QUELLE** — und ob der Verband die
+   Nummer am Wechsel ueberhaupt mitschickt, ist ungemessen: die einzige
+   aufgezeichnete Antwort enthaelt fuenf Tore und keinen Wechsel.
+
+   Deshalb wird nicht angenommen, sondern hergeleitet UND gezaehlt:
+   `wechsel_nummer_vom_verband` beantwortet die offene Frage beim ersten
+   Lauf.
+
+   ── Warum ueber die PERSONENNUMMER und nicht ueber die Nummer ─────────
+
+   `spiel_aufstellung_verein_key UNIQUE (verein_id, spiel_id,
+   sfv_person_id)` macht den Schluessel je Spiel eindeutig. **Die
+   Derby-Falle greift auf dieser Richtung nicht**: zwei eigene Kader unter
+   derselben `spiel_id` teilen keine `personId`, nur die Nummer auf dem
+   Trikot. Die Schwester-Bruecke muss ueber die Nummer gehen (weil
+   `substitutePlayerId` kein `personId` ist) und braucht genau deshalb
+   `ist_eigener` auf beiden Seiten.
+   ══════════════════════════════════════════════════════════════════════ */
+describe("⚠ ⚠ beide Nummern in einer eigenen Wechselzeile", () => {
+  /* ⚠ OHNE `rueckennr` — der Fall, um den es geht: der Verband nennt den
+     Ausgewechselten nur ueber `personId`. */
+  const wOhneNr = (ueber = {}) => e({
+    typ_id: TYP_WECHSEL, ist_eigener: true,
+    sfv_person_id: 222, rueckennr: null,
+    ein_sfv_person_id: 333, ein_rueckennr: 9,
+    ...ueber,
+  });
+  const auf = (f: Partial<{ spiel_id: string; ist_eigener: boolean;
+                            sfv_person_id: number | null; rueckennr: number | null }> = {}) => ({
+    spiel_id: "s1", ist_eigener: true, sfv_person_id: 222, rueckennr: 11, ...f,
+  });
+  const karte = (zeilen = [auf()]) => baueNummerJePerson(zeilen);
+  const lauf = (ev: AnzeigeEreignis, k = karte(), z = neuerVerlaufZaehler()) => ({
+    zeile: bildeVerlauf([ev], true, new Map(), "FC Herrliberg",
+      undefined, "s1", z, k)[0],
+    z,
+  });
+
+  it("traegt BEIDE Nummern", () => {
+    const { zeile } = lauf(wOhneNr());
+    expect(zeile.nummer).toBe(11);
+    expect(zeile.ein_nummer).toBe(9);
+  });
+
+  it("⚠ und die beiden sind VERSCHIEDEN", () => {
+    /* ⚠ Zweimal dieselbe Zahl hiesse, wir haetten den EINGEWECHSELTEN
+       getroffen — eine Zeile „Nr. 9 ersetzt durch Nr. 9", plausibel und
+       falsch. */
+    const { zeile } = lauf(wOhneNr());
+    expect(zeile.nummer).not.toBe(zeile.ein_nummer);
+  });
+
+  it("⚠ ⚠ bleibt LEER, wo die Zuordnung nicht eindeutig ist", () => {
+    /* Zwei Nummern fuer dieselbe Person in demselben Spiel. Der
+       UNIQUE-Schluessel macht das heute unmoeglich — **eine Datenlage ist
+       keine Absicherung**, und eine Bruecke, die raet, ist schlimmer als
+       keine. */
+    const k = karte([auf({ rueckennr: 11 }), auf({ rueckennr: 14 })]);
+    const { zeile, z } = lauf(wOhneNr(), k);
+    expect(zeile.nummer).toBeNull();
+    expect(z.wechsel_nummer_mehrdeutig).toBe(1);
+  });
+
+  it("⚠ der Verband hat Vorrang — seine Angabe wird nicht ueberschrieben", () => {
+    /* Die Aufstellung sagt 11, das Ereignis sagt 7. Hergeleitet wird nur,
+       was FEHLT; alles andere waere eine stille Korrektur fremder Daten. */
+    const { zeile, z } = lauf(wOhneNr({ rueckennr: 7 }));
+    expect(zeile.nummer).toBe(7);
+    expect(z.wechsel_nummer_vom_verband).toBe(1);
+    expect(z.wechsel_nummer_hergeleitet).toBe(0);
+  });
+
+  it("⚠ ⚠ eine FREMDE Wechselzeile bekommt nichts hergeleitet", () => {
+    /* ⚠ Die Karte enthaelt nur eigene Zeilen — und genau so war es bei
+       `baueNummernBruecke()` auch, bevor am 11.09.2026 unsere Spieler beim
+       Gegner im Verlauf standen: sie filterte, was sie AUFNAHM, und wer
+       sie BEFRAGTE, stand unter keiner Aufsicht.
+
+       Die Attrappe legt die Falle: dieselbe `sfv_person_id` steht in der
+       Karte. Ohne den Filter stuende die Nummer eines eigenen Spielers an
+       einer Gegnerzeile. */
+    const { zeile, z } = lauf(wOhneNr({ ist_eigener: false, ein_sfv_person_id: null }));
+    expect(zeile.nummer).toBeNull();
+    /* ⚠ Und der Zaehler bleibt unberuehrt: fremde Zeilen sind nicht Teil
+       der Aufteilung. Sonst ginge sie nicht auf. */
+    expect(z.wechsel_eigen).toBe(0);
+  });
+
+  it("schweigt, wenn die Aufstellungszeile keine Nummer traegt", () => {
+    const k = karte([auf({ rueckennr: null })]);
+    const { zeile, z } = lauf(wOhneNr(), k);
+    expect(zeile.nummer).toBeNull();
+    /* ⚠ Ein ANDERER Grund als „keine Zeile" — der Verband fuehrt fuer
+       diesen Menschen keine Nummer. Nicht feststellbar ist nicht dasselbe
+       wie nichts gefunden. */
+    expect(z.wechsel_nummer_zeile_ohne_nummer).toBe(1);
+    expect(z.wechsel_nummer_ohne_zeile).toBe(0);
+  });
+
+  it("schweigt, wenn es zu dieser Person keine Zeile gibt", () => {
+    const k = karte([auf({ sfv_person_id: 999 })]);
+    const { zeile, z } = lauf(wOhneNr(), k);
+    expect(zeile.nummer).toBeNull();
+    expect(z.wechsel_nummer_ohne_zeile).toBe(1);
+  });
+
+  it("schweigt ohne Personennummer am Ereignis — es gibt keinen Schluessel", () => {
+    const { zeile, z } = lauf(wOhneNr({ sfv_person_id: null }));
+    expect(zeile.nummer).toBeNull();
+    expect(z.wechsel_nummer_ohne_person).toBe(1);
+  });
+
+  it("⚠ ⚠ KOLLISION: dieselbe Zahl wie ein_nummer wird verworfen", () => {
+    /* Die Aufstellung nennt fuer den Ausgewechselten die 9 — und die 9
+       steht schon als Eingewechselter da. Dann haben wir den falschen
+       Menschen getroffen, und Schweigen ist die einzige richtige
+       Antwort. */
+    const k = karte([auf({ rueckennr: 9 })]);
+    const { zeile, z } = lauf(wOhneNr(), k);
+    expect(zeile.nummer).toBeNull();
+    expect(zeile.ein_nummer).toBe(9);
+    expect(z.wechsel_nummer_kollision).toBe(1);
+    expect(z.wechsel_beide_nummern).toBe(0);
+  });
+
+  it("⚠ meldet «nicht gefragt», wenn die Karte fehlt", () => {
+    /* ⚠ Nicht „keine Zeile". Steht diese Zahl in Betrieb ueber null, ist
+       eine Aufrufstelle nicht verdrahtet — und dann sagt der Zaehler das,
+       statt die Datenlage zu beschuldigen. Dieselbe Luecke wie
+       `sfv_person_id: null`, das hart verdrahtet war und wie eine leere
+       Tabelle aussah. */
+    const z = neuerVerlaufZaehler();
+    const [zeile] = bildeVerlauf([wOhneNr()], true, new Map(), "FC Herrliberg",
+      undefined, "s1", z);
+    expect(zeile.nummer).toBeNull();
+    expect(z.wechsel_nummer_nicht_gefragt).toBe(1);
+    expect(z.wechsel_nummer_ohne_zeile).toBe(0);
+  });
+
+  /* ── Die Gegenprobe, die keine einzelne Zahl leisten kann ─────────── */
+  it("⚠ ⚠ die Aufteilung geht auf — acht Werte, eine Bezugsgroesse", () => {
+    /* Eine einzelne Zahl kann nur behauptet werden; eine Aufteilung kann
+       man nachrechnen. Geht sie nicht auf, misst eine der Stellen etwas
+       anderes als die andere. */
+    const k = karte([
+      auf({ sfv_person_id: 222, rueckennr: 11 }),          // hergeleitet
+      auf({ sfv_person_id: 444, rueckennr: null }),        // zeile_ohne_nummer
+      auf({ sfv_person_id: 555, rueckennr: 9 }),           // kollision
+      auf({ sfv_person_id: 666, rueckennr: 3 }),
+      auf({ sfv_person_id: 666, rueckennr: 4 }),           // mehrdeutig
+    ]);
+    const z = neuerVerlaufZaehler();
+    bildeVerlauf([
+      wOhneNr({ minute: 10 }),                                   // hergeleitet
+      wOhneNr({ minute: 20, rueckennr: 7 }),                     // vom_verband
+      wOhneNr({ minute: 30, sfv_person_id: null }),              // ohne_person
+      wOhneNr({ minute: 40, sfv_person_id: 888 }),               // ohne_zeile
+      wOhneNr({ minute: 50, sfv_person_id: 444 }),               // zeile_ohne_nummer
+      wOhneNr({ minute: 60, sfv_person_id: 666 }),               // mehrdeutig
+      wOhneNr({ minute: 70, sfv_person_id: 555 }),               // kollision
+      /* ⚠ Eine Gegnerzeile MIT in derselben Liste — sie darf in keinem
+         der acht Werte auftauchen, sonst ginge die Rechnung nicht auf. */
+      wOhneNr({ minute: 80, ist_eigener: false, ein_sfv_person_id: null }),
+      /* ⚠ Und ein TOR — die Herleitung gilt nur fuer Wechsel. */
+      e({ minute: 90, typ_id: TYP_TOR, ist_eigener: true, rueckennr: 5 }),
+    ], true, new Map(), "FC Herrliberg", undefined, "s1", z, k);
+
+    const summe = z.wechsel_nummer_vom_verband + z.wechsel_nummer_hergeleitet
+      + z.wechsel_nummer_ohne_person + z.wechsel_nummer_nicht_gefragt
+      + z.wechsel_nummer_ohne_zeile + z.wechsel_nummer_zeile_ohne_nummer
+      + z.wechsel_nummer_mehrdeutig + z.wechsel_nummer_kollision;
+    expect(z.wechsel_eigen).toBe(7);
+    expect(summe).toBe(z.wechsel_eigen);
+    /* ⚠ Und jeder Grund GENAU einmal — eine Summe allein bestaetigt die
+       Aufteilung nicht: zwei Fehler koennten sich aufheben. */
+    expect({
+      vom_verband: z.wechsel_nummer_vom_verband,
+      hergeleitet: z.wechsel_nummer_hergeleitet,
+      ohne_person: z.wechsel_nummer_ohne_person,
+      nicht_gefragt: z.wechsel_nummer_nicht_gefragt,
+      ohne_zeile: z.wechsel_nummer_ohne_zeile,
+      zeile_ohne_nummer: z.wechsel_nummer_zeile_ohne_nummer,
+      mehrdeutig: z.wechsel_nummer_mehrdeutig,
+      kollision: z.wechsel_nummer_kollision,
+    }).toEqual({
+      vom_verband: 1, hergeleitet: 1, ohne_person: 1, nicht_gefragt: 0,
+      ohne_zeile: 1, zeile_ohne_nummer: 1, mehrdeutig: 1, kollision: 1,
+    });
+    /* Beide Nummern haben die zwei, die eine Nummer bekommen haben. */
+    expect(z.wechsel_beide_nummern).toBe(2);
+  });
+
+  /* ── Die Widerspruchsfrage: EINE Quelle fuer drei Felder ──────────── */
+  it("⚠ ⚠ `text` und `ohne_person` widersprechen `nummer` NICHT", () => {
+    /* ⚠ ⚠  DAS IST DIE ENTSCHEIDENDE ZUSAGE DIESES UMBAUS.
+
+       Setzte man nur das FELD aus der Herleitung, stuende in derselben
+       Zeile `nummer: 11` neben `text: "Unser Team ersetzt durch Nr. 9"`
+       und `ohne_person: true` — drei Aussagen ueber denselben Menschen,
+       zwei davon falsch. Und `ohne_person` ist das Feld, an dem die
+       Website entscheidet, ob dort ein Mensch steht.
+
+       Deshalb entsteht die Nummer VOR `werBefund()` und geht dort mit
+       ein. Genau diese Doppelung ist am 24.09.2026 bei `ohne_person`
+       aufgeloest worden. */
+    const { zeile } = lauf(wOhneNr());
+    expect(zeile.nummer).toBe(11);
+    expect(zeile.text).toBe("Nr. 11 ersetzt durch Nr. 9");
+    expect(zeile.ohne_person).toBe(false);
+    expect(zeile.text).not.toContain("Unser Team");
+  });
+
+  it("⚠ und ohne Herleitung bleiben alle drei beim alten Befund", () => {
+    /* Die Gegenrichtung: schweigt die Bruecke, darf `text` nicht so
+       aussehen, als waere jemand benannt. */
+    const { zeile } = lauf(wOhneNr({ sfv_person_id: null }));
+    expect(zeile.nummer).toBeNull();
+    expect(zeile.text).toBe("Unser Team ersetzt durch Nr. 9");
+    expect(zeile.ohne_person).toBe(true);
+  });
+
+  it("⚠ ein TOR bekommt nichts hergeleitet — nur Wechsel", () => {
+    /* Bei Tor und Karte steht `nummer` heute schon, und `text` traegt den
+       Subtyp-Zusatz, aus dem die Spielseite das Wort „Eigentor" liest. An
+       diesen Zeilen wird nichts angefasst. */
+    const z = neuerVerlaufZaehler();
+    const [zeile] = bildeVerlauf(
+      [e({ typ_id: TYP_TOR, ist_eigener: true, sfv_person_id: 222, rueckennr: null })],
+      true, new Map(), "FC Herrliberg", undefined, "s1", z, karte());
+    expect(zeile.nummer).toBeNull();
+    expect(z.wechsel_eigen).toBe(0);
+  });
+
+  /* ── Die Bruecke fuer sich ─────────────────────────────────────────── */
+  it("⚠ die Karte nimmt keine FREMDE Aufstellungszeile auf", () => {
+    const k = karte([auf({ ist_eigener: false })]);
+    expect(k.size).toBe(0);
+  });
+
+  it("⚠ zwei Spiele, dieselbe Person — die Nummern bleiben getrennt", () => {
+    /* Der Schluessel traegt die `spiel_id`. Ohne sie zoege ein Spiel die
+       Nummer eines anderen heran. */
+    const k = karte([auf({ spiel_id: "s1", rueckennr: 11 }),
+                     auf({ spiel_id: "s2", rueckennr: 14 })]);
+    expect(k.get("s1:222")?.nummer).toBe(11);
+    expect(k.get("s2:222")?.nummer).toBe(14);
+  });
+
+  it("⚠ ⚠ die Herleitung ruehrt die KLARNAMEN-ZAHL nicht an", () => {
+    /* ⚠ ⚠  DIE ZAHL, DIE VOR JEDEM SCHARFEN LAUF ENTSCHEIDET, ob Klarnamen
+       von Junioren auf eine oeffentliche Seite gehen. Die Herleitung gibt
+       eine NUMMER, nie einen Namen — aber das ist eine Behauptung ueber
+       eine andere Stelle, und die prueft kein Werkzeug.
+
+       ⚠ `mit_rueckennummer` ist der Auffangtopf („ohne jeden Namen"), und
+       die hergeleitete Zeile bleibt darin: vorher zeigte sie „Unser Team",
+       jetzt „Nr. 11" — dieselbe Seite der Grenze, und das Etikett stimmt
+       seither sogar besser. Waechst `mit_eigenem_namen` oder
+       `mit_sfv_namen` durch diesen Umbau, ist etwas anderes passiert als
+       gebaut wurde. */
+    const roh = [wOhneNr()];
+    const vorher = zaehleVerlaufNamen(roh, new Set<number>(), new Set<number>());
+    expect(vorher.mit_eigenem_namen).toBe(0);
+    expect(vorher.mit_sfv_namen).toBe(0);
+    expect(vorher.mit_rueckennummer).toBe(1);
+    /* Und die Zeile, die daraus entsteht, traegt eine Nummer und keinen
+       Namen — die zwei Aussagen zusammen sind die Zusage. */
+    const { zeile } = lauf(wOhneNr());
+    expect(zeile.text).toBe("Nr. 11 ersetzt durch Nr. 9");
+    expect(zeile.sfv_person_id).toBe("222");
+  });
+
+  it("⚠ `herkunft` nennt eine Gegnerzeile «fremd», nicht «verband»", () => {
+    /* Damit der Zweig in `bildeVerlauf()` sie erkennen kann, ohne selbst
+       noch einmal `ist_eigener` zu lesen — zwei Stellen, eine Aussage. */
+    const b = nummerDesAusgewechselten(
+      { ist_eigener: false, sfv_person_id: 222, rueckennr: 4, ein_rueckennr: 9 },
+      karte(), "s1");
+    expect(b.herkunft).toBe("fremd");
+    expect(b.nummer).toBe(4);
   });
 });
 
@@ -2425,5 +2722,175 @@ describe("⚠ ⚠ jeder Select auf `spiel_ereignisse` holt alle Spalten", () => 
         `${datei}: select(${fund}) ist weder "*" noch eine reine Id-Abfrage`)
         .toContain(fund);
     }
+  });
+});
+
+/* ======================================================================
+   ⚠ ⚠  DER SUBTYP-KLARTEXT — UND SEINE GRENZE
+   29.09.2026
+
+   Anlass: das Theme bildet eigene Verlaufszeilen aus den FELDERN, und
+   damit fielen die Zusaetze weg, die nur in `text` standen — "Kopftor",
+   "Freistosstor", "Notbremse".
+
+   ⚠ ⚠  DIE SCHARFE ZUSAGE IST NICHT, DASS DER KLARTEXT ANKOMMT,
+              SONDERN DASS DIE ABWESENHEITSGRUENDE ES NICHT TUN.
+
+   Gemessen in `docs/sfv/sfv_stammdaten.json`: die Subtyp-Liste hat 100
+   Eintraege und ist ein gemeinsamer Vorrat ueber alle 30 Ereignistypen.
+   50-72 sind Abwesenheitsgruende — `Verletzt`, `Krank`, `Rekonvaleszent`,
+   `Gesperrt`, `Militaer`. Auf einer oeffentlichen Seite, neben dem Namen
+   eines Junioren, waere das eine Gesundheitsangabe.
+
+   Heute halten sie zwei Grenzen, und nur eine ist dafuer gebaut:
+   `verlaufArt()` laesst Typ 8 "Abwesend" nicht durch (Nebeneffekt), und
+   `ZUSATZ_TYPEN` laesst den Klartext nur bei Tor, Verwarnung und
+   Ausschluss hinaus (Absicht). **Dieser Block prueft die zweite** — die
+   erste faellt, sobald jemand eine sechste `art` ergaenzt, und CLAUDE.md
+   fuehrt Typ 15 "Strafen (Trainer, Funktionaere, Zuschauer)" als offenen
+   Punkt genau dafuer.
+   ====================================================================== */
+describe("⚠ ereignis_subtyp — der Klartext und seine Grenze", () => {
+  const namen = new Map<number, string>();
+  const eineZeile = (f: Partial<AnzeigeEreignis>) =>
+    bildeVerlauf([e(f)], true, namen, "FC Herrliberg")[0];
+
+  it("traegt den Klartext des Verbands beim Tor", () => {
+    /* ⚠ ⚠  UND ZWAR DIE GEMESSENEN NAMEN. Der Auftrag nannte
+       "Freistoss" und "Kopfball"; in den Stammdaten heissen sie
+       `Freistosstor` (3) und `Kopftor` (1). Wer eine Zuordnung auf
+       "Freistoss" baut, trifft nichts — und nichts schlaegt fehl. Deshalb
+       stehen hier die Werte des Verbands und nicht die des Auftrags. */
+    expect(eineZeile({ typ_id: TYP_TOR, subtyp_id: 3, subtyp: "Freistosstor" })
+      .ereignis_subtyp).toBe("Freistosstor");
+    expect(eineZeile({ typ_id: TYP_TOR, subtyp_id: 1, subtyp: "Kopftor" })
+      .ereignis_subtyp).toBe("Kopftor");
+  });
+
+  it("traegt ihn bei Verwarnung und Ausschluss", () => {
+    expect(eineZeile({ typ_id: TYP_VERWARNUNG, subtyp_id: 11, subtyp: "Reklamieren" })
+      .ereignis_subtyp).toBe("Reklamieren");
+    expect(eineZeile({ typ_id: TYP_AUSSCHLUSS, subtyp_id: 22, subtyp: "Notbremse" })
+      .ereignis_subtyp).toBe("Notbremse");
+  });
+
+  it('⚠ "2. Verwarnung" kommt mit, obwohl `art` schon gelbrot sagt', () => {
+    /* An `ereignis_zusatz` ist sie bewusst ausgeschlossen — dort waere sie
+       die Wiederholung eines Merkmals. Hier ist sie der WORTLAUT des
+       Verbands, und ob die Seite ihn neben ihrem Symbol zeigt, ist ihre
+       Entscheidung. Sie wegzulassen waere ein Loch, das wir erklaeren
+       muessten. */
+    const z = eineZeile({
+      typ_id: TYP_AUSSCHLUSS, subtyp_id: SUBTYP_ZWEITE_VERWARNUNG,
+      subtyp: "2. Verwarnung",
+    });
+    expect(z.art).toBe("gelbrot");
+    expect(z.ereignis_subtyp).toBe("2. Verwarnung");
+    expect(z.ereignis_zusatz).toBe("");
+  });
+
+  it('⚠ der Strich ist kein Text, sondern der Klartext zu Subtyp 0', () => {
+    /* Ohne diese Pruefung stuende auf der Website "FC Kuesnacht a . -".
+       Aufgefallen am 05.09.2026 in Didis eigener Ausgabe. */
+    expect(eineZeile({ typ_id: TYP_TOR, subtyp_id: 0, subtyp: "-" })
+      .ereignis_subtyp).toBe("");
+    expect(eineZeile({ typ_id: TYP_TOR, subtyp_id: 0, subtyp: "   " })
+      .ereignis_subtyp).toBe("");
+    expect(eineZeile({ typ_id: TYP_TOR, subtyp_id: null, subtyp: null })
+      .ereignis_subtyp).toBe("");
+  });
+
+  it("⚠ ⚠ ein Abwesenheitsgrund geht NICHT hinaus — auch nicht am Wechsel", () => {
+    /* ⚠ ⚠  DIE ZUSAGE, UM DIE ES GEHT. `Verletzt` (50) gehoert zu
+       Ereignistyp 8 "Abwesend" — aber der plausibelste Subtyp eines
+       WECHSELS ist genau dieser, und ein Wechsel kommt durch
+       `verlaufArt()`. Waere der Klartext eine Durchreiche, stuende eine
+       Gesundheitsangabe neben einem Namen auf einer oeffentlichen Seite.
+
+       ⚠ Am Wechsel kostet die Grenze nichts: `bildeVerlauf()` haengt den
+       Zusatz dort seit jeher nicht an den Text, sobald ein Ersatzspieler
+       bekannt ist. */
+    for (const grund of ["Verletzt", "Krank", "Gesperrt", "Militaer"]) {
+      expect(eineZeile({ typ_id: TYP_WECHSEL, subtyp_id: 50, subtyp: grund })
+        .ereignis_subtyp).toBe("");
+    }
+    expect(eineZeile({ typ_id: TYP_ASSIST, subtyp_id: 50, subtyp: "Verletzt" })
+      .ereignis_subtyp).toBe("");
+  });
+
+  it("⚠ ⚠ `ereignis_zusatz` bleibt unser Wort — nicht der Klartext", () => {
+    /* ⚠ ⚠  DAS FELD, AN DEM DER ZWISCHENSTAND HAENGT. Subtyp 2 heisst
+       im Klartext `Eigentor`, unser Wert ist `eigentor`. Legte jemand den
+       Klartext in dasselbe Feld, aenderte er ausgerechnet die zwei Werte,
+       an denen die Spielseite den Stand auf die andere Mannschaft dreht —
+       **ein Eigentor zaehlt fuer den Gegner**, und der Stand verschoebe
+       sich um zwei Tore, ohne Fehlermeldung.
+
+       Genau deshalb sind es zwei Felder. Dieser Fall ist die Grenze. */
+    const z = eineZeile({
+      typ_id: TYP_TOR, subtyp_id: SUBTYP_EIGENTOR, subtyp: "Eigentor",
+    });
+    expect(z.ereignis_zusatz).toBe("eigentor");
+    expect(z.ereignis_subtyp).toBe("Eigentor");
+  });
+
+  it("⚠ ⚠ `text` bleibt unveraendert — auch wo das Feld leer bleibt", () => {
+    /* Die Spielseite liest das Wort "Eigentor" aus dem Fliesstext, solange
+       das neue Feld nicht bestaetigt ankommt. Und die Grenze gilt fuer das
+       FELD, nicht fuer den Text: ein Assist behaelt seinen Zusatz im Satz,
+       obwohl `ereignis_subtyp` leer ist. */
+    expect(eineZeile({
+      typ_id: TYP_TOR, subtyp_id: SUBTYP_EIGENTOR, subtyp: "Eigentor",
+      rueckennr: 9,
+    }).text).toContain("Eigentor");
+
+    const assist = eineZeile({
+      typ_id: TYP_ASSIST, subtyp_id: 90, subtyp: "Tor", rueckennr: 7,
+    });
+    expect(assist.ereignis_subtyp).toBe("");
+    expect(assist.text).toContain("Tor");
+  });
+
+  it("⚠ ⚠ die Aufteilung geht auf, und die Liste fuehrt keinen Klartext", () => {
+    /* ⚠ Eine einzelne Zahl kann nur behauptet werden; eine Aufteilung
+       kann man nachrechnen. `gesendet + verworfen` = Zeilen mit einer
+       Subtyp-Aussage — hier drei von vier, die vierte traegt den Strich. */
+    const z: VerlaufZaehler = neuerVerlaufZaehler();
+    bildeVerlauf([
+      e({ minute: 10, typ_id: TYP_TOR, subtyp_id: 1, subtyp: "Kopftor" }),
+      e({ minute: 20, typ_id: TYP_VERWARNUNG, subtyp_id: 11, subtyp: "Reklamieren" }),
+      e({ minute: 30, typ_id: TYP_WECHSEL, subtyp_id: 50, subtyp: "Verletzt" }),
+      e({ minute: 40, typ_id: TYP_TOR, subtyp_id: 0, subtyp: "-" }),
+    ], true, namen, "FC Herrliberg", undefined, undefined, z);
+
+    expect(z.zusatz_gesendet).toBe(2);
+    expect(z.zusatz_verworfen).toBe(1);
+    expect(z.zusatz_gesendet + z.zusatz_verworfen).toBe(3);
+
+    /* ⚠ ⚠  ZAHLEN, NIEMALS DER KLARTEXT. Der verworfene Wert kann
+       `Verletzt` heissen; ihn ins Protokoll zu schreiben waere genau der
+       Ausgang, den die Grenze schliessen soll — so gingen am 21.08.2026
+       903 Klarnamen in `api_sync_log`. */
+    expect(z.zusatz_verworfen_ids).toEqual(["2:50"]);
+    expect(JSON.stringify(z)).not.toContain("Verletzt");
+  });
+
+  it("die zwei Fragen sind getrennt, und die Grenze nennt ihre Typen", () => {
+    /* `subtypKlartext` heisst "steht da etwas?" und gilt fuer jede Art;
+       `zusatzText` heisst "darf es hinaus?". Zusammengelegt waeren sie eine
+       Stelle, die zwei Dinge entscheidet. */
+    expect(subtypKlartext("Kopftor")).toBe("Kopftor");
+    expect(subtypKlartext("-")).toBe("");
+    expect(subtypKlartext(null)).toBe("");
+    expect(zusatzText(TYP_WECHSEL, "Kopftor")).toBe("");
+
+    /* ⚠ Die Positivkontrolle: eine leere Allowlist waere still — dann
+       ergaebe `zusatzText` ueberall den Leerwert, und jeder Fall darueber
+       bliebe gruen, ohne etwas zu pruefen. */
+    const zahl = (x: number, y: number) => x - y;
+    expect([...ZUSATZ_TYPEN].sort(zahl))
+      .toEqual([TYP_TOR, TYP_VERWARNUNG, TYP_AUSSCHLUSS].sort(zahl));
+    expect(ZUSATZ_TYPEN).not.toContain(TYP_WECHSEL);
+    expect(ZUSATZ_TYPEN).not.toContain(TYP_ASSIST);
   });
 });

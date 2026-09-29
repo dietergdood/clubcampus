@@ -775,6 +775,183 @@ export function baueNummernBruecke(
   return raus;
 }
 
+/* ══════════════════════════════════════════════════════════════════════
+   Die ZWEITE Bruecke: Personennummer → Rueckennummer
+   29.09.2026
+
+   ⚠ ⚠  SIE LAEUFT IN DIE ANDERE RICHTUNG ALS DIE ERSTE, UND GENAU DAS
+         MACHT SIE SICHER.
+
+   |  | Schluessel | Wert | fuer |
+   |---|---|---|---|
+   | `baueNummernBruecke` | `spiel_id:rueckennr`     | Name   | den EINGEWECHSELTEN |
+   | `baueNummerJePerson` | `spiel_id:sfv_person_id` | Nummer | den AUSGEWECHSELTEN |
+
+   Die erste MUSS ueber eine Anzeigeangabe gehen: `substitutePlayerId` ist
+   kein `personId` (gemessen 10.09.2026, fuenf von fuenf loesen nicht auf).
+   Deshalb braucht sie `ist_eigener` auf beiden Seiten — eine
+   Rueckennummer gibt es in beiden Mannschaften, und am 11.09.2026 standen
+   unsere Spieler beim Gegner im Verlauf.
+
+   ⚠ Die zweite geht ueber die PERSONENNUMMER, und die ist je Spiel
+   eindeutig: `spiel_aufstellung_verein_key UNIQUE (verein_id, spiel_id,
+   sfv_person_id)`. **Die Derby-Falle greift auf DIESER Richtung nicht** —
+   zwei eigene Kader unter derselben `spiel_id` teilen keine `personId`,
+   nur die Rueckennummer. Genau deshalb wird hier die Personennummer
+   benutzt und nicht die Nummer.
+
+   ⚠ ⚠  UND SIE SCHWEIGT TROTZDEM BEI ZWEI KANDIDATEN. Der Constraint
+   macht das heute unmoeglich — **eine Datenlage ist keine Absicherung**,
+   und die Regel kostet vier Zeilen. Dieselbe Grenze wie bei der
+   Schwester, aus demselben Grund: eine Bruecke, die raet, ist schlimmer
+   als keine.
+   ══════════════════════════════════════════════════════════════════════ */
+
+/** Was die Aufstellung ueber die Nummer EINER Person in EINEM Spiel sagt. */
+export interface NummerJePerson {
+  /** Die Rueckennummer, oder `null` wenn nicht eindeutig bestimmbar. */
+  nummer: number | null;
+  /**
+   * Warum sie fehlt — `""`, wenn sie da ist.
+   *
+   * ⚠ Die zwei Gruende sind GETRENNT, weil sie Verschiedenes heissen:
+   * `zeile_ohne_nummer` ist „der Verband fuehrt fuer diesen Menschen
+   * keine Nummer", `mehrdeutig` ist „wir koennen nicht sagen, welche".
+   * **Nicht feststellbar ist nicht dasselbe wie nichts gefunden** — und
+   * wer sie zusammenzaehlt, schickt den Leser in die falsche Richtung.
+   */
+  grund: "" | "zeile_ohne_nummer" | "mehrdeutig";
+}
+
+export function baueNummerJePerson(
+  zeilen: { spiel_id: string; ist_eigener: boolean; sfv_person_id: number | null;
+            rueckennr: number | null }[],
+): Map<string, NummerJePerson> {
+  /* ⚠ `null` kommt in die Menge MIT. Sonst waere eine Zeile ohne Nummer
+     von einer fehlenden Zeile nicht zu unterscheiden, und der Zaehler
+     meldete den falschen Grund — „der Verband fuehrt keine Nummer" statt
+     „wir haben keine Zeile". Zwei verschiedene Befunde, dieselbe Null. */
+  const kandidaten = new Map<string, Set<number | null>>();
+  for (const z of zeilen) {
+    /* ⚠ ⚠  `ist_eigener` — DIE GRENZE, DIE AM 11.09.2026 GEFEHLT HAT.
+       Eine fremde Aufstellungszeile traegt ohnehin keine
+       `sfv_person_id` (`spiel_aufstellung_fremde_ohne_person` erzwingt
+       es). Genau das ist aber eine Zusicherung ueber eine ANDERE Stelle,
+       und die prueft hier kein Werkzeug — dieselbe Familie wie der
+       Kommentar an `baueNummernBruecke()`, der die Regel woertlich nannte,
+       waehrend im Code zwei von drei Teilen standen. */
+    if (!z.ist_eigener || z.sfv_person_id == null) continue;
+    const k = `${z.spiel_id}:${z.sfv_person_id}`;
+    const menge = kandidaten.get(k) ?? new Set<number | null>();
+    menge.add(z.rueckennr);
+    kandidaten.set(k, menge);
+  }
+  const raus = new Map<string, NummerJePerson>();
+  for (const [k, menge] of kandidaten) {
+    /* ⚠ Zwei verschiedene Nummern fuer dieselbe Person in demselben
+       Spiel: die Bruecke traegt nicht, und Schweigen ist die richtige
+       Antwort. Der UNIQUE-Schluessel macht es heute unmoeglich; die
+       Zeile steht hier fuer den Tag, an dem er es nicht mehr tut. */
+    if (menge.size > 1) {
+      raus.set(k, { nummer: null, grund: "mehrdeutig" });
+      continue;
+    }
+    const nr = [...menge][0];
+    raus.set(k, nr == null
+      ? { nummer: null, grund: "zeile_ohne_nummer" }
+      : { nummer: nr, grund: "" });
+  }
+  return raus;
+}
+
+/**
+ * Die Rueckennummer des AUSGEWECHSELTEN — und woher sie kommt.
+ *
+ * ⚠ ⚠  DER VERBAND HAT VORRANG. Schickt er `jerseyNumber` am Wechsel mit,
+ * gilt seine Angabe; hergeleitet wird nur, was fehlt. **Ob er sie
+ * mitschickt, ist ungemessen** — die einzige aufgezeichnete Antwort
+ * (`docs/sfv/matchdaten_beispiel.json`) enthaelt fuenf Tore und keinen
+ * Wechsel, und `MatchEvent` hat 28 Felder ohne eine einzige
+ * `description`. Deshalb ist `herkunft: "verband"` ein eigener Wert und
+ * wird gezaehlt: **diese Zahl beantwortet die offene Frage**, statt sie
+ * anzunehmen.
+ *
+ * ⚠ Die `herkunft` ist eine Aufteilung, die AUFGEHEN MUSS — je eigene
+ * Wechselzeile genau ein Wert. Eine einzelne Zahl kann nur behauptet
+ * werden; eine Aufteilung kann man nachrechnen.
+ */
+export interface AusgewechseltNummer {
+  /** Die Nummer, oder `null` wenn sie nicht zu bestimmen ist. */
+  nummer: number | null;
+  herkunft:
+    /** Der Verband hat sie mitgeschickt. */
+    | "verband"
+    /** Aus der Aufstellung derselben Partie hergeleitet. */
+    | "aufstellung"
+    /** ⚠ Gegnerzeile — hier wird NIE hergeleitet, siehe unten. */
+    | "fremd"
+    /** Das Ereignis nennt keine `sfv_person_id`; es gibt keinen Schluessel. */
+    | "ohne_person"
+    /** ⚠ Die Karte wurde nicht uebergeben — **nicht gefragt**, nicht
+        „nichts gefunden". In Betrieb ist das 0; steht dort eine Zahl, ist
+        eine Aufrufstelle nicht verdrahtet, und der Zaehler sagt es statt
+        die Datenlage zu beschuldigen. */
+    | "nicht_gefragt"
+    /** Kein Aufstellungseintrag zu dieser Person in diesem Spiel. */
+    | "ohne_zeile"
+    /** Der Eintrag ist da und traegt keine Nummer. */
+    | "zeile_ohne_nummer"
+    /** Zwei Nummern fuer dieselbe Person — die Bruecke schweigt. */
+    | "mehrdeutig"
+    /** ⚠ Dieselbe Zahl wie `ein_nummer` — dann haben wir den
+        EINGEWECHSELTEN getroffen, nicht den Ausgewechselten. */
+    | "kollision";
+}
+
+export function nummerDesAusgewechselten(
+  /* ⚠ `ist_eigener` ist PFLICHT, nicht optional — dieselbe Begruendung
+     wie bei `beschreibeGewechselten()`: optional hiesse, eine
+     Aufrufstelle kann es weglassen, und dann ist der Fehler vom
+     11.09.2026 zurueck, ohne dass etwas meldet. */
+  e: Pick<EreignisZeile, "ist_eigener" | "sfv_person_id" | "rueckennr"
+       | "ein_rueckennr">,
+  nummern?: Map<string, NummerJePerson>,
+  spielId?: string,
+): AusgewechseltNummer {
+  /* ⚠ ⚠  DIE GRENZE STEHT GANZ VORNE, VOR JEDER QUELLE. Die Karte
+     enthaelt nur eigene Zeilen — und genau so war es bei
+     `baueNummernBruecke()` auch, bevor am 11.09.2026 unsere Spieler beim
+     Gegner im Verlauf standen: die Bruecke filterte, was sie AUFNAHM, und
+     wer sie BEFRAGTE, stand unter keiner Aufsicht.
+
+     Eine fremde Zeile behaelt die Nummer des Verbands, die Entscheid B
+     ausdruecklich erlaubt (verboten sind Name und Personennummer) — und
+     bekommt nichts hergeleitet. */
+  if (!e.ist_eigener) return { nummer: e.rueckennr ?? null, herkunft: "fremd" };
+
+  if (e.rueckennr != null) return { nummer: e.rueckennr, herkunft: "verband" };
+  if (e.sfv_person_id == null) return { nummer: null, herkunft: "ohne_person" };
+  if (!nummern || spielId == null) return { nummer: null, herkunft: "nicht_gefragt" };
+
+  const befund = nummern.get(`${spielId}:${e.sfv_person_id}`);
+  if (!befund) return { nummer: null, herkunft: "ohne_zeile" };
+  if (befund.nummer == null) {
+    return {
+      nummer: null,
+      herkunft: befund.grund === "mehrdeutig" ? "mehrdeutig" : "zeile_ohne_nummer",
+    };
+  }
+  /* ⚠ ⚠  NIE ZWEIMAL DIESELBE ZAHL IN EINER ZEILE. Ergibt die Herleitung
+     die Nummer des Eingewechselten, haben wir den falschen Menschen
+     getroffen — dann ist Schweigen die einzige richtige Antwort. Sie
+     stehenzulassen waere eine Zeile, die „Nr. 9 ersetzt durch Nr. 9"
+     behauptet: plausibel, und falsch. */
+  if (e.ein_rueckennr != null && befund.nummer === e.ein_rueckennr) {
+    return { nummer: null, herkunft: "kollision" };
+  }
+  return { nummer: befund.nummer, herkunft: "aufstellung" };
+}
+
 /**
  * @param bruecke `spiel_id:nummer` → Name, aus der Aufstellung derselben
  *   Partie. Siehe baueNummernBruecke().
