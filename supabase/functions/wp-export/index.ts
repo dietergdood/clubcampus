@@ -306,6 +306,18 @@ async function alleSeiten<T>(
  *    Die Frage ist deshalb nicht „habe ich index.ts angefasst?", sondern
  *    **„antwortet sie jetzt anders?"**.
  *
+ *    63  29.09.2026  `ereignis_subtyp` und die hergeleiteten
+ *                    Wechselnummern gehen hinaus. Dazu zehn Zaehler zur
+ *                    Herkunft der Nummer des Ausgewechselten.
+ *                    ⚠ Die Quote steht seit heute auch in der KACHEL
+ *                    (`deuteVorschau`) — bis dahin war sie berechnet,
+ *                    gesendet und von niemandem gelesen. Neunter Fall
+ *                    dieser Familie in zwei Tagen; gefunden hat ihn eine
+ *                    Frage der Gegenstelle, keine Pruefung.
+ *                    ⚠ `wechsel_nummer_vom_verband` beantwortet, was im
+ *                    Repository nicht messbar war: schickt der Verband
+ *                    `jerseyNumber` am Wechsel mit? Die aufgezeichnete
+ *                    Antwort enthaelt fuenf Tore und keinen Wechsel.
  *    62  24.09.2026  ⚠ ⚠ DER SPIELE-LAUF HOERT VON SELBST AUF, STATT
  *                    ABGEBROCHEN ZU WERDEN. Bis hierher hatte die
  *                    Teile-Schleife kein Zeitbudget — das Gateway toetet
@@ -462,7 +474,7 @@ async function alleSeiten<T>(
  *    46  12.09.2026  Durchreiche von personen/teams/unterfelder/
  *                    geschwister, nichtDurchgereicht(), diese Angabe
  */
-const FUNCTION_FASSUNG = 62;
+const FUNCTION_FASSUNG = 63;
 
 const AKTIONEN = ["probe", "export", "bestand", "status", "ranglisten"];
 

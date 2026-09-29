@@ -239,7 +239,56 @@ export function ApiTab({loading,isMobile,mobileKachel,apiVerbindungen,tab,sb=nul
          Namen" gegen nichts zu halten. */
       `Wechsel, zweiter Spieler: ${n("zeilen_mit_zweitem_namen")} mit Namen · `
         +`${n("wechsel_ohne_ersatzname")} ohne Namen · ${n("wechsel_ohne_ersatzkennung")} ohne Kennung`,
+      /* ⚠ ⚠  DIE QUOTE, AUF DIE DAS THEME WARTET — beide Rückennummern je
+         eigener Wechselzeile, mit der Bezugsgrösse in DERSELBEN Zeile.
+
+         ⚠ Sie hat bis zum 29.09.2026 gefehlt, und das ist der neunte Fall
+         derselben Familie an zwei Tagen: die Zähler waren gebaut, in der
+         Antwort der Probe, geprüft — und **von niemandem gezeigt**. Wer
+         „Vorschau" drückte, sah sie nicht. Gefunden hat es die Frage der
+         Gegenstelle, keine Prüfung; gegen diesen Fall gibt es kein
+         Werkzeug, nur die Frage „wer liest diesen Wert?". */
+      `Wechsel (eigene): ${n("wechsel_beide_nummern")} von ${n("wechsel_eigen")} `
+        +`tragen beide Nummern`,
+      /* ⚠ Die Herkunft getrennt, weil sie zwei verschiedene Dinge heissen:
+         `vom_verband` ist seine Angabe, `hergeleitet` unsere Rechnung über
+         `spiel_aufstellung`. Eine Summe daraus verschwiege genau die
+         Frage, die vorher nicht messbar war. */
+      `  davon ${n("wechsel_nummer_vom_verband")} vom Verband · `
+        +`${n("wechsel_nummer_hergeleitet")} hergeleitet`,
     ];
+    /* ⚠ ⚠  NULL VON NULL IST KEINE QUOTE. Ohne eine einzige eigene
+       Wechselzeile im Stapel sagt „0 von 0" nichts über die Kette — und
+       eine Null, die wie ein Befund aussieht, ist teurer als ein Satz.
+       Dieselbe Trennung wie bei `halbzeit_nicht_pruefbar`. */
+    if(n("wechsel_eigen")===0){
+      zeilen.push("⚠ Keine eigene Wechselzeile in diesem Stapel — die Quote "
+        +"darüber sagt nichts über die Kette, nur dass nichts zu messen war.");
+    } else if(n("wechsel_nummer_vom_verband")===0){
+      /* ⚠ ⚠  DAS IST DIE ANTWORT AUF EINE FRAGE, DIE IM REPOSITORY NICHT
+         MESSBAR WAR: schickt der Verband `jerseyNumber` am Wechsel mit?
+         Die einzige aufgezeichnete Antwort enthält fünf Tore und keinen
+         Wechsel, und `MatchEvent` hat 28 Felder ohne eine `description`.
+         Steht hier 0 bei Wechseln im Stapel, ist sie beantwortet. */
+      zeilen.push("→ Der Verband schickt am Wechsel KEINE Rückennummer des "
+        +"Ausgewechselten — jede kommt aus der Aufstellung.");
+    }
+    /* ⚠ Die Aufteilung ist die Gegenprobe: gehen die acht Gründe nicht auf,
+       misst eine der Stellen etwas anderes als die andere. Nur bei
+       Abweichung gemeldet — sonst stünde sie in jedem Lauf da und würde
+       nach dem dritten Mal überlesen. */
+    {
+      const summe=["wechsel_nummer_vom_verband","wechsel_nummer_hergeleitet",
+        "wechsel_nummer_ohne_person","wechsel_nummer_nicht_gefragt",
+        "wechsel_nummer_ohne_zeile","wechsel_nummer_zeile_ohne_nummer",
+        "wechsel_nummer_mehrdeutig","wechsel_nummer_kollision"]
+        .reduce((a,k)=>a+n(k),0);
+      if(summe!==n("wechsel_eigen")){
+        zeilen.push(`⚠ Wechsel-Aufteilung geht NICHT auf: ${summe} Gründe `
+          +`gegen ${n("wechsel_eigen")} eigene Zeilen — die Zahlen darüber `
+          +"sind unbrauchbar.");
+      }
+    }
     if(z.zaehlung_stimmt===false){
       zeilen.push("⚠ Die Aufteilung geht nicht auf — die Zahlen sind unbrauchbar.");
     }

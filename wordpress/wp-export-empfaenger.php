@@ -62,10 +62,39 @@
    weiterhin dort, wo sie hingehoert und wo wir sie pflegen: am Feld
    `ereignis_subtyp` in `src/domains/spiele/wpNutzlast.ts`.
 
-   Uebernommen am 29.09.2026 aus Fassung 0.9.42, byteweise. Ausser diesem
-   Block ist die Datei Zeichen fuer Zeichen die des Theme-Repos - belegt
-   mit `diff`, nicht mit einer Pruefsumme: der Vermerk verschiebt sie
-   ohnehin.
+   -- HERKUNFT DIESER ABSCHRIFT ------------------------------------------
+
+       Quell-Commit    6643af6  (fch-theme, main)
+       abgeschrieben   29.09.2026
+       sha256 Quelle   c70121c9ce947679...   337 629 Byte
+       fremde Fassung  0.9.42  <- ⚠ ANGABE DES EMPFAENGERS, NICHT UNSERE
+
+   ⚠ ⚠  DIESE ABSCHRIFT TRAEGT KEINE EIGENE FASSUNG MEHR (Entscheid
+   29.09.2026). Am selben Tag trugen zwei Dateien die Nummer 0.9.40 mit
+   verschiedenem Inhalt: unsere mit dem Allowlist-Eintrag fuer
+   `ereignis_subtyp`, ihre mit `kandidaten()`. Keine Gabelung war zu sehen,
+   weil die Nummer gleich war.
+
+   > Eine Fassungsnummer ist kein Schluessel, solange zwei Seiten sie
+   > vergeben duerfen.
+
+   ⚠ **Aber nicht NICHTS statt der Nummer** - eine Abschrift ohne jede
+   Kennung ist genauso schwer zu pruefen wie eine mit eigener. Deshalb die
+   vier Zeilen oben: Herkunft statt Selbstbehauptung. Die Fassung ist eine
+   ZITIERTE Angabe der Gegenstelle, kein Wert, den wir fuehren.
+
+   ⚠ **Aenderungen am Empfaenger gehen als Auftrag an fch-theme**, nie
+   hier hinein. Was hier entsteht, ist an keinem Server wirksam und
+   veraltet beim naechsten `cp`.
+
+   Ausser diesem Block ist die Datei Zeichen fuer Zeichen die des
+   Theme-Repos. Belegt mit `diff`, nicht mit einer Pruefsumme ueber die
+   ganze Datei - der Vermerk verschiebt sie ohnehin:
+
+       diff <(sed '2,<letzte Zeile dieses Blocks>d' ziel) quelle
+
+   Die Pruefsumme oben gilt der QUELLE und macht die Wortgleichheit in
+   einer Zeile pruefbar: `sha256sum` der Quelldatei gegen den Wert.
    ======================================================================= */
 /**
  * ClubCampus-Abgleich — Empfaenger auf WordPress-Seite
